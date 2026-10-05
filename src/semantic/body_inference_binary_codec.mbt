@@ -2207,7 +2207,7 @@ fn ib_span_valid(span : HirSpan, length : Int) -> Bool {
 
 ///|
 fn ib_type_valid(type_ : BodyTypeId, length : Int) -> Bool {
-  type_ <= 0 || type_ < length
+  type_ < -1 || (type_ >= 0 && type_ < length)
 }
 
 ///|
@@ -2250,6 +2250,8 @@ fn ib_validate_type_graph(
           !ib_span_valid(span, arguments.length()) {
           return false
         }
+      BodyErrorType if index != 0 => return false
+      BodyResolvedType(_) => return false
       BodyVariableType(_) if index == 0 => return false
       _ => ()
     }
@@ -2305,6 +2307,56 @@ fn ib_validate_module_bodies(value : InferredModuleBodies) -> Bool {
       return false
     }
   }
+  for selection in value.expression_selections {
+    let span = match selection {
+      StructConstructionSelection(_, arguments)
+      | VariantConstructionSelection(_, arguments)
+      | UnitVariantValueSelection(_, arguments)
+      | FunctionReferenceSelection(_, arguments) => Some(arguments)
+      _ => None
+    }
+    match span {
+      Some(arguments) =>
+        if !ib_span_valid(
+            arguments,
+            value.expression_type_arguments.length(),
+          ) {
+          return false
+        }
+      None => ()
+    }
+  }
+  for pattern_constructor in value.pattern_constructors {
+    let span = match pattern_constructor {
+      StructInferredPatternConstructor(_, arguments)
+      | VariantInferredPatternConstructor(_, arguments) => Some(arguments)
+      _ => None
+    }
+    match span {
+      Some(arguments) =>
+        if !ib_span_valid(arguments, value.pattern_type_arguments.length()) {
+          return false
+        }
+      None => ()
+    }
+  }
+  for targets in [value.call_targets, value.operator_targets] {
+    for target in targets {
+      let span = match target {
+        SelectedInferredCallTarget(_, arguments)
+        | SelectedBoundInferredCallTarget(_, _, arguments)
+        | SelectedDynamicTraitCallTarget(_, _, _, arguments) => Some(arguments)
+        _ => None
+      }
+      match span {
+        Some(arguments) =>
+          if !ib_span_valid(arguments, value.call_type_arguments.length()) {
+            return false
+          }
+        None => ()
+      }
+    }
+  }
   for span in value.expression_evidence {
     if !ib_span_valid(span, value.trait_evidence_roots.length()) {
       return false
@@ -2332,6 +2384,17 @@ fn ib_validate_module_bodies(value : InferredModuleBodies) -> Bool {
         if !ib_span_valid(span, value.trait_evidence_arguments.length()) {
           return false
         }
+      BoundInferredTraitEvidence(_) => ()
+      GuardedInferredTraitEvidence(target, bound) =>
+        if target < 0 || bound < 0 || evidence.prerequisites.length != 0 {
+          return false
+        }
+    }
+  }
+  for coercion in value.trait_object_coercions {
+    match coercion {
+      SelectedInferredTraitObjectCoercion(_, evidence) if evidence < 0 ||
+        evidence >= value.trait_evidence.length() => return false
       _ => ()
     }
   }

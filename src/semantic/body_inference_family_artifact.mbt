@@ -29,8 +29,9 @@ fn rebase_family_origin(
       rebase_family_source_id(origin.source, expression_delta)
     PatternTypeConstraint =>
       rebase_family_source_id(origin.source, pattern_delta)
-    LocalTypeConstraint | ReturnTypeConstraint | SyntheticTypeConstraint =>
-      origin.source
+    ReturnTypeConstraint =>
+      rebase_family_source_id(origin.source, expression_delta)
+    LocalTypeConstraint | SyntheticTypeConstraint => origin.source
   }
   {
     ..origin,
@@ -405,17 +406,27 @@ fn body_family_span_is_valid(span : HirSpan, length : Int) -> Bool {
 }
 
 ///|
-fn body_family_type_is_valid(type_ : BodyTypeId, length : Int) -> Bool {
-  type_ <= 0 || type_ < length
+fn body_family_type_is_valid(
+  type_ : BodyTypeId,
+  length : Int,
+  resolved_length : Int,
+) -> Bool {
+  if type_ < -1 {
+    let resolved = -(type_ + 2)
+    resolved >= 0 && resolved < resolved_length
+  } else {
+    type_ >= 0 && type_ < length
+  }
 }
 
 ///|
 fn body_family_type_array_is_valid(
   types : Array[BodyTypeId],
   length : Int,
+  resolved_length : Int,
 ) -> Bool {
   for type_ in types {
-    if !body_family_type_is_valid(type_, length) {
+    if !body_family_type_is_valid(type_, length, resolved_length) {
       return false
     }
   }
@@ -423,7 +434,10 @@ fn body_family_type_array_is_valid(
 }
 
 ///|
-fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool {
+fn body_inference_job_type_graph_is_valid(
+  job : BodyInferenceJobResult,
+  resolved_length : Int,
+) -> Bool {
   if job.types.length() == 0 || !(job.types[0] is BodyErrorType) {
     return false
   }
@@ -431,7 +445,7 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
   for index in 1..<type_length {
     match job.types[index] {
       BodyMemberTypeProjection(owner, operation, _) =>
-        if !body_family_type_is_valid(owner, type_length) ||
+        if !body_family_type_is_valid(owner, type_length, resolved_length) ||
           owner >= index ||
           !computed_type_builtin(operation) {
           return false
@@ -445,13 +459,14 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
           if !body_family_type_is_valid(
               job.type_arguments[field_index],
               type_length,
+              resolved_length,
             ) {
             return false
           }
         }
       }
       BodyAppliedType(base, arguments) => {
-        if !body_family_type_is_valid(base, type_length) ||
+        if !body_family_type_is_valid(base, type_length, resolved_length) ||
           !body_family_span_is_valid(arguments, job.type_arguments.length()) {
           return false
         }
@@ -461,13 +476,14 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
           if !body_family_type_is_valid(
               job.type_arguments[argument_index],
               type_length,
+              resolved_length,
             ) {
             return false
           }
         }
       }
       BodyFunctionType(parameters, result) => {
-        if !body_family_type_is_valid(result, type_length) ||
+        if !body_family_type_is_valid(result, type_length, resolved_length) ||
           !body_family_span_is_valid(parameters, job.type_arguments.length()) {
           return false
         }
@@ -477,6 +493,7 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
           if !body_family_type_is_valid(
               job.type_arguments[parameter_index],
               type_length,
+              resolved_length,
             ) {
             return false
           }
@@ -485,17 +502,39 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
       BodyErrorType | BodyResolvedType(_) => return false
     }
   }
-  if !body_family_type_is_valid(job.result_type, type_length) ||
-    !body_family_type_array_is_valid(job.expression_types, type_length) ||
-    !body_family_type_array_is_valid(job.local_types, type_length) ||
-    !body_family_type_array_is_valid(job.capture_types, type_length) ||
-    !body_family_type_array_is_valid(job.block_types, type_length) ||
-    !body_family_type_array_is_valid(job.pattern_types, type_length) ||
-    !body_family_type_array_is_valid(job.pattern_type_arguments, type_length) ||
-    !body_family_type_array_is_valid(job.control_state_types, type_length) ||
-    !body_family_type_array_is_valid(job.control_result_types, type_length) ||
-    !body_family_type_array_is_valid(job.expression_type_arguments, type_length) ||
-    !body_family_type_array_is_valid(job.call_type_arguments, type_length) {
+  if !body_family_type_is_valid(
+      job.result_type, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.expression_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.local_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.capture_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.block_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.pattern_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.pattern_type_arguments, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.control_state_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.control_result_types, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.expression_type_arguments, type_length, resolved_length,
+    ) ||
+    !body_family_type_array_is_valid(
+      job.call_type_arguments, type_length, resolved_length,
+    ) {
     return false
   }
   for selection in job.expression_selections {
@@ -626,6 +665,7 @@ fn body_inference_job_local_ids_are_valid(
 ///|
 fn validate_body_inference_family_artifact(
   collected : CollectedModule,
+  resolved : ResolvedModuleTypes,
   names : ResolvedModuleNames,
   body_index : Int,
   artifact : BodyInferenceFamilyArtifact,
@@ -653,7 +693,9 @@ fn validate_body_inference_family_artifact(
       body_names.controls.length,
       body.object_fields.length,
     ) ||
-    !body_inference_job_type_graph_is_valid(artifact.root) ||
+    !body_inference_job_type_graph_is_valid(
+      artifact.root, resolved.types.length(),
+    ) ||
     !body_inference_job_local_ids_are_valid(
       artifact.root,
       body.expressions.length,
@@ -685,7 +727,9 @@ fn validate_body_inference_family_artifact(
         lambda_names.controls.length,
         lambda.body.object_fields.length,
       ) ||
-      !body_inference_job_type_graph_is_valid(lambda_artifact.job) ||
+      !body_inference_job_type_graph_is_valid(
+        lambda_artifact.job, resolved.types.length(),
+      ) ||
       !body_inference_job_local_ids_are_valid(
         lambda_artifact.job,
         lambda.body.expressions.length,

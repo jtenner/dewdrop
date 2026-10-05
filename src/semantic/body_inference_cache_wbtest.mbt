@@ -1,11 +1,16 @@
 ///|
+fn body_inference_cache_test_source() -> Bytes {
+  b"pub enum Value {\n  Empty\n  Number(I32)\n}\npub fn read(value: Value) -> I32 {\n  match value {\n    Value.Number(number) => number\n    Value.Empty => 0\n  }\n}\n"
+}
+
+///|
 fn body_inference_cache_test_program() -> CollectedProgram {
   collect_program_manifest(
     23100UL,
     ProgramManifest::new([
       ManifestModule::new("cache.body", [
         ManifestFile::new(
-          "main.dew", b"pub enum Value {\n  Empty\n  Number(I32)\n}\npub fn read(value: Value) -> I32 {\n  match value {\n    Value.Number(number) => number\n    Value.Empty => 0\n  }\n}\n",
+          "main.dew", body_inference_cache_test_source(),
         ),
       ]),
     ]),
@@ -21,6 +26,38 @@ test "inferred module bodies serialize and decode byte-identically" {
   let decoded = deserialize_inferred_module_bodies(encoded).unwrap()
   assert_eq(decoded, inferred)
   assert_eq(serialize_inferred_module_bodies(decoded).unwrap(), encoded)
+}
+
+///|
+test "inferred module decoder rejects sentinel type ids and embedded spans" {
+  let (_, _, _, invalid_type) = call_test_module(
+    23100UL,
+    body_inference_cache_test_source(),
+  )
+  invalid_type.expression_types.push(-1)
+  assert_true(
+    deserialize_inferred_module_bodies(
+      serialize_inferred_module_bodies(invalid_type).unwrap(),
+    )
+    is Err(_),
+  )
+
+  let (collected, _, _, invalid_span) = call_test_module(
+    23101UL,
+    body_inference_cache_test_source(),
+  )
+  invalid_span.pattern_constructors.push(
+    VariantInferredPatternConstructor(
+      collected.variants[0].id,
+      { start: 2147483647, length: 1, },
+    ),
+  )
+  assert_true(
+    deserialize_inferred_module_bodies(
+      serialize_inferred_module_bodies(invalid_span).unwrap(),
+    )
+    is Err(_),
+  )
 }
 
 ///|
@@ -229,6 +266,35 @@ test "cached body families rebase nested lambda and diagnostic expression ids" {
 }
 
 ///|
+test "cached return diagnostics rebase expression ids" {
+  let original = collect_bytes(
+    23104UL,
+    b"fn changing() -> I32 {\n  1\n}\nfn invalid() -> I32 {\n  return true\n}\n",
+  )
+  let cold = infer_module_bodies_with_family_cache(
+    original,
+    resolve_module_types(original),
+    resolve_module_names(original),
+    Array::make(original.bodies.length(), None),
+  ).unwrap()
+  let edited = collect_bytes(
+    23104UL,
+    b"fn changing() -> I32 {\n  if true {\n    10\n  } else {\n    1\n  }\n}\nfn invalid() -> I32 {\n  return true\n}\n",
+  )
+  let resolved = resolve_module_types(edited)
+  let names = resolve_module_names(edited)
+  let mixed = infer_module_bodies_with_family_cache(
+    edited,
+    resolved,
+    names,
+    [None, cold.families[1]],
+  ).unwrap()
+  let fresh = infer_module_bodies(edited, resolved, names)
+  assert_eq(mixed.family_hits, 1)
+  assert_eq(mixed.inferred, fresh)
+}
+
+///|
 test "body-family artifacts include nested lambdas and reject incompatible owners" {
   let collected = collect_bytes(
     23102UL, b"fn owner(seed: I32) -> I32 {\n  let apply = fn(value: I32) -> I32 {\n    value + seed\n  }\n  apply(1)\n}\nfn independent() -> I32 {\n  42\n}\n",
@@ -269,6 +335,37 @@ test "body-family artifacts include nested lambdas and reject incompatible owner
   ]
   assert_true(
     infer_module_bodies_with_family_cache(collected, resolved, names, corrupt)
+    is Err(_),
+  )
+
+  let invalid_sentinel = {
+    ..owner,
+    root: { ..owner.root, result_type: -1, },
+  }
+  assert_true(
+    infer_module_bodies_with_family_cache(
+      collected,
+      resolved,
+      names,
+      [Some(invalid_sentinel), cold.families[1]],
+    )
+    is Err(_),
+  )
+
+  let invalid_resolved = {
+    ..owner,
+    root: {
+      ..owner.root,
+      result_type: -resolved.types.length() - 2,
+    },
+  }
+  assert_true(
+    infer_module_bodies_with_family_cache(
+      collected,
+      resolved,
+      names,
+      [Some(invalid_resolved), cold.families[1]],
+    )
     is Err(_),
   )
 }

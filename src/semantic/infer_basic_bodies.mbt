@@ -3032,24 +3032,20 @@ fn BasicBodyInferencer::constrain_root(self : BasicBodyInferencer) -> Unit {
     BlockBodyRoot(block) => self.block_type(block)
   }
   if self.callable_index >= 0 {
-    let origin = return_type_origin(
-      semantic_id_local(self.body.id),
-      self.body.offset,
-    )
     match root_expression {
       Some(expression) =>
         if !self.is_unit_type(self.declared_return_type) {
           self.constrain_expression_assignable(
             expression,
             self.declared_return_type,
-            origin,
+            return_type_origin(expression, self.body.offset),
           )
         }
       None =>
         self.constrain_assignable(
           self.result_type,
           self.declared_return_type,
-          origin,
+          return_type_origin(-1, self.body.offset),
         )
     }
   } else if self.body.kind == ModuleLetBody {
@@ -4398,7 +4394,7 @@ fn infer_module_bodies_with_imports_in_order_and_family_cache(
       Some(artifact) => {
         match
           validate_body_inference_family_artifact(
-            collected, names, body_index, artifact,
+            collected, resolved, names, body_index, artifact,
           ) {
           Ok(_) => ()
           Err(error) => return Err(error)

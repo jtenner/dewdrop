@@ -22,6 +22,7 @@ pub fn proven_span_end(
 ) -> Int where {
   proof_require: 0 <= start,
   proof_require: 0 <= length,
+  proof_require: length <= 2147483647 - start,
   proof_ensure: result => result >= start,
   proof_ensure: result => result >= length,
   proof_ensure: result => result == start + length,

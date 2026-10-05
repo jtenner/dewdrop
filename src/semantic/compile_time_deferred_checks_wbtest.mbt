@@ -68,7 +68,7 @@ test "compile time deferred checks: fixed call operands wait but keep independen
 ///|
 test "compile time deferred checks: branch results are checked against the selected return type" {
   let (program, lowering) = compile_time_evidence_test(
-    b"open dew.std.types\nfn zero<T>() -> T {\n  if is_integer::<T>() {\n    0i64\n  } else {\n    ()\n  }\n}\npub fn main() -> I64 {\n  zero::<Unit>()\n  zero::<I64>()\n}\n",
+    b"open dew.std.types\nfn pad() -> Unit {\n}\nfn zero<T>() -> T {\n  if is_integer::<T>() {\n    0i64\n  } else {\n    ()\n  }\n}\npub fn main() -> I64 {\n  zero::<Unit>()\n  zero::<I64>()\n}\n",
   )
   let fragments = plan_program_wasmgc_fragments(
     analyze_program_semantics(program),
