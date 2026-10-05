@@ -3,6 +3,7 @@ open dew.std.bytes
 open dew.std.fs
 open dew.std.path
 open dew.std.process
+open dew.std.process.wasi
 open dew.std.testing
 
 fn host_test_path(value: String) -> RelativePath {
@@ -102,6 +103,36 @@ test "relative paths join validated children" {
     Result::Ok(path) => assert(path.to_string().equals("cache/packs/v1.dwp"), "joined path changed")
     Result::Err(_) => assert(false, "valid child path was rejected")
   }
+}
+
+test "WASI process scratch layout includes pointer tables" {
+  assert(
+    wasi_process_layout_fits(4092u32, 49152u32),
+    "exact one-page process layout was rejected",
+  )
+  assert(
+    !wasi_process_layout_fits(4093u32, 49152u32),
+    "oversized process pointer table was accepted",
+  )
+}
+
+test "WASI process pointers stay inside the text region" {
+  assert(
+    wasi_process_pointer_limit(64u32, 64u32, 4u32) is Option::Some(4u32),
+    "text start was rejected",
+  )
+  assert(
+    wasi_process_pointer_limit(67u32, 64u32, 4u32) is Option::Some(1u32),
+    "text tail was rejected",
+  )
+  assert(
+    wasi_process_pointer_limit(63u32, 64u32, 4u32) is Option::None,
+    "pointer table address was accepted",
+  )
+  assert(
+    wasi_process_pointer_limit(68u32, 64u32, 4u32) is Option::None,
+    "text end was accepted",
+  )
 }
 
 test "filesystem contract dispatches without ambient host state" {
