@@ -1454,7 +1454,7 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-058 | Superseded | U+FFFD replacement was replaced by lossless tagged malformed-byte sentinels under D-059. |
 | D-059 | Answered and implemented | WTF-8 surrogate code points are accepted; malformed bytes use `0x110000..0x1100FF` sentinels and remain acceptable inside string literals. |
 | D-060 | Answered and implemented | Descriptor reads reuse one buffer; incomplete sequences are compacted within that buffer before refill. |
-| D-061 | Implemented | A terminal descriptor failure yields one `0x120000..0x12FFFF` I/O-error sentinel and then exhausts the iterator. |
+| D-061 | Implemented | A terminal descriptor failure yields one `0x120000..0x12FFFF` I/O-error sentinel and then exhausts the iterator. String and hexadecimal escape scanning preserves that sentinel as `SourceIo` instead of replacing it with an escape diagnostic. |
 | D-062 | Implemented | `Tokenizer` consumes the WTF-8 cursor with two units of bounded lookahead and returns `Iter[Token]` without source backtracking. |
 | D-063 | Implemented | Fixed symbols include delimiters, arithmetic operators, `**`, `%`, `:`, `::`, `=`, `.`, `...`, `->`, and basic logical symbols. |
 | D-064 | Implemented | `@identifier` and dotted forms such as `@wasm.i64_trunc_i32` are single `AtIdentifier(String)` tokens. |

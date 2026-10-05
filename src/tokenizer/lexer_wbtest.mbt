@@ -238,6 +238,32 @@ test "double quoted strings decode escapes" {
 }
 
 ///|
+#cfg(target="native")
+fn tokenizer_with_terminal_error(bytes : Bytes, error : Int) -> Tokenizer {
+  let source = Utf8Cursor::new(bytes)
+  source.read_error = error
+  Tokenizer::new(source)
+}
+
+///|
+#cfg(target="native")
+test "string escape preserves a terminal source error" {
+  let tokenizer = tokenizer_with_terminal_error(b"\"value\\", 5)
+  assert_eq(tokenizer.iter().map(token => token.kind()).to_array(), [
+    Error(SourceIo(5)),
+  ])
+}
+
+///|
+#cfg(target="native")
+test "hex string escape preserves a terminal source error" {
+  let tokenizer = tokenizer_with_terminal_error(b"\"value\\x0", 5)
+  assert_eq(tokenizer.iter().map(token => token.kind()).to_array(), [
+    Error(SourceIo(5)),
+  ])
+}
+
+///|
 test "b-prefixed strings produce exact byte literals" {
   assert_eq(token_kinds(b"b\"utf8: λ \\x00\\xFF\""), [
     BytesLiteral(b"utf8: λ \x00\xFF"),

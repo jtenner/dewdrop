@@ -555,6 +555,10 @@ fn Tokenizer::scan_string(
       Some((0x5CU, _)) => {
         ignore(self.take())
         let escaped = match self.take() {
+          Some((escaped, _)) if is_io_error(escaped) =>
+            return self.emit(
+              Error(SourceIo(io_error_code(escaped).unwrap())), offset,
+            )
           Some((escaped, _)) => escaped
           None => return self.emit(Error(UnterminatedString), offset)
         }
@@ -569,10 +573,18 @@ fn Tokenizer::scan_string(
           0x66U => output.write_byte(b'\x0C')
           0x78U => {
             let first = match self.take() {
+              Some((digit, _)) if is_io_error(digit) =>
+                return self.emit(
+                  Error(SourceIo(io_error_code(digit).unwrap())), offset,
+                )
               Some((digit, _)) => hex_digit(digit)
               None => None
             }
             let second = match self.take() {
+              Some((digit, _)) if is_io_error(digit) =>
+                return self.emit(
+                  Error(SourceIo(io_error_code(digit).unwrap())), offset,
+                )
               Some((digit, _)) => hex_digit(digit)
               None => None
             }
