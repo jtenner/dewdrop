@@ -1349,7 +1349,9 @@ fn starshine_program_append_nominal_enum_adapter(
     let branch : Array[@lib.Instruction] = [
       @lib.Instruction::i32_const(@lib.I32::new(variant.tag)),
     ]
-    for target_offset in 0..<target_physical.fields.length {
+    // The inherited enum tag is reconstructed explicitly above. Only the
+    // subtype-owned payload fields participate in carrier conversion.
+    for target_offset in 1..<target_physical.fields.length {
       let target_field = fragments.fields[target_physical.fields.start +
         target_offset]
       let field_type = match (variant.payload, target_field.role) {
