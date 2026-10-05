@@ -412,9 +412,12 @@ as one atomic entry.
 Lookup occurs in dependency order and keys commit to manifest source identity
 plus direct public content fingerprints. Private dependency changes retain
 downstream hits while public interface changes invalidate dependents
-transitively. Verified package
-capsules provide artifact-assisted source-tree recovery for missing locked
-dependencies.
+transitively. Verified package capsules provide artifact-assisted source-tree
+recovery for missing locked dependencies. Capsule decode accepts at most 65,536
+source files, validates bounded normalized relative paths and file/directory
+conflicts with hash sets before the first filesystem write, and creates each
+validated directory once in parent-first order without recursive per-file
+directory walks.
 
 The earlier syntax boundary is now `parse_event_cache.mbt`. It prepares each
 workspace source before standard-module selection, prepares only the selected

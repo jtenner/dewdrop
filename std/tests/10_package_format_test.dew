@@ -8,6 +8,7 @@ open dew.std.package
 open dew.std.package.artifact
 open dew.std.semver
 open dew.std.string
+open dew.std.string_builder
 
 fn package_test_version(value: String) -> SemVer {
   match semver_parse(value) {
@@ -219,6 +220,31 @@ test "installed package artifacts encode decode and verify checksums" {
   assert(decoded.files().get_unchecked(0u32).contents().starts_with(b"pub fn"), "artifact contents changed")
   let corrupted = encoded.subarray(0u32, 8u32).concat(b"x").concat(encoded.subarray(9u32, encoded.byte_length()))
   assert(package_artifact_try_decode(corrupted) is Result::Err(FormatDecodeError::ChecksumMismatch), "artifact checksum was ignored")
+}
+
+test "package artifact validation scales linearly at the file limit" {
+  let files = Array::new()
+  while 0u32 {
+    index if index < package_artifact_max_files() => {
+      let path = StringBuilder::new()
+      path.append("src/file-")
+      path.append_u32(index)
+      path.append(".dew")
+      files.push(package_artifact_file(path.finish(), b""))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let artifact = package_artifact(
+    "@scope/large",
+    package_test_version("1.0.0"),
+    "file:packages/large",
+    package_test_integrity(),
+    package_test_hex(),
+    Array::new(),
+    files,
+  )
+  assert(artifact.validate() is Result::Ok(_), "maximum artifact file set failed validation")
 }
 
 test "package format limits are explicit" {

@@ -8,6 +8,7 @@ open dew.std.format
 open dew.std.integrity.sha256
 open dew.std.package
 open dew.std.semver
+open dew.std.set
 open dew.std.string
 
 pub struct PackageArtifactFile {
@@ -211,22 +212,23 @@ pub fn package_artifact_read_dependencies(
   index: U32,
   output: Array<PackageDependency>,
 ) -> Result<Array<PackageDependency>, FormatDecodeError> {
-  if index >= count {
-    Result::Ok(output)
-  } else {
-    let name = package_artifact_read_string(reader, package_name_max_bytes())
-    let requirement_text = package_artifact_read_string(reader, package_requirement_max_bytes())
-    if reader.failed {
-      Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
-    } else {
-      match package_requirement_parse(requirement_text) {
-        Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package artifact dependency"))
-        Result::Ok(requirement) => {
-          output.push(package_dependency(name, requirement))
-          package_artifact_read_dependencies(reader, count, index + 1u32, output)
+  while index {
+    current if current < count => {
+      let name = package_artifact_read_string(reader, package_name_max_bytes())
+      let requirement_text = package_artifact_read_string(reader, package_requirement_max_bytes())
+      if reader.failed {
+        break Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
+      } else {
+        match package_requirement_parse(requirement_text) {
+          Result::Err(_) => break Result::Err(FormatDecodeError::InvalidSyntax("package artifact dependency"))
+          Result::Ok(requirement) => {
+            output.push(package_dependency(name, requirement))
+            continue current + 1u32
+          }
         }
       }
     }
+    _ => break Result::Ok(output)
   }
 }
 
@@ -236,17 +238,18 @@ pub fn package_artifact_read_files(
   index: U32,
   output: Array<PackageArtifactFile>,
 ) -> Result<Array<PackageArtifactFile>, FormatDecodeError> {
-  if index >= count {
-    Result::Ok(output)
-  } else {
-    let path = package_artifact_read_string(reader, package_path_max_bytes())
-    let contents = package_artifact_read_bytes(reader, package_artifact_max_source_bytes())
-    if reader.failed {
-      Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
-    } else {
-      output.push(package_artifact_file(path, contents))
-      package_artifact_read_files(reader, count, index + 1u32, output)
+  while index {
+    current if current < count => {
+      let path = package_artifact_read_string(reader, package_path_max_bytes())
+      let contents = package_artifact_read_bytes(reader, package_artifact_max_source_bytes())
+      if reader.failed {
+        break Result::Err(FormatDecodeError::UnexpectedEnd(reader.offset))
+      } else {
+        output.push(package_artifact_file(path, contents))
+        continue current + 1u32
+      }
     }
+    _ => break Result::Ok(output)
   }
 }
 
@@ -325,13 +328,16 @@ pub fn package_artifact_dependency_size(
   values: Array<PackageDependency>,
   index: U32,
 ) -> U64 {
-  if index >= values.length() {
-    0u64
-  } else {
-    let dependency = values.get_unchecked(index)
-    8u64 + package_artifact_u32_to_u64(dependency.name().byte_length()) +
-    package_artifact_u32_to_u64(package_requirement_to_string(dependency.requirement()).byte_length()) +
-    package_artifact_dependency_size(values, index + 1u32)
+  let mut total = 0u64
+  while index {
+    current if current < values.length() => {
+      let dependency = values.get_unchecked(current)
+      total = total + 8u64 +
+        package_artifact_u32_to_u64(dependency.name().byte_length()) +
+        package_artifact_u32_to_u64(package_requirement_to_string(dependency.requirement()).byte_length())
+      continue current + 1u32
+    }
+    _ => break total
   }
 }
 
@@ -339,13 +345,15 @@ pub fn package_artifact_file_size(
   values: Array<PackageArtifactFile>,
   index: U32,
 ) -> U64 {
-  if index >= values.length() {
-    0u64
-  } else {
-    let file = values.get_unchecked(index)
-    8u64 + package_artifact_u32_to_u64(file.path().byte_length()) +
-    package_artifact_u32_to_u64(file.contents().byte_length()) +
-    package_artifact_file_size(values, index + 1u32)
+  let mut total = 0u64
+  while index {
+    current if current < values.length() => {
+      let file = values.get_unchecked(current)
+      total = total + 8u64 + package_artifact_u32_to_u64(file.path().byte_length()) +
+        package_artifact_u32_to_u64(file.contents().byte_length())
+      continue current + 1u32
+    }
+    _ => break total
   }
 }
 
@@ -364,12 +372,13 @@ pub fn package_artifact_dependency_seen(
   limit: U32,
   name: String,
 ) -> Bool {
-  if limit == 0u32 {
-    false
-  } else if values.get_unchecked(limit - 1u32).name().equals(name) {
-    true
-  } else {
-    package_artifact_dependency_seen(values, limit - 1u32, name)
+  while limit {
+    current if current > 0u32 => if values.get_unchecked(current - 1u32).name().equals(name) {
+      break true
+    } else {
+      continue current - 1u32
+    }
+    _ => break false
   }
 }
 
@@ -377,17 +386,26 @@ pub fn package_artifact_validate_dependencies(
   values: Array<PackageDependency>,
   index: U32,
 ) -> Result<Unit, FormatValidationErr> {
-  if index >= values.length() {
-    Result::Ok(package_artifact_unit())
-  } else {
-    let name = values.get_unchecked(index).name()
-    if !package_name_is_valid(name) {
-      Result::Err(FormatValidationErr::InvalidField("artifact dependency"))
-    } else if package_artifact_dependency_seen(values, index, name) {
-      Result::Err(FormatValidationErr::Duplicate(name))
-    } else {
-      package_artifact_validate_dependencies(values, index + 1u32)
+  let seen = Set::empty()
+  while 0u32 {
+    current if current < index && current < values.length() => {
+      seen.insert(values.get_unchecked(current).name())
+      continue current + 1u32
     }
+    _ => break package_artifact_unit()
+  }
+  while index {
+    current if current < values.length() => {
+      let name = values.get_unchecked(current).name()
+      if !package_name_is_valid(name) {
+        break Result::Err(FormatValidationErr::InvalidField("artifact dependency"))
+      } else if !seen.insert(name) {
+        break Result::Err(FormatValidationErr::Duplicate(name))
+      } else {
+        continue current + 1u32
+      }
+    }
+    _ => break Result::Ok(package_artifact_unit())
   }
 }
 
@@ -396,12 +414,13 @@ pub fn package_artifact_file_seen(
   limit: U32,
   path: String,
 ) -> Bool {
-  if limit == 0u32 {
-    false
-  } else if values.get_unchecked(limit - 1u32).path().equals(path) {
-    true
-  } else {
-    package_artifact_file_seen(values, limit - 1u32, path)
+  while limit {
+    current if current > 0u32 => if values.get_unchecked(current - 1u32).path().equals(path) {
+      break true
+    } else {
+      continue current - 1u32
+    }
+    _ => break false
   }
 }
 
@@ -409,18 +428,27 @@ pub fn package_artifact_validate_files(
   values: Array<PackageArtifactFile>,
   index: U32,
 ) -> Result<Unit, FormatValidationErr> {
-  if index >= values.length() {
-    Result::Ok(package_artifact_unit())
-  } else {
-    let file = values.get_unchecked(index)
-    let path = file.path()
-    if !package_artifact_path_is_valid(path) || file.contents().byte_length() > package_artifact_max_source_bytes() {
-      Result::Err(FormatValidationErr::InvalidField("artifact file"))
-    } else if package_artifact_file_seen(values, index, path) {
-      Result::Err(FormatValidationErr::Duplicate(path))
-    } else {
-      package_artifact_validate_files(values, index + 1u32)
+  let seen = Set::empty()
+  while 0u32 {
+    current if current < index && current < values.length() => {
+      seen.insert(values.get_unchecked(current).path())
+      continue current + 1u32
     }
+    _ => break package_artifact_unit()
+  }
+  while index {
+    current if current < values.length() => {
+      let file = values.get_unchecked(current)
+      let path = file.path()
+      if !package_artifact_path_is_valid(path) || file.contents().byte_length() > package_artifact_max_source_bytes() {
+        break Result::Err(FormatValidationErr::InvalidField("artifact file"))
+      } else if !seen.insert(path) {
+        break Result::Err(FormatValidationErr::Duplicate(path))
+      } else {
+        continue current + 1u32
+      }
+    }
+    _ => break Result::Ok(package_artifact_unit())
   }
 }
 
@@ -481,14 +509,15 @@ impl Decode<PackageArtifact, FormatDecodeError> for PackageArtifact {
 
 impl Validate<FormatValidationErr> for PackageArtifact {
   fn validate(self) -> Result<Unit, FormatValidationErr> {
+    let encoded_size = package_artifact_encoded_size(self)
     if !package_name_is_valid(self.name) || self.source.byte_length() == 0u32 ||
       self.source.byte_length() > package_requirement_max_bytes() ||
       !self.integrity.starts_with("sha256-") || self.integrity.byte_length() != 71u32 ||
       !package_artifact_is_hex(self.integrity.slice(7u32, 71u32), 64u32) ||
       !package_artifact_is_hex(self.interface_fingerprint, 64u32) {
       Result::Err(FormatValidationErr::InvalidField("package artifact provenance"))
-    } else if package_artifact_encoded_size(self) > 268435456u64 {
-      Result::Err(FormatValidationErr::ByteLimitExceeded("package artifact bytes", package_artifact_encoded_size(self), 268435456u64))
+    } else if encoded_size > 268435456u64 {
+      Result::Err(FormatValidationErr::ByteLimitExceeded("package artifact bytes", encoded_size, 268435456u64))
     } else if self.dependencies.length() > package_max_dependencies() {
       Result::Err(FormatValidationErr::LimitExceeded("artifact dependencies", self.dependencies.length(), package_max_dependencies()))
     } else if self.files.length() == 0u32 || self.files.length() > package_artifact_max_files() {

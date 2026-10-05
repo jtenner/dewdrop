@@ -73,3 +73,54 @@ test "bootstrap compiler fingerprint uses the selected standard root" {
   )
   assert_false(files.contains(bootstrap_join(root, "std/array.dew")))
 }
+
+///|
+test "package artifact validation rejects unsafe and conflicting source paths" {
+  assert_true(
+    bootstrap_validate_package_artifact_files([("../escape.dew", b"")])
+    is Err(_),
+  )
+  assert_true(
+    bootstrap_validate_package_artifact_files([("/escape.dew", b"")]) is Err(_),
+  )
+  assert_true(
+    bootstrap_validate_package_artifact_files([("src\\escape.dew", b"")])
+    is Err(_),
+  )
+  assert_true(
+    bootstrap_validate_package_artifact_files([("dew.json/source.dew", b"")])
+    is Err(_),
+  )
+  assert_true(
+    bootstrap_validate_package_artifact_files([
+      ("src/main.dew", b"a"),
+      ("src/main.dew", b"b"),
+    ])
+    is Err(_),
+  )
+  assert_true(
+    bootstrap_validate_package_artifact_files([
+      ("src.dew", b"a"),
+      ("src.dew/nested.dew", b"b"),
+    ])
+    is Err(_),
+  )
+}
+
+///|
+test "package artifact validation is iterative at the maximum file count" {
+  let files : Array[(String, Bytes)] = []
+  for index in 0..<BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES {
+    files.push(("src/file-\{index}.dew", b""))
+  }
+  assert_eq(bootstrap_validate_package_artifact_files(files), Ok(["src"]))
+}
+
+///|
+test "package artifact validation rejects a file beyond the maximum" {
+  let files : Array[(String, Bytes)] = []
+  for index in 0..<=BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES {
+    files.push(("file-\{index}.dew", b""))
+  }
+  assert_true(bootstrap_validate_package_artifact_files(files) is Err(_))
+}

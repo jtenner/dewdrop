@@ -6,6 +6,95 @@ struct BootstrapArtifactReader {
 }
 
 ///|
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES : Int = 268435456
+
+///|
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_DEPENDENCIES : Int = 256
+
+///|
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES : Int = 65536
+
+///|
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_PATH_BYTES : Int = 4096
+
+///|
+fn bootstrap_package_artifact_source_path_valid(path : String) -> Bool {
+  let bytes = @utf8.encode(path)
+  if bytes.length() == 0 ||
+    bytes.length() > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_PATH_BYTES ||
+    bytes[0] == b'/' ||
+    !path.has_suffix(".dew") ||
+    path.has_prefix("dew.json/") {
+    return false
+  }
+  let mut segment_start = 0
+  for index in 0..<=bytes.length() {
+    if index < bytes.length() &&
+      (bytes[index] == b'\\' || bytes[index] == b'\x00') {
+      return false
+    }
+    if index == bytes.length() || bytes[index] == b'/' {
+      let length = index - segment_start
+      if length == 0 ||
+        (length == 1 && bytes[segment_start] == b'.') ||
+        (
+          length == 2 &&
+          bytes[segment_start] == b'.' &&
+          bytes[segment_start + 1] == b'.'
+        ) {
+        return false
+      }
+      segment_start = index + 1
+    }
+  }
+  true
+}
+
+///|
+fn bootstrap_validate_package_artifact_files(
+  files : Array[(String, Bytes)],
+) -> Result[Array[String], String] {
+  if files.length() == 0 ||
+    files.length() > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES {
+    return Err("installed package artifact file count is outside its bound")
+  }
+  let file_paths : Set[String] = Set([], capacity=files.length())
+  let directories : Set[String] = Set([], capacity=files.length())
+  for file in files {
+    let path = file.0
+    if !bootstrap_package_artifact_source_path_valid(path) {
+      return Err("installed package artifact source path is unsafe: \{path}")
+    }
+    if !file_paths.add_and_check(path) {
+      return Err(
+        "installed package artifact has duplicate source path: \{path}",
+      )
+    }
+    let parts = path.split("/").map(part => part.to_owned()).to_array()
+    let mut directory = ""
+    for index in 0..<(parts.length() - 1) {
+      directory = if directory == "" {
+        parts[index]
+      } else {
+        directory + "/" + parts[index]
+      }
+      if file_paths.contains(directory) {
+        return Err(
+          "installed package artifact source path is also a directory: \{directory}",
+        )
+      }
+      directories.add(directory)
+    }
+    if directories.contains(path) {
+      return Err(
+        "installed package artifact source path is also a directory: \{path}",
+      )
+    }
+  }
+  Ok(directories.to_array())
+}
+
+///|
 fn BootstrapArtifactReader::read_u32(self : BootstrapArtifactReader) -> Int {
   if self.offset + 4 > self.bytes.length() {
     self.error = Some("truncated package artifact")
@@ -173,7 +262,8 @@ fn bootstrap_restore_package_artifact(
       b""
     }
   }
-  if encoded.length() < 40 {
+  if encoded.length() < 40 ||
+    encoded.length() > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES {
     bootstrap_fail("unsupported or truncated installed package artifact")
   }
   let payload = encoded[0:encoded.length() - 32].to_owned()
@@ -207,7 +297,14 @@ fn bootstrap_restore_package_artifact(
   }
   let dependencies : Array[BootstrapDependencyRequest] = []
   let dependency_count = reader.read_u32()
-  for _ in 0..<dependency_count {
+  let bounded_dependency_count = if dependency_count < 0 ||
+    dependency_count > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_DEPENDENCIES {
+    reader.error = Some("invalid package artifact dependency count")
+    0
+  } else {
+    dependency_count
+  }
+  for _ in 0..<bounded_dependency_count {
     dependencies.push({
       name: reader.read_string(),
       requirement: reader.read_string(),
@@ -215,11 +312,25 @@ fn bootstrap_restore_package_artifact(
   }
   let file_count = reader.read_u32()
   let files : Array[(String, Bytes)] = []
-  for _ in 0..<file_count {
+  let bounded_file_count = if file_count <= 0 ||
+    file_count > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES {
+    reader.error = Some("invalid package artifact file count")
+    0
+  } else {
+    file_count
+  }
+  for _ in 0..<bounded_file_count {
     files.push((reader.read_string(), reader.read_bytes()))
   }
   if reader.error is Some(_) || reader.offset != payload.length() {
     bootstrap_fail("invalid installed package artifact")
+  }
+  let directories = match bootstrap_validate_package_artifact_files(files) {
+    Ok(value) => value
+    Err(error) => {
+      bootstrap_fail(error)
+      []
+    }
   }
   let package_root = bootstrap_dirname(lock.manifest)
   if @fs.path_exists(package_root) {
@@ -242,6 +353,15 @@ fn bootstrap_restore_package_artifact(
   )
   ignore(bootstrap_remove_tree(staging))
   bootstrap_ensure_directory(staging)
+  for directory in directories {
+    let destination = bootstrap_join(staging, directory)
+    @fs.create_dir(destination) catch {
+      error =>
+        bootstrap_fail(
+          "cannot restore package source directory: \{bootstrap_fs_error_message(error)}",
+        )
+    }
+  }
   let dependency_fields : Map[String, Json] = Map([])
   for dependency in dependencies {
     dependency_fields[dependency.name] = Json::string(dependency.requirement)
@@ -261,7 +381,6 @@ fn bootstrap_restore_package_artifact(
   }
   for file in files {
     let destination = bootstrap_join(staging, file.0)
-    bootstrap_ensure_directory(bootstrap_dirname(destination))
     @fs.write_bytes_to_file(destination, file.1) catch {
       error =>
         bootstrap_fail(
