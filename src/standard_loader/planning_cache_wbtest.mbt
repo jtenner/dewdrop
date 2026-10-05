@@ -77,3 +77,55 @@ test "planning cache keys track source interface root and planning mode" {
   )
   assert_true(fragment_key != changed_fragment_key)
 }
+
+///|
+test "fragment cache accounting excludes usage-dependent enum bypasses" {
+  let prior_plan = @sys.get_env_var("DEW_PLAN_CACHE").unwrap_or("")
+  let prior_compiler = @sys.get_env_var("DEW_COMPILER_FINGERPRINT").unwrap_or(
+    "",
+  )
+  @sys.set_env_var("DEW_PLAN_CACHE", "1")
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", "fragment-bypass-test")
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("main", [
+      @semantic.ManifestFile::new(
+        "main.dew", b"pub fn main() -> I32 {\n  1\n}\n",
+      ),
+    ]),
+  ])
+  let program = @semantic.collect_program_manifest_with_standard_sources(
+    23961UL,
+    manifest,
+    @semantic.StandardLibrarySources::bootstrap(),
+    true,
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let session = program_output_test_session()
+  let lowering = plan_program_lowering_with_cache(
+    program, analyzed, pack=Some(session),
+  ).unwrap().lowering
+  let root = program.module_index("main").unwrap()
+  let options = @semantic.WasmGCPlanningOptions::optimized_subtype_families()
+  let cold = plan_program_wasmgc_link_with_cache(
+    program,
+    analyzed,
+    lowering,
+    root,
+    options,
+    pack=Some(session),
+  ).unwrap()
+  assert_eq(cold.status.fragment_hits, 0)
+  assert_eq(cold.status.fragment_misses, program.modules.length() - 1)
+  let warm = plan_program_wasmgc_link_with_cache(
+    program,
+    analyzed,
+    lowering,
+    root,
+    options,
+    pack=Some(session),
+  ).unwrap()
+  assert_eq(warm.status.fragment_hits, program.modules.length() - 1)
+  assert_eq(warm.status.fragment_misses, 0)
+  @sys.set_env_var("DEW_PLAN_CACHE", prior_plan)
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", prior_compiler)
+}

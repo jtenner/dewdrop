@@ -858,6 +858,12 @@ pub fn analyze_program_semantics_with_body_cache(
     program.modules.length(),
     None,
   )
+  // Body inference can complete deferred types in interfaces owned by modules
+  // that were analyzed earlier. Delay publication until every module has been
+  // inferred so entries use the same settled interface state that the
+  // interface-bundle cache persists.
+  let pending_module_stores : Array[@semantic.InferredModuleBodies?] =
+    Array::make(program.modules.length(), None)
   let mut hits = 0
   let mut misses = 0
   let mut family_hits = 0
@@ -915,17 +921,7 @@ pub fn analyze_program_semantics_with_body_cache(
               )
             }
             if !family_applicable {
-              match
-                store_body_inference_cache(
-                  program,
-                  frozen,
-                  module_index,
-                  value,
-                  pack~,
-                ) {
-                Ok(_) => ()
-                Err(error) => return Err(error)
-              }
+              pending_module_stores[module_index] = Some(value)
             }
             value
           }
@@ -943,6 +939,23 @@ pub fn analyze_program_semantics_with_body_cache(
           inferred,
         ),
       )
+    }
+  }
+  for module_index, pending in pending_module_stores {
+    match pending {
+      Some(value) =>
+        match
+          store_body_inference_cache(
+            program,
+            frozen,
+            module_index,
+            value,
+            pack~,
+          ) {
+          Ok(_) => ()
+          Err(error) => return Err(error)
+        }
+      None => ()
     }
   }
   let modules : Array[@semantic.AnalyzedProgramModule] = []

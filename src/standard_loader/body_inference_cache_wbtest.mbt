@@ -156,6 +156,54 @@ test "body-inference cache keys include exact source and interface evidence" {
 }
 
 ///|
+test "body-inference pack entries match the persisted final interface state" {
+  let prior_body = @sys.get_env_var("DEW_BODY_CACHE").unwrap_or("")
+  let prior_family = @sys.get_env_var("DEW_BODY_FAMILY_CACHE").unwrap_or("")
+  let prior_compiler = @sys.get_env_var("DEW_COMPILER_FINGERPRINT").unwrap_or(
+    "",
+  )
+  @sys.set_env_var("DEW_BODY_CACHE", "1")
+  @sys.set_env_var("DEW_BODY_FAMILY_CACHE", "0")
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", "body-final-interface-test")
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("main", [
+      @semantic.ManifestFile::new(
+        "main.dew", b"pub fn main() -> I32 {\n  1\n}\n",
+      ),
+    ]),
+  ])
+  let loaded : StandardLibraryLoad = {
+    sources: @semantic.StandardLibrarySources::bootstrap(),
+    fingerprint: "body-final-interface-standard",
+    dependency_fingerprint: "",
+    cacheable: true,
+  }
+  let program = @semantic.collect_program_manifest_with_standard_sources(
+    23113UL,
+    manifest,
+    loaded.sources,
+    true,
+  )
+  let session = program_output_test_session()
+  let cold = analyze_program_with_interface_bundle_cache(
+    program,
+    loaded,
+    pack=Some(session),
+  ).unwrap()
+  assert_true(cold.body_cache_status.misses > 0)
+  let warm = analyze_program_with_interface_bundle_cache(
+    program,
+    loaded,
+    pack=Some(session),
+  ).unwrap()
+  assert_eq(warm.body_cache_status.hits, program.modules.length())
+  assert_eq(warm.body_cache_status.misses, 0)
+  @sys.set_env_var("DEW_BODY_CACHE", prior_body)
+  @sys.set_env_var("DEW_BODY_FAMILY_CACHE", prior_family)
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", prior_compiler)
+}
+
+///|
 test "body-family cache keys isolate private declaration edits" {
   let original = @semantic.collect_program_manifest(
     23111UL,

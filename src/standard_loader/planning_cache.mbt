@@ -663,6 +663,10 @@ pub fn plan_program_wasmgc_link_with_cache(
     lowering.modules.length(),
     None,
   )
+  // The semantic planner deliberately bypasses module fragments whose generic
+  // enum layouts depend on whole-program usage. Record a miss only when the
+  // planner confirms that a fresh fragment is cacheable by publishing it.
+  let missing = Array::make(lowering.modules.length(), false)
   let mut hits = 0
   let mut misses = 0
   for module_index, _ in lowering.modules {
@@ -680,7 +684,7 @@ pub fn plan_program_wasmgc_link_with_cache(
         cached[module_index] = Some(value)
         hits += 1
       }
-      Ok(None) => misses += 1
+      Ok(None) => missing[module_index] = true
     }
   }
   let mut cache_error : String? = None
@@ -693,6 +697,9 @@ pub fn plan_program_wasmgc_link_with_cache(
     fn(module_index, fresh) {
       if cache_error is Some(_) {
         return
+      }
+      if missing[module_index] {
+        misses += 1
       }
       match
         store_wasmgc_fragment_cache(
