@@ -1036,6 +1036,9 @@ Run the pinned Starshine tests only when the Starshine integration changes:
 tools/test-starshine-native.sh
 ```
 
+This lane uses native release lowering. The current MoonBit O0 native linker
+cannot lower the non-null value-record arrays used by Starshine's hot IR pass.
+
 Do not use `moon test --target native` as the normal Dewdrop command. Moon runs
 that command for both members of `moon.work`, including the complete Starshine
 test suite.
