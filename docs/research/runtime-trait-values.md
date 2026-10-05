@@ -119,6 +119,8 @@ A Node WasmGC runtime probe executed ten million loop iterations per sample. The
 
 Generic parameter-selector propagation originally recomputed every body summary and rescanned every expression until a fixed point. A forwarding chain of depth `D` therefore required up to `D` whole-program scans. The planner now builds one deterministic declaration-to-call-site index, seeds direct selectors in module/body order, and processes newly discovered transitive selectors through a source-ordered worklist. Each call-site record carries its optional root-body index, so the planner retains only sparse body and generic-call metadata rather than one dense root slot per expression. Every candidate call is rewritten at most once, and malformed spans or indices are rejected locally rather than indexing an arena unchecked. The release-native depth-256 benchmark improved from `72.82 ms ± 21.88 ms` to `19.33–23.54 ms` across two post-change runs, approximately 68–73% faster, while a permanent depth-64 regression proves complete devirtualization with zero materialized generic functions or runtime-trait artifacts.
 
+Selector and transparent-flow analysis unwrap a valid explicit-return expression before tracing its returned value. This preserves closed generic trait devirtualization after return expressions become explicit lowering nodes, while genuinely dynamic and externally callable paths retain their runtime evidence.
+
 ## Determinism and static fast path
 
 Trait layouts follow first source use and trait declaration method order. Dictionaries are keyed by exact trait and implementation declarations. Adapter, function, type, global, and element ordering is deterministic through the existing module and program planners.

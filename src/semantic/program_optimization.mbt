@@ -283,6 +283,22 @@ fn program_callable_effect_summaries(
 }
 
 ///|
+fn program_unwrap_return_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+) -> ExprId {
+  if expression < 0 || expression >= module_.expressions.length() {
+    return -1
+  }
+  match module_.expressions[expression].kind {
+    PlannedReturnExpression(value) if value >= 0 &&
+      value < module_.expressions.length() => value
+    PlannedReturnExpression(_) => -1
+    _ => expression
+  }
+}
+
+///|
 fn transparent_callback_root_expression(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
@@ -308,10 +324,13 @@ fn transparent_callback_root_expression(
       if tail < 0 {
         return -1
       }
-      let mut candidate = tail
+      let mut candidate = program_unwrap_return_expression(module_, tail)
+      if candidate < 0 {
+        return -1
+      }
       let mut candidate_item = items.length - 1
       if items.length >= 2 {
-        match module_.expressions[tail].kind {
+        match module_.expressions[candidate].kind {
           PlannedLocalGet(tail_local_id) =>
             match module_.block_items[items.start + items.length - 2].kind {
               PlannedLetItem(local_id, false, initializer) if local_id ==
@@ -530,7 +549,7 @@ fn generic_parameter_selector_root_expression(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
 ) -> ExprId {
-  match body.root {
+  let expression = match body.root {
     BlockBodyRoot(block) => {
       if block < 0 || block >= module_.blocks.length() {
         return -1
@@ -548,6 +567,7 @@ fn generic_parameter_selector_root_expression(
     }
     ExpressionBodyRoot(expression) => expression
   }
+  program_unwrap_return_expression(module_, expression)
 }
 
 ///|
@@ -887,10 +907,12 @@ fn runtime_trait_block_result_expression(
   if items.length == 0 {
     return -1
   }
-  match module_.block_items[items.start + items.length - 1].kind {
+  let expression = match
+    module_.block_items[items.start + items.length - 1].kind {
     PlannedExpressionItem(expression) => expression
     _ => -1
   }
+  program_unwrap_return_expression(module_, expression)
 }
 
 ///|
@@ -1271,6 +1293,10 @@ fn runtime_trait_summary_body_is_transparent(
         | PlannedDynamicTraitCall(_, _, _, _, _, _) => continue
         _ => return false
       }
+    }
+    match module_.expressions[expression].kind {
+      PlannedReturnExpression(value) if value == root => continue
+      _ => ()
     }
     if !program_effect_summary_expression_is_discardable(
         module_, expression, effects, 0,

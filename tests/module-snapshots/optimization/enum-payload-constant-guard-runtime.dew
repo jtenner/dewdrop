@@ -12,6 +12,6 @@ fn guarded(value: I32) -> I32 {
   }
 }
 
-pub fn main() -> Unit {
-  assert(guarded(42) == 42, "constant guard result")
+pub fn main() -> I32 {
+  guarded(42)
 }

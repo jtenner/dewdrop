@@ -998,6 +998,44 @@ test "closed generic trait coercion forwarding erases dynamic artifacts" {
 }
 
 ///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
+test "explicit-return generic trait selectors devirtualize every closed call" {
+  let program = collect_program_manifest(
+    21980UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nstruct Item {\n  value: I32\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nimpl Read for Item {\n  fn read(self) -> I32 {\n    self.value\n  }\n}\nfn erase<t: Read>(value: t) -> Read {\n  return value\n}\nfn forward<t: Read>(value: t) -> Read {\n  return erase(value)\n}\nfn invoke(value: Read) -> I32 {\n  return value.read()\n}\npub fn main() -> I32 {\n  invoke(forward(Box::{\n    value: 40\n  })) + invoke(erase(Item::{\n    value: 2\n  }))\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.modules[0].trait_dictionaries.length(), 0)
+  assert_eq(link.modules[0].trait_methods.length(), 0)
+  assert_eq(link.trait_dictionary_globals.length(), 0)
+  let mut direct_impl_calls = 0
+  for expression in lowering.modules[0].expressions {
+    match expression.kind {
+      PlannedDynamicTraitCall(_, _, _, _, _, _) =>
+        fail("closed generic flow retained dynamic dispatch")
+      PlannedDirectCall(target, receiver, _, _) if receiver >= 0 =>
+        match lowering.modules[0].functions.callable_of(target) {
+          Some({ kind: PlannedImplMethodCallable(_, _), .. }) =>
+            direct_impl_calls += 1
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  assert_eq(direct_impl_calls, 2)
+}
+
+///|
 fn open_generic_selector_chain_test_source(depth : Int) -> Bytes {
   let source = Buffer(size_hint=depth * 96 + 512)
   source.write_string_utf8(
