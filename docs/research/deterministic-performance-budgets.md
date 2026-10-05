@@ -27,6 +27,8 @@ The 2026-09-10 snapshot refresh added deterministic `compiler.facts` metadata an
 
 The refresh does not weaken the semantic gates. Adapter export counts, materialized specialization counts, indirect-dispatch limits, aggregate reconstruction sites, and cast/test limits remain exact or bounded at the current implementation. The later aggregate and enum correctness repair adds required payload reconstruction sites; their budgets record that new correct shape instead of hiding it behind extra general headroom.
 
+The WAT architecture cases also had count-only expectations from before that snapshot refresh. Their numeric counts now match the reviewed current fixtures, while every required and forbidden pattern remains in force. The checker counts WAT tokens rather than substrings, so the producer name `dewdrop` in `compiler.facts` cannot inflate the `drop` instruction count.
+
 ## Initial gates
 
 `tests/performance-budgets/closure-directization.json` requires the allocation-free callback path to retain zero `call_ref`, `return_call_ref`, `ref.cast`, and `ref.test` instructions. It also bounds binary/text size, function/type counts, and the remaining standard assertion string allocation sites.
