@@ -27,9 +27,9 @@ def outputs():
         native.append("      Some({ inputs: [" + ", ".join(f"Wasm{item}Value" for item in inputs) +
                       f"], result: {native_result}, }})\n")
         dew.append("  if " + " ||\n    ".join(f'name.equals(b"{op}")' for op in opcodes) + " {\n")
-        dew.append("    return Option::Some(SelfHostRawIntrinsicSignature::{\n      inputs: [" +
-                   ", ".join(f"SelfHostWasmBodyCarrier::{item}BodyCarrier" for item in inputs) +
-                   f"]\n      result: SelfHostWasmBodyCarrier::{result}BodyCarrier\n    }})\n  }}\n")
+        dew.append("    return Some({\n      inputs: [" +
+                   ", ".join(f"{item}BodyCarrier" for item in inputs) +
+                   f"]\n      result: {result}BodyCarrier\n    }})\n  }}\n")
     native.append("    _ => raw_wasm_shuffle_signature(name)\n  }\n}\n")
     native.append("\n///|\nfn raw_wasm_simd_uses_memory(name : Bytes) -> Bool {\n  match name {\n    ")
     native.append(" | ".join(f'b"{row[0]}"' for row in SIMD_MEMORY_INSTRUCTIONS))

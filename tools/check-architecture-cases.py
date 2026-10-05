@@ -12,6 +12,18 @@ ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "tests" / "architecture-cases.json"
 
 
+def consumer_result_error(output: str, expected: object) -> str | None:
+    if not isinstance(expected, dict):
+        return "expected consumer result must be a JSON object"
+    try:
+        actual = json.loads(output)
+    except json.JSONDecodeError as error:
+        return f"consumer returned invalid JSON: {error}"
+    if actual != expected:
+        return f"expected {expected!r}, got {actual!r}"
+    return None
+
+
 def run_performance(cases: list[dict[str, object]]) -> None:
     for case in cases:
         label = str(case["label"])
@@ -48,10 +60,12 @@ def run_performance(cases: list[dict[str, object]]) -> None:
                 capture_output=True,
             )
             output = consumed.stdout.decode(errors="replace")
-            if consumed.returncode != 0 or str(consumer["expected"]) not in output:
+            result_error = consumer_result_error(output, consumer.get("expected"))
+            if consumed.returncode != 0 or result_error is not None:
                 raise SystemExit(
                     f"{label} consumer case failed:\n"
                     f"{consumed.stderr.decode(errors='replace')}{output}"
+                    f"{'' if result_error is None else result_error + chr(10)}"
                 )
         print(f"checked architecture performance case: {label}")
 

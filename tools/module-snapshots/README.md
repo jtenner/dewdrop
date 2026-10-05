@@ -175,7 +175,8 @@ tools/module-snapshots/run.sh --runtime node --runtime wago
 # Run one fixture by its feature-relative name.
 tools/module-snapshots/run.sh --fixture text/concat
 
-# Regenerate diagnostics, stdout output, and WAT.
+# Regenerate diagnostics, stdout output, and WAT. This also creates a missing
+# JSON expectation and WAT for a new fixture.
 tools/module-snapshots/run.sh --update
 
 # List fixture names.

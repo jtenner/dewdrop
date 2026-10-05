@@ -122,9 +122,13 @@ def validate_host(path: Path, host: Any) -> None:
             raise SnapshotError(f"{path.relative_to(ROOT)} stdin_hex must be hexadecimal") from error
 
 
-def load_expectation(source: Path) -> dict[str, Any]:
+def load_expectation(
+    source: Path, *, allow_missing: bool = False
+) -> dict[str, Any]:
     path = expectation_path(source)
     if not path.is_file():
+        if allow_missing:
+            return {"errors": [], "warnings": [], "output": None}
         raise SnapshotError(f"missing {path.relative_to(ROOT)}")
     try:
         expected = json.loads(path.read_text(encoding="utf-8"))
@@ -189,6 +193,8 @@ def compiler_diagnostics(output: str) -> tuple[list[str], list[str], list[str]]:
             warnings.append(line.removeprefix("DEW_WARNING "))
         elif line.startswith("DEW_INTERNAL "):
             internals.append(line.removeprefix("DEW_INTERNAL "))
+        elif line:
+            internals.append(f"unframed compiler output: {line}")
     if active is not None:
         internals.append("unterminated compiler diagnostic")
     return errors, warnings, internals
@@ -417,7 +423,7 @@ def process_fixture(
         return FixtureResult(tuple(stdout), tuple(stderr), True)
 
     temporary_name = name.replace("/", "__")
-    expected = load_expectation(source)
+    expected = load_expectation(source, allow_missing=update)
     first = temp / f"{temporary_name}.wasm"
     second = temp / f"{temporary_name}.repeat.wasm"
     actual_wat = temp / f"{temporary_name}.wat"

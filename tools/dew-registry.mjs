@@ -25,7 +25,7 @@ function registryOrigin() {
   let url;
   try { url = new URL(raw); } catch { fail("registry must be an absolute URL"); }
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/") fail("registry URL must contain only an origin");
-  const local = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
+  const local = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
   if (url.protocol !== "https:" && !(local && url.protocol === "http:")) fail("registry must use HTTPS unless it is local development");
   return url.origin;
 }
