@@ -73,6 +73,15 @@ fn cache_pack_write_string(output : Buffer, value : String) -> Unit {
 }
 
 ///|
+fn cache_pack_write_int(output : Buffer, value : Int) -> Unit {
+  let bits = value.reinterpret_as_uint()
+  output.write_byte((bits & 0xffU).to_byte())
+  output.write_byte(((bits >> 8) & 0xffU).to_byte())
+  output.write_byte(((bits >> 16) & 0xffU).to_byte())
+  output.write_byte(((bits >> 24) & 0xffU).to_byte())
+}
+
+///|
 fn cache_pack_default_key(
   manifest : @semantic.ProgramManifest,
   root_module_index : Int,
@@ -80,7 +89,7 @@ fn cache_pack_default_key(
   planning_mode : Int,
 ) -> String {
   let output = Buffer()
-  output.write_bytes(b"DEW_COMPILATION_CACHE_PACK_KEY_V1\x00")
+  output.write_bytes(b"DEW_COMPILATION_CACHE_PACK_KEY_V1_COUNTED_GRAPH\x00")
   output.write_byte(if default_preamble { 1 } else { 0 })
   for shift in [0, 8, 16, 24] {
     output.write_byte(
@@ -88,8 +97,10 @@ fn cache_pack_default_key(
     )
   }
   output.write_byte(planning_mode.to_byte())
+  cache_pack_write_int(output, manifest.modules.length())
   for module_ in manifest.modules {
     cache_pack_write_string(output, module_.path)
+    cache_pack_write_int(output, module_.files.length())
     for file in module_.files {
       cache_pack_write_string(output, file.path)
     }

@@ -32,6 +32,11 @@ Exact successful check, HIR, lowering, and Wasm results are pack sections. They
 form the default warm-start boundary. Module phase sections remain available for
 incremental misses and explicit phase-cache measurements.
 
+Pack-path and exact-program content identities use canonical counted manifest
+graphs. They encode the module count and each module's file count before the
+ordered path and source records. Moving a file across a module boundary cannot
+produce the same cache identity.
+
 ## Consequences
 
 - A warm 100-module exact hit uses one pack read instead of hundreds of artifact

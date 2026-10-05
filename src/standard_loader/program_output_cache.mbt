@@ -43,9 +43,11 @@ fn program_output_content_digest(
   manifest : @semantic.ProgramManifest,
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_PROGRAM_OUTPUT_CONTENT_V1\x00")
+  output.write_bytes(b"DEW_PROGRAM_OUTPUT_CONTENT_V1_COUNTED_GRAPH\x00")
+  program_output_write_int(output, manifest.modules.length())
   for module_ in manifest.modules {
     cache_pack_write_string(output, module_.path)
+    program_output_write_int(output, module_.files.length())
     for file in module_.files {
       cache_pack_write_string(output, file.path)
       program_output_write_int(output, file.source.length())
