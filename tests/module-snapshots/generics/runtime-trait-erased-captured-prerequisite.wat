@@ -595,21 +595,21 @@
   (func (;22;) (type 53) (param eqref eqref eqref) (result eqref)
     (local eqref eqref)
     local.get 0
-    local.set 1
+    local.set 3
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
     f64.const 0x0p+0 (;=0;)
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-    local.get 1
+    local.get 3
     struct.new 32
-    local.set 2
+    local.set 4
     i32.const 0
     i64.const 0
     f32.const 0x0p+0 (;=0;)
     f64.const 0x0p+0 (;=0;)
     v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000
-    local.get 2
+    local.get 4
     struct.new 33
     local.get 1
     local.get 2

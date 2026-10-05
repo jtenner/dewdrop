@@ -5,8 +5,14 @@ pub enum CompilerPlanningMode {
 } derive(Eq, Debug)
 
 ///|
+pub(all) struct CompilerRenderedDiagnostic {
+  severity : @semantic.CompilerDiagnosticSeverity
+  text : String
+} derive(Eq, Debug)
+
+///|
 pub(all) enum CompilerCompilationError {
-  CompilerSourceError(String)
+  CompilerSourceError(String, Array[CompilerRenderedDiagnostic])
   CompilerInfrastructureError(String)
 } derive(Eq, Debug)
 
@@ -15,7 +21,7 @@ pub fn CompilerCompilationError::message(
   self : CompilerCompilationError,
 ) -> String {
   match self {
-    CompilerSourceError(message) => message
+    CompilerSourceError(message, _) => message
     CompilerInfrastructureError(message) => message
   }
 }
@@ -84,15 +90,16 @@ fn compiler_frontend_error(
     return None
   }
   let message = StringBuilder::new()
+  let rendered : Array[CompilerRenderedDiagnostic] = []
   for index, diagnostic in diagnostics {
     if index > 0 {
       message.write_string("\n")
     }
-    message.write_string(
-      @semantic.render_compiler_source_diagnostic(program, diagnostic),
-    )
+    let text = @semantic.render_compiler_source_diagnostic(program, diagnostic)
+    rendered.push({ severity: diagnostic.severity, text, })
+    message.write_string(text)
   }
-  Some(CompilerSourceError(message.to_string()))
+  Some(CompilerSourceError(message.to_string(), rendered))
 }
 
 ///|

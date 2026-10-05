@@ -99,6 +99,16 @@ fn main {
   let compiled = match
     @compiler_driver.compile_manifest(manifest, loaded, options) {
     Ok(compiled) => compiled
+    Err(@compiler_driver.CompilerSourceError(_, diagnostics)) => {
+      for diagnostic in diagnostics {
+        match diagnostic.severity {
+          @semantic.CompilerError => snapshot_error(diagnostic.text)
+          @semantic.CompilerWarning => snapshot_warning(diagnostic.text)
+        }
+      }
+      @sys.exit(1)
+      abort("unreachable source error")
+    }
     Err(error) => {
       snapshot_fail(error.message())
       abort("unreachable cache failure")

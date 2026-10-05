@@ -51,7 +51,11 @@ test "compiler driver reports missing constructor context before physical planni
       @standard_loader.StandardLibraryLoad::bootstrap(),
       CompilerPipelineOptions::production(5002UL, 0, true),
     ) {
-    Err(CompilerSourceError(message)) => {
+    Err(CompilerSourceError(message, diagnostics)) => {
+      assert_true(diagnostics.length() > 0)
+      for diagnostic in diagnostics {
+        assert_true(message.contains(diagnostic.text))
+      }
       assert_true(message.contains("missing-context.dew"))
       assert_true(message.contains("error:"))
     }
@@ -74,7 +78,11 @@ test "uncached compiler driver reports source errors before physical planning" {
       @semantic.StandardLibrarySources::bootstrap(),
       CompilerPipelineOptions::production(5003UL, 0, true),
     ) {
-    Err(CompilerSourceError(message)) => {
+    Err(CompilerSourceError(message, diagnostics)) => {
+      assert_true(diagnostics.length() > 0)
+      for diagnostic in diagnostics {
+        assert_true(message.contains(diagnostic.text))
+      }
       assert_true(message.contains("missing-context.dew"))
       assert_true(message.contains("error:"))
     }

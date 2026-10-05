@@ -26,7 +26,7 @@ fn cli_compilation_error(
   error : @compiler_driver.CompilerCompilationError,
 ) -> Unit {
   match error {
-    @compiler_driver.CompilerSourceError(message) => {
+    @compiler_driver.CompilerSourceError(message, _) => {
       cli_error(message)
       @sys.exit(1)
     }
