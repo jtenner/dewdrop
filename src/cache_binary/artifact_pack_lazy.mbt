@@ -52,6 +52,14 @@ pub fn ArtifactPack::lookup_checked(
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],
 ) -> Result[Bytes?, String] {
+  match artifact_pack_validate_digest(content_digest, "content digest") {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  match artifact_pack_validate_digest(context_digest, "context digest") {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
   let candidates = self.owner_entries.get((kind, owner)).unwrap_or([])
   for index in candidates {
     let entry = self.entries[index]

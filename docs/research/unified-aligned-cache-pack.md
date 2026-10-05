@@ -177,6 +177,7 @@ Permanent coverage includes:
 - exact magic, section sizes, entry sizes, zero padding, and byte-identical
   re-encoding;
 - lazy index opening and one-entry decoding;
+- checked lookup rejection of non-32-byte content and context digests;
 - full-digest checks after forced 32-bit lookup-lane collisions;
 - stale-owner replacement while unchanged entries survive repacking;
 - truncation, selected-entry corruption, and whole-pack corruption;

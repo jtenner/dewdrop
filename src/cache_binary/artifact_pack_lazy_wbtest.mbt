@@ -91,3 +91,31 @@ test "lazy artifact pack reports corruption in a selected entry" {
     is Err(_),
   )
 }
+
+///|
+test "checked artifact lookup rejects short digests without trapping" {
+  let pack = ArtifactPack::empty()
+  let short_digest : FixedArray[Byte] = FixedArray::make(3, (0 : Byte))
+  match
+    pack.lookup_checked(
+      test_parse_event_pack_kind,
+      1U,
+      "module:a.dew",
+      short_digest,
+      blake3(b"context"),
+    ) {
+    Err(error) => assert_true(error.contains("content digest"))
+    Ok(_) => fail("short content digest must be rejected")
+  }
+  match
+    pack.lookup_checked(
+      test_parse_event_pack_kind,
+      1U,
+      "module:a.dew",
+      blake3(b"content"),
+      short_digest,
+    ) {
+    Err(error) => assert_true(error.contains("context digest"))
+    Ok(_) => fail("short context digest must be rejected")
+  }
+}
