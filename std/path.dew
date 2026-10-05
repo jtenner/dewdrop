@@ -97,9 +97,7 @@ impl RelativePath {
         builder.append(self.value)
         builder.append_ascii(47u8)
         builder.append(valid_child.to_string())
-        Result::Ok(RelativePath::{
-          value: builder.finish()
-        })
+        relative_path(builder.finish())
       }
     }
   }

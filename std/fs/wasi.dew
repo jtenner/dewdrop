@@ -94,6 +94,10 @@ pub fn wasi_write_rights() -> U64 {
   6291536u64
 }
 
+pub fn wasi_create_directory_accepts_existing_kind(kind: PathKind) -> Bool {
+  kind is PathKind::Directory
+}
+
 impl FileSystem for WasiFileSystem {
   fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError> {
     let path_pointer = 128u32
@@ -242,8 +246,20 @@ impl FileSystem for WasiFileSystem {
     let pointer = 128u32
     let length = wasi_copy_path(path, pointer)
     let error = @wasi.path_create_directory(self.root, pointer, length)
-    if error == 0u32 || error == 20u32 {
+    if error == 0u32 {
       Result::Ok(wasi_fs_unit())
+    } else if error == 20u32 {
+      match self.path_kind(path) {
+        Result::Err(stat_error) => Result::Err(stat_error)
+        Result::Ok(kind) =>
+          if wasi_create_directory_accepts_existing_kind(kind) {
+            Result::Ok(wasi_fs_unit())
+          } else {
+            Result::Err(
+              wasi_fs_error(FsOperation::CreateDirectory, path, error),
+            )
+          }
+      }
     } else {
       Result::Err(wasi_fs_error(FsOperation::CreateDirectory, path, error))
     }

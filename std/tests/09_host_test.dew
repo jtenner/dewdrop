@@ -1,9 +1,11 @@
 open dew.std.array
 open dew.std.bytes
 open dew.std.fs
+open dew.std.fs.wasi
 open dew.std.path
 open dew.std.process
 open dew.std.process.wasi
+open dew.std.string_builder
 open dew.std.testing
 
 fn host_test_path(value: String) -> RelativePath {
@@ -105,6 +107,22 @@ test "relative paths join validated children" {
   }
 }
 
+test "relative path joins enforce the total path limit" {
+  let builder = StringBuilder::with_capacity(4096u32)
+  while 0u32 {
+    index if index < 4096u32 => {
+      builder.append_ascii(97u8)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let root = host_test_path(builder.finish())
+  assert(
+    root.join("b") is Result::Err(PathError::TooLong),
+    "oversized joined path was accepted",
+  )
+}
+
 test "WASI process scratch layout includes pointer tables" {
   assert(
     wasi_process_layout_fits(4092u32, 49152u32),
@@ -132,6 +150,17 @@ test "WASI process pointers stay inside the text region" {
   assert(
     wasi_process_pointer_limit(68u32, 64u32, 4u32) is Option::None,
     "text end was accepted",
+  )
+}
+
+test "WASI create directory is idempotent only for a directory" {
+  assert(
+    wasi_create_directory_accepts_existing_kind(PathKind::Directory),
+    "existing directory was rejected",
+  )
+  assert(
+    !wasi_create_directory_accepts_existing_kind(PathKind::File),
+    "existing file was accepted",
   )
 }
 

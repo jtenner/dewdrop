@@ -82,7 +82,8 @@ validates and reproduces the fixture.
 
 Permanent coverage includes:
 
-- strict relative-path validation and joining;
+- strict relative-path validation, including joined-value length limits;
+- existing-directory idempotence without accepting existing files;
 - provider-neutral filesystem and process trait dispatch;
 - selective and wildcard standard-module loading;
 - frozen-interface handling for module-local foreign library namespaces;
