@@ -8,11 +8,11 @@
     "callbackWrapper": 1
   },
   "path": "fixture.application",
-  "interfaceFingerprint": "37e198ed82c19e275ff40728ee82380a9d0ad7ef8414c5a762c87d6fe34e7487",
+  "interfaceFingerprint": "e5fbe2fa2645e217ce0a17aa6aa0936f827979a412b0d5cf55e70b1960393aa2",
   "dependencies": [
     {
       "path": "dew.std.option",
-      "contentFingerprint": "56693c65ea8f8e5f1dffe6e0423526c980d2a7123363056a383d70b724af275a"
+      "contentFingerprint": "cd5e73a6f84ed11dce0a0b73da9595e3f8914c95c5e22e976b8a62dff10ccfe0"
     },
     {
       "path": "dew.std.result",
@@ -20,7 +20,7 @@
     },
     {
       "path": "dew.std.preamble",
-      "contentFingerprint": "74d9f0cc0bdda12e2ce7f7283e05e7368ad61db16086efead047bc3f956f6abc"
+      "contentFingerprint": "058ecbea462f0643afe2fb1ca3fca9b5bece988bf8e5b53ea47b44791861f154"
     },
     {
       "path": "fixture.package_callback",
