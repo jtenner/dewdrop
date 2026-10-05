@@ -3466,6 +3466,7 @@ fn starshine_body_locals(
   generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.PlannedBodyLowering,
   leading_parameter_count : Int,
+  minimum_parameter_count? : Int = -1,
   lambda? : @semantic.LambdaId = -1,
 ) -> (
   Array[Int],
@@ -3543,6 +3544,12 @@ fn starshine_body_locals(
         if planned_local.elided || elided_locals[local_id] {
           continue
         }
+        let local_parameter_count = if minimum_parameter_count >
+          parameter_count {
+          minimum_parameter_count
+        } else {
+          parameter_count
+        }
         let cell_slot = starshine_local_capture_cell_slot(
           lowering, body, local_id,
         )
@@ -3553,7 +3560,8 @@ fn starshine_body_locals(
           planned_local.shape,
         )
         if specialized_shape is @semantic.ProductPlannedValueShape(_) {
-          local_indices[local_id] = parameter_count + body_local_types.length()
+          local_indices[local_id] = local_parameter_count +
+            body_local_types.length()
           let start = body_local_types.length()
           if cell_slot >= 0 {
             body_local_types.push(@lib.ValType::eqref_null())
@@ -3659,12 +3667,19 @@ fn starshine_body_locals(
               }
               slot_reusable[slot] = reusable
             }
-            local_indices[local_id] = parameter_count + slot
+            local_indices[local_id] = local_parameter_count + slot
           }
           None => ()
         }
       }
     }
+  }
+  // Program specializations append runtime trait-evidence parameters after
+  // the source parameters represented by ParameterLocal entries. Body locals
+  // must start after the complete physical signature, not after only the
+  // source-visible prefix.
+  if minimum_parameter_count > parameter_count {
+    parameter_count = minimum_parameter_count
   }
   let match_local_indices = Array::make(body.expressions.length, -1)
   let match_result_local_indices = Array::make(body.expressions.length, -1)
@@ -8450,6 +8465,7 @@ fn emit_starshine_lambda_body(
     generic_specialization,
     body,
     starshine_lambda_leading_parameter_count(lowering, planned, lambda),
+    minimum_parameter_count=fragment.parameters.length,
     lambda~,
   )
   let parameter_count = planned.functions[planned.lambda_function_indices[lambda]].parameters.length
@@ -8523,6 +8539,10 @@ fn emit_starshine_function_body(
     return Err(MissingBody(body_id))
   }
   let body = lowering.bodies[body_index]
+  let parameter_count = match planned.function_of(body.declaration) {
+    Some(function_) => function_.parameters.length
+    None => 0
+  }
   let (
     local_indices,
     body_local_types,
@@ -8535,11 +8555,15 @@ fn emit_starshine_function_body(
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
-  ) = starshine_body_locals(lowering, planned, None, None, body, 0)
-  let parameter_count = match planned.function_of(body.declaration) {
-    Some(function_) => function_.parameters.length
-    None => 0
-  }
+  ) = starshine_body_locals(
+    lowering,
+    planned,
+    None,
+    None,
+    body,
+    0,
+    minimum_parameter_count=parameter_count,
+  )
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     lowering,
     None,

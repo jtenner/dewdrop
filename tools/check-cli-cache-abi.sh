@@ -719,9 +719,11 @@ wasm-tools print .tmp/dew-runtime-trait-evidence-provider.wasm \
 # through exact recursively nested concrete implementation prerequisites. The
 # exported `reader` additionally allocates an evidence-capturing closure. The
 # erased exports wrap receivers with one or two source-ordered caller dictionaries;
-# `erased_nested` then dispatches through two concrete prerequisite layers.
+# `erased_nested` then dispatches through two concrete prerequisite layers. The
+# exact allocation total below is a current-codegen shape budget; the subsequent
+# external consumer's 673 result is the semantic runtime-evidence guard.
 test "$(grep -c 'call_ref' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 4
-test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 15
+test "$(grep -c 'struct.new' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 14
 test "$(grep -c 'struct (field eqref) (field eqref))' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
 test "$(grep -c 'struct (field eqref) (field eqref) (field eqref))' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 1
 test "$(grep -c 'global (;.*mut (ref null' .tmp/dew-runtime-trait-evidence-provider.wat)" -eq 2

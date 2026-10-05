@@ -73,3 +73,60 @@ test "linear immutable locals reuse compatible physical slots" {
   let module_ = emit_starshine_program_module(lowering, link).unwrap()
   assert_eq(@validate.validate_module(module_), Ok(()))
 }
+
+///|
+test "runtime evidence parameters do not alias body locals" {
+  let program = @semantic.collect_program_manifest(
+    2609UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew",
+          b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn consume_value<t: Value>(value: t) -> I32 {\n  let boxed = Box::{\n    value: value\n  }\n  consume(boxed)\n}\npub fn main() -> I32 {\n  consume_value(42)\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(program.diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+  assert_eq(link.diagnostics.length(), 0)
+  let declaration = program.modules[0].lookup_value("consume_value").unwrap()
+  let body = program.modules[0].body_of(declaration).unwrap().id
+  let helper_plan = starshine_program_adapter_helper_plan(lowering, link)
+  let mut checked = 0
+  for function_ in link.functions {
+    if function_.declaration != declaration ||
+      function_.elided ||
+      function_.specialization_evidence.length != 1 {
+      continue
+    }
+    let fragments = link.modules[function_.module_index]
+    let evidence = fragments.specialization_evidence_roots[function_.specialization_evidence.start]
+    match fragments.specialization_trait_evidence[evidence].kind {
+      @semantic.PlannedRuntimeTraitEvidence(_, _) => ()
+      _ => continue
+    }
+    assert_eq(function_.parameters.length, 2)
+    let emitted = emit_starshine_program_function_body(
+      lowering, link, function_, body, helper_plan,
+    ).unwrap()
+    let @lib.Func(_, @lib.Expr(instructions)) = emitted
+    let mut writes_body_local = false
+    for instruction in instructions {
+      match instruction {
+        @lib.LocalSet(@lib.LocalIdx(index))
+        | @lib.LocalTee(@lib.LocalIdx(index)) => {
+          assert_true(index.to_int() >= function_.parameters.length)
+          writes_body_local = true
+        }
+        _ => ()
+      }
+    }
+    assert_true(writes_body_local)
+    checked += 1
+  }
+  assert_eq(checked, 1)
+}

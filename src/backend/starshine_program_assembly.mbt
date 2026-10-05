@@ -486,6 +486,7 @@ fn emit_starshine_program_function_body(
     generic_specialization,
     body,
     0,
+    minimum_parameter_count=function_.parameters.length,
   )
   match generic_specialization {
     Some(specialization) =>
