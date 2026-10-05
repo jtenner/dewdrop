@@ -34,7 +34,7 @@ fn compile_string_benchmark(source : Bytes) -> Bytes {
     ) {
     Ok(compiled) => compiled
     Err(error) => {
-      string_benchmark_fail(error)
+      string_benchmark_fail(error.message())
       abort("unreachable cache failure")
     }
   }

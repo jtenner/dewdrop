@@ -188,7 +188,7 @@ fn main {
     ) {
     Ok(compiled) => compiled
     Err(error) => {
-      dew_test_fail(error)
+      dew_test_fail(error.message())
       abort("unreachable cache failure")
     }
   }

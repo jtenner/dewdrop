@@ -136,6 +136,10 @@ Exit status is:
 - `1` for compiler, link, validation, or emission diagnostics;
 - `2` for CLI usage, input I/O, or output I/O failures.
 
+Source diagnostics print directly, without the `dew:` operational-error prefix.
+Compiler-driver and cache failures keep that prefix. This keeps source failures
+at status 1 and operational failures at status 2 in cached and uncached paths.
+
 ## Validation
 
 The full `tools/check.sh` workflow checks a valid scalar fixture through default

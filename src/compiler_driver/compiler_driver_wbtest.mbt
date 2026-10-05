@@ -51,10 +51,33 @@ test "compiler driver reports missing constructor context before physical planni
       @standard_loader.StandardLibraryLoad::bootstrap(),
       CompilerPipelineOptions::production(5002UL, 0, true),
     ) {
-    Err(message) => {
+    Err(CompilerSourceError(message)) => {
       assert_true(message.contains("missing-context.dew"))
       assert_true(message.contains("error:"))
     }
-    Ok(_) => fail("a nominal struct with no type context must be diagnosed")
+    _ => fail("a nominal struct with no type context must be diagnosed")
+  }
+}
+
+///|
+test "uncached compiler driver reports source errors before physical planning" {
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("driver.invalid", [
+      @semantic.ManifestFile::new(
+        "missing-context.dew", b"struct Cell {\n  item: I32\n}\npub fn main() -> I32 {\n  let cell = {\n    item: 42i32\n  }\n  cell.item\n}\n",
+      ),
+    ]),
+  ])
+  match
+    compile_manifest_uncached(
+      manifest,
+      @semantic.StandardLibrarySources::bootstrap(),
+      CompilerPipelineOptions::production(5003UL, 0, true),
+    ) {
+    Err(CompilerSourceError(message)) => {
+      assert_true(message.contains("missing-context.dew"))
+      assert_true(message.contains("error:"))
+    }
+    _ => fail("uncached invalid source must stop before physical planning")
   }
 }

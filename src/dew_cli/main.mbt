@@ -22,6 +22,19 @@ fn cli_warning(message : String) -> Unit {
 }
 
 ///|
+fn cli_compilation_error(
+  error : @compiler_driver.CompilerCompilationError,
+) -> Unit {
+  match error {
+    @compiler_driver.CompilerSourceError(message) => {
+      cli_error(message)
+      @sys.exit(1)
+    }
+    @compiler_driver.CompilerInfrastructureError(message) => cli_fail(message)
+  }
+}
+
+///|
 fn cli_read_file(path : String) -> Bytes {
   @fs.read_file_to_bytes(path) catch {
     error => {
@@ -188,11 +201,18 @@ fn run_source_compile_request(
       request.config.default_preamble,
     )
   }
-  let compiled = @compiler_driver.compile_manifest_uncached(
-    manifest,
-    @semantic.StandardLibrarySources::bootstrap(),
-    options,
-  )
+  let compiled = match
+    @compiler_driver.compile_manifest_uncached(
+      manifest,
+      @semantic.StandardLibrarySources::bootstrap(),
+      options,
+    ) {
+    Ok(compiled) => compiled
+    Err(error) => {
+      cli_compilation_error(error)
+      abort("unreachable compiler failure")
+    }
+  }
   for dependency in request.dependency_interfaces {
     let mut dependency_index = -1
     for candidate, module_ in request.modules {
@@ -542,7 +562,7 @@ fn main {
     ) {
     Ok(compiled) => compiled
     Err(error) => {
-      cli_fail(error)
+      cli_compilation_error(error)
       abort("unreachable cache failure")
     }
   }

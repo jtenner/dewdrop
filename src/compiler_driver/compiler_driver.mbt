@@ -5,6 +5,22 @@ pub enum CompilerPlanningMode {
 } derive(Eq, Debug)
 
 ///|
+pub(all) enum CompilerCompilationError {
+  CompilerSourceError(String)
+  CompilerInfrastructureError(String)
+} derive(Eq, Debug)
+
+///|
+pub fn CompilerCompilationError::message(
+  self : CompilerCompilationError,
+) -> String {
+  match self {
+    CompilerSourceError(message) => message
+    CompilerInfrastructureError(message) => message
+  }
+}
+
+///|
 pub struct CompilerPipelineOptions {
   module_id_base : @semantic.ModuleId
   root_module_index : Int
@@ -54,11 +70,37 @@ pub struct CompilerCompilation {
 }
 
 ///|
+fn compiler_frontend_error(
+  program : @semantic.CollectedProgram,
+  analyzed : @semantic.AnalyzedProgramSemantics,
+  lowering : @semantic.PlannedProgramLowering,
+) -> CompilerCompilationError? {
+  let diagnostics = @semantic.collect_compiler_frontend_diagnostics(
+    program, analyzed, lowering,
+  )
+  if !diagnostics.any(fn(diagnostic) {
+      diagnostic.severity is @semantic.CompilerError
+    }) {
+    return None
+  }
+  let message = StringBuilder::new()
+  for index, diagnostic in diagnostics {
+    if index > 0 {
+      message.write_string("\n")
+    }
+    message.write_string(
+      @semantic.render_compiler_source_diagnostic(program, diagnostic),
+    )
+  }
+  Some(CompilerSourceError(message.to_string()))
+}
+
+///|
 pub fn compile_manifest_uncached(
   manifest : @semantic.ProgramManifest,
   standard_sources : @semantic.StandardLibrarySources,
   options : CompilerPipelineOptions,
-) -> CompilerCompilation {
+) -> Result[CompilerCompilation, CompilerCompilationError] {
   let program = @semantic.collect_program_manifest_with_standard_sources(
     options.module_id_base,
     manifest,
@@ -67,6 +109,10 @@ pub fn compile_manifest_uncached(
   )
   let analyzed = @semantic.analyze_program_semantics(program)
   let lowering = @semantic.plan_program_lowering(program, analyzed)
+  match compiler_frontend_error(program, analyzed, lowering) {
+    Some(error) => return Err(error)
+    None => ()
+  }
   let planning_options = match options.planning_mode {
     CompilerProductionPlanning =>
       @semantic.WasmGCPlanningOptions::optimized_subtype_families()
@@ -78,7 +124,7 @@ pub fn compile_manifest_uncached(
     options.root_module_index,
     planning_options,
   )
-  {
+  Ok({
     program,
     analyzed,
     lowering,
@@ -88,7 +134,7 @@ pub fn compile_manifest_uncached(
     planning_cache_status: @standard_loader.PlanningCacheStatus::disabled(),
     parse_event_cache_status: @standard_loader.ParseEventCacheWasDisabled(0),
     cache_pack_status: "disabled",
-  }
+  })
 }
 
 ///|
@@ -100,7 +146,7 @@ pub fn compile_manifest(
     0, 0,
   ),
   pack? : @standard_loader.CompilationCachePack? = None,
-) -> Result[CompilerCompilation, String] {
+) -> Result[CompilerCompilation, CompilerCompilationError] {
   let prepared = match
     @standard_loader.prepare_program_parse_event_cache(
       manifest,
@@ -110,7 +156,7 @@ pub fn compile_manifest(
       pack~,
     ) {
     Ok(value) => value
-    Err(error) => return Err(error)
+    Err(error) => return Err(CompilerInfrastructureError(error))
   }
   let manifest = prepared.manifest
   let program = @semantic.collect_program_manifest_with_standard_sources(
@@ -127,30 +173,18 @@ pub fn compile_manifest(
       pack~,
     ) {
     Ok(value) => value
-    Err(error) => return Err(error)
+    Err(error) => return Err(CompilerInfrastructureError(error))
   }
   let analyzed = cached.analyzed
   let planned = match
     @standard_loader.plan_program_lowering_with_cache(program, analyzed, pack~) {
     Ok(value) => value
-    Err(error) => return Err(error)
+    Err(error) => return Err(CompilerInfrastructureError(error))
   }
   let lowering = planned.lowering
-  // Invalid source must be reported before physical planning asserts on types.
-  let diagnostics = @semantic.collect_compiler_frontend_diagnostics(
-    program, analyzed, lowering,
-  )
-  if diagnostics.any(fn(diagnostic) {
-      diagnostic.severity is @semantic.CompilerError
-    }) {
-    let message = StringBuilder::new()
-    for diagnostic in diagnostics {
-      message.write_string(
-        @semantic.render_compiler_source_diagnostic(program, diagnostic),
-      )
-      message.write_string("\n")
-    }
-    return Err(message.to_string())
+  match compiler_frontend_error(program, analyzed, lowering) {
+    Some(error) => return Err(error)
+    None => ()
   }
   let planning_options = match options.planning_mode {
     CompilerProductionPlanning =>
@@ -167,14 +201,14 @@ pub fn compile_manifest(
       pack~,
     ) {
     Ok(value) => value
-    Err(error) => return Err(error)
+    Err(error) => return Err(CompilerInfrastructureError(error))
   }
   let link = linked.link
   match pack {
     Some(session) =>
       match session.commit() {
         Ok(_) => ()
-        Err(error) => return Err(error)
+        Err(error) => return Err(CompilerInfrastructureError(error))
       }
     None => ()
   }

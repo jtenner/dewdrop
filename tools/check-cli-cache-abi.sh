@@ -942,8 +942,17 @@ fi
 grep -q 'UnknownValueName' .tmp/dew-no-preamble-error.txt
 tools/dew check --no-default-preamble \
   tests/cli/no-default-explicit-preamble.dew
-if tools/dew check tests/module-snapshots/names/unknown-value.dew > .tmp/dew-cli-error.txt; then
-  echo "expected dew check to reject an invalid source" >&2
+set +e
+tools/dew check tests/module-snapshots/names/unknown-value.dew \
+  > .tmp/dew-cli-error.txt
+dew_cli_error_status=$?
+set -e
+if [ "$dew_cli_error_status" -ne 1 ]; then
+  echo "expected invalid source exit 1, got $dew_cli_error_status" >&2
+  exit 1
+fi
+if grep -q '^dew: ' .tmp/dew-cli-error.txt; then
+  echo "source diagnostics must not use the operational dew: prefix" >&2
   exit 1
 fi
 grep -q '^tests/module-snapshots/names/unknown-value.dew:2:3: error: UnknownValueName' \
