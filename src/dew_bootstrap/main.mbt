@@ -116,16 +116,40 @@ fn bootstrap_write_hash_string(hash : @crypto.SHA256, value : String) -> Unit {
 }
 
 ///|
-fn bootstrap_compiler_fingerprint(repository : String) -> String {
+fn bootstrap_compiler_fingerprint_files(
+  repository : String,
+  standard_root : String,
+) -> Array[String] {
   let files : Array[String] = []
   bootstrap_collect_files(bootstrap_join(repository, "src"), ".mbt", files)
-  bootstrap_collect_files(bootstrap_join(repository, "std"), ".dew", files)
+  bootstrap_collect_files(bootstrap_join(repository, "src"), ".c", files)
+  bootstrap_collect_files(bootstrap_join(repository, "src"), "moon.pkg", files)
+  bootstrap_collect_files(bootstrap_join(standard_root, "std"), ".dew", files)
   for candidate in ["moon.mod", "moon.work", ".mooncakes/.moon-lock"] {
     let path = bootstrap_join(repository, candidate)
     if @fs.path_exists(path) {
       files.push(path)
     }
   }
+  let starshine = bootstrap_join(repository, "starshine-mb")
+  bootstrap_collect_files(bootstrap_join(starshine, "src"), ".mbt", files)
+  bootstrap_collect_files(bootstrap_join(starshine, "src"), ".c", files)
+  bootstrap_collect_files(bootstrap_join(starshine, "src"), "moon.pkg", files)
+  for candidate in ["moon.mod", "moon.work", ".mooncakes/.moon-lock"] {
+    let path = bootstrap_join(starshine, candidate)
+    if @fs.path_exists(path) {
+      files.push(path)
+    }
+  }
+  files
+}
+
+///|
+fn bootstrap_compiler_fingerprint(
+  repository : String,
+  standard_root : String,
+) -> String {
+  let files = bootstrap_compiler_fingerprint_files(repository, standard_root)
   bootstrap_fingerprint_files(files)
 }
 
@@ -133,7 +157,7 @@ fn bootstrap_compiler_fingerprint(repository : String) -> String {
 fn bootstrap_fingerprint_files(files : Array[String]) -> String {
   files.sort()
   let hash = @crypto.SHA256::new()
-  hash.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_MOONBIT_V1\x00")
+  hash.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_MOONBIT_V2\x00")
   for path in files {
     bootstrap_write_hash_string(hash, path)
     let bytes = @fs.read_file_to_bytes(path) catch {
@@ -338,7 +362,8 @@ fn bootstrap_compile(
     false,
   )
   let prepared = bootstrap_prepare_compile_arguments(repository, expanded)
-  let fingerprint = bootstrap_compiler_fingerprint(repository)
+  let standard_root = @sys.get_env_var("DEW_STD_ROOT").unwrap_or(repository)
+  let fingerprint = bootstrap_compiler_fingerprint(repository, standard_root)
   @sys.set_env_var("DEW_COMPILER_FINGERPRINT", fingerprint)
   let host = repository + "/tools/run-dew-cli-host.sh"
   if command == "build" {

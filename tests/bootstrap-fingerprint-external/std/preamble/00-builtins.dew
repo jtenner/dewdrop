@@ -1,0 +1,3 @@
+pub fn fingerprint_fixture() -> I32 {
+  0
+}

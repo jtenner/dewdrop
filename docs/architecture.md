@@ -65,6 +65,12 @@ static linking, and `src/compiler_driver` consumes both. `src/dew_cli` and
 `src/dew_bootstrap` are executable packages above the driver: `src/dew_bootstrap`
 owns whole-build caching, compiler fingerprinting, and process dispatch behind
 `tools/dew`, while `src/dew_cli` implements the compiler-facing commands.
+The compiler fingerprint covers MoonBit source, native C stubs, package
+manifests, root workspace metadata, and the selected `dew.std` source tree. It
+also covers the exact source and package manifests of the active Starshine
+workspace dependency. A change to an external standard library, native
+tokenizer, package dependency graph, or Starshine implementation therefore
+invalidates cached compiler output.
 `src/compiler_proofs` is the proof-enabled leaf package: it separates executable
 code in `.mbt` from logical predicates and lemmas in `.mbtp` and proves the
 arena-span, physical-carrier, and dense type-remap obligations behind

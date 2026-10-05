@@ -1,7 +1,10 @@
 ///|
 test "bench bootstrap source fingerprint" (it : @bench.T) {
   let root = @sys.get_env_var("DEW_REPOSITORY_ROOT").unwrap()
-  it.bench(fn() { it.keep(bootstrap_compiler_fingerprint(root)) }, count=3U)
+  it.bench(
+    fn() { it.keep(bootstrap_compiler_fingerprint(root, root)) },
+    count=3U,
+  )
 }
 
 ///|
