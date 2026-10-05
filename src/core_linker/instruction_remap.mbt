@@ -5,6 +5,7 @@ fn core_remap_instruction(
 ) -> @lib.Instruction {
   match value {
     @lib.AnyConvertExtern => value
+    @lib.Publish | @lib.RefI31Shared => value
     @lib.WaitqueueNew | @lib.WaitqueueNotify => value
     @lib.StructWait(type_, field) =>
       @lib.Instruction::struct_wait(core_remap_type_idx(map, type_), field)
@@ -61,7 +62,7 @@ fn core_remap_instruction(
       @lib.Instruction::array_load(
         v0,
         core_remap_type_idx(map, v1),
-        memarg=argument,
+        memarg=core_remap_mem_arg(map, argument),
       )
     @lib.ArrayNew(v0) =>
       @lib.Instruction::array_new(core_remap_type_idx(map, v0))
@@ -85,7 +86,7 @@ fn core_remap_instruction(
       @lib.Instruction::array_store(
         v0,
         core_remap_type_idx(map, v1),
-        memarg=argument,
+        memarg=core_remap_mem_arg(map, argument),
       )
     @lib.AtomicCmpxchg(v0, v1, v2) =>
       @lib.Instruction::atomic_cmpxchg(

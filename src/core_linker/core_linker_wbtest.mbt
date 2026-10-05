@@ -1,16 +1,21 @@
 ///|
-test "link preserves backing array memory offsets and alignment" {
+test "link remaps backing array memory and preserves offsets and alignment" {
   let map : CoreWasmIndexMap = {
     type_indices: [7],
     function_indices: [],
     table_indices: [],
-    memory_indices: [],
+    memory_indices: [3],
     global_indices: [],
     tag_indices: [],
     element_indices: [],
     data_indices: [],
   }
   let argument = @lib.MemArg::new(@lib.U32::new(1U), None, @lib.U64::new(23UL))
+  let remapped_argument = @lib.MemArg::new(
+    @lib.U32::new(1U),
+    Some(@lib.MemIdx::new(3U)),
+    @lib.U64::new(23UL),
+  )
   let load = @lib.Instruction::array_load(
     @lib.LoadOp::i32_load(),
     @lib.TypeIdx::new(0U),
@@ -26,7 +31,7 @@ test "link preserves backing array memory offsets and alignment" {
     @lib.Instruction::array_load(
       @lib.LoadOp::i32_load(),
       @lib.TypeIdx::new(7U),
-      memarg=argument,
+      memarg=remapped_argument,
     ),
   )
   assert_eq(
@@ -34,9 +39,30 @@ test "link preserves backing array memory offsets and alignment" {
     @lib.Instruction::array_store(
       @lib.StoreOp::i32_store(),
       @lib.TypeIdx::new(7U),
-      memarg=argument,
+      memarg=remapped_argument,
     ),
   )
+}
+
+///|
+test "link preserves operand-free shared instructions" {
+  let map : CoreWasmIndexMap = {
+    type_indices: [],
+    function_indices: [],
+    table_indices: [],
+    memory_indices: [],
+    global_indices: [],
+    tag_indices: [],
+    element_indices: [],
+    data_indices: [],
+  }
+  for
+    instruction in [
+      @lib.Instruction::publish(),
+      @lib.Instruction::ref_i31_shared(),
+    ] {
+    assert_eq(core_remap_instruction(map, instruction), instruction)
+  }
 }
 
 ///|

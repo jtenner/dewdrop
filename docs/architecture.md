@@ -70,6 +70,10 @@ code in `.mbt` from logical predicates and lemmas in `.mbtp` and proves the
 arena-span, physical-carrier, and dense type-remap obligations behind
 `tools/test-proofs.sh`.
 
+Core linking remaps every embedded type, function, table, memory, global, tag,
+element, and data index. This includes memory indices stored in array-memory
+instruction arguments; operand-free proposal instructions pass through unchanged.
+
 Starshine is pinned as the `starshine-mb/` Git submodule and MoonBit workspace
 member. `src/backend` uses it to construct, validate, and encode WebAssembly.
 

@@ -1,6 +1,6 @@
 # Starshine FFI consumer
 
-Dewdrop pins the raw Core WasmGC provider at the `starshine-mb` submodule revision. Starshine currently exports 3,366 concrete functions. Dewdrop selects the exact compiler-facing subset in `ffi-used.json`; the generated `ffi.dew` currently contains 32 raw carrier declarations.
+Dewdrop pins the raw Core WasmGC provider at the `starshine-mb` submodule revision. Starshine currently exports 4,235 concrete functions. Dewdrop selects the exact compiler-facing subset in `ffi-used.json`; the generated `ffi.dew` currently contains 32 raw carrier declarations.
 
 Starshine's `ffi_bridge` package provides the typed mutable arrays, module constructor, validation result, and encoded-byte inspector needed by Dew. It does not add a second command language.
 
@@ -22,7 +22,7 @@ The compiler fingerprint changes when the submodule revision, an interface diges
 
 Packed GC storage uses the provider's direct `PackType`, `StorageType`,
 `array.get_s`/`array.get_u`, and `struct.get_s`/`struct.get_u` exports. The
-consumer currently selects 476 signatures. Field width and signedness come
+consumer currently selects 473 signatures. Field width and signedness come
 from compiler plans, not provider-side runtime algorithms.
 
 ## Check
