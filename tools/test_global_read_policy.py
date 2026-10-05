@@ -19,7 +19,8 @@ class GlobalReadPolicy(unittest.TestCase):
         source = (COMPILER / "starshine_module_globals.dew").read_text()
         self.assertIn("self_host_checked_relative_index(", source)
         self.assertIn("initializer.declaration != declaration", source)
-        self.assertIn("selected is Option::Some(_)", source)
+        self.assertIn("if selected is Some(_)", source)
+        self.assertIn("None => self_host_global_read_failure(", source)
         for forbidden in ("self_host_linked_callable_by_name(",
                           "self_host_linked_callable_function_index(",
                           "ffi_lib_Instruction_ref_func("):
