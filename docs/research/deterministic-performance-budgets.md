@@ -21,6 +21,12 @@ The compiler appends exactly one `dew.abi` compatibility section and one `dew.me
 
 The tool reports JSON in a fixed field order. Budgets use non-negative integer bounds and reject unknown metrics or malformed constraints rather than silently skipping them.
 
+## 2026-09-10 baseline refresh
+
+The 2026-09-10 snapshot refresh added deterministic `compiler.facts` metadata and emitted the current standard assertion helper and carrier types. The WAT snapshots changed, but the performance budgets still contained the older byte, type, function, call, cast, and local ceilings. The refreshed budgets now measure the committed snapshots and production binaries with small byte-size margins. The architecture checker also requires each budget file to occur in exactly one declared performance case, so a new budget cannot silently miss CI.
+
+The refresh does not weaken the semantic gates. Adapter export counts, materialized specialization counts, indirect-dispatch limits, aggregate reconstruction sites, and cast/test limits remain exact or bounded at the current implementation. The later aggregate and enum correctness repair adds required payload reconstruction sites; their budgets record that new correct shape instead of hiding it behind extra general headroom.
+
 ## Initial gates
 
 `tests/performance-budgets/closure-directization.json` requires the allocation-free callback path to retain zero `call_ref`, `return_call_ref`, `ref.cast`, and `ref.test` instructions. It also bounds binary/text size, function/type counts, and the remaining standard assertion string allocation sites.
@@ -50,7 +56,7 @@ Static instruction counts are compiler regression gates, not runtime timing clai
 3. imported-package adapter linkage must remain compact and allocation-bounded while its external Wasm consumer stays executable;
 4. materialized generic bodies must not multiply or disappear behind unchanged adapter-export counts.
 
-Binary-size ceilings include the deterministic `dew.abi` module path, schema versions, transitive interface fingerprint, and direct dependency content records. The compatibility metadata intentionally increased every baseline while leaving instruction/entity metrics unchanged.
+Binary-size ceilings include the deterministic `dew.abi` module path, schema versions, transitive interface fingerprint, direct dependency content records, and `compiler.facts`. The compatibility and facts metadata intentionally increased the baselines. Standard assertion helpers and carrier types also increased some instruction and entity counts without changing the adapter invariants listed above.
 
 Budget changes should be reviewed with the implementation and snapshots in the same atomic commit. A semantic improvement may intentionally increase one count while reducing runtime work elsewhere; in that case the rationale belongs in this document.
 

@@ -1,16 +1,16 @@
 {
-  "wasm_bytes": { "max": 2950 },
-  "wat_bytes": { "max": 15500 },
-  "types": { "max": 32 },
+  "wasm_bytes": { "max": 8200 },
+  "wat_bytes": { "max": 30250 },
+  "types": { "max": 39 },
   "functions": { "max": 17 },
   "adapter_exports": { "exact": 0 },
   "materialized_specializations": { "exact": 0 },
-  "direct_calls": { "max": 12 },
+  "direct_calls": { "max": 31 },
   "call_refs": { "exact": 10 },
   "return_call_refs": { "exact": 0 },
   "struct_news": { "min": 32, "max": 34 },
   "array_news": { "max": 19 },
   "ref_casts": { "max": 55 },
   "ref_tests": { "exact": 5 },
-  "local_sets": { "max": 28 }
+  "local_sets": { "max": 31 }
 }

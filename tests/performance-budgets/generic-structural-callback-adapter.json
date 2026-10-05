@@ -1,7 +1,7 @@
 {
-  "wasm_bytes": { "max": 2450 },
-  "wat_bytes": { "max": 15500 },
-  "types": { "max": 31 },
+  "wasm_bytes": { "max": 4900 },
+  "wat_bytes": { "max": 22500 },
+  "types": { "max": 38 },
   "functions": { "max": 22 },
   "adapter_exports": { "exact": 3 },
   "materialized_specializations": { "exact": 6 },
