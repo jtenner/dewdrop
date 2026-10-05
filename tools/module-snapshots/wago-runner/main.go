@@ -134,6 +134,35 @@ func (h *snapshotHost) preview1(name string) func(wago.HostModule, []uint64, []u
 	}
 }
 
+func preview1Imports(host *snapshotHost) *wago.Imports {
+	imports := wago.NewImports()
+	for name, parameterCount := range preview1ParameterCounts {
+		callback := host.preview1(name)
+		switch name {
+		case "fd_write":
+			callback = host.fdWrite
+		case "fd_read":
+			callback = host.fdRead
+		}
+
+		params := make([]wago.ValType, parameterCount)
+		for index := range params {
+			params[index] = wago.ValI32
+		}
+		builder := imports.HostFunc(
+			"wasi_snapshot_preview1",
+			name,
+			func(caller wago.Caller, call wago.HostCall) {
+				callback(caller, call.ParamSlots(), call.ResultSlots())
+			},
+		).Params(params...)
+		if name != "proc_exit" {
+			builder.Results(wago.ValI32)
+		}
+	}
+	return imports
+}
+
 func (h *snapshotHost) requirePreview1SmokeComplete() error {
 	if !h.config.Preview1Smoke {
 		return nil
@@ -412,18 +441,8 @@ func main() {
 		fail("compile: %v", err)
 	}
 	defer compiled.Close()
-	imports := wago.Imports{
-		"wasi_snapshot_preview1.fd_write": wago.HostFunc(host.fdWrite),
-		"wasi_snapshot_preview1.fd_read":  wago.HostFunc(host.fdRead),
-	}
-	for name := range preview1ParameterCounts {
-		if name == "fd_write" || name == "fd_read" {
-			continue
-		}
-		imports["wasi_snapshot_preview1."+name] = wago.HostFunc(host.preview1(name))
-	}
 	instance, err := wago.Instantiate(compiled, wago.InstantiateOptions{
-		Imports: imports,
+		Imports: preview1Imports(host),
 		GC:      wago.GCConfig{ThroughputHeapBytes: 64 << 20},
 	})
 	if err != nil {
