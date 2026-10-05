@@ -428,15 +428,40 @@ pub fn package_is_hex(value: String, length: U32) -> Bool {
 }
 
 pub fn package_relative_path_is_valid(value: String) -> Bool {
-  value.byte_length() > 0u32 &&
-  value.byte_length() <= package_path_max_bytes() &&
-  value.byte_at(0u32) != 47u8 &&
-  !value.contains("\\") &&
-  !value.contains("\x00") &&
-  !value.equals("..") &&
-  !value.starts_with("../") &&
-  !value.contains("/../") &&
-  !value.ends_with("/..")
+  let length = value.byte_length()
+  if length == 0u32 ||
+    length > package_path_max_bytes() ||
+    value.byte_at(0u32) == 47u8 {
+    false
+  } else {
+    let bytes = value.as_bytes()
+    let mut segment_start = 0u32
+    while 0u32 {
+      index if index <= length => {
+        if index < length &&
+          (bytes.byte_at(index) == 0u8 || bytes.byte_at(index) == 92u8) {
+          break false
+        } else if index == length || bytes.byte_at(index) == 47u8 {
+          let segment_length = index - segment_start
+          if segment_length == 0u32 ||
+            (segment_length == 1u32 && bytes.byte_at(segment_start) == 46u8) ||
+            (segment_length == 2u32 &&
+            bytes.byte_at(segment_start) == 46u8 &&
+            bytes.byte_at(segment_start + 1u32) == 46u8) {
+            break false
+          } else if index == length {
+            break true
+          } else {
+            segment_start = index + 1u32
+            continue index + 1u32
+          }
+        } else {
+          continue index + 1u32
+        }
+      }
+      _ => break false
+    }
+  }
 }
 
 pub fn package_manifest_dependencies(

@@ -50,6 +50,10 @@ Additional bounds are:
 - 65,536 files per installed package capsule;
 - 16 MiB per source file in an installed capsule.
 
+Logical paths use the strict `dew.std.path.RelativePath` grammar. They reject
+absolute paths, parent escapes, dot segments, empty segments, trailing
+separators, backslashes, NUL, and values longer than 4,096 UTF-8 bytes.
+
 JSON formats use strict UTF-8, reject duplicate JSON object keys through
 `dew.std.json`, reject unknown fields, and produce compact deterministic JSON
 with one trailing newline. The installed capsule remains compatible with the

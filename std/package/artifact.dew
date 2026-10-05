@@ -202,15 +202,7 @@ pub fn package_artifact_is_hex(value: String, length: U32) -> Bool {
 }
 
 pub fn package_artifact_path_is_valid(value: String) -> Bool {
-  value.byte_length() > 0u32 &&
-  value.byte_length() <= package_path_max_bytes() &&
-  value.byte_at(0u32) != 47u8 &&
-  !value.contains("\\") &&
-  !value.contains("\x00") &&
-  !value.equals("..") &&
-  !value.starts_with("../") &&
-  !value.contains("/../") &&
-  !value.ends_with("/..")
+  package_relative_path_is_valid(value)
 }
 
 pub fn package_artifact_read_dependencies(

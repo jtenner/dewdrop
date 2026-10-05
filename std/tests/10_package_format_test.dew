@@ -32,28 +32,28 @@ fn package_test_encode<t: Encode<FormatEncodeError>>(value: t) -> Bytes {
 }
 
 fn package_test_decode_manifest(bytes: Bytes) -> PackageManifest {
-  match Decode::decode(bytes) {
+  match package_manifest_try_decode(bytes) {
     Result::Ok(decoded) => decoded
     Result::Err(_) => unreachable()
   }
 }
 
 fn package_test_decode_lock(bytes: Bytes) -> PackageLock {
-  match Decode::decode(bytes) {
+  match package_lock_try_decode(bytes) {
     Result::Ok(decoded) => decoded
     Result::Err(_) => unreachable()
   }
 }
 
 fn package_test_decode_modules(bytes: Bytes) -> ModuleManifest {
-  match Decode::decode(bytes) {
+  match module_manifest_try_decode(bytes) {
     Result::Ok(decoded) => decoded
     Result::Err(_) => unreachable()
   }
 }
 
 fn package_test_decode_artifact(bytes: Bytes) -> PackageArtifact {
-  match Decode::decode(bytes) {
+  match package_artifact_try_decode(bytes) {
     Result::Ok(decoded) => decoded
     Result::Err(_) => unreachable()
   }
@@ -161,6 +161,41 @@ test "dew.modules.json graphs preserve module and file order" {
   let decoded = package_test_decode_modules(package_test_encode(manifest))
   assert(decoded.root().equals("scope.app"), "root module changed")
   assert(decoded.modules().get_unchecked(0u32).files().get_unchecked(1u32).equals("src/second.dew"), "file order changed")
+}
+
+test "package paths reject noncanonical aliases" {
+  assert(!package_relative_path_is_valid("."), "dot path was accepted")
+  assert(!package_relative_path_is_valid("src/./main.dew"), "dot segment was accepted")
+  assert(!package_relative_path_is_valid("src//main.dew"), "empty segment was accepted")
+  assert(!package_relative_path_is_valid("src/main.dew/"), "trailing separator was accepted")
+  assert(!package_artifact_path_is_valid("src/./main.dew"), "artifact dot segment was accepted")
+
+  let module_files = Array::new()
+  module_files.push("src/main.dew")
+  module_files.push("src//main.dew")
+  let modules = Array::new()
+  modules.push(module_manifest_entry("scope.app", module_files))
+  assert(
+    module_manifest("scope.app", modules).validate() is Result::Err(_),
+    "module path alias was accepted",
+  )
+
+  let artifact_files = Array::new()
+  artifact_files.push(package_artifact_file("src/main.dew", b""))
+  artifact_files.push(package_artifact_file("src/./main.dew", b""))
+  let artifact = package_artifact(
+    "@scope/app",
+    package_test_version("1.0.0"),
+    "file:packages/app",
+    package_test_integrity(),
+    package_test_hex(),
+    Array::new(),
+    artifact_files,
+  )
+  assert(
+    artifact.validate() is Result::Err(FormatValidationErr::InvalidField("artifact file")),
+    "artifact path alias was accepted",
+  )
 }
 
 test "installed package artifacts encode decode and verify checksums" {
