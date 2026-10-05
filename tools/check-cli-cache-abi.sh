@@ -651,7 +651,9 @@ test -s .tmp/dew-cli-smoke.lowering
 test -s .tmp/dew-cli-smoke.wat
 grep -Fq '(@custom "dew.abi"' .tmp/dew-cli-smoke.wat
 grep -Fq '(@custom "dew.metrics"' .tmp/dew-cli-smoke.wat
+# The smoke program does not read input. Close inherited PTY stdin explicitly.
 tools/dew run tests/module-snapshots/control-flow/short-circuit-runtime.dew \
+  < /dev/null \
   > .tmp/dew-cli-run.txt
 grep -q '^control:short-circuit$' .tmp/dew-cli-run.txt
 tools/dew build \
