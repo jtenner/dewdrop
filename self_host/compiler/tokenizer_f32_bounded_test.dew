@@ -1,0 +1,50 @@
+open dew.std.bytes_builder
+open dew.std.string_builder
+open dew.std.text_runtime
+
+fn f32_bounded_source(length: U32, side: I32) -> Bytes {
+  let builder = BytesBuilder::with_capacity(length + 64u32)
+  builder.append(if side < 0i32 {
+    b"1.000000059604644775390624"
+  } else {
+    b"1.000000059604644775390625"
+  })
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(if side < 0i32 {
+        57u8
+      } else {
+        48u8
+      })
+      continue index + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  if side > 0i32 {
+    builder.append_byte(49u8)
+  } else {}
+  builder.append(b"f32")
+  builder.finish()
+}
+
+test "self-host f32 midpoint comparison has bounded scratch for long decimals" {
+  for length in [1024u32, 4096u32, 16384u32, 65536u32] {
+    assert_self_host_f32_decimal(f32_bounded_source(length, -1i32), 1065353216u32)
+    assert_self_host_f32_decimal(f32_bounded_source(length, 0i32), 1065353216u32)
+    assert_self_host_f32_decimal(f32_bounded_source(length, 1i32), 1065353217u32)
+  }
+}
+
+test "self-host f32 long leading zeros and exponent preserve the midpoint" {
+  let builder = BytesBuilder::new()
+  builder.append(b"0.")
+  while 0u32 {
+    index if index < 4096u32 => {
+      builder.append_byte(48u8)
+      continue index + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  builder.append(b"1000000059604644775390625e4097f32")
+  assert_self_host_f32_decimal(builder.finish(), 1065353216u32)
+}

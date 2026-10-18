@@ -41,10 +41,14 @@ and signed decimal exponents are compared without making a source-sized
 integer. A large exponent is capped only beyond the range that any resident
 String length can balance. The normal path makes no digit array.
 
-The Dew helper reuses `self_host_big_decimal`, `self_host_f64_dyadic`, and
-`self_host_decimal_compare_dyadic`. It adds no runtime algorithm builtin
-and no new source-list dependency. It stays in `tokenizer.dew` so existing
-explicit parser source lists include it. The new test file is included in
+The Dew helper now uses the same bounded midpoint-digit method as the
+MoonBit helper. It uses one `FixedArray<U32>` of 113 digits (452 bytes of
+numeric payload, plus its GC header), then scans the source twice. It uses
+I64 for decimal orders, so source-length subtraction cannot wrap at I32.
+It does not build an integer from the source digits. Runtime assertions
+check the midpoint exponent and scratch capacity, with `TOK-301` and
+`TOK-302` diagnostic messages. It adds no runtime algorithm builtin and
+no new production source-list dependency. Both numeric test files are in
 the full smoke parser/tokenizer test list.
 
 This corrects F32 selection when an F64 parse loses the side of an F32
@@ -67,21 +71,20 @@ cases cover separators, exponent normalization, zero, far underflow,
 far overflow, and an ordinary exact value. The same 42 cases are in
 `self_host/compiler/tokenizer_f32_decimal_test.dew`.
 
-The full native tokenizer suite passes all 45 tests. Final measured lane:
-0.357 seconds. The isolated target avoids other agents' build jobs:
+The full native tokenizer suite now passes all 46 tests. Final measured lane:
+0.344 seconds. The isolated target avoids other agents' build jobs:
 
 ```sh
 DEW_NATIVE_TEST_PACKAGES=tokenizer tools/test-native.sh --target-dir /tmp/dewdrop-implementation-2026-10-18/f32-build
 ```
 
-The final self-hosted grouped suite passes all 29 tests, including both
-numeric tests, parser recovery, and existing tokenizer/parser tests.
-Generation took 4.750 seconds, linking 1.126 seconds, and execution
-0.066 seconds. The final source hashes are recorded in
-`.tmp/malformed-escape-recovery/source-sha256.json`; logs are
-`.tmp/malformed-escape-recovery/green-{generate,link,tests}.log`.
-The production tokenizer SHA-256 used in that run is
-`13259ff00c58cdc0da81bee68b47e0d66090bd2ca011588676ba1fc5e8e84d7a`.
+The first self-hosted grouped suite passed all 29 tests, including the
+42-case numeric matrix and parser recovery tests. After the bounded-scratch
+follow-up below, a focused module containing the numeric matrix, original
+witness, and both long-source tests passes all four test groups. Final
+prebuilt-generator time is 0.308 seconds and execution time is 0.051 seconds.
+Its logs are `/tmp/dewdrop-review-2026-10-18/f32-bounds/{generate,test}.log`.
+Final production tokenizer SHA-256: `abb88363f58e8c7a52655ebac70bef57898fc6ceb478b7ec433cc6a69019f94a`.
 
 ## Short-literal cost
 
@@ -150,3 +153,94 @@ Decimal precision, keeping the decimal point and exponent. Alternate
 bytes and expected bit patterns, so runtime tests need no Python or host
 float parser. The initial evidence and generated JSON remain under
 `/tmp/dewdrop-review-2026-10-18/features/`.
+
+## Follow-up: bounded self-host midpoint work
+
+An independent backend review found a cost fault in the first self-host
+correction. Unlike the existing F64 exact path, that correction had no
+source-digit or exponent cap. For `1.000000059604644775390625` followed by
+many zeroes, it made a full source-sized integer and repeatedly multiplied
+by five. This did quadratic digit work and used source-sized scratch.
+That implementation is the **before** control below. Its source is from
+commit `6a881286bc3f3a99e3f02b08224f313eada894d7`.
+
+The replacement keeps the existing cheap fast path. Its exact comparison
+builds only the midpoint's digits, with the fixed 113-digit array described
+above. The two source scans ignore separators and compare decimal orders
+before a digit comparison. Extra leading and trailing zeroes do not make
+scratch storage larger. Exponents use the scanner's existing policy; this
+change does not expand its exponent cap or replace the approximate F64 path.
+
+New tests cover 1,024, 4,096, 16,384, and 65,536 added digits. For each size,
+a tie uses trailing zeroes, a value just above has a final `1`, and a value
+just below uses the previous midpoint decimal prefix followed by `9`s.
+A separate case has 4,096 leading fractional zeroes and a compensating
+`e4097`. Native tests also cover all 12 long tie/below/above cases.
+An independent source review checked the new scratch bounds, carry values,
+I64 decimal orders, separator handling, and zero padding, with no defect found.
+
+### Scaling fixture and controls
+
+The checked-in fixture and harness are in
+[`data/f32-midpoint-bounds-2026-10-18`](data/f32-midpoint-bounds-2026-10-18/).
+The fixture prepares a guest `Bytes` value before the timed call. It calls
+`self_host_round_f32_decimal` with that source and the exact F64 midpoint,
+which isolates the corrected path from token scanning. It checks the returned
+F32 bits (`0x3f800000`) in every process. The old and new builds use the same
+fixture and generator. They differ in tokenizer source. These are WasmGC execution
+measurements in Node, not native-code or emulated-target measurements. The
+fixture needs no Starshine provider.
+
+For each length, three fresh Node processes per implementation alternate.
+Node v24.21.0 runs with `--no-liftoff --expose-gc` on Linux x86_64. A small
+warmup runs before input preparation. The harness forces GC before the timed
+call, records `performance.now`, `process.memoryUsage().heapUsed` before and
+after the call, and `process.resourceUsage().maxRSS`. Input construction and
+source retention are outside the measured call. The compiled fixture identities
+are in `samples.json` and are SHA-256 hashes of the exact executed Wasm.
+Each prebuilt-generator step took under 0.4 seconds; each Node process took
+under 0.34 seconds. No compiler activity reached 30 seconds.
+
+| Added digits | Sample | Before ms | After ms | Before heap growth B | After heap growth B | Before peak RSS KiB | After peak RSS KiB |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1024 | 1 | 0.092524 | 0.006913 | 32416 | 29000 | 57080 | 56996 |
+| 1024 | 2 | 0.093085 | 0.006332 | 32416 | 29000 | 57244 | 57148 |
+| 1024 | 3 | 0.091312 | 0.006953 | 32416 | 29000 | 57004 | 56764 |
+| 4096 | 1 | 1.203951 | 0.021090 | 46176 | 29000 | 56904 | 56872 |
+| 4096 | 2 | 1.144589 | 0.041859 | 46176 | 29000 | 56972 | 56956 |
+| 4096 | 3 | 1.122738 | 0.016982 | 46176 | 29000 | 56912 | 56932 |
+| 16384 | 1 | 19.203839 | 0.059071 | 100624 | 29000 | 57088 | 56808 |
+| 16384 | 2 | 17.385987 | 0.061636 | 99792 | 29000 | 57160 | 56972 |
+| 16384 | 3 | 17.543802 | 0.058610 | 100624 | 29000 | 57052 | 56984 |
+| 65536 | 1 | 277.935321 | 0.228579 | 335352 | 29000 | 56912 | 56908 |
+| 65536 | 2 | 279.650322 | 0.224402 | 335352 | 29000 | 56760 | 57144 |
+| 65536 | 3 | 283.694880 | 0.227888 | 335352 | 29000 | 57272 | 56960 |
+
+For 65,536 added digits, the median isolated call fell from 279.650322 ms to
+0.227888 ms. From 4,096 to 65,536 digits (16 times more source), the old median
+rose from 1.144589 ms to 279.650322 ms (about 244 times), while the new median
+rose from 0.021090 ms to 0.227888 ms (about 11 times). The small timings contain
+fixed call and counter costs, so these ratios are observations, not universal
+speed guarantees. The algorithm now does linear source work plus a bounded
+midpoint conversion.
+
+Measured heap growth was 29,000 bytes for the new path at every size; the old
+path rose from 32,416 bytes at 1,024 digits to 335,352 bytes at 65,536 digits.
+Heap deltas include V8 bookkeeping and uncollected transient values; they are
+not exact allocation counts or the 452-byte scratch payload. Peak RSS stayed
+near 57 MiB and is too noisy to resolve this small scratch change. The fixed
+scratch claim comes from the array bound, with these heap observations as
+supporting evidence. No peak-RSS reduction or native-machine allocation gain
+is claimed.
+
+Reproduce from the repository root, using the existing release test generator:
+
+```sh
+python3 docs/research/data/f32-midpoint-bounds-2026-10-18/build.py /tmp/dewdrop-f32-midpoint-bounds
+python3 docs/research/data/f32-midpoint-bounds-2026-10-18/measure.py /tmp/dewdrop-f32-midpoint-bounds
+```
+
+The build harness saves generator output and rejects failures. Each generation
+has a 25-second limit. Each fresh runtime sample has a 20-second limit. The
+measurement harness writes new raw samples beside its Wasm inputs. The checked-in
+`samples.json` retains the original 24 samples, environment, and binary hashes.

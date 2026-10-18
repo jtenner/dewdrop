@@ -150,3 +150,40 @@ test "f32 exact decimal boundary matrix" {
     }
   }
 }
+
+///|
+test "f32 long decimal midpoint neighbors" {
+  for length in [1024, 4096, 16384, 65536] {
+    for side in [-1, 0, 1] {
+      let source = Buffer()
+      source.write_string_utf8(
+        if side < 0 {
+          "1.000000059604644775390624"
+        } else {
+          "1.000000059604644775390625"
+        },
+      )
+      for index = 0; index < length; index = index + 1 {
+        source.write_byte(if side < 0 { b'9' } else { b'0' })
+      }
+      if side > 0 {
+        source.write_byte(b'1')
+      }
+      source.write_string_utf8("f32")
+      let kinds = token_kinds(source.to_bytes())
+      assert_eq(kinds.length(), 1)
+      match kinds[0] {
+        F32(value) =>
+          assert_eq(
+            value.reinterpret_as_uint(),
+            if side > 0 {
+              0x3f800001U
+            } else {
+              0x3f800000U
+            },
+          )
+        _ => fail("expected long f32 literal")
+      }
+    }
+  }
+}

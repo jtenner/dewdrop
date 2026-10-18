@@ -1,6 +1,7 @@
 open dew.std.array
 open dew.std.bytes
 open dew.std.bytes_builder
+open dew.std.fixed_array
 open dew.std.math
 open dew.std.string
 open dew.std.string_builder
@@ -1104,6 +1105,148 @@ fn self_host_decimal_value(
   self_host_round_decimal_exact(source, start, end, exponent, approximate)
 }
 
+fn self_host_compare_f32_midpoint(
+  source: Bytes,
+  start: U32,
+  end: U32,
+  decimal_exponent: SelfHostExponentScan,
+  midpoint: F64,
+) -> I32 {
+  let dyadic = self_host_f64_dyadic(f64_to_bits(midpoint))
+  let mut significand = dyadic.significand
+  let mut exponent = dyadic.exponent
+  while significand {
+    current if (current & 1u64) == 0u64 => {
+      significand = current >> 1u64
+      exponent = exponent + 1i32
+      continue significand
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  assert(exponent >= -150i32 && exponent <= 104i32, "TOK-301 f32 midpoint exponent")
+  let digits = FixedArray::make(113u32, 0u32)
+  let mut count = 0u32
+  while significand {
+    current if current > 0u64 => {
+      digits[count] = u64_into_u32(current % 10u64)
+      count = count + 1u32
+      significand = current / 10u64
+      continue significand
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  let factor = if exponent < 0i32 {
+    5u32
+  } else {
+    2u32
+  }
+  let steps = i32_into_u32(if exponent < 0i32 {
+    -exponent
+  } else {
+    exponent
+  })
+  while 0u32 {
+    step if step < steps => {
+      let mut carry = 0u32
+      while 0u32 {
+        index if index < count => {
+          let product = digits[index] * factor + carry
+          digits[index] = product % 10u32
+          carry = product / 10u32
+          continue index + 1u32
+        }
+        _ => break self_host_tokenizer_unit()
+      }
+      if carry > 0u32 {
+        assert(count < 113u32, "TOK-302 f32 midpoint digits")
+        digits[count] = carry
+        count = count + 1u32
+      } else {
+      }
+      continue step + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  let mut fraction_digits = 0u32
+  let mut significant_digits = 0u32
+  let mut first_digit = end
+  let mut after_dot = false
+  while start {
+    index if index < end => {
+      let unit = source.byte_at(index)
+      if unit == 46u8 {
+        after_dot = true
+      } else if self_host_ascii_digit(unit) {
+        if after_dot {
+          fraction_digits = fraction_digits + 1u32
+        } else {}
+        if first_digit == end && unit != 48u8 {
+          first_digit = index
+        } else {}
+        if first_digit != end {
+          significant_digits = significant_digits + 1u32
+        } else {}
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  let explicit = if decimal_exponent.negative {
+    -u32_into_i64(decimal_exponent.magnitude)
+  } else {
+    u32_into_i64(decimal_exponent.magnitude)
+  }
+  let source_order = u32_into_i64(significant_digits) - u32_into_i64(fraction_digits) + explicit
+  let midpoint_order = u32_into_i64(count) + i32_into_i64(if exponent < 0i32 {
+    exponent
+  } else {
+    0i32
+  })
+  if source_order < midpoint_order {
+    return -1i32
+  } else if source_order > midpoint_order {
+    return 1i32
+  } else {
+  }
+  let mut remaining = count
+  while first_digit {
+    index if index < end => {
+      let unit = source.byte_at(index)
+      if self_host_ascii_digit(unit) {
+        let actual = u8_into_u32(unit - 48u8)
+        let expected = if remaining > 0u32 {
+          digits[remaining - 1u32]
+        } else {
+          0u32
+        }
+        if actual < expected {
+          return -1i32
+        } else if actual > expected {
+          return 1i32
+        } else {}
+        if remaining > 0u32 {
+          remaining = remaining - 1u32
+        } else {}
+      } else {
+      }
+      continue index + 1u32
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  while remaining {
+    current if current > 0u32 => {
+      if digits[current - 1u32] != 0u32 {
+        return -1i32
+      } else {}
+      remaining = current - 1u32
+      continue remaining
+    }
+    _ => break self_host_tokenizer_unit()
+  }
+  0i32
+}
+
 fn self_host_round_f32_decimal(
   source: Bytes,
   start: U32,
@@ -1135,12 +1278,7 @@ fn self_host_round_f32_decimal(
     if value != midpoint {
       narrowed
     } else {
-      let decimal_info = self_host_decimal_exponent(source, start, end, exponent)
-      let decimal = self_host_big_decimal(source, start, end)
-      let dyadic = self_host_f64_dyadic(f64_to_bits(midpoint))
-      let comparison = self_host_decimal_compare_dyadic(
-        decimal, decimal_info.exponent, dyadic.significand, dyadic.exponent,
-      )
+      let comparison = self_host_compare_f32_midpoint(source, start, end, exponent, midpoint)
       if comparison < 0i32 {
         f32_from_bits(lower_bits)
       } else if comparison > 0i32 {
