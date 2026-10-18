@@ -661,3 +661,50 @@ test "matrix stability mutable selected string comparison" {
   assert_eq(flows.diagnostics.length(), 1)
   assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
 }
+
+///|
+fn flow_noise_library() -> Bytes {
+  let output = Buffer(size_hint=40000)
+  output.write_string_utf8("pub enum Noise {\n")
+  for index in 0..<5000 {
+    output.write_string_utf8("  N\{index}\n")
+  }
+  output.write_string_utf8("}\npub enum Bit {\n  Zero\n  One\n}\npub enum Maybe<t> {\n  None\n  Some(t)\n}\n")
+  output.to_bytes()
+}
+
+///|
+fn flow_noise_match() -> Bytes {
+  b"fn read(value: (Maybe<Bit>, Maybe<Bit>, Maybe<Bit>)) -> I32 {\n  match value {\n    (None, None, None) => 42\n    (None, None, Some(Zero)) => 42\n    (None, None, Some(One)) => 42\n    (None, Some(Zero), None) => 42\n    (None, Some(Zero), Some(Zero)) => 42\n    (None, Some(Zero), Some(One)) => 42\n    (None, Some(One), None) => 42\n    (None, Some(One), Some(Zero)) => 42\n    (None, Some(One), Some(One)) => 42\n    (Some(Zero), None, None) => 42\n    (Some(Zero), None, Some(Zero)) => 42\n    (Some(Zero), None, Some(One)) => 42\n    (Some(Zero), Some(Zero), None) => 42\n    (Some(Zero), Some(Zero), Some(Zero)) => 42\n    (Some(Zero), Some(Zero), Some(One)) => 42\n    (Some(Zero), Some(One), None) => 42\n    (Some(Zero), Some(One), Some(Zero)) => 42\n    (Some(Zero), Some(One), Some(One)) => 42\n    (Some(One), None, None) => 42\n    (Some(One), None, Some(Zero)) => 42\n    (Some(One), None, Some(One)) => 42\n    (Some(One), Some(Zero), None) => 42\n    (Some(One), Some(Zero), Some(Zero)) => 42\n    (Some(One), Some(Zero), Some(One)) => 42\n    (Some(One), Some(One), None) => 42\n    (Some(One), Some(One), Some(Zero)) => 42\n    (Some(One), Some(One), Some(One)) => 42\n  }\n}\n"
+}
+
+///|
+test "matrix coverage ignores 5000 unrelated local variants" {
+  let output = Buffer(size_hint=42000)
+  output.write_bytes(flow_noise_library())
+  output.write_bytes(flow_noise_match())
+  let (collected, resolved, inferred, flows) = flow_test_module(
+    294UL, output.to_bytes(),
+  )
+  assert_eq(collected.diagnostics, [])
+  assert_eq(resolved.diagnostics, [])
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "matrix coverage ignores 5000 unrelated imported variants" {
+  let output = Buffer(size_hint=2000)
+  output.write_string_utf8("open app.library\n")
+  output.write_bytes(flow_noise_match())
+  let (program, frozen, imports, _, inferred) = imported_semantic_program(
+    output.to_bytes(), flow_noise_library(),
+  )
+  assert_eq(program.diagnostics, [])
+  assert_eq(frozen.import_diagnostics, [])
+  assert_eq(inferred.diagnostics, [])
+  let flows = analyze_module_flows_with_imports(
+    program.modules[0], frozen.interfaces[0].resolved_types, inferred, imports,
+  )
+  assert_eq(flows.diagnostics, [])
+}

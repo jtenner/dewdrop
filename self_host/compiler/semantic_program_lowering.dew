@@ -1779,6 +1779,7 @@ fn self_host_plan_program_lowering(
             basic,
             imports.variants,
             imports.fields,
+            imports.variant_spans,
           ),
         )
         planned_indices.push(module_index)

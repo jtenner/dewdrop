@@ -299,6 +299,7 @@ struct SelfHostBodyFlowAnalyzer {
   inferred: SelfHostBasicInferredBody
   imported_variants: Array<SelfHostResolvedImportedVariant>
   imported_fields: Array<SelfHostResolvedImportedField>
+  imported_variant_spans: Option<Map<U64, SelfHostHirSpan>>
   expression_flows: Array<U32>
   block_flows: Array<U32>
   block_done: Array<Bool>
@@ -317,6 +318,7 @@ impl SelfHostBodyFlowAnalyzer {
     inferred: SelfHostBasicInferredBody,
     imported_variants: Array<SelfHostResolvedImportedVariant>,
     imported_fields: Array<SelfHostResolvedImportedField>,
+    imported_variant_spans: Option<Map<U64, SelfHostHirSpan>>,
   ) -> SelfHostBodyFlowAnalyzer {
     self_host_assert_body_owned_spans(collected, body, 3u32)
     {
@@ -326,6 +328,7 @@ impl SelfHostBodyFlowAnalyzer {
       inferred: inferred
       imported_variants: imported_variants
       imported_fields: imported_fields
+      imported_variant_spans: imported_variant_spans
       expression_flows: self_host_flow_slots(body.expressions.length)
       block_flows: self_host_flow_slots(body.blocks.length)
       block_done: self_host_module_value_bool_slots(body.blocks.length)
@@ -1278,6 +1281,7 @@ fn self_host_analyze_basic_module_flows_internal(
   inferred: SelfHostBasicInferredModuleBodies,
   imported_variants: Array<SelfHostResolvedImportedVariant>,
   imported_fields: Array<SelfHostResolvedImportedField>,
+  imported_variant_spans: Option<Map<U64, SelfHostHirSpan>>,
 ) -> SelfHostAnalyzedModuleFlows {
   let bodies = []
   let mut index = 0u32
@@ -1291,6 +1295,7 @@ fn self_host_analyze_basic_module_flows_internal(
           inferred.bodies[current],
           imported_variants,
           imported_fields,
+          imported_variant_spans,
         ).finish(),
       )
       continue current + 1u32
@@ -1309,6 +1314,7 @@ fn self_host_analyze_basic_module_flows_internal(
         inferred.lambdas[current].body,
         imported_variants,
         imported_fields,
+        imported_variant_spans,
       ).finish()
       lambdas.push({
         lambda: current
@@ -1342,6 +1348,7 @@ fn self_host_analyze_basic_module_flows(
     inferred,
     [],
     [],
+    None,
   )
 }
 
@@ -1357,6 +1364,7 @@ fn self_host_analyze_basic_module_flows_with_imports(
     inferred,
     imported_variants,
     [],
+    None,
   )
 }
 
@@ -1366,9 +1374,10 @@ fn self_host_analyze_basic_module_flows_with_field_imports(
   inferred: SelfHostBasicInferredModuleBodies,
   imported_variants: Array<SelfHostResolvedImportedVariant>,
   imported_fields: Array<SelfHostResolvedImportedField>,
+  imported_variant_spans: Map<U64, SelfHostHirSpan>,
 ) -> SelfHostAnalyzedModuleFlows {
   self_host_analyze_basic_module_flows_internal(
-    collected, resolved, inferred, imported_variants, imported_fields,
+    collected, resolved, inferred, imported_variants, imported_fields, Some(imported_variant_spans),
   )
 }
 
@@ -1390,7 +1399,7 @@ impl SelfHostPatternCoverageWork {
 }
 
 impl SelfHostBodyFlowAnalyzer {
-  fn variant_is_only_constructor(self, variant: U64) -> Bool {
+  fn variant_is_only_constructor(self, variant: U64, pattern: U32) -> Bool {
     if self_host_semantic_id_module(variant) == self.collected.module_id {
       let index = self_host_semantic_id_local(variant)
       if index >= self.collected.variants.length() {
@@ -1402,14 +1411,41 @@ impl SelfHostBodyFlowAnalyzer {
       }
       index + 1u32 >= self.collected.variants.length() || self.collected.variants[index + 1u32].declaration != owner
     } else {
-      let mut owner = None
-      for candidate in self.imported_variants {
-        if candidate.variant == variant {
-          owner = Some(candidate.declaration)
+      let owner = while self.inferred.pattern_types[self.pattern_index(pattern)] {
+        type_ => match self.inferred.type_term(type_) {
+          BodyAppliedType(base, _) => continue base
+          BodyResolvedType(resolved_type) => {
+            break while resolved_type {
+              current => match self.resolved.types[current] {
+                AppliedType(base, _) => continue base
+                NominalType(declaration) => break Some(declaration)
+                _ => break None
+              }
+            }
+          }
+          _ => break None
         }
       }
       match owner {
-        Some(declaration) => self.enum_variants(declaration).length() == 1u32
+        Some(declaration) => {
+          match self.imported_variant_spans {
+            Some(spans) => return match spans.get(declaration) {
+              Some(span) => span.length == 1u32
+              None => false
+            }
+            None => {}
+          }
+          let mut count = 0u32
+          for candidate in self.imported_variants {
+            if candidate.declaration == declaration {
+              count = count + 1u32
+              if count > 1u32 {
+                return false
+              }
+            }
+          }
+          count == 1u32
+        }
         None => false
       }
     }
@@ -1476,7 +1512,7 @@ impl SelfHostBodyFlowAnalyzer {
             if self.collected.patterns[pattern] is StructPattern(_, _, _, _, _) && !variant_payload {
               valid
             } else {
-              valid && self.variant_is_only_constructor(constructor)
+              valid && self.variant_is_only_constructor(constructor, pattern)
             }
           }
           NoBasicPatternConstructor => match self.collected.patterns[pattern] {
@@ -1496,47 +1532,104 @@ impl SelfHostBodyFlowAnalyzer {
   fn matrix_enum_variants(
     self,
     declaration: U64,
+    seed: U64,
     work: SelfHostPatternCoverageWork,
   ) -> Option<Array<U64>> {
     if !work.spend(1u32) {
       return None
     }
-    let variants = array_new::<U64>()
-    let _ = while 0u32 {
-      index => if index < self.collected.variants.length() {
-        if !work.spend(1u32) {
-          return None
-        }
-        let variant = self.collected.variants[index]
-        if variant.declaration == declaration {
+    if self_host_semantic_id_module(declaration) == self.collected.module_id {
+      let index = self_host_semantic_id_local(seed)
+      if !work.spend(1u32) {
+        return None
+      }
+      self_host_assert_compiler_invariant(index < self.collected.variants.length() && self.collected.variants[index].declaration == declaration, "PAT-104 matrix local enum seed")
+      let mut start = index
+      let _ = while start {
+        current => if current > 0u32 {
           if !work.spend(1u32) {
             return None
           }
-          variants.push(variant.id)
+          if self.collected.variants[current - 1u32].declaration != declaration {
+            break self_host_semantic_unit()
+          }
+          start = current - 1u32
+          continue start
+        } else {
+          break self_host_semantic_unit()
         }
-        continue index + 1u32
-      } else {
-        break self_host_semantic_unit()
       }
-    }
-    let _ = while 0u32 {
-      index => if index < self.imported_variants.length() {
-        if !work.spend(1u32) {
-          return None
-        }
-        let variant = self.imported_variants[index]
-        if variant.declaration == declaration {
+      let mut end = index + 1u32
+      let _ = while end {
+        current => if current < self.collected.variants.length() {
           if !work.spend(1u32) {
             return None
           }
-          variants.push(variant.variant)
+          if self.collected.variants[current].declaration != declaration {
+            break self_host_semantic_unit()
+          }
+          end = current + 1u32
+          continue end
+        } else {
+          break self_host_semantic_unit()
         }
-        continue index + 1u32
-      } else {
-        break self_host_semantic_unit()
+      }
+      if !work.spend(end - start) {
+        return None
+      }
+      let variants = array_new::<U64>()
+      let _ = while start {
+        current => if current < end {
+          variants.push(self.collected.variants[current].id)
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      return Some(variants)
+    }
+    match self.imported_variant_spans {
+      Some(spans) => {
+        let span = match spans.get(declaration) {
+          Some(span) => span
+          None => self_host_empty_hir_span(0u32)
+        }
+        if !work.spend(span.length) {
+          return None
+        }
+        let variants = array_new::<U64>()
+        let _ = while 0u32 {
+          index => if index < span.length {
+            variants.push(self.imported_variants[span.start + index].variant)
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        Some(variants)
+      }
+      None => {
+        let variants = array_new::<U64>()
+        let _ = while 0u32 {
+          index => if index < self.imported_variants.length() {
+            if !work.spend(1u32) {
+              return None
+            }
+            let variant = self.imported_variants[index]
+            if variant.declaration == declaration {
+              if !work.spend(1u32) {
+                return None
+              }
+              variants.push(variant.variant)
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        Some(variants)
       }
     }
-    Some(variants)
   }
 
   fn matrix_domain(
@@ -1560,18 +1653,30 @@ impl SelfHostBodyFlowAnalyzer {
           self_host_assert_compiler_invariant(index < self.collected.variants.length(), "PAT-102 matrix variant owner")
           return EnumFlowCoverageDomain(self.collected.variants[index].declaration)
         }
-        let _ = while 0u32 {
-          index => if index < self.imported_variants.length() {
+        let _ = while self.inferred.pattern_types[self.pattern_index(pattern)] {
+          type_ => {
             if !work.spend(1u32) {
               return OpenFlowCoverageDomain
             }
-            let variant = self.imported_variants[index]
-            if variant.variant == constructor {
-              return EnumFlowCoverageDomain(variant.declaration)
+            match self.inferred.type_term(type_) {
+              BodyAppliedType(base, _) => continue base
+              BodyResolvedType(resolved_type) => {
+                let _ = while resolved_type {
+                  current => {
+                    if !work.spend(1u32) {
+                      return OpenFlowCoverageDomain
+                    }
+                    match self.resolved.types[current] {
+                      AppliedType(base, _) => continue base
+                      NominalType(declaration) => return EnumFlowCoverageDomain(declaration)
+                      _ => break self_host_semantic_unit()
+                    }
+                  }
+                }
+                break self_host_semantic_unit()
+              }
+              _ => break self_host_semantic_unit()
             }
-            continue index + 1u32
-          } else {
-            break self_host_semantic_unit()
           }
         }
         OpenFlowCoverageDomain
@@ -1950,7 +2055,11 @@ impl SelfHostBodyFlowAnalyzer {
         true
       }
       EnumFlowCoverageDomain(declaration) => {
-        let variants = match self.matrix_enum_variants(declaration, work) {
+        let seed = match self.pattern_variant(sample) {
+          Some(variant) => variant
+          None => return false
+        }
+        let variants = match self.matrix_enum_variants(declaration, seed, work) {
           Some(variants) => variants
           None => return false
         }

@@ -806,21 +806,26 @@ fn BodyFlowAnalyzer::matrix_domain(
         }
         EnumCoverageDomain(self.collected.variants[index].declaration)
       } else {
-        match self.imports {
-          Some(imports) => {
-            for index in 0..<imports.variants.length() {
-              if !work.spend(1) {
-                return ErrorCoverageDomain
-              }
-              let info = imports.variants[index]
-              if info.variant == variant {
-                return EnumCoverageDomain(info.declaration)
+        let mut current = self.inferred.pattern_types[pattern]
+        while true {
+          if !work.spend(1) { return ErrorCoverageDomain }
+          match self.inferred.type_term(current) {
+            BodyAppliedType(base, _) => current = base
+            BodyResolvedType(type_) => {
+              let mut resolved = type_
+              while true {
+                if !work.spend(1) { return ErrorCoverageDomain }
+                match self.resolved.types[resolved] {
+                  AppliedType(base, _) => resolved = base
+                  NominalType(declaration) => return EnumCoverageDomain(declaration)
+                  _ => return ErrorCoverageDomain
+                }
               }
             }
-            ErrorCoverageDomain
+            _ => return ErrorCoverageDomain
           }
-          None => ErrorCoverageDomain
         }
+        ErrorCoverageDomain
       }
     }
     StructInferredPatternConstructor(_, _) => OpenCoverageDomain

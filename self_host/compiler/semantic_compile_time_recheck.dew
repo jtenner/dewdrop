@@ -68,7 +68,7 @@ fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering,
     self_host_clone_query_functions(original.functions), names,
     self_host_lowering_imported_builtin_recipes(source, imports), inferred,
     self_host_publish_merged_module_evidence(source, inferred, self_host_index_module_implementations_with_imports(source, imports)),
-    self_host_analyze_basic_module_flows_with_field_imports(source, resolved, basic, imports.variants, imports.fields),
+    self_host_analyze_basic_module_flows_with_field_imports(source, resolved, basic, imports.variants, imports.fields, imports.variant_spans),
     Some(live),
   )
   match lowering.compile_time.instances.get(specialization) {
