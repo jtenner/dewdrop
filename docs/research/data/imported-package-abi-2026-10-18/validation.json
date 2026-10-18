@@ -1,0 +1,331 @@
+{
+  "date": "2026-10-18",
+  "source_head": "fca541b710a0ee043c0a7cac7cee00011cb8dd5c",
+  "method": "Compile the unchanged dependency and application source through the prebuilt native CLI, with explicit module names from package source conventions and disk standard modules. Decode dew.abi from the resulting Wasm. Then validate correct and incorrect provenance with the same CLI and external Wasm consumer.",
+  "tool_sha256": {
+    "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe": "261c5a67c3eb07430bb26045e97e320891386ff964bb0ce0a76d88922a2f18ec",
+    "_build/native/release/build/jtenner/dewdrop/dew_bootstrap/dew_bootstrap.exe": "3cfd883b1b4c7dcdeb3f817b2d26d940512c53d8f8982a543c608a894b259ee7",
+    "tools/dew-abi.mjs": "819ba6f17e0d8be9a58b56634d0351e47a38ae94ca7bb6f9a6e1971d9b0c3ff6",
+    "tools/dew-wasm-consumer.mjs": "51f10214a29396905336a0802607ed01b4ffdc31bc12cc1ff7517417ba2f3041"
+  },
+  "source_checks": [
+    {
+      "path": "tests/abi-consumers/imported-package/main.dew",
+      "review_baseline_sha256": "b48b1cd352c339a73df5f42e65255b14a452ac25aad4f3fd2cd42b2be10fef5e",
+      "current_sha256": "b48b1cd352c339a73df5f42e65255b14a452ac25aad4f3fd2cd42b2be10fef5e",
+      "byte_identical": true
+    },
+    {
+      "path": "tests/abi-consumers/imported-package/dependency/callback.dew",
+      "review_baseline_sha256": "83e6394f73caa73e52803c65548904769c8e406881e50a6b00facc1c6997ddd9",
+      "current_sha256": "83e6394f73caa73e52803c65548904769c8e406881e50a6b00facc1c6997ddd9",
+      "byte_identical": true
+    },
+    {
+      "path": "tests/abi-consumers/imported-package/dew.json",
+      "review_baseline_sha256": "be10cee6e1f907abf5c8415225b03a9a31b0b45960330c99a609ae98b249eacc",
+      "current_sha256": "be10cee6e1f907abf5c8415225b03a9a31b0b45960330c99a609ae98b249eacc",
+      "byte_identical": true
+    },
+    {
+      "path": "tests/abi-consumers/imported-package/dependency/dew.json",
+      "review_baseline_sha256": "26ab9702a4c2a4cd42823c8e91f9159fa144c4c95ee12fd321c9cef89ff63b04",
+      "current_sha256": "26ab9702a4c2a4cd42823c8e91f9159fa144c4c95ee12fd321c9cef89ff63b04",
+      "byte_identical": true
+    }
+  ],
+  "old_dependency_interface": "e3c8ce7f337e1f0d923441c84e62f3959e20cda2c08ef7e28a5bc8074842c098",
+  "dependency_abi": {
+    "schema": 1,
+    "versions": {
+      "language": 1,
+      "closure": 1,
+      "genericCarrier": 1,
+      "box": 1,
+      "callbackWrapper": 1
+    },
+    "path": "fixture.package_callback",
+    "interfaceFingerprint": "0814b500a42b5814c92ea1331e8d4be9d943bbb4a0eda806e2a6065de6bebfba",
+    "dependencies": [
+      {
+        "path": "dew.std.option",
+        "contentFingerprint": "72669b92a7ed55a717ef56141d1fa05d41657862778580d0acefe4183aa16f2c"
+      },
+      {
+        "path": "dew.std.result",
+        "contentFingerprint": "56747a25a1032ba9039d30209ed1059c0a01eea77645c018c67814a33324a0d8"
+      },
+      {
+        "path": "dew.std.preamble",
+        "contentFingerprint": "058ecbea462f0643afe2fb1ca3fca9b5bece988bf8e5b53ea47b44791861f154"
+      }
+    ]
+  },
+  "old_application_abi": {
+    "schema": 1,
+    "versions": {
+      "language": 1,
+      "closure": 1,
+      "genericCarrier": 1,
+      "box": 1,
+      "callbackWrapper": 1
+    },
+    "path": "fixture.application",
+    "interfaceFingerprint": "e5fbe2fa2645e217ce0a17aa6aa0936f827979a412b0d5cf55e70b1960393aa2",
+    "dependencies": [
+      {
+        "path": "dew.std.option",
+        "contentFingerprint": "cd5e73a6f84ed11dce0a0b73da9595e3f8914c95c5e22e976b8a62dff10ccfe0"
+      },
+      {
+        "path": "dew.std.result",
+        "contentFingerprint": "e7f23ab44f4ae7881c51c7deea14d5bc294725430d7419b15408796260a607a6"
+      },
+      {
+        "path": "dew.std.preamble",
+        "contentFingerprint": "058ecbea462f0643afe2fb1ca3fca9b5bece988bf8e5b53ea47b44791861f154"
+      },
+      {
+        "path": "fixture.package_callback",
+        "contentFingerprint": "b31e1dd024f836271bc89f325fdceb6a81afe36b53de48e91209d4be57eaccb6"
+      }
+    ]
+  },
+  "new_application_abi": {
+    "schema": 1,
+    "versions": {
+      "language": 1,
+      "closure": 1,
+      "genericCarrier": 1,
+      "box": 1,
+      "callbackWrapper": 1
+    },
+    "path": "fixture.application",
+    "interfaceFingerprint": "40675e033507c17e9376721378d813385a979c3aa303ec69d495e21a3e7e4984",
+    "dependencies": [
+      {
+        "path": "dew.std.option",
+        "contentFingerprint": "72669b92a7ed55a717ef56141d1fa05d41657862778580d0acefe4183aa16f2c"
+      },
+      {
+        "path": "dew.std.result",
+        "contentFingerprint": "56747a25a1032ba9039d30209ed1059c0a01eea77645c018c67814a33324a0d8"
+      },
+      {
+        "path": "dew.std.preamble",
+        "contentFingerprint": "058ecbea462f0643afe2fb1ca3fca9b5bece988bf8e5b53ea47b44791861f154"
+      },
+      {
+        "path": "fixture.package_callback",
+        "contentFingerprint": "e81e68ab6388de93a9c850f7b6a3e8bf35f2ab1988b5b905c9f1394cbdc20d39"
+      }
+    ]
+  },
+  "application_generic_adapters": [
+    {
+      "source": "identity_box",
+      "carriers": [
+        "i32"
+      ],
+      "export": "identity_box$dew$i32"
+    }
+  ],
+  "builds": [
+    {
+      "command": [
+        "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-program-cache",
+        "--no-cache-pack",
+        "--no-interface-cache",
+        "--module",
+        "fixture.package_callback",
+        "tests/abi-consumers/imported-package/dependency/callback.dew",
+        "--root",
+        "fixture.package_callback",
+        "-o",
+        "/tmp/dewdrop-implementation-2026-10-18/abi-fixture-refresh/dependency.wasm"
+      ],
+      "exit": 0,
+      "seconds": 0.18020265600353014,
+      "cli_sha256": "261c5a67c3eb07430bb26045e97e320891386ff964bb0ce0a76d88922a2f18ec"
+    },
+    {
+      "command": [
+        "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-program-cache",
+        "--no-cache-pack",
+        "--no-interface-cache",
+        "--module",
+        "fixture.package_callback",
+        "tests/abi-consumers/imported-package/dependency/callback.dew",
+        "--module",
+        "fixture.application",
+        "tests/abi-consumers/imported-package/main.dew",
+        "--root",
+        "fixture.application",
+        "--dependency-interface",
+        "fixture.package_callback",
+        "0814b500a42b5814c92ea1331e8d4be9d943bbb4a0eda806e2a6065de6bebfba",
+        "-o",
+        "/tmp/dewdrop-implementation-2026-10-18/abi-fixture-refresh/application.wasm"
+      ],
+      "exit": 0,
+      "seconds": 0.18286088499735342,
+      "cli_sha256": "261c5a67c3eb07430bb26045e97e320891386ff964bb0ce0a76d88922a2f18ec"
+    }
+  ],
+  "checks": [
+    {
+      "name": "normal-wrapper-manifest-check",
+      "command": [
+        "tools/dew",
+        "check",
+        "--no-interface-cache",
+        "--manifest",
+        "tests/abi-consumers/imported-package/dew.json"
+      ],
+      "timeout_seconds": 29,
+      "status": "timeout",
+      "stdout": "",
+      "stderr": "",
+      "limit": "Shared Moon build was active; no claim that this normal wrapper check passed."
+    },
+    {
+      "name": "direct-dependency-interface-valid",
+      "command": [
+        "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-program-cache",
+        "--no-cache-pack",
+        "--no-interface-cache",
+        "--module",
+        "fixture.package_callback",
+        "tests/abi-consumers/imported-package/dependency/callback.dew",
+        "--module",
+        "fixture.application",
+        "tests/abi-consumers/imported-package/main.dew",
+        "--root",
+        "fixture.application",
+        "--dependency-interface",
+        "fixture.package_callback",
+        "0814b500a42b5814c92ea1331e8d4be9d943bbb4a0eda806e2a6065de6bebfba"
+      ],
+      "exit": 0,
+      "seconds": 0.18905305299995234,
+      "stdout": "checked 2 Dew source file(s) in 2 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "name": "direct-dependency-interface-mismatch",
+      "command": [
+        "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-program-cache",
+        "--no-cache-pack",
+        "--no-interface-cache",
+        "--module",
+        "fixture.package_callback",
+        "tests/abi-consumers/imported-package/dependency/callback.dew",
+        "--module",
+        "fixture.application",
+        "tests/abi-consumers/imported-package/main.dew",
+        "--root",
+        "fixture.application",
+        "--dependency-interface",
+        "fixture.package_callback",
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "exit": 2,
+      "seconds": 0.17667395999887958,
+      "stdout": "dew: dependency interface mismatch for fixture.package_callback: expected 0000000000000000000000000000000000000000000000000000000000000000, got 0814b500a42b5814c92ea1331e8d4be9d943bbb4a0eda806e2a6065de6bebfba\n",
+      "stderr": ""
+    },
+    {
+      "name": "package-integrity",
+      "command": [
+        "_build/native/release/build/jtenner/dewdrop/dew_bootstrap/dew_bootstrap.exe",
+        "package-integrity",
+        "tests/abi-consumers/imported-package/dependency/dew.json"
+      ],
+      "exit": 0,
+      "seconds": 0.0016863519995240495,
+      "stdout": "sha256-3e7a3664ebe8b0d4aa7b5b91be63b83e16899a5f58b2ff0a2696faa02f921b46\n",
+      "stderr": ""
+    },
+    {
+      "name": "package-integrity-mismatch",
+      "command": [
+        "_build/native/release/build/jtenner/dewdrop/dew_bootstrap/dew_bootstrap.exe",
+        "check",
+        "--manifest",
+        ".tmp/abi-fixture-refresh/integrity-invalid/dew.json"
+      ],
+      "exit": 2,
+      "seconds": 0.0011591700022108853,
+      "stdout": "dew: dependency integrity mismatch for @fixture/package-callback@1.0.0: expected sha256-3e7a3664ebe8b0d4aa7b5b91be63b83e16899a5f58b2ff0a2696faa02f921b46, got sha256-3b78813c6dbb0e49db46a012b9edfc03ec7bee62a035e5a1b8cd7982eab2d772\n",
+      "stderr": ""
+    },
+    {
+      "name": "consumer",
+      "command": [
+        "node",
+        "tools/dew-wasm-consumer.mjs",
+        "/tmp/dewdrop-implementation-2026-10-18/abi-fixture-refresh/application.wasm",
+        ".tmp/dew-aggregate-callback-consumer.wasm",
+        "run",
+        "i32",
+        "fixture.application",
+        "40675e033507c17e9376721378d813385a979c3aa303ec69d495e21a3e7e4984"
+      ],
+      "exit": 0,
+      "seconds": 0.03169370999967214,
+      "stdout": "{\"export\":\"run\",\"result\":{\"type\":\"i32\",\"value\":42}}\n",
+      "stderr": ""
+    },
+    {
+      "name": "consumer-interface-mismatch",
+      "command": [
+        "node",
+        "tools/dew-wasm-consumer.mjs",
+        "/tmp/dewdrop-implementation-2026-10-18/abi-fixture-refresh/application.wasm",
+        ".tmp/dew-aggregate-callback-consumer.wasm",
+        "run",
+        "i32",
+        "fixture.application",
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "exit": 1,
+      "seconds": 0.03152543299802346,
+      "stdout": "",
+      "stderr": "Dew ABI metadata: interface fingerprint mismatch for fixture.application: expected 0000000000000000000000000000000000000000000000000000000000000000, got 40675e033507c17e9376721378d813385a979c3aa303ec69d495e21a3e7e4984\n"
+    }
+  ],
+  "stale_constant_audit": {
+    "command": [
+      "rg",
+      "-n",
+      "e3c8ce7f337e1f0d923441c84e62f3959e20cda2c08ef7e28a5bc8074842c098|e5fbe2fa2645e217ce0a17aa6aa0936f827979a412b0d5cf55e70b1960393aa2|cd5e73a6f84ed11dce0a0b73da9595e3f8914c95c5e22e976b8a62dff10ccfe0|e7f23ab44f4ae7881c51c7deea14d5bc294725430d7419b15408796260a607a6|b31e1dd024f836271bc89f325fdceb6a81afe36b53de48e91209d4be57eaccb6",
+      ".",
+      "-g",
+      "!.git/**"
+    ],
+    "matches_after_update": [
+      "./docs/research/data/starshine-2026-09-10/starshine-consumers-rechecked.jsonl:8:{\"case\":{\"commands\":[{\"command\":[\"$DEWDROP/tools/dew\",\"build\",\"--manifest\",\"tests/abi-consumers/imported-package/dew.json\",\"-o\",\"$DEWDROP/.tmp/starshine-consumers-rechecked/cli/imported-package/baseline.wasm\"],\"program\":\"dew\",\"returncode\":2,\"seconds\":1.127223,\"stderr\":\"\",\"stdout\":\"dew: dependency interface mismatch for fixture.package_callback: expected 960a10a2d1e24a79257c23580595b15822f664cb3ac14d6af8980012259564c0, got e3c8ce7f337e1f0d923441c84e62f3959e20cda2c08ef7e28a5bc8074842c098\\n\",\"timeout\":false}],\"error\":\"exit 2: ['$DEWDROP/tools/dew', 'build', '--manifest', 'tests/abi-consumers/imported-package/dew.json', '-o', '$DEWDROP/.tmp/starshine-consumers-rechecked/cli/imported-package/baseline.wasm']\\ndew: dependency interface mismatch for fixture.package_callback: expected 960a10a2d1e24a79257c23580595b15822f664cb3ac14d6af8980012259564c0, got e3c8ce7f337e1f0d923441c84e62f3959e20cda2c08ef7e28a5bc8074842c098\\n\",\"name\":\"cli/imported-package\",\"pipelines\":{},\"status\":\"baseline-failed\"}}"
+    ],
+    "limit": "Historical research logs are retained as recorded data. No active fixture or test-script match remains.",
+    "search_stage": "After fixture edits, before writing this audit file. This audit intentionally retains old hashes as evidence."
+  },
+  "limits": [
+    "The normal tools/dew manifest check timed out at 29 seconds while a shared Moon build was active. No pass is claimed for that wrapper invocation; root will rerun the complete CLI lane.",
+    "The two native build hashes identify executable bytes, not independently certified compiler source commits.",
+    "Public source and package definitions are byte-identical to the review baseline; ABI schema versions, module paths and the expected generic adapter remain unchanged. Interface metadata fingerprints change because each field now carries its module-private bit, including transitive Option and Result fields."
+  ],
+  "public_abi_checks": {
+    "schema_versions_and_root_path_unchanged": true,
+    "dependency_paths_and_order_unchanged": true,
+    "generic_adapter": "identity_box$dew$i32",
+    "external_consumer_result": 42
+  }
+}

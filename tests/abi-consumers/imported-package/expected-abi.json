@@ -8,15 +8,15 @@
     "callbackWrapper": 1
   },
   "path": "fixture.application",
-  "interfaceFingerprint": "e5fbe2fa2645e217ce0a17aa6aa0936f827979a412b0d5cf55e70b1960393aa2",
+  "interfaceFingerprint": "40675e033507c17e9376721378d813385a979c3aa303ec69d495e21a3e7e4984",
   "dependencies": [
     {
       "path": "dew.std.option",
-      "contentFingerprint": "cd5e73a6f84ed11dce0a0b73da9595e3f8914c95c5e22e976b8a62dff10ccfe0"
+      "contentFingerprint": "72669b92a7ed55a717ef56141d1fa05d41657862778580d0acefe4183aa16f2c"
     },
     {
       "path": "dew.std.result",
-      "contentFingerprint": "e7f23ab44f4ae7881c51c7deea14d5bc294725430d7419b15408796260a607a6"
+      "contentFingerprint": "56747a25a1032ba9039d30209ed1059c0a01eea77645c018c67814a33324a0d8"
     },
     {
       "path": "dew.std.preamble",
@@ -24,7 +24,7 @@
     },
     {
       "path": "fixture.package_callback",
-      "contentFingerprint": "b31e1dd024f836271bc89f325fdceb6a81afe36b53de48e91209d4be57eaccb6"
+      "contentFingerprint": "e81e68ab6388de93a9c850f7b6a3e8bf35f2ab1988b5b905c9f1394cbdc20d39"
     }
   ]
 }
