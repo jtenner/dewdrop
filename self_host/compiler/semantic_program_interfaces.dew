@@ -177,6 +177,15 @@ fn self_host_manifest_with_default_preamble(
   if !enabled {
     return manifest
   }
+  let mut has_option = false
+  let mut has_result = false
+  for module_ in manifest.modules {
+    if self_host_manifest_string_equal(module_.path, "dew.std.option") {
+      has_option = true
+    } else if self_host_manifest_string_equal(module_.path, "dew.std.result") {
+      has_result = true
+    }
+  }
   let modules = []
   for module_ in manifest.modules {
     if self_host_manifest_string_equal(module_.path, "dew.std.preamble") {
@@ -194,9 +203,21 @@ fn self_host_manifest_with_default_preamble(
           break self_host_semantic_unit()
         }
       }
+      let imports = if self_host_manifest_string_equal(module_.path, "dew.std.option") ||
+        self_host_manifest_string_equal(module_.path, "dew.std.result") {
+        b"open dew.std.preamble\n"
+      } else if has_option && has_result {
+        b"open dew.std.preamble\nopen dew.std.option\nopen dew.std.result\n"
+      } else if has_option {
+        b"open dew.std.preamble\nopen dew.std.option\n"
+      } else if has_result {
+        b"open dew.std.preamble\nopen dew.std.result\n"
+      } else {
+        b"open dew.std.preamble\n"
+      }
       files.push({
         path: "__dew_default_preamble.dew"
-        source: b"open dew.std.preamble\n"
+        source: imports
         test_only: false
       })
       modules.push({

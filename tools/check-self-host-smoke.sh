@@ -178,7 +178,7 @@ run_compiler() {
   wasm-tools print "$work/$stage/output.wasm" > "$wat"
   grep -Fq 'local.get 0' "$wat"
   grep -Fq 'local.get 1' "$wat"
-  test "$(grep -Ec 'call [0-9]+' "$wat")" -ge 2
+  test "$(grep -Ec '^[[:space:]]+call[[:space:]]+([0-9]+|\$[^[:space:]]+)([[:space:]]|$)' "$wat")" -ge 2
   grep -Fq 'i32.const 35' "$wat"
   grep -Fq 'local.set 0' "$wat"
   grep -Fq 'i32.const 70' "$wat"

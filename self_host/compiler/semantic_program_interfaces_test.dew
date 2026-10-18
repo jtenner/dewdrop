@@ -1,6 +1,88 @@
 open dew.std.option
 open dew.std.testing
 
+test "default preamble resolves Option and Result without self imports" {
+  let manifest = {
+    modules: [
+      {
+        path: "dew.std.preamble"
+        files: [{
+          path: "core.dew"
+          source: b""
+          test_only: false
+        }]
+      },
+      {
+        path: "dew.std.option"
+        files: [{
+          path: "option.dew"
+          source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
+          test_only: false
+        }]
+      },
+      {
+        path: "dew.std.result"
+        files: [{
+          path: "result.dew"
+          source: b"pub enum Result<t, e> {\n  Ok(t)\n  Err(e)\n}\n"
+          test_only: false
+        }]
+      },
+      {
+        path: "app.main"
+        files: [{
+          path: "main.dew"
+          source: b"pub fn maybe(value: Option<I32>) -> Option<I32> {\n  value\n}\npub fn result(value: Result<I32, Bool>) -> Result<I32, Bool> {\n  value\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  }
+  let enabled = self_host_manifest_with_default_preamble(manifest, true)
+  let frozen = self_host_freeze_program_signature_interfaces(
+    self_host_collect_program_manifest(5510u64, enabled),
+  )
+  assert(frozen.import_diagnostics.length() == 0u32, "default imports must resolve")
+  assert(frozen.interfaces.at(3u32).resolved_diagnostic_count() == 0u32, "Option and Result signatures must resolve through default imports")
+  assert(self_host_manifest_module_file_count(enabled.modules[0u32]) == 1u32, "preamble must not import itself")
+  for module_index in [1u32, 2u32] {
+    let imported = self_host_collect_program_manifest(5510u64, enabled).modules.at(module_index)
+    assert(imported.imports.length() == 1u32, "Option and Result modules must only import the preamble")
+  }
+  assert(self_host_manifest_module_file(enabled.modules[3u32], 0u32).path == "main.dew", "default imports must retain original file identities")
+  let disabled = self_host_manifest_with_default_preamble(manifest, false)
+  assert(self_host_manifest_module_file_count(disabled.modules[3u32]) == 1u32, "disabled preamble must not add imports")
+  let disabled_frozen = self_host_freeze_program_signature_interfaces(
+    self_host_collect_program_manifest(5510u64, disabled),
+  )
+  assert(disabled_frozen.interfaces.at(3u32).resolved_diagnostic_count() > 0u32, "disabled defaults must require explicit imports")
+  for selected in [0u32, 1u32, 2u32] {
+    let modules = [manifest.modules[0u32]]
+    if selected != 0u32 {
+      modules.push(manifest.modules[selected])
+    }
+    modules.push(manifest.modules[3u32])
+    let partial = self_host_manifest_with_default_preamble(
+      {
+        modules: modules
+      },
+      true,
+    )
+    let partial_frozen = self_host_freeze_program_signature_interfaces(
+      self_host_collect_program_manifest(5510u64, partial),
+    )
+    assert(partial_frozen.import_diagnostics.length() == 0u32, "defaults must not import absent modules")
+    assert(partial_frozen.path_diagnostics.length() == 0u32, "minimal manifests must keep valid import paths")
+    let interface_ = partial_frozen.interfaces.at(modules.length() - 1u32)
+    assert(interface_.resolved_diagnostic_count() > 0u32, "absent types must still report signature errors")
+    let option_type = interface_.resolved_type_at(interface_.resolved_parameter_type(0u32))
+    let result_type = interface_.resolved_type_at(interface_.resolved_parameter_type(1u32))
+    assert((option_type is ErrorType) == (selected != 1u32), "only a present Option module supplies its default type")
+    assert((result_type is ErrorType) == (selected != 2u32), "only a present Result module supplies its default type")
+  }
+  assert(self_host_manifest_module_file_count(manifest.modules[3u32]) == 1u32, "default preparation must not mutate the input")
+}
+
 test "program manifests assign deterministic module and file identities" {
   let program = self_host_collect_program_manifest(
     200u64,

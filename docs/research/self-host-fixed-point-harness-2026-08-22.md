@@ -2,6 +2,23 @@
 
 Date: 2026-08-22
 
+When defaults are enabled and requests include the complete standard inputs,
+self-host ambient imports follow the native rule: ordinary modules open the
+preamble, `Option`, and `Result` modules. Minimal manifests open only the modules
+they contain; references to absent types retain normal resolution errors. The
+preamble does not import itself, and the `Option` and `Result` modules only
+receive the preamble import. Disabled defaults preserve the self-host manifest;
+native Dew still supplies ambient imports to standard modules in that mode.
+Duplicate explicit opens are harmless in self-host, while native filters them.
+Implicit imports use a separate appended file, so existing file identities and
+source offsets remain stable.
+
+The smoke fixture opens optional fixed-array and byte operations explicitly
+and gives its U32 to I32 conversion a concrete result type. Two constructor
+probes exercise the enum payload layouts required by the existing shape checks.
+The direct-call count accepts numeric and named targets; it excludes tail
+calls, `call_ref`, comments, and unrelated names.
+
 `tools/check-self-host-bootstrap.sh` now owns the complete fixed-point sequence:
 
 1. MoonBit Dewdrop builds compiler A with the pinned Starshine provider.
