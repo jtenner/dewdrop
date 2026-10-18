@@ -131,6 +131,22 @@ fn compile_time_program_context(
         work.push(callable.declaration)
       }
     }
+    // A generic lambda's captures and cells belong to its selected owner.
+    // Use the existing instance planner even when no type query is present.
+    for lambda in module_.lambdas {
+      if lambda.elided {
+        continue
+      }
+      let body = module_.bodies[semantic_id_local(lambda.root_body)]
+      match module_.functions.callable_of(body.declaration) {
+        Some(owner) if program_callable_generic_parameters(owner).length > 0 &&
+          !logical.contains(owner.declaration) => {
+          logical[owner.declaration] = true
+          logical_work.push(owner.declaration)
+        }
+        _ => ()
+      }
+    }
     for index, expression in module_.expressions {
       // Trait-bound calls need their logical witness in returned function and
       // lambda bodies too. Physical carriers cannot identify an implementation.

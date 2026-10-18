@@ -79,6 +79,7 @@ native panic-test runner cannot require an exact abort record from the full
 planner. The planner hook was checked by source review, and valid full-planner
 cases remain covered.
 
-The next bounded task is to check mutable captured source-local shapes before
-`starshine_local_capture_cell_slot` selects a physical cell. This change checks
-the capture record's shape; the source local has a separate saved shape.
+The source-local follow-up is now complete; see the
+[mutable source-local log](native-mutable-capture-source-shapes-2026-10-18.md).
+This change checks the capture record; that follow-up checks the separate
+source-local fact and selected cell storage.

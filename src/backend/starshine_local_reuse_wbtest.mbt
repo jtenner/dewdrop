@@ -41,7 +41,7 @@ test "linear immutable locals reuse compatible physical slots" {
     None,
     scalar_body,
     0,
-  )
+  ).unwrap()
   let (_, overlap_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
@@ -49,7 +49,7 @@ test "linear immutable locals reuse compatible physical slots" {
     None,
     overlap_body,
     0,
-  )
+  ).unwrap()
   let (_, reference_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
@@ -57,7 +57,7 @@ test "linear immutable locals reuse compatible physical slots" {
     None,
     reference_body,
     0,
-  )
+  ).unwrap()
   let (_, generic_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
@@ -65,7 +65,7 @@ test "linear immutable locals reuse compatible physical slots" {
     None,
     generic_body,
     0,
-  )
+  ).unwrap()
   assert_eq(scalar_types.length(), 1)
   assert_eq(overlap_types.length(), 2)
   assert_eq(reference_types.length(), 2)

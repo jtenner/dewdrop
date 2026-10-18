@@ -456,6 +456,14 @@ Correctness comes first. Keep these timing defects visible after query completio
   elided lambdas and unspecialized generic templates retain their existing path.
   Scalar checks need no worklist. See the
   [live capture log](docs/research/native-live-capture-shapes-2026-10-18.md).
+  Native mutable source locals now check saved and selected cell shapes,
+  reject Error leaves, and report concrete carrier conflicts. Exact emission records cover nested products,
+  function/lambda owners, initializers, and selected-instance corruption.
+  Ordinary generic lambda owners now select complete existing instances without
+  needing a type query; erased public exports keep their checked reference ABI.
+  Selected product capture reads now reserve their shared reference scratch.
+  See the [source-local log](docs/research/native-mutable-capture-source-shapes-2026-10-18.md).
+  Next, compare each concrete mutable source carrier with its capture carriers.
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.

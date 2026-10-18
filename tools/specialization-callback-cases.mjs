@@ -3,6 +3,9 @@ import { checkSpecializationProducts, specializationI64Values } from "./speciali
 
 export const specializationCallbackNames = [
   "selected_envelope_callback", "selected_result_callback",
+  "generic_mutable_i64_callback", "generic_mutable_unit_callback",
+  "generic_mutable_product_callback", "generic_mutable_escaping_callback",
+  "generic_mutable_nested_callback",
   "loop_return_callback",
   "raw_array_i64_callback", "raw_array_product_callback", "raw_array_unit_callback",
   "raw_array_packed_callback",
@@ -43,4 +46,15 @@ export function checkSpecializationCallbacks(exports) {
     }
   }
   return checks;
+}
+
+export function checkErasedMutableCapture(exports) {
+  for (const name of ["mutable_select", "mutable_reference", "mutable_reference_value"]) {
+    assert.equal(typeof exports[name], "function", `missing export ${name}`);
+  }
+  const first = exports.mutable_reference(1n);
+  const second = exports.mutable_reference(42n);
+  const selected = exports.mutable_select(first, second);
+  assert.equal(exports.mutable_reference_value(selected), 42n, "erased mutable reference");
+  return 1;
 }

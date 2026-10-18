@@ -1795,6 +1795,7 @@ pub struct PlannedLocal {
   nominal : UInt64
   offset : UInt64
 } derive(Eq, @debug.Debug)
+pub fn PlannedLocal::with_shape(Self, PlannedValueShape) -> Self
 
 pub struct PlannedLoweredBodyView {
   body : PlannedBodyLowering

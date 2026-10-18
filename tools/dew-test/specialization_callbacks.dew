@@ -831,3 +831,91 @@ pub fn never_loop_result() -> I64 {
     _ => continue 0u32
   }
 }
+
+// No type query is needed to select a generic mutable capture's cell.
+pub fn mutable_select<t>(first: t, second: t) -> t {
+  let mut item = first
+  let update = fn() -> t {
+    item = second
+    item
+  }
+  item = first
+  let _ = update()
+  item
+}
+
+pub fn generic_mutable_i64_callback(value: I64) -> I64 {
+  mutable_forward(0i64, value)
+}
+
+pub fn generic_mutable_unit_callback(value: I64) -> I64 {
+  mutable_select((), ())
+  value
+}
+
+pub fn generic_mutable_product_callback(value: I64) -> I64 {
+  let (selected, (effect, tag)) = mutable_select((0i64, ((), 0i32)), (value, ((), 7i32)))
+  let _ = effect
+  if tag == 7i32 {
+    selected
+  } else {
+    0i64
+  }
+}
+
+fn mutable_reader<t>(first: t, second: t) -> fn() -> t {
+  let mut item = first
+  fn() -> t {
+    let previous = item
+    item = second
+    previous
+  }
+}
+
+pub fn generic_mutable_escaping_callback(value: I64) -> I64 {
+  let reader = mutable_reader(0i64, value)
+  let previous = reader()
+  let selected = reader()
+  if previous == 0i64 {
+    selected
+  } else {
+    nested_tuple_failure()
+  }
+}
+
+fn mutable_nested_reader<t>(first: t, second: t) -> fn() -> fn() -> t {
+  fn() -> fn() -> t {
+    let mut item = first
+    fn() -> t {
+      let previous = item
+      item = second
+      previous
+    }
+  }
+}
+
+pub fn generic_mutable_nested_callback(value: I64) -> I64 {
+  let outer = mutable_nested_reader(0i64, value)
+  let reader = outer()
+  let previous = reader()
+  let selected = reader()
+  if previous == 0i64 {
+    selected
+  } else {
+    nested_tuple_failure()
+  }
+}
+
+fn mutable_forward<t>(first: t, second: t) -> t {
+  mutable_select(first, second)
+}
+
+pub fn mutable_reference(value: I64) -> Item {
+  Item::{
+    value: value
+  }
+}
+
+pub fn mutable_reference_value(item: Item) -> I64 {
+  item.value
+}

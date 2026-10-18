@@ -479,15 +479,19 @@ fn emit_starshine_program_function_body(
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
-  ) = starshine_body_locals(
-    module_lowering,
-    module_fragments,
-    Some(planned),
-    generic_specialization,
-    body,
-    0,
-    minimum_parameter_count=function_.parameters.length,
-  )
+  ) = match
+    starshine_body_locals(
+      module_lowering,
+      module_fragments,
+      Some(planned),
+      generic_specialization,
+      body,
+      0,
+      minimum_parameter_count=function_.parameters.length,
+    ) {
+    Ok(locals) => locals
+    Err(error) => return Err(error)
+  }
   match generic_specialization {
     Some(specialization) =>
       for local_id in 0..<body.locals.length {
@@ -827,14 +831,18 @@ fn emit_starshine_program_initializer_body(
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
-  ) = starshine_body_locals(
-    module_lowering,
-    module_fragments,
-    Some(planned),
-    None,
-    body,
-    0,
-  )
+  ) = match
+    starshine_body_locals(
+      module_lowering,
+      module_fragments,
+      Some(planned),
+      None,
+      body,
+      0,
+    ) {
+    Ok(locals) => locals
+    Err(error) => return Err(error)
+  }
   let mut product_scratch_index = -1
   if initializer.shape is @semantic.ProductPlannedValueShape(_) {
     product_scratch_index = body_local_types.length()

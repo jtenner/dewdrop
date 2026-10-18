@@ -3489,19 +3489,22 @@ fn starshine_body_locals(
   leading_parameter_count : Int32,
   minimum_parameter_count~ : Int32 = -1,
   lambda~ : @semantic.LambdaId = -1,
-) -> (
-  Array[Int32],
-  Array[@lib.ValType],
-  Array[Int32],
-  Array[Int32],
-  Int32,
-  Int32,
-  Array[Int32],
-  Array[Int32],
-  Array[Int32],
-  Array[Int32],
-  Array[Int32],
-) {
+) -> Result[
+  (
+    Array[Int32],
+    Array[@lib.ValType],
+    Array[Int32],
+    Array[Int32],
+    Int32,
+    Int32,
+    Array[Int32],
+    Array[Int32],
+    Array[Int32],
+    Array[Int32],
+    Array[Int32],
+  ),
+  StarshineCodeEmissionError,
+] {
   @semantic.assert_planned_body_arenas(lowering, body, 7, lambda~)
   let local_indices = Array::make(body.locals.length, -1)
   let elided_locals = Array::make(body.locals.length, false)
@@ -3526,14 +3529,32 @@ fn starshine_body_locals(
   let mut parameter_count = leading_parameter_count
   for local_id in 0..<body.locals.length {
     let planned_local = lowering.locals[body.locals.start + local_id]
-    match planned_local.kind {
-      @semantic.ParameterLocal => {
-        let specialized_shape = starshine_specialized_shape(
+    if !(planned_local.kind is @semantic.ParameterLocal) &&
+      (planned_local.elided || elided_locals[local_id]) {
+      continue
+    }
+    let specialized_shape = starshine_specialized_shape(
+      lowering,
+      generic_specialization,
+      planned_local.type_,
+      planned_local.shape,
+    )
+    let cell_slot = starshine_local_capture_cell_slot(lowering, body, local_id)
+    if cell_slot >= 0 {
+      match
+        starshine_check_capture_cell_shape(
           lowering,
-          generic_specialization,
-          planned_local.type_,
+          body,
+          body.locals.start + local_id,
           planned_local.shape,
-        )
+          specialized_shape,
+        ) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    }
+    match planned_local.kind {
+      @semantic.ParameterLocal =>
         match specialized_shape {
           @semantic.ProductPlannedValueShape(_) => {
             local_indices[local_id] = parameter_count
@@ -3560,25 +3581,12 @@ fn starshine_body_locals(
             }
           }
         }
-      }
       @semantic.LetLocal | @semantic.PatternLocal => {
-        if planned_local.elided || elided_locals[local_id] {
-          continue
-        }
         let local_parameter_count = if minimum_parameter_count > parameter_count {
           minimum_parameter_count
         } else {
           parameter_count
         }
-        let cell_slot = starshine_local_capture_cell_slot(
-          lowering, body, local_id,
-        )
-        let specialized_shape = starshine_specialized_shape(
-          lowering,
-          generic_specialization,
-          planned_local.type_,
-          planned_local.shape,
-        )
         if specialized_shape is @semantic.ProductPlannedValueShape(_) {
           local_indices[local_id] = local_parameter_count +
             body_local_types.length()
@@ -3958,14 +3966,21 @@ fn starshine_body_locals(
           starshine_append_shape_value_types(body_local_types, value_shape)
         }
       }
-      @semantic.PlannedCaptureGet(_) | @semantic.PlannedModuleValueGet(_, _) =>
-        if lowering.expressions[expression].shape
-          is @semantic.ProductPlannedValueShape(_) &&
+      @semantic.PlannedCaptureGet(_) | @semantic.PlannedModuleValueGet(_, _) => {
+        let source = lowering.expressions[expression]
+        let shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          source.type_,
+          source.shape,
+        )
+        if shape is @semantic.ProductPlannedValueShape(_) &&
           fixed_array_ref_scratch_index < 0 {
           fixed_array_ref_scratch_index = parameter_count +
             body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
+      }
       @semantic.PlannedFieldGet(field, _, _) => {
         let source = lowering.expressions[expression]
         let field_shape = starshine_specialized_shape(
@@ -4120,11 +4135,13 @@ fn starshine_body_locals(
       }
     }
   }
-  (
-    local_indices, body_local_types, match_local_indices, match_result_local_indices,
-    fixed_array_ref_scratch_index, fixed_array_i32_scratch_index, map_key_local_indices,
-    map_value_local_indices, control_state_local_indices, control_result_local_indices,
-    constructor_local_indices,
+  Ok(
+    (
+      local_indices, body_local_types, match_local_indices, match_result_local_indices,
+      fixed_array_ref_scratch_index, fixed_array_i32_scratch_index, map_key_local_indices,
+      map_value_local_indices, control_state_local_indices, control_result_local_indices,
+      constructor_local_indices,
+    ),
   )
 }
 
@@ -8478,16 +8495,20 @@ fn emit_starshine_lambda_body(
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
-  ) = starshine_body_locals(
-    lowering,
-    planned,
-    program,
-    generic_specialization,
-    body,
-    starshine_lambda_leading_parameter_count(lowering, planned, lambda),
-    minimum_parameter_count=fragment.parameters.length,
-    lambda~,
-  )
+  ) = match
+    starshine_body_locals(
+      lowering,
+      planned,
+      program,
+      generic_specialization,
+      body,
+      starshine_lambda_leading_parameter_count(lowering, planned, lambda),
+      minimum_parameter_count=fragment.parameters.length,
+      lambda~,
+    ) {
+    Ok(locals) => locals
+    Err(error) => return Err(error)
+  }
   let parameter_count = planned.functions[planned.lambda_function_indices[lambda]].parameters.length
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     lowering,
@@ -8575,15 +8596,19 @@ fn emit_starshine_function_body(
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
-  ) = starshine_body_locals(
-    lowering,
-    planned,
-    None,
-    None,
-    body,
-    0,
-    minimum_parameter_count=parameter_count,
-  )
+  ) = match
+    starshine_body_locals(
+      lowering,
+      planned,
+      None,
+      None,
+      body,
+      0,
+      minimum_parameter_count=parameter_count,
+    ) {
+    Ok(locals) => locals
+    Err(error) => return Err(error)
+  }
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(
     lowering,
     None,
