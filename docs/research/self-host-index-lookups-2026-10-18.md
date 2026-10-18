@@ -248,3 +248,48 @@ Evidence:
 - [Field build identity](data/self-host-index-lookups-2026-10-18/field-build-identity.json)
 - [Field build and test log](data/self-host-index-lookups-2026-10-18/field-index-tests.log)
 - [Field sample command time](data/self-host-index-lookups-2026-10-18/field-layout-samples-timing.txt)
+
+## Source and harness audit
+
+The [provenance audit](data/self-host-index-lookups-2026-10-18/provenance-audit.json)
+compares recorded input hashes with `git show COMMIT:PATH`. This was a source
+and raw-data check, with no new build or runtime sample. It recomputes every
+lookup median and heap delta from the saved samples. All recorded medians
+match. All measured lookup files, their
+fixtures, and the checked linker and owner-index source match the feature
+commits byte for byte:
+
+| Run | Feature commit | Matching source inputs | Other input mismatches |
+| --- | --- | ---: | --- |
+| Function | `e7545e727b` | 310 / 314 | `semantic_body_flow.dew`, `std/json.dew`, `std/math.dew`, `std/text.dew` |
+| Metadata | `6af8898bbf` | 315 / 316 | `semantic_body_flow.dew` |
+| Field | `ce4e70d006` | 316 / 317 | `semantic_body_flow.dew` |
+
+The JSON records both hashes for each mismatch. The source snapshots are the
+measured inputs; they are not exact snapshots of those full commits or the
+final branch head. `checkout_commit` records HEAD when the snapshot was made,
+before the pending lookup edits were committed. It is not a build identity on
+its own. These differences do not change the byte-identical measured lookup
+bodies, but they prevent a claim that the entire measured compiler matched a
+feature commit.
+
+The metadata and field sample harness hashes match the harness stored at their
+feature commits. Their changes add suite selection and output fields; the
+warm-up count, seven samples, timer boundary, collection calls and worker flags
+stay the same. The function sample has no recorded harness hash. Commit
+`e7545e727b` preserves its compatible fixed-tier harness, with SHA-256
+`ef1dbd1f931258bc94ff703125895aed2adc836a705196b057396205d08549f6`,
+but the record cannot prove the exact sampled script bytes. The initial tiered
+run is historical supporting data, not the fixed-tier result.
+
+The generator hash also changed from `cc2ab3…` for the function run to
+`325aaf…` for metadata and field. The linker and provider hashes stayed the
+same. Each table compares both query versions in its own single binary; the
+tables are not one cross-version compiler benchmark. The recorded tool hashes
+identify tool bytes, not a certified tool source commit.
+
+The three `*index_lookups_test.dew` files are found by
+`tools/test-short-inference-self-host.sh --all`, which selects every compiler
+`.dew` file. They are also now listed explicitly in
+`tools/test-self-host-hardening.sh`. This audit checked discovery and shell
+syntax only; it did not run another compiler or test lane.

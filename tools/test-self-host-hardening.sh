@@ -168,6 +168,9 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/parser_pattern_test.dew \
   self_host/compiler/semantic_product_patterns_test.dew \
   self_host/compiler/semantic_wasm_body_plan_test.dew \
+  self_host/compiler/semantic_index_lookups_test.dew \
+  self_host/compiler/semantic_metadata_index_lookups_test.dew \
+  self_host/compiler/semantic_field_index_lookups_test.dew \
   self_host/compiler/semantic_wasm_body_work_queue_test.dew \
   self_host/compiler/semantic_physical_target_updates_test.dew \
   self_host/compiler/semantic_linked_call_index_test.dew \

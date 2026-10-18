@@ -96,8 +96,12 @@ storage. The shared source input was allocated before each measured region.
 The probe build took 0.675771 seconds. Its combined executable was 517,736 bytes
 with SHA-256 `d536dd33a06d4d1a0a4b6e2dbee69346ad106c327664d6ea2c46bf4a74601243`.
 
-The allocation probe uses a fixed table to track live requests. Its own table
-storage is outside the counted requests. It does not measure allocator page
+The allocation probe uses a fixed table to track live requests. It intercepts
+only successful `mi_malloc` requests and matching `mi_free` calls while the
+probe is active. It does not intercept other allocation entry points. Its
+counts and requested-byte traffic therefore have lower-bound coverage; live
+byte peaks apply only to tracked requests. Its own table storage is outside
+the counted requests. It does not measure allocator page
 retention, process RSS, or total compiler peak memory. The normal timing
 benchmark has no allocation tracking. No process memory or code-size gain is
 claimed. The probe's executable contains both versions and is not a production
@@ -113,3 +117,20 @@ generated harness hashes, executable identity, and measured build time.
 `blake3-candidate.mbt.txt` preserves the measured hash source. Pass its path to
 the probe with `--candidate-source` to repeat that exact source after later
 formatting changes.
+
+## Provenance audit
+
+The [source audit](data/self-host-index-lookups-2026-10-18/provenance-audit.json)
+checks the allocation probe without running it again. The BLAKE3 source,
+strict pack source and lazy pack source at probe baseline `43fd293043` are
+byte-identical to review baseline `9d86b82929`. The saved candidate BLAKE3
+snapshot matches the raw probe hash and feature commit `d4b976f`. The generated
+MoonBit and C harness strings in `measure-allocations.py` also match their
+hashes in `allocations.stdout`.
+
+The copy control uses `input[0:1024 * 1024].to_owned()`. This is the same
+slice-to-owned expression as the old `artifact_pack_copy_bytes` helper. The
+probe measures copy-and-hash work; it does not call a complete cache decoder
+or measure its allocations. The removed full-size request is visible in all
+seven raw sample pairs. The table is a result for those tracked requests,
+not proof that all compiler allocation paths were counted.

@@ -1,0 +1,643 @@
+{
+  "audit_date": "2026-10-18",
+  "audit_head": "bf39e85b93c5d19f0dbed7978a31a1c51654777a",
+  "method": "SHA-256 of git show COMMIT:PATH compared with the recorded source_sha256; no new compiler run or benchmark.",
+  "lookup_runs": [
+    {
+      "family": "function",
+      "measurement_source_record": "docs/research/data/self-host-index-lookups-2026-10-18/function-build-identity.json",
+      "source_record_sha256": "17a92d1d4ec6c64c50de66506fefd7300d22494e8ddda33c76e17c82006f539d",
+      "recorded_checkout_commit": "a747c7c6be34d4b07bd52ba639bca6bae7e4cc30",
+      "comparison_commit": "e7545e727b590fee0f5d71b195f8217f4582de21",
+      "source_inputs_checked": 314,
+      "matching_source_inputs": 310,
+      "mismatches": [
+        {
+          "path": "self_host/compiler/semantic_body_flow.dew",
+          "recorded_sha256": "6cc62ff034d611c8421793c1982dafa7db324028988d106d6ea1c3ecc7494a5b",
+          "commit_sha256": "3cf73778205725b0030975da48dda36f6e01db2593bfff00d341dce90fed6a9b",
+          "match": false
+        },
+        {
+          "path": "std/json.dew",
+          "recorded_sha256": "1f19243934b31a12b481a297d03805cac6ef110a299a230b51bbc1d729deca11",
+          "commit_sha256": "d28e38f6324dd94f7e08d57464716ebdf6f4fcfc746875db94cccfaeef07f778",
+          "match": false
+        },
+        {
+          "path": "std/math.dew",
+          "recorded_sha256": "e05757e2650b260c04ba2065cdd7b48b79b1d6890c7a7ffc2469299bd337a197",
+          "commit_sha256": "dcb485a9110ab89002a274e0fe1ee4ebcb2f07101b506ca4b43731b3fa1291dc",
+          "match": false
+        },
+        {
+          "path": "std/text.dew",
+          "recorded_sha256": "b9c196db808e99132103cabf2eecb5aec65120858d0aacd37b5d44d74f44c5bb",
+          "commit_sha256": "6bf2b3695bb3705622cf6379853bcfbd89fef9f28c4f75b168cd8c12ec461106",
+          "match": false
+        }
+      ],
+      "hot_source_checks": [
+        {
+          "path": "self_host/compiler/semantic_program_link_plan.dew",
+          "recorded_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+          "commit_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_program_lowering.dew",
+          "recorded_sha256": "eb2c0ba828724f63d25ed24d213b491acdd5ba34b0cce237179f00683ec7f044",
+          "commit_sha256": "eb2c0ba828724f63d25ed24d213b491acdd5ba34b0cce237179f00683ec7f044",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_program_specialization.dew",
+          "recorded_sha256": "ef21a6ee7e9e92b792b08d08f52c5068e6d0f67ccad037acda039794e9b45b9b",
+          "commit_sha256": "ef21a6ee7e9e92b792b08d08f52c5068e6d0f67ccad037acda039794e9b45b9b",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_wasm_body_plan.dew",
+          "recorded_sha256": "2b7971fe61f2ada0fea2b126547da848fa647f7c147fca15c9b01907dc435786",
+          "commit_sha256": "2b7971fe61f2ada0fea2b126547da848fa647f7c147fca15c9b01907dc435786",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_index_lookups_test.dew",
+          "recorded_sha256": "11f444f5dd509657d756387604a0a179800aedf67a5306ed8561e860251ad74e",
+          "commit_sha256": "11f444f5dd509657d756387604a0a179800aedf67a5306ed8561e860251ad74e",
+          "match": true
+        }
+      ],
+      "all_hot_sources_match": true,
+      "harness_at_comparison_commit_sha256": "ef1dbd1f931258bc94ff703125895aed2adc836a705196b057396205d08549f6",
+      "recorded_harness_sha256": null,
+      "harness_hash_matches_record": null,
+      "harness_provenance_limit": "No harness hash was recorded for the function run; the feature commit preserves a compatible fixed-tier harness, but that alone does not certify the sampled script bytes.",
+      "tool_sha256": {
+        "_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "cc2ab3c46f839c7a8a563a7ea8ea6896ce97615fc3d3eadb66d1d132e12ba3e2",
+        "_build/native/release/build/jtenner/dewdrop/self_host_link_fixture/self_host_link_fixture.exe": "3e5c2c72ad5a392a7d1ce750c064a384cea0c88f6a1b93fae2f147e3ec4970b7",
+        "starshine-mb/dist/ffi/starshine-ffi.wasm": "e2dcb59f3da6827e83a46c96a881ada86a3ad59a687e0dfcccf6c045264c4cd3",
+        "fixtures/facet/facet-adapter.wasm": "6bdb891aa41ebe4c9d3b6e5220bcc2ab97c30fc7f017146bffb70ca208482ae0",
+        "tools/moonbit-time-provider.wat": "a466be15f4da206454936df45a8efbb02faa119bbf5d0f50d0c88f66e1252ac3"
+      },
+      "sample_wasm_sha256": "851acbd78b99df8ab7e21b6831cc03673eff9972990b04f9bdd368bdc8481c8b"
+    },
+    {
+      "family": "metadata",
+      "measurement_source_record": "docs/research/data/self-host-index-lookups-2026-10-18/metadata-build-identity.json",
+      "source_record_sha256": "f18be7707cbd9f49a83ac6ba8862677444c97d17104a6101d87d7381a86c4769",
+      "recorded_checkout_commit": "f488465d417e9e6b641c7785f53f33a9250eda6a",
+      "comparison_commit": "6af8898bbf50214b550588afea6c120ef7fc2c5b",
+      "source_inputs_checked": 316,
+      "matching_source_inputs": 315,
+      "mismatches": [
+        {
+          "path": "self_host/compiler/semantic_body_flow.dew",
+          "recorded_sha256": "1f135ba04949de7c471945db50c9e7e8bf18e0a76b5a0114fd707e55f540638a",
+          "commit_sha256": "3cf73778205725b0030975da48dda36f6e01db2593bfff00d341dce90fed6a9b",
+          "match": false
+        }
+      ],
+      "hot_source_checks": [
+        {
+          "path": "self_host/compiler/semantic_program_link_plan.dew",
+          "recorded_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+          "commit_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_program_lowering.dew",
+          "recorded_sha256": "eb2c0ba828724f63d25ed24d213b491acdd5ba34b0cce237179f00683ec7f044",
+          "commit_sha256": "eb2c0ba828724f63d25ed24d213b491acdd5ba34b0cce237179f00683ec7f044",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_program_specialization.dew",
+          "recorded_sha256": "ef21a6ee7e9e92b792b08d08f52c5068e6d0f67ccad037acda039794e9b45b9b",
+          "commit_sha256": "ef21a6ee7e9e92b792b08d08f52c5068e6d0f67ccad037acda039794e9b45b9b",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/starshine_module.dew",
+          "recorded_sha256": "87b83e0a77ce755ec2cdaba1e0167f645f8d38a74974491b7dc134575c01e7d9",
+          "commit_sha256": "87b83e0a77ce755ec2cdaba1e0167f645f8d38a74974491b7dc134575c01e7d9",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_metadata_index_lookups_test.dew",
+          "recorded_sha256": "1d81d2f0abef16dfc62c283351b5e7c3fc50ee85a0e54c644adc48287b4a6962",
+          "commit_sha256": "1d81d2f0abef16dfc62c283351b5e7c3fc50ee85a0e54c644adc48287b4a6962",
+          "match": true
+        }
+      ],
+      "all_hot_sources_match": true,
+      "harness_at_comparison_commit_sha256": "7dd26f651a53b3e9b3b5d65193219a5e02df628b2e2ee7c281e82e01b071860e",
+      "recorded_harness_sha256": "7dd26f651a53b3e9b3b5d65193219a5e02df628b2e2ee7c281e82e01b071860e",
+      "harness_hash_matches_record": true,
+      "harness_provenance_limit": "Recorded hash matches committed harness bytes.",
+      "tool_sha256": {
+        "_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "325aafb33b884cc531efda101bd4fa5ac278bafa16ce8be5287d049e3a468098",
+        "_build/native/release/build/jtenner/dewdrop/self_host_link_fixture/self_host_link_fixture.exe": "3e5c2c72ad5a392a7d1ce750c064a384cea0c88f6a1b93fae2f147e3ec4970b7",
+        "starshine-mb/dist/ffi/starshine-ffi.wasm": "e2dcb59f3da6827e83a46c96a881ada86a3ad59a687e0dfcccf6c045264c4cd3",
+        "fixtures/facet/facet-adapter.wasm": "6bdb891aa41ebe4c9d3b6e5220bcc2ab97c30fc7f017146bffb70ca208482ae0",
+        "tools/moonbit-time-provider.wat": "a466be15f4da206454936df45a8efbb02faa119bbf5d0f50d0c88f66e1252ac3"
+      },
+      "sample_wasm_sha256": "9ebe33152fdf8b24112f0ed1f50faf975e564ef4595f110c01b7ee66dc7461dd"
+    },
+    {
+      "family": "field",
+      "measurement_source_record": "docs/research/data/self-host-index-lookups-2026-10-18/field-build-identity.json",
+      "source_record_sha256": "0d2509e0e93c5f24bb2ea16207ddf74fed971d445548dcb200630dd54bfaeb4a",
+      "recorded_checkout_commit": "6af8898bbf50214b550588afea6c120ef7fc2c5b",
+      "comparison_commit": "ce4e70d0060de1b08772d7f860aa3b0713f13f3e",
+      "source_inputs_checked": 317,
+      "matching_source_inputs": 316,
+      "mismatches": [
+        {
+          "path": "self_host/compiler/semantic_body_flow.dew",
+          "recorded_sha256": "dfd3102f8c1311b5cc7506b3c8e7b837c36db0aa355952bffe99ae034004f6d4",
+          "commit_sha256": "3cf73778205725b0030975da48dda36f6e01db2593bfff00d341dce90fed6a9b",
+          "match": false
+        }
+      ],
+      "hot_source_checks": [
+        {
+          "path": "self_host/compiler/semantic_program_link_plan.dew",
+          "recorded_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+          "commit_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_program_lowering.dew",
+          "recorded_sha256": "eb2c0ba828724f63d25ed24d213b491acdd5ba34b0cce237179f00683ec7f044",
+          "commit_sha256": "eb2c0ba828724f63d25ed24d213b491acdd5ba34b0cce237179f00683ec7f044",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_program_specialization.dew",
+          "recorded_sha256": "ef21a6ee7e9e92b792b08d08f52c5068e6d0f67ccad037acda039794e9b45b9b",
+          "commit_sha256": "ef21a6ee7e9e92b792b08d08f52c5068e6d0f67ccad037acda039794e9b45b9b",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_type_layouts.dew",
+          "recorded_sha256": "490880d8f2868627943754c41b86cec16b5a833dae1e0ddad5cd90584e09d27d",
+          "commit_sha256": "490880d8f2868627943754c41b86cec16b5a833dae1e0ddad5cd90584e09d27d",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/starshine_module.dew",
+          "recorded_sha256": "c73680910e8d2115f283239cc52130777ff81295636ca99c4fb1d87a72212779",
+          "commit_sha256": "c73680910e8d2115f283239cc52130777ff81295636ca99c4fb1d87a72212779",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_metadata_index_lookups_test.dew",
+          "recorded_sha256": "0ebd904e0a7f1035fbefdfeecbe4309c44a9a20d0002af15a14bdb398bc03c2e",
+          "commit_sha256": "0ebd904e0a7f1035fbefdfeecbe4309c44a9a20d0002af15a14bdb398bc03c2e",
+          "match": true
+        },
+        {
+          "path": "self_host/compiler/semantic_field_index_lookups_test.dew",
+          "recorded_sha256": "cff403cc1ec47bbae6890bac7a19c112a129d26827aba9fd5bcc13aaf9e8c19a",
+          "commit_sha256": "cff403cc1ec47bbae6890bac7a19c112a129d26827aba9fd5bcc13aaf9e8c19a",
+          "match": true
+        }
+      ],
+      "all_hot_sources_match": true,
+      "harness_at_comparison_commit_sha256": "92c0a1cb7fd6e050ba2c754d3da15d99462f7d486016a0288a4ec8b4df5c8af6",
+      "recorded_harness_sha256": "92c0a1cb7fd6e050ba2c754d3da15d99462f7d486016a0288a4ec8b4df5c8af6",
+      "harness_hash_matches_record": true,
+      "harness_provenance_limit": "Recorded hash matches committed harness bytes.",
+      "tool_sha256": {
+        "_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "325aafb33b884cc531efda101bd4fa5ac278bafa16ce8be5287d049e3a468098",
+        "_build/native/release/build/jtenner/dewdrop/self_host_link_fixture/self_host_link_fixture.exe": "3e5c2c72ad5a392a7d1ce750c064a384cea0c88f6a1b93fae2f147e3ec4970b7",
+        "starshine-mb/dist/ffi/starshine-ffi.wasm": "e2dcb59f3da6827e83a46c96a881ada86a3ad59a687e0dfcccf6c045264c4cd3",
+        "fixtures/facet/facet-adapter.wasm": "6bdb891aa41ebe4c9d3b6e5220bcc2ab97c30fc7f017146bffb70ca208482ae0",
+        "tools/moonbit-time-provider.wat": "a466be15f4da206454936df45a8efbb02faa119bbf5d0f50d0c88f66e1252ac3"
+      },
+      "sample_wasm_sha256": "b1b557e73be842df0fd1a977aac2f653542bb7e463fbb517823a063e8fed1376"
+    }
+  ],
+  "cache_probe": {
+    "probe_baseline": "43fd2930435868228c7289fdfe6c4aa678b9d80b",
+    "review_baseline": "9d86b829292b1efa8f1aca32b0ff49565c878ee0",
+    "baseline_source_checks": [
+      {
+        "path": "src/cache_binary/blake3.mbt",
+        "probe_baseline_sha256": "4ea0427ab79b55e9347ddd4896230e986438ee6edd16569516df69cacb2392e2",
+        "review_baseline_sha256": "4ea0427ab79b55e9347ddd4896230e986438ee6edd16569516df69cacb2392e2",
+        "byte_identical": true
+      },
+      {
+        "path": "src/cache_binary/artifact_pack.mbt",
+        "probe_baseline_sha256": "25562d34f38fa843b8576a7b9ace969a33bbcff8f607115325fc70a437ed9a7d",
+        "review_baseline_sha256": "25562d34f38fa843b8576a7b9ace969a33bbcff8f607115325fc70a437ed9a7d",
+        "byte_identical": true
+      },
+      {
+        "path": "src/cache_binary/artifact_pack_lazy.mbt",
+        "probe_baseline_sha256": "f1fe90bc482dcf25aa55f895121e2fdeeeeaa8d2d9cd542fab8a5a850b34452e",
+        "review_baseline_sha256": "f1fe90bc482dcf25aa55f895121e2fdeeeeaa8d2d9cd542fab8a5a850b34452e",
+        "byte_identical": true
+      }
+    ],
+    "renamed_baseline_sha256": "bfce86cf225b785a67e4c1472be6e0468a27832cded14266b94b31bb146f1670",
+    "renamed_baseline_matches_raw": true,
+    "candidate_snapshot_sha256": "d806559c9814f6f215a56c8e6f5f7112493ca32515a2e6e5b09639f27752ba24",
+    "candidate_matches_raw": true,
+    "candidate_matches_feature_commit": true,
+    "generated_harness_checks": [
+      {
+        "name": "main.mbt",
+        "sha256": "af545afe8686c30258efca180ad6d234781dc0ea251360707e93ebf11c158af7",
+        "recorded_sha256": "af545afe8686c30258efca180ad6d234781dc0ea251360707e93ebf11c158af7",
+        "match": true
+      },
+      {
+        "name": "probe.c",
+        "sha256": "9c0a2094e45e3388914a3c0463318b46dc0d6ab011b786ba8bd3561e01fc1635",
+        "recorded_sha256": "9c0a2094e45e3388914a3c0463318b46dc0d6ab011b786ba8bd3561e01fc1635",
+        "match": true
+      }
+    ],
+    "probe_script_sha256": "df21db9b9d1e30daabda3bc21e6dc7b1c962d4c26646a523e3b23171925386fa",
+    "copy_control": "The harness uses input[0:1024 * 1024].to_owned(), the same slice-to-owned expression as artifact_pack_copy_bytes at the review baseline. It does not execute the decoder or its helper wrapper.",
+    "allocation_coverage": "Only successful mi_malloc requests and matching mi_free calls while active are tracked. Other allocation entry points are not intercepted. Counts and requested-byte traffic are lower-bound coverage, not all allocations; live-byte peaks are only for tracked requests. They are not RSS, allocator page retention, or whole-compiler memory.",
+    "raw_allocation_pairs": [
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      },
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      },
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      },
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "copy",
+        "calls": 212017,
+        "requested_bytes": 14606362,
+        "peak_live_requested_bytes": 1122705,
+        "end_live_requested_bytes": 41,
+        "largest_request": 1048585
+      },
+      {
+        "kind": "range",
+        "calls": 212017,
+        "requested_bytes": 13557793,
+        "peak_live_requested_bytes": 74120,
+        "end_live_requested_bytes": 41,
+        "largest_request": 8200
+      }
+    ],
+    "no_new_measurements": true,
+    "raw_summary": {
+      "timing": {
+        "copy": {
+          "count": 21,
+          "median_ms": 7.546075,
+          "min_ms": 7.528632,
+          "max_ms": 7.570283
+        },
+        "range": {
+          "count": 21,
+          "median_ms": 7.513614,
+          "min_ms": 7.492013,
+          "max_ms": 7.553681
+        }
+      },
+      "identical_pairs": 7,
+      "tracked_total_requested_bytes_reduction": 1048569,
+      "tracked_peak_live_requested_bytes_reduction": 1048585
+    }
+  },
+  "test_discovery": {
+    "all_lane": "tools/test-short-inference-self-host.sh --all",
+    "rule": "rg --files self_host/compiler -g '*.dew' | sort",
+    "files": [
+      {
+        "path": "self_host/compiler/semantic_index_lookups_test.dew",
+        "exists": true,
+        "hardening_listed": true
+      },
+      {
+        "path": "self_host/compiler/semantic_metadata_index_lookups_test.dew",
+        "exists": true,
+        "hardening_listed": true
+      },
+      {
+        "path": "self_host/compiler/semantic_field_index_lookups_test.dew",
+        "exists": true,
+        "hardening_listed": true
+      }
+    ],
+    "validation_limit": "Static discovery and shell syntax checked here. No compiler or test lane was run in this audit."
+  },
+  "raw_lookup_summary": [
+    {
+      "family": "function",
+      "raw_file": "function-samples.json",
+      "rows": [
+        {
+          "family": "function",
+          "mode": "scan",
+          "size": 128,
+          "samples": 7,
+          "median_milliseconds_recomputed": 1.7067589999999768,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 442240,
+          "median_retained_heap_change_bytes": 160,
+          "peak_rss_kib": 121692
+        },
+        {
+          "family": "function",
+          "mode": "direct",
+          "size": 128,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.02690100000000939,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 22848,
+          "median_retained_heap_change_bytes": 160,
+          "peak_rss_kib": 118464
+        },
+        {
+          "family": "function",
+          "mode": "scan",
+          "size": 512,
+          "samples": 7,
+          "median_milliseconds_recomputed": 6.848985000000027,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 516768,
+          "median_retained_heap_change_bytes": 160,
+          "peak_rss_kib": 119376
+        },
+        {
+          "family": "function",
+          "mode": "direct",
+          "size": 512,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.026810999999980822,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 47472,
+          "median_retained_heap_change_bytes": 160,
+          "peak_rss_kib": 116624
+        },
+        {
+          "family": "function",
+          "mode": "scan",
+          "size": 2048,
+          "samples": 7,
+          "median_milliseconds_recomputed": 30.31703200000004,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 812752,
+          "median_retained_heap_change_bytes": 160,
+          "peak_rss_kib": 123540
+        },
+        {
+          "family": "function",
+          "mode": "direct",
+          "size": 2048,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.058270999999990636,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 145824,
+          "median_retained_heap_change_bytes": 160,
+          "peak_rss_kib": 118088
+        }
+      ]
+    },
+    {
+      "family": "metadata",
+      "raw_file": "metadata-samples.json",
+      "rows": [
+        {
+          "family": "field",
+          "mode": "scan",
+          "size": 64,
+          "samples": 7,
+          "median_milliseconds_recomputed": 9.521232000000055,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 7128152,
+          "median_retained_heap_change_bytes": 352,
+          "peak_rss_kib": 137976
+        },
+        {
+          "family": "field",
+          "mode": "direct",
+          "size": 64,
+          "samples": 7,
+          "median_milliseconds_recomputed": 4.475279999999998,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 913304,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 138476
+        },
+        {
+          "family": "field",
+          "mode": "scan",
+          "size": 256,
+          "samples": 7,
+          "median_milliseconds_recomputed": 32.22423099999992,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 6993320,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 138984
+        },
+        {
+          "family": "field",
+          "mode": "direct",
+          "size": 256,
+          "samples": 7,
+          "median_milliseconds_recomputed": 16.67879000000005,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 758920,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 137564
+        },
+        {
+          "family": "callable",
+          "mode": "scan",
+          "size": 64,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.5236500000000888,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 804720,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 139260
+        },
+        {
+          "family": "callable",
+          "mode": "direct",
+          "size": 64,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.17993000000001302,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 735416,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 137728
+        },
+        {
+          "family": "callable",
+          "mode": "scan",
+          "size": 256,
+          "samples": 7,
+          "median_milliseconds_recomputed": 1.9148610000000872,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 801968,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 138992
+        },
+        {
+          "family": "callable",
+          "mode": "direct",
+          "size": 256,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.26886799999999766,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 735416,
+          "median_retained_heap_change_bytes": 352,
+          "peak_rss_kib": 136972
+        }
+      ]
+    },
+    {
+      "family": "field",
+      "raw_file": "field-layout-samples.json",
+      "rows": [
+        {
+          "family": "field_layout",
+          "mode": "scan",
+          "size": 64,
+          "samples": 7,
+          "median_milliseconds_recomputed": 4.580141000000026,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 1430152,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 138352
+        },
+        {
+          "family": "field_layout",
+          "mode": "direct",
+          "size": 64,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.6270039999999426,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 1349304,
+          "median_retained_heap_change_bytes": 352,
+          "peak_rss_kib": 137492
+        },
+        {
+          "family": "field_layout",
+          "mode": "scan",
+          "size": 256,
+          "samples": 7,
+          "median_milliseconds_recomputed": 17.150062999999932,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 1288408,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 139052
+        },
+        {
+          "family": "field_layout",
+          "mode": "direct",
+          "size": 256,
+          "samples": 7,
+          "median_milliseconds_recomputed": 0.6884410000000116,
+          "recorded_median_matches": true,
+          "median_heap_growth_bytes": 1286272,
+          "median_retained_heap_change_bytes": 384,
+          "peak_rss_kib": 139260
+        }
+      ]
+    }
+  ]
+}
