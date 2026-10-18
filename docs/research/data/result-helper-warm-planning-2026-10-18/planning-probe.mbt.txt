@@ -1,0 +1,70 @@
+///|
+struct WarmState {
+  program : @semantic.CollectedProgram
+  analyzed : @semantic.AnalyzedProgramSemantics
+  session : @standard_loader.CompilationCachePack
+  root : Int32
+}
+
+///|
+fn setup(path : String, cache : String) -> WarmState {
+  @sys.set_env_var("DEW_CACHE_DIR", cache)
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("main", [
+      @semantic.ManifestFile::new("main.dew", b"pub fn main() -> I32 {\n  1\n}\n"),
+    ]),
+  ])
+  let sources = @standard_loader.load_for_manifest(path, manifest, true).unwrap()
+  let program = @semantic.collect_program_manifest_with_standard_sources(
+    23961UL, manifest, sources, true,
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let session = @standard_loader.open_compilation_cache_pack(manifest, 0, true, 0).unwrap()
+  { program, analyzed, session, root: program.module_index("main").unwrap(), }
+}
+
+///|
+fn run(state : WarmState, variant : Int32, iteration : Int32) -> Unit {
+  let start = @bench.monotonic_clock_start()
+  let lower = @standard_loader.plan_program_lowering_with_cache(
+    state.program, state.analyzed, pack=Some(state.session),
+  ).unwrap()
+  let linked = @standard_loader.plan_program_wasmgc_link_with_cache(
+    state.program, state.analyzed, lower.lowering, state.root,
+    @semantic.WasmGCPlanningOptions::optimized_subtype_families(),
+    pack=Some(state.session),
+  ).unwrap()
+  let elapsed = @bench.monotonic_clock_end(start)
+  // Observe each timed result and keep wrong cache state visible.
+  if iteration >= 0 {
+    let expected = if variant == 0 { 5 } else { 4 }
+    if linked.status.fragment_hits != expected || linked.status.fragment_misses != 0 {
+      abort("unexpected warm fragment cache status")
+    }
+  }
+  println("sample variant=\{variant} iteration=\{iteration} us=\{elapsed} layout_hits=\{lower.status.layout_hits} fragment_hits=\{linked.status.fragment_hits} fragment_misses=\{linked.status.fragment_misses}")
+}
+
+///|
+fn main {
+  @sys.set_env_var("DEW_COMPILER_FINGERPRINT", "result-warm-plan-probe")
+  @sys.set_env_var("DEW_PLAN_CACHE", "1")
+  @sys.set_env_var("DEW_CACHE_PACK", "1")
+  @sys.set_env_var("DEW_PROGRAM_CACHE", "0")
+  let base = "/tmp/dewdrop-implementation-2026-10-18/result-warm-planning"
+  let old = setup(base + "/old", base + "/old/planning-only-cache")
+  let new = setup(base + "/new", base + "/new/planning-only-cache")
+  for iteration in -4..<0 {
+    run(old, 0, iteration)
+    run(new, 1, iteration)
+  }
+  for iteration in 0..<21 {
+    if iteration % 2 == 0 {
+      run(old, 0, iteration)
+      run(new, 1, iteration)
+    } else {
+      run(new, 1, iteration)
+      run(old, 0, iteration)
+    }
+  }
+}

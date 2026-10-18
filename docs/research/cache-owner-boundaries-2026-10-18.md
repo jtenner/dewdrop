@@ -37,6 +37,34 @@ This changes only parse-cache owner construction. It adds no hashing or byte
 copies to that function. General pack replacement and lookup rules stay the
 same.
 
+### Retained entries and cleanup
+
+The pack has no remove-owner API. When a shallow file becomes too deep to cache,
+the writer skips the new entry. The last shallow entry stays in that pack.
+Content and context checks prevent it from matching the changed file. More deep
+edits do not append entries. A later cacheable edit replaces the current owner's
+entry. Under the compiler's normal store path, this is at most one stale entry
+per current file owner in a pack.
+
+The owner-prefix change can also retain one old `file:` entry per old owner.
+There is one old prefix and one current prefix in this change. The limit is per
+owner and prefix in one pack, not a bound on the whole cache directory or future
+format changes. Packs for removed module graphs can also stay on disk.
+
+Safe owner removal would need a new pack operation that checks exact owner
+strings in lazy indexes and updates both loaded and indexed entries. There is
+no cheap existing removal call. This change keeps that work out of cache
+admission and documents the bounded retained entry.
+
+To reclaim the pack files, run this from the project root:
+
+```sh
+rm -f -- "${DEW_CACHE_DIR:-.dew/cache}"/packs/v1-*.dwp
+```
+
+This removes pack cache data. The next builds create fresh packs. Source files
+are unchanged. A caller can instead delete only the selected `.dwp` file.
+
 ## Validation
 
 The isolated native proof used cache pack sources from commit

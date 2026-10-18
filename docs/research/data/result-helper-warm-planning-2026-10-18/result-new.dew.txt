@@ -1,0 +1,34 @@
+pub enum Result<t, e> {
+  Ok(t)
+  Err(e)
+}
+
+impl<t, e> Result<t, e> {
+  fn map<u>(self, transform: fn(t) -> u) -> Result<u, e> {
+    match self {
+      Result::Ok(value) => Result::Ok(transform(value))
+      Result::Err(error) => Result::Err(error)
+    }
+  }
+
+  fn map_err<f>(self, transform: fn(e) -> f) -> Result<t, f> {
+    match self {
+      Result::Ok(value) => Result::Ok(value)
+      Result::Err(error) => Result::Err(transform(error))
+    }
+  }
+
+  fn and_then<u>(self, transform: fn(t) -> Result<u, e>) -> Result<u, e> {
+    match self {
+      Result::Ok(value) => transform(value)
+      Result::Err(error) => Result::Err(error)
+    }
+  }
+
+  fn unwrap_or_else(self, fallback: fn(e) -> t) -> t {
+    match self {
+      Result::Ok(value) => value
+      Result::Err(error) => fallback(error)
+    }
+  }
+}

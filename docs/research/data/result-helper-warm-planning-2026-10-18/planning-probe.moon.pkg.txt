@@ -1,0 +1,6 @@
+import {
+ "jtenner/dewdrop/semantic", "jtenner/dewdrop/standard_loader",
+ "moonbitlang/core/bench", "moonbitlang/x/sys",
+}
+pkgtype(kind: "executable")
+options(link: { "native": { "cc-flags": "-fwrapv -fno-strict-aliasing -Og -pipe" } })

@@ -1,0 +1,116 @@
+{"variant": "old", "phase": "cold", "iteration": 0, "elapsed_ms": 257.136464, "exit": 0}
+{"variant": "old", "phase": "warmup", "iteration": 0, "elapsed_ms": 219.373363, "exit": 0}
+{"variant": "old", "phase": "warmup", "iteration": 1, "elapsed_ms": 223.732289, "exit": 0}
+{"variant": "old", "phase": "warmup", "iteration": 2, "elapsed_ms": 220.017516, "exit": 0}
+{"variant": "new", "phase": "cold", "iteration": 0, "elapsed_ms": 260.991805, "exit": 0}
+{"variant": "new", "phase": "warmup", "iteration": 0, "elapsed_ms": 220.583553, "exit": 0}
+{"variant": "new", "phase": "warmup", "iteration": 1, "elapsed_ms": 226.360212, "exit": 0}
+{"variant": "new", "phase": "warmup", "iteration": 2, "elapsed_ms": 216.735203, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 0, "elapsed_ms": 219.301162, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 0, "elapsed_ms": 219.988921, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 1, "elapsed_ms": 231.15211, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 1, "elapsed_ms": 220.224938, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 2, "elapsed_ms": 220.886972, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 2, "elapsed_ms": 220.268339, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 3, "elapsed_ms": 220.296432, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 3, "elapsed_ms": 225.30107, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 4, "elapsed_ms": 218.768309, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 4, "elapsed_ms": 221.559776, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 5, "elapsed_ms": 218.635689, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 5, "elapsed_ms": 225.363819, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 6, "elapsed_ms": 220.672099, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 6, "elapsed_ms": 219.685945, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 7, "elapsed_ms": 222.143512, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 7, "elapsed_ms": 225.198459, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 8, "elapsed_ms": 223.377984, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 8, "elapsed_ms": 222.471111, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 9, "elapsed_ms": 220.848731, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 9, "elapsed_ms": 219.518819, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 10, "elapsed_ms": 226.063356, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 10, "elapsed_ms": 221.755536, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 11, "elapsed_ms": 218.730537, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 11, "elapsed_ms": 224.166759, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 12, "elapsed_ms": 234.675859, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 12, "elapsed_ms": 224.476741, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 13, "elapsed_ms": 222.894497, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 13, "elapsed_ms": 221.360653, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 14, "elapsed_ms": 218.984315, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 14, "elapsed_ms": 227.052966, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 15, "elapsed_ms": 219.967676, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 15, "elapsed_ms": 220.912683, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 16, "elapsed_ms": 220.429855, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 16, "elapsed_ms": 225.54403, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 17, "elapsed_ms": 220.569256, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 17, "elapsed_ms": 219.870873, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 18, "elapsed_ms": 220.198869, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 18, "elapsed_ms": 225.656871, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 19, "elapsed_ms": 230.331541, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 19, "elapsed_ms": 231.014255, "exit": 0}
+{"variant": "old", "phase": "warm", "iteration": 20, "elapsed_ms": 220.235087, "exit": 0}
+{"variant": "new", "phase": "warm", "iteration": 20, "elapsed_ms": 219.618257, "exit": 0}
+{
+  "old": {
+    "median_ms": 220.886972,
+    "mean_ms": 222.69172357142858,
+    "stdev_ms": 4.132268309358525,
+    "min_ms": 218.768309,
+    "max_ms": 234.675859,
+    "samples": [
+      219.301162,
+      220.224938,
+      220.886972,
+      225.30107,
+      218.768309,
+      225.363819,
+      220.672099,
+      225.198459,
+      223.377984,
+      219.518819,
+      226.063356,
+      224.166759,
+      234.675859,
+      221.360653,
+      218.984315,
+      220.912683,
+      220.429855,
+      219.870873,
+      220.198869,
+      231.014255,
+      220.235087
+    ],
+    "cache_bytes": 429696,
+    "cache_files": 1
+  },
+  "new": {
+    "median_ms": 221.559776,
+    "mean_ms": 222.55468923809525,
+    "stdev_ms": 3.578363804382495,
+    "min_ms": 218.635689,
+    "max_ms": 231.15211,
+    "samples": [
+      219.988921,
+      231.15211,
+      220.268339,
+      220.296432,
+      221.559776,
+      218.635689,
+      219.685945,
+      222.143512,
+      222.471111,
+      220.848731,
+      221.755536,
+      218.730537,
+      224.476741,
+      222.894497,
+      227.052966,
+      219.967676,
+      225.54403,
+      220.569256,
+      225.656871,
+      230.331541,
+      219.618257
+    ],
+    "cache_bytes": 426752,
+    "cache_files": 1
+  }
+}

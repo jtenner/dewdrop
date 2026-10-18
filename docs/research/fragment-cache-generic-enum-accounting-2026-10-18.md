@@ -29,5 +29,12 @@ DEW_NATIVE_TEST_PACKAGES='standard_loader/planning_cache_wbtest.mbt' bash tools/
 All three tests passed in 5.044 seconds. The focused lane took 5.038 seconds.
 The [diagnostic trace](data/fragment-cache-generic-enum-accounting-2026-10-18/diagnostic-trace.txt)
 and [final record](data/fragment-cache-generic-enum-accounting-2026-10-18/validation.json)
-contain the module checks, counts, and command. The trace includes the expected
-failure of the old warm-count assertion during diagnosis.
+contain the module checks, counts, and command. The trace also records a
+failure from a temporary edited copy of the test. That source copy was not
+retained, so its failure line cannot be mapped to the baseline test. Inspection
+of the baseline source confirms that old line 120 checked cold fragment misses.
+
+The [warm-cost measurement](result-helper-warm-planning-2026-10-18.md) compares
+old and new Result source with one pinned CLI and a separate planning timer.
+Both confirm five versus four warm fragment hits. The small timing differences
+are within the observed noise; no cache policy change was made.

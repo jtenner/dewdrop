@@ -1,0 +1,23 @@
+{
+  "exit": 0,
+  "stderr_sha256": "759ebb7cb6c1ec0c15b7d884d57b95e58a07810b910c7cb3ff66cd78b0cd4cca",
+  "stderr_bytes": 678138,
+  "warning_headers": 1128,
+  "error_headers": 0,
+  "final_lines": [
+    " 83 \u2502     @sys.get_env_var(\"DEW_STD_ROOT\").unwrap_or(\"\"),",
+    "    \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  ",
+    "    \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.",
+    "\u2500\u2500\u2500\u2500\u256f",
+    "Warning: [0020]",
+    "    \u256d\u2500[ /home/dev/Projects/dewdrop/src/standard_loader/program_output_cache.mbt:87:5 ]",
+    "    \u2502",
+    " 87 \u2502     @sys.get_env_var(\"DEW_DEPENDENCY_INTERFACE_KEY\").unwrap_or(\"\"),",
+    "    \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  ",
+    "    \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.",
+    "\u2500\u2500\u2500\u2500\u256f",
+    "Finished. moon: ran 6 tasks, now up to date (1128 warnings, 0 errors)"
+  ],
+  "full_log_local_path": "/tmp/dewdrop-implementation-2026-10-18/result-warm-planning/planning-build.stderr",
+  "scope": "Build warnings are unrelated to measured old/new cache samples. All raw timing samples and cache reports are retained separately."
+}

@@ -1,0 +1,12 @@
+{
+  "seconds": 15.00798616999964,
+  "exit": 0,
+  "command": [
+    "moon",
+    "build",
+    "--target",
+    "native",
+    "--release",
+    "src/_result_warm_probe"
+  ]
+}
