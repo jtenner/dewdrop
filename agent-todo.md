@@ -450,6 +450,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   product leaves as well as top-level Generic/Error shapes, with complete
   numeric context. See the
   [native lambda log](docs/research/native-lambda-shapes-2026-09-08.md).
+  Native base planning now also checks live concrete lambda captures before
+  capture cells, closure fields, or lifted parameters select physical storage.
+  Exact SPC-301 tests cover Generic/Error shapes and invalid product leaves;
+  elided lambdas and unspecialized generic templates retain their existing path.
+  Scalar checks need no worklist. See the
+  [live capture log](docs/research/native-live-capture-shapes-2026-10-18.md).
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.

@@ -1,4 +1,127 @@
 ///|
+test "live capture planning rejects invalid shapes with full source context" {
+  for
+    source in [
+      b"pub fn make(seed: I64) -> fn(I64) -> I64 {\n  fn(value: I64) -> I64 {\n    value + seed\n  }\n}\n",
+      b"pub fn run(seed: I64) -> I64 {\n  let callback = fn(value: I64) -> I64 {\n    value + seed\n  }\n  callback(41i64)\n}\n",
+      b"pub fn run() -> I64 {\n  let mut seed = 1i64\n  let callback = fn(value: I64) -> I64 {\n    seed = seed + value\n    seed\n  }\n  callback(41i64)\n}\n",
+    ] {
+    let (_, lowering) = wasmgc_test_inputs(24912UL, source)
+    assert_eq(lowering.diagnostics, [])
+    assert_eq(lowering.lambdas.length(), 1)
+    assert_eq(lowering.captures.length(), 1)
+    let lambda = lowering.lambdas[0]
+    let capture = lowering.captures[0]
+    assert_false(lambda.elided)
+    assert_eq(capture.shape, I64PlannedValueShape)
+    assert_eq(check_module_lambda_capture_shapes(lowering), Ok(()))
+    for
+      (shape, reason) in [
+        (GenericPlannedValueShape, 1UL),
+        (ErrorPlannedValueShape, 2UL),
+        (
+          ProductPlannedValueShape([
+            I64PlannedValueShape,
+            GenericPlannedValueShape,
+          ]),
+          1UL,
+        ),
+        (
+          ProductPlannedValueShape([
+            I64PlannedValueShape,
+            ErrorPlannedValueShape,
+          ]),
+          2UL,
+        ),
+      ] {
+      lowering.captures[0] = { ..capture, shape, }
+      assert_eq(
+        check_module_lambda_capture_shapes(lowering),
+        Err({
+          code: 301,
+          phase: 4,
+          module_id: 24912UL,
+          declaration: 24912UL << 32,
+          body: 24912UL << 32,
+          expression: lambda.expressions.start.reinterpret_as_uint(),
+          expected: 0UL,
+          actual: reason,
+          detail: 2UL << 32,
+        }),
+      )
+    }
+  }
+}
+
+///|
+test "capture failures retain the declaration and relative capture index" {
+  let (_, lowering) = wasmgc_test_inputs(
+    24915UL, b"struct Marker {\n  value: I32\n}\npub fn make(left: I64, right: I64) -> fn() -> I64 {\n  fn() -> I64 {\n    left + right\n  }\n}\n",
+  )
+  assert_eq(lowering.diagnostics, [])
+  assert_eq(lowering.captures.length(), 2)
+  let lambda = lowering.lambdas[0]
+  let second = lowering.captures[lambda.captures.start + 1]
+  assert_eq(second.capture, 1)
+  lowering.captures[lambda.captures.start + 1] = {
+    ..second,
+    shape: ErrorPlannedValueShape,
+  }
+  assert_eq(
+    check_module_lambda_capture_shapes(lowering),
+    Err({
+      code: 301,
+      phase: 4,
+      module_id: 24915UL,
+      declaration: (24915UL << 32) | 1UL,
+      body: 24915UL << 32,
+      expression: lambda.expressions.start.reinterpret_as_uint(),
+      expected: 0UL,
+      actual: 2UL,
+      detail: (2UL << 32) | 1UL,
+    }),
+  )
+}
+
+///|
+test "capture checks preserve concrete shapes and logical templates" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    24912UL, b"pub fn make(seed: I64) -> fn(I64) -> I64 {\n  fn(value: I64) -> I64 {\n    value + seed\n  }\n}\n",
+  )
+  let capture = lowering.captures[0]
+  for
+    shape in [
+      UnitPlannedValueShape,
+      NeverPlannedValueShape,
+      I64PlannedValueShape,
+      RefPlannedValueShape,
+      ProductPlannedValueShape([UnitPlannedValueShape, I64PlannedValueShape]),
+    ] {
+    lowering.captures[0] = { ..capture, shape, }
+    assert_eq(check_module_lambda_capture_shapes(lowering), Ok(()))
+  }
+  lowering.captures[0] = capture
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  let closure = planned.physical_types[planned.lambda_closure_type_indices[0]]
+  assert_eq(planned.fields[closure.fields.start + 1].storage, WasmI64Storage)
+  let (_, template) = wasmgc_test_inputs(
+    24913UL, b"pub fn make<t>(seed: t) -> fn() -> t {\n  fn() -> t {\n    seed\n  }\n}\n",
+  )
+  assert_eq(template.diagnostics, [])
+  assert_eq(template.captures[0].shape, GenericPlannedValueShape)
+  assert_eq(check_module_lambda_capture_shapes(template), Ok(()))
+  let (elided_resolved, elided) = wasmgc_test_inputs(
+    24914UL, b"pub fn run() -> I32 {\n  let mut seed = 1\n  let unused = fn() -> I32 {\n    seed\n  }\n  seed = 42\n  seed\n}\n",
+  )
+  assert_true(elided.lambdas[0].elided)
+  elided.captures[0] = { ..elided.captures[0], shape: ErrorPlannedValueShape, }
+  assert_eq(check_module_lambda_capture_shapes(elided), Ok(()))
+  let planned_elided = plan_module_wasmgc_fragments(elided_resolved, elided)
+  assert_eq(planned_elided.capture_cell_type_indices[0], -1)
+  assert_eq(planned_elided.lambda_closure_type_indices[0], -1)
+}
+
+///|
 test "WasmGC planning flattens lambda captures into closure subtypes" {
   let (resolved, lowering) = wasmgc_test_inputs(
     980UL, b"fn make(seed: I32) -> fn(I32) -> I32 {\n  fn(value: I32) -> I32 {\n    value + seed\n  }\n}\n",

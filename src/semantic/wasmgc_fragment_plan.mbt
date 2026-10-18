@@ -3094,6 +3094,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     abort("WasmGC fragment inputs belong to different modules")
   }
   assert_planned_capture_metadata(lowering, 4)
+  assert_module_lambda_capture_shapes(lowering)
   let resolved = {
     ..resolved,
     types: lowering.resolved_types,
