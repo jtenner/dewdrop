@@ -913,7 +913,7 @@ fn self_host_decimal_compare_dyadic(
 }
 
 struct SelfHostDecimalInfo {
-  exponent: I32
+  exponent: I64
   digit_count: U32
 }
 
@@ -945,15 +945,15 @@ fn self_host_decimal_exponent(
   }
   let explicit = if exponent.present {
     if exponent.negative {
-      -self_host_u32_to_i32(exponent.magnitude)
+      -u32_into_i64(exponent.magnitude)
     } else {
-      self_host_u32_to_i32(exponent.magnitude)
+      u32_into_i64(exponent.magnitude)
     }
   } else {
-    0i32
+    0i64
   }
   {
-    exponent: explicit - self_host_u32_to_i32(fraction_digits)
+    exponent: explicit - u32_into_i64(fraction_digits)
     digit_count: digit_count
   }
 }
@@ -984,11 +984,12 @@ fn self_host_round_decimal_exact(
   let decimal_info = self_host_decimal_exponent(source, start, end, exponent)
   let decimal_exponent = decimal_info.exponent
   let digit_count = decimal_info.digit_count
-  if digit_count <= 15u32 && decimal_exponent > -23i32 && decimal_exponent < 23i32 {
+  if digit_count <= 15u32 && decimal_exponent > -23i64 && decimal_exponent < 23i64 {
     approximate
-  } else if digit_count > 768u32 || decimal_exponent < -400i32 || decimal_exponent > 400i32 {
+  } else if digit_count > 768u32 || decimal_exponent < -400i64 || decimal_exponent > 400i64 {
     approximate
   } else {
+    let decimal_exponent = i64_into_i32(decimal_exponent)
     let decimal = self_host_big_decimal(source, start, end)
     let mut bits = f64_to_bits(approximate)
     if bits >= 9218868437227405312u64 {
@@ -1085,23 +1086,27 @@ fn self_host_decimal_value(
   } else {
     0u32
   }
-  let positive_shift = skipped_digits + if exponent.present && !exponent.negative {
-    base_exponent
+  let positive_shift = u32_into_i64(skipped_digits) + if exponent.present && !exponent.negative {
+    u32_into_i64(base_exponent)
   } else {
-    0u32
+    0i64
   }
-  let negative_shift_magnitude = fraction_digits + if exponent.present && exponent.negative {
-    base_exponent
+  let negative_shift_magnitude = u32_into_i64(fraction_digits) + if exponent.present && exponent.negative {
+    u32_into_i64(base_exponent)
   } else {
-    0u32
+    0i64
   }
-  let decimal_shift = if positive_shift >= negative_shift_magnitude {
-    positive_shift - negative_shift_magnitude
+  let shift = positive_shift - negative_shift_magnitude
+  // Beyond the F64 decimal range no further scaling can change the result.
+  // Bound work even when an exponent has thousands of source digits.
+  let decimal_shift = i64_into_u32(if shift > 1000i64 || shift < -1000i64 {
+    1000i64
+  } else if shift < 0i64 {
+    -shift
   } else {
-    negative_shift_magnitude - positive_shift
-  }
-  let negative_shift = positive_shift < negative_shift_magnitude
-  let approximate = self_host_scale_decimal(significand.into(), decimal_shift, negative_shift)
+    shift
+  })
+  let approximate = self_host_scale_decimal(significand.into(), decimal_shift, shift < 0i64)
   self_host_round_decimal_exact(source, start, end, exponent, approximate)
 }
 
@@ -1255,7 +1260,10 @@ fn self_host_round_f32_decimal(
   value: F64,
 ) -> F32 {
   let narrowed = self_host_f64_to_f32(value)
-  if (f64_to_bits(value) & 268435455u64) != 0u64 {
+  // Long sources can bypass exact F64 rounding. Their approximation still
+  // locates adjacent F32 values, but must not decide the midpoint's side.
+  let long_source = end - start > 256u32 || exponent.magnitude > 256u32
+  if !long_source && (f64_to_bits(value) & 268435455u64) != 0u64 {
     return narrowed
   }
   let bits = f32_to_bits(narrowed)
@@ -1275,7 +1283,7 @@ fn self_host_round_f32_decimal(
       f32_into_f64(f32_from_bits(lower_bits + 1u32))
     }
     let midpoint = (lower + upper) * 0.5
-    if value != midpoint {
+    if !long_source && value != midpoint {
       narrowed
     } else {
       let comparison = self_host_compare_f32_midpoint(source, start, end, exponent, midpoint)
@@ -1283,8 +1291,10 @@ fn self_host_round_f32_decimal(
         f32_from_bits(lower_bits)
       } else if comparison > 0i32 {
         f32_from_bits(lower_bits + 1u32)
+      } else if (lower_bits & 1u32) == 0u32 {
+        f32_from_bits(lower_bits)
       } else {
-        narrowed
+        f32_from_bits(lower_bits + 1u32)
       }
     }
   }
@@ -1327,13 +1337,11 @@ fn self_host_scan_exponent(tokenizer: SelfHostTokenizer) -> SelfHostExponentScan
         index if index < tokenizer.source.byte_length() => {
           let digit = tokenizer.source.byte_at(index)
           if self_host_ascii_digit(digit) {
-            if exponent < 10000u32 {
-              exponent = exponent * 10u32 + self_host_u8_to_u32(digit - 48u8)
-              if exponent > 10000u32 {
-                exponent = 10000u32
-              } else {
-              }
+            let value = self_host_u8_to_u32(digit - 48u8)
+            if exponent <= (4294967295u32 - value) / 10u32 {
+              exponent = exponent * 10u32 + value
             } else {
+              exponent = 4294967295u32
             }
             saw_digit = true
             previous_underscore = false

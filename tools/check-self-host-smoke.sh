@@ -81,6 +81,7 @@ if [[ "${DEW_SELF_HOST_FULL_VALIDATION:-0}" == "1" ]]; then
   self_host/compiler/tokenizer_parity_test.dew \
   self_host/compiler/tokenizer_f32_decimal_test.dew \
   self_host/compiler/tokenizer_f32_bounded_test.dew \
+  self_host/compiler/tokenizer_f32_long_range_test.dew \
   self_host/compiler/parser_type_test.dew \
   self_host/compiler/parser_pattern_test.dew \
   self_host/compiler/parser_expression_test.dew \
