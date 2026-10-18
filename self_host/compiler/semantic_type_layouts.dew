@@ -89,17 +89,19 @@ impl SelfHostPlannedModuleTypeLayouts {
       return None
     }
     let selected = self.fields[index]
-    self_host_assert_compiler_invariant_with_failure(selected.field == field, {
-      code: 1u32
-      phase: 4u32
-      module_id: self.module_id
-      declaration: selected.declaration
-      body: 0u64
-      expression: 4294967295u32
-      expected: field
-      actual: selected.field
-      detail: u32_into_u64(index)
-    }, "planned field identity must match its module-local arena slot")
+    if selected.field != field {
+      let _ = self_host_assert_compiler_invariant_with_failure(false, {
+        code: 1u32
+        phase: 4u32
+        module_id: self.module_id
+        declaration: selected.declaration
+        body: 0u64
+        expression: 4294967295u32
+        expected: field
+        actual: selected.field
+        detail: u32_into_u64(index)
+      }, "planned field identity must match its module-local arena slot")
+    }
     Some(selected)
   }
 }

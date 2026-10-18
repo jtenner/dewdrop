@@ -1,0 +1,2 @@
+wall_seconds=4.123621
+exit_status=0

@@ -144,7 +144,7 @@ fn self_host_metadata_test_scan_callable_declared_result_shape(
 
 fn self_host_metadata_test_link(length: U32) -> SelfHostPlannedProgramWasmGCLink {
   let source = StringBuilder::new()
-  source.append("pub struct Item {\n  value: I32\n}\npub enum Choice<t> {\n  Empty\n  Tuple(Item)\n  Named {\n    item: Item\n  }\n  Scalar(I32)\n  Generic(t)\n}\npub fn hold(value: Choice<Item>) -> Choice<Item> {\n  value\n}\nfn identity<t>(value: t) -> t {\n  value\n}\npub fn generic(value: Item) -> Item {\n  identity(value)\n}\nforeign impl \"host\" as host {\n  fn read(value: I32) -> I64 = \"read\"\n}\npub fn foreign_result() -> I64 {\n  read(1)\n}\n")
+  source.append("pub struct Item {\n  value: I32\n}\npub struct Box<t> {\n  value: t\n}\npub fn hold_box(value: Box<Item>) -> Box<Item> {\n  value\n}\npub enum Choice<t> {\n  Empty\n  Tuple(Item)\n  Named {\n    item: Item\n  }\n  Scalar(I32)\n  Generic(t)\n  GenericNamed {\n    item: t\n  }\n}\npub fn hold(value: Choice<Item>) -> Choice<Item> {\n  value\n}\nfn identity<t>(value: t) -> t {\n  value\n}\npub fn generic(value: Item) -> Item {\n  identity(value)\n}\nforeign impl \"host\" as host {\n  fn read(value: I32) -> I64 = \"read\"\n}\npub fn foreign_result() -> I64 {\n  read(1)\n}\n")
   while 0u32 {
     index if index < length => {
       source.append("pub struct Record")

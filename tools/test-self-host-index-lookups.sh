@@ -14,6 +14,7 @@ fi
 mapfile -t sources < <(rg --files self_host/compiler -g '*.dew' -g '!main.dew' -g '!*_test.dew' | sort)
 sources+=(self_host/compiler/semantic_index_lookups_test.dew)
 sources+=(self_host/compiler/semantic_metadata_index_lookups_test.dew)
+sources+=(self_host/compiler/semantic_field_index_lookups_test.dew)
 python3 - "$work" "${sources[@]}" <<'PY'
 import hashlib, json, shutil, subprocess, sys
 from pathlib import Path

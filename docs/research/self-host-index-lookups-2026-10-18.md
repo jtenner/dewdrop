@@ -181,3 +181,70 @@ Evidence:
 - [Metadata build identity](data/self-host-index-lookups-2026-10-18/metadata-build-identity.json)
 - [Metadata build and test log](data/self-host-index-lookups-2026-10-18/metadata-index-tests.log)
 - [Metadata sample command time](data/self-host-index-lookups-2026-10-18/metadata-samples-timing.txt)
+
+## Declared field layout slots
+
+The third change removes the remaining ordinary-field layout scan. It applies
+only to `WasmStructField(source_field)`. The physical planner writes this role
+and its matching source declaration together for struct fields and named enum
+fields. The query checks that they agree and that the source field, lowering
+module and layout table have the same module identity. It then reuses the
+existing checked `type_layouts.field(source_field)` lookup.
+
+That lookup validates the module-local slot and exact stored source field ID.
+Its diagnostic record is now constructed only when that identity check fails.
+The failure contents are unchanged. The new caller guards also construct their
+records only on failure. No extra map, array or stored record is added.
+
+Tuple payloads and synthetic roles retain the preceding paths. Named enum
+fields can use the direct lookup because they have the exact source-field
+role. Generic struct and generic named-enum fields use the same declared
+`layout.type_` as the old scan. There is no new shape assumption, cast or value
+adapter.
+
+The test fixture now also includes a generic struct and generic named enum
+field. The existing old-query comparisons still pass. New tests check ordinary,
+generic, named-enum and tuple roles; missing and synthetic fields; mismatched
+physical source IDs; wrong module and layout owners; and a different stored
+source field. All 31 focused tests pass. Generation took 4.627 seconds,
+time-provider preparation 0.004 seconds, linking 1.095 seconds and execution
+0.235 seconds.
+
+The new `field_layout` benchmark contains both the preceding type-slot-only
+queries and the new queries in one binary. It uses the existing linked fixtures,
+with setup outside the timer, three warm-up calls, seven samples and the same
+fixed-tier and collection controls. Each sample makes 8,192 pairs of nominal
+and owner queries. The original scan remains the independent checksum oracle.
+
+| Fixture record types | Type slot only, median | Type and field slots, median |
+| --- | ---: | ---: |
+| 64 | 4.580 ms | 0.627 ms |
+| 256 | 17.150 ms | 0.688 ms |
+
+These numbers measure the incremental field-query change. They do not measure
+whole-compiler gains and are not combined with the earlier tables to estimate
+one. The quiet sample command took 4.124 seconds.
+
+At 256 records, old/new sample heap growth was 1,288,408/1,286,272 bytes, with a
+median post-collection change of 384 bytes on both paths. Peak process RSS was
+139,052/139,260 KiB. These values show a similar footprint within this probe;
+they do not support a memory reduction or an exact allocation count.
+
+The third binary is 2,449,188 bytes with SHA-256
+`b1b557e73be842df0fd1a977aac2f653542bb7e463fbb517823a063e8fed1376`.
+It contains both paths and more tests, so its size is not a compiler code-size
+comparison. Source, tool and harness hashes are saved with the raw results.
+The host and runtime match the earlier probes. No native Dew or ARM runtime
+claim is made.
+
+```sh
+node tools/benchmark-self-host-index-lookups.mjs \
+  .tmp/self-host-index-lookups/tests.wasm 7 field_layout
+```
+
+Evidence:
+
+- [Incremental field raw samples](data/self-host-index-lookups-2026-10-18/field-layout-samples.json)
+- [Field build identity](data/self-host-index-lookups-2026-10-18/field-build-identity.json)
+- [Field build and test log](data/self-host-index-lookups-2026-10-18/field-index-tests.log)
+- [Field sample command time](data/self-host-index-lookups-2026-10-18/field-layout-samples-timing.txt)

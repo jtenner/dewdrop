@@ -16,7 +16,7 @@ if (worker) args.shift();
 const [path, count = "7", mode, size, family = "function"] = args;
 const runs = Number(count);
 if (!path || !Number.isInteger(runs) || runs < 1 || runs > 30) {
-  throw new Error("usage: node tools/benchmark-self-host-index-lookups.mjs TESTS.wasm [RUNS=7] [function|metadata]");
+  throw new Error("usage: node tools/benchmark-self-host-index-lookups.mjs TESTS.wasm [RUNS=7] [function|metadata|field_layout]");
 }
 const bytes = readFileSync(path);
 if (worker) {
@@ -77,8 +77,9 @@ if (worker) {
 } else {
   const cases = [];
   const suite = mode ?? "function";
-  if (!["function", "metadata"].includes(suite)) throw new Error(`unknown suite: ${suite}`);
-  for (const family of suite === "function" ? ["function"] : ["field", "callable"]) {
+  if (!["function", "metadata", "field_layout"].includes(suite)) throw new Error(`unknown suite: ${suite}`);
+  const families = suite === "metadata" ? ["field", "callable"] : [suite];
+  for (const family of families) {
     for (const size of family === "function" ? [128, 512, 2048] : [64, 256]) {
       for (const mode of ["scan", "direct"]) {
         const result = spawnSync(process.execPath, ["--expose-gc", "--no-liftoff", fileURLToPath(import.meta.url),
@@ -94,7 +95,7 @@ if (worker) {
     worker_node_flags: ["--expose-gc", "--no-liftoff"],
     environment: { platform: platform(), release: release(), arch: arch(), cpu: cpus()[0].model },
     runs, suite, warmup_runs_per_case: 3, queries_per_sample: 8192,
-    field_queries_per_iteration: suite === "metadata" ? 2 : 0,
+    field_queries_per_iteration: suite === "function" ? 0 : 2,
     fixture_construction_included: suite === "function",
     memory_limits: "V8 heap sizes and process RSS include runtime overhead. Heap deltas are not allocation totals; collection can occur during a sample.",
     cases }, null, 2));

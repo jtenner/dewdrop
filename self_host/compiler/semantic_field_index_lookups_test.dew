@@ -1,0 +1,254 @@
+open dew.std.array
+open dew.std.option
+
+fn self_host_field_test_outer_field_container_owner_module_id(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: SelfHostLinkedWasmFieldLink,
+) -> U64 {
+  if field.type_index >= link.types.length() {
+    return 0u64
+  }
+  let linked_type = self_host_linked_type_slot(link.types, field.type_index)
+  let physical_module = link.fragments.modules[linked_type.module_index]
+  let physical = self_host_linked_physical_type_at(
+    physical_module,
+    linked_type.fragment_index,
+  )
+  if field.field_index < physical.fields.length {
+    let physical_field = self_host_linked_physical_field_at(
+      physical_module,
+      self_host_u32_add(physical.fields.start, field.field_index),
+    )
+    let lowering_module = link.fragments.specialization.lowering.modules[
+      linked_type.module_index
+    ]
+    for layout_field in lowering_module.type_layouts.fields {
+      if self_host_u64_equal(
+        layout_field.field,
+        physical_field.declaration,
+      ) {
+        return self_host_linked_type_owner_module_id(
+          link,
+          lowering_module,
+          -self_host_u32_to_i32(layout_field.type_) - 2i32,
+        )
+      }
+    }
+  }
+  0u64
+}
+
+fn self_host_field_test_outer_field_value_nominal_declaration(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: SelfHostLinkedWasmFieldLink,
+) -> U64 {
+  if field.type_index >= link.types.length() {
+    return 0u64
+  }
+  let linked_type = self_host_linked_type_slot(link.types, field.type_index)
+  let physical_module = link.fragments.modules[linked_type.module_index]
+  let physical = self_host_linked_physical_type_at(
+    physical_module,
+    linked_type.fragment_index,
+  )
+  if field.field_index < physical.fields.length {
+    let physical_field = self_host_linked_physical_field_at(
+      physical_module,
+      self_host_u32_add(physical.fields.start, field.field_index),
+    )
+    let lowering_module = link.fragments.specialization.lowering.modules[
+      linked_type.module_index
+    ]
+    match physical_field.role {
+      WasmVariantPayloadField(
+        variant,
+        payload_index,
+      ) => {
+        for layout_variant in lowering_module.type_layouts.variants {
+          if self_host_u64_equal(layout_variant.variant, variant) {
+            let payload = match layout_variant.payload {
+              PlannedTupleVariantLayout(span) => span
+              PlannedStructVariantLayout(span) => span
+              PlannedUnitVariantLayout => ({
+                start: 0u32
+                length: 0u32
+              })
+            }
+            if payload_index < payload.length {
+              let index = self_host_u32_add(payload.start, payload_index)
+              if index < lowering_module.type_layouts.payload_types.length() {
+                let nominal = self_host_linked_resolved_nominal_declaration(
+                  lowering_module,
+                  lowering_module.type_layouts.payload_types[index],
+                )
+                if !self_host_u64_equal(nominal, 0u64) {
+                  return nominal
+                }
+              }
+            }
+          }
+        }
+      }
+      _ => {}
+    }
+    for layout_field in lowering_module.type_layouts.fields {
+      if self_host_u64_equal(
+        layout_field.field,
+        physical_field.declaration,
+      ) {
+        return self_host_linked_resolved_nominal_declaration(
+          lowering_module,
+          layout_field.type_,
+        )
+      }
+    }
+  }
+  0u64
+}
+
+fn self_host_field_test_physical(field: U64, role: SelfHostPlannedWasmFieldRole) -> SelfHostPlannedWasmField {
+  {
+    role: role
+    declaration: field
+    physical_index: 0u32
+    storage: WasmI32Storage
+    mutable_: false
+    exact_nominal: false
+    offset: 0u32
+  }
+}
+
+test "index lookups declared fields keep generic and named variant source identity" {
+  let link = self_host_metadata_test_links[0u32]
+  let mut ordinary = 0u32
+  let mut generic = 0u32
+  let mut named = 0u32
+  let mut other = 0u32
+  for linked_type in link.types {
+    let physical_module = link.fragments.modules[linked_type.module_index]
+    let module_ = link.fragments.specialization.lowering.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(physical_module, linked_type.fragment_index)
+    while 0u32 {
+      index if index < physical.fields.length => {
+        let field = self_host_linked_physical_field_at(physical_module, physical.fields.start + index)
+        let result = self_host_linked_source_struct_field_layout(module_.module_id, module_.type_layouts, field)
+        match field.role {
+          WasmStructField(source) => match result {
+            Some(layout) => {
+              assert(layout.field == source && source == field.declaration, "exact source identity")
+              assert(self_host_semantic_id_module(layout.field) == module_.module_id, "exact module owner")
+              ordinary = ordinary + 1u32
+              if layout.shape is GenericPlannedValueShape {
+                generic = generic + 1u32
+              }
+              if layout.variant is Some(_) {
+                named = named + 1u32
+              }
+            }
+            None => assert(false, "declared field has source layout")
+          }
+          _ => {
+            assert(result is None, "tuple and synthetic roles do not enter direct field lookup")
+            other = other + 1u32
+          }
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(ordinary > 0u32 && generic > 0u32 && named > 0u32 && other > 0u32,
+    "fixture exercises ordinary, generic, named enum and tuple fields")
+}
+
+test "ARN-106 index lookups declared fields reject a different physical source" expect_trap "unreachable" {
+  let module_ = self_host_metadata_test_links[0u32].fragments.specialization.lowering.modules[0u32]
+  let source = module_.type_layouts.fields[0u32].field
+  let field = self_host_field_test_physical(source, WasmStructField(source + 1u64))
+  let _ = self_host_linked_source_struct_field_layout(module_.module_id, module_.type_layouts, field)
+}
+
+test "ARN-106 index lookups declared fields reject a different owner module" expect_trap "unreachable" {
+  let module_ = self_host_metadata_test_links[0u32].fragments.specialization.lowering.modules[0u32]
+  let source = module_.type_layouts.fields[0u32].field
+  let field = self_host_field_test_physical(source, WasmStructField(source))
+  let _ = self_host_linked_source_struct_field_layout(module_.module_id + 1u64, module_.type_layouts, field)
+}
+
+test "index lookups declared fields retain missing and synthetic layouts" {
+  let module_ = self_host_metadata_test_links[0u32].fragments.specialization.lowering.modules[0u32]
+  let source = module_.type_layouts.fields[0u32].field
+  let missing = source + u32_into_u64(module_.type_layouts.fields.length())
+  let field = self_host_field_test_physical(missing, WasmStructField(missing))
+  assert(self_host_linked_source_struct_field_layout(module_.module_id, module_.type_layouts, field) is None,
+    "missing source field stays absent")
+  let synthetic = self_host_field_test_physical(source, WasmClosureEntryField)
+  assert(self_host_linked_source_struct_field_layout(module_.module_id, module_.type_layouts, synthetic) is None,
+    "synthetic role cannot use a declared field certificate")
+}
+
+fn self_host_field_test_layouts(
+  original: SelfHostPlannedModuleTypeLayouts,
+  module_id: U64,
+  fields: Array<SelfHostPlannedFieldLayout>,
+) -> SelfHostPlannedModuleTypeLayouts {
+  {
+    module_id: module_id
+    layouts: original.layouts
+    layout_by_declaration: original.layout_by_declaration
+    fields: fields
+    variants: original.variants
+    payload_types: original.payload_types
+    payload_shapes: original.payload_shapes
+  }
+}
+
+test "ARN-106 index lookups declared fields reject a different layout owner" expect_trap "unreachable" {
+  let module_ = self_host_metadata_test_links[0u32].fragments.specialization.lowering.modules[0u32]
+  let source = module_.type_layouts.fields[0u32].field
+  let field = self_host_field_test_physical(source, WasmStructField(source))
+  let layouts = self_host_field_test_layouts(module_.type_layouts,
+    module_.module_id + 1u64, module_.type_layouts.fields)
+  let _ = self_host_linked_source_struct_field_layout(module_.module_id, layouts, field)
+}
+
+test "index lookups declared fields reject a different stored source field" expect_trap "unreachable" {
+  let module_ = self_host_metadata_test_links[0u32].fragments.specialization.lowering.modules[0u32]
+  let source = module_.type_layouts.fields[0u32].field
+  let field = self_host_field_test_physical(source, WasmStructField(source))
+  let layouts = self_host_field_test_layouts(module_.type_layouts,
+    module_.module_id, [module_.type_layouts.fields[1u32]])
+  let _ = self_host_linked_source_struct_field_layout(module_.module_id, layouts, field)
+}
+
+fn self_host_field_test_benchmark(fixture: SelfHostMetadataIndexTestFixture, direct: Bool) -> Unit {
+  let mut checksum = 0u64
+  while 0u32 {
+    iteration if iteration < 8192u32 => {
+      let field = fixture.fields[(iteration * 17u32) % fixture.fields.length()]
+      if direct {
+        checksum = checksum + self_host_linked_field_value_nominal_declaration(fixture.link, field)
+        checksum = checksum + self_host_linked_field_container_owner_module_id(fixture.link, field)
+      } else {
+        checksum = checksum + self_host_field_test_outer_field_value_nominal_declaration(fixture.link, field)
+        checksum = checksum + self_host_field_test_outer_field_container_owner_module_id(fixture.link, field)
+      }
+      continue iteration + 1u32
+    }
+    _ => break ()
+  }
+  assert(checksum == fixture.field_checksum, "declared field benchmark checksum")
+}
+
+test "index lookup metadata benchmark field_layout scan 64" {
+  self_host_field_test_benchmark(self_host_metadata_test_fixtures[0u32], false)
+}
+test "index lookup metadata benchmark field_layout direct 64" {
+  self_host_field_test_benchmark(self_host_metadata_test_fixtures[0u32], true)
+}
+test "index lookup metadata benchmark field_layout scan 256" {
+  self_host_field_test_benchmark(self_host_metadata_test_fixtures[1u32], false)
+}
+test "index lookup metadata benchmark field_layout direct 256" {
+  self_host_field_test_benchmark(self_host_metadata_test_fixtures[1u32], true)
+}

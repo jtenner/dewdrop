@@ -1,0 +1,18 @@
+semantic_specialized_body_shapes.dew:56:11: warning: UnreachableBlockItem(10510, 1, 1972)
+  |
+56 |           unreachable()
+  |           ^
+starshine_module.dew:12677:28: warning: RedundantPatternArm(11582, 452291)
+  |
+12677 |             PlannedLocalSet(_, _) => {
+  |                            ^
+starshine_module.dew:12724:13: warning: RedundantPatternArm(11597, 454630)
+  |
+12724 |             _ => {
+  |             ^
+wrote self-describing Dew test module
+self-host timing: index test generation: 4.627 seconds
+self-host timing: index test time provider: 0.004 seconds
+self-host timing: index test link: 1.095 seconds
+Dew tests passed: 31 selected from 31
+self-host timing: index test execution: 0.235 seconds
