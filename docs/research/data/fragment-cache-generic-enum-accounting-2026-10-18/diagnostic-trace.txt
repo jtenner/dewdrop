@@ -1,0 +1,13 @@
+TRACE context_changed=false
+TRACE cold=layout hits 0, layout misses 0, fragment hits 0, fragment misses 4 modules=[main, dew.std.preamble, dew.std.option, dew.std.result, dew.std.text_runtime, dew.std.wasm.intrinsics]
+TRACE cache HIT main
+TRACE cache HIT dew.std.preamble
+TRACE cache MISS dew.std.option
+TRACE cache MISS dew.std.result
+TRACE cache HIT dew.std.text_runtime
+TRACE cache HIT dew.std.wasm.intrinsics
+TRACE warm=layout hits 0, layout misses 0, fragment hits 4, fragment misses 0
+[jtenner/dewdrop] test standard_loader/planning_cache_wbtest.mbt:82 ("fragment cache accounting excludes usage-dependent enum bypasses") failed: src/standard_loader/planning_cache_wbtest.mbt:140:3-140:69@jtenner/dewdrop FAILED: `4 != 5`
+diff:
+-4 +5
+Total tests: 3, passed: 2, failed: 1.

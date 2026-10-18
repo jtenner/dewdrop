@@ -116,8 +116,22 @@ test "fragment cache accounting excludes usage-dependent enum bypasses" {
     options,
     pack=Some(session),
   ).unwrap()
+  // Option and Result both have usage-dependent generic enum layouts. The
+  // Result combinators now reference applied Result types in their signatures.
+  // Neither module can publish a reusable baseline fragment.
+  let bypassed = ["dew.std.option", "dew.std.result"]
+  let cacheable_count = program.modules.length() - bypassed.length()
   assert_eq(cold.status.fragment_hits, 0)
-  assert_eq(cold.status.fragment_misses, program.modules.length() - 1)
+  assert_eq(cold.status.fragment_misses, cacheable_count)
+  let context = wasmgc_fragment_program_context(
+    program, analyzed.frozen, root, options,
+  ).unwrap()
+  for module_index, path in program.module_paths {
+    let cached = lookup_wasmgc_fragment_cache(
+      program, lowering, module_index, context, options, pack=Some(session),
+    ).unwrap()
+    assert_eq(cached is None, bypassed.contains(path), msg=path)
+  }
   let warm = plan_program_wasmgc_link_with_cache(
     program,
     analyzed,
@@ -126,7 +140,7 @@ test "fragment cache accounting excludes usage-dependent enum bypasses" {
     options,
     pack=Some(session),
   ).unwrap()
-  assert_eq(warm.status.fragment_hits, program.modules.length() - 1)
+  assert_eq(warm.status.fragment_hits, cacheable_count)
   assert_eq(warm.status.fragment_misses, 0)
   @sys.set_env_var("DEW_PLAN_CACHE", prior_plan)
   @sys.set_env_var("DEW_COMPILER_FINGERPRINT", prior_compiler)

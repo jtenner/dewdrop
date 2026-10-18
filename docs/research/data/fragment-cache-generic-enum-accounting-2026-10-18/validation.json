@@ -1,0 +1,25 @@
+{
+  "command": [
+    "bash",
+    "tools/test-native.sh"
+  ],
+  "elapsed": 5.044097922997025,
+  "exit": 0,
+  "packages": "standard_loader/planning_cache_wbtest.mbt",
+  "tests_passed": 3,
+  "tests_failed": 0,
+  "bypass_modules": [
+    "dew.std.option",
+    "dew.std.result"
+  ],
+  "cacheable_modules": [
+    "main",
+    "dew.std.preamble",
+    "dew.std.text_runtime",
+    "dew.std.wasm.intrinsics"
+  ],
+  "program_context_changed": false,
+  "cold_fragment_misses": 4,
+  "warm_fragment_hits": 4,
+  "warm_fragment_misses": 0
+}
