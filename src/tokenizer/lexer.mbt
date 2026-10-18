@@ -246,7 +246,9 @@ fn Tokenizer::skip_trivia(self : Tokenizer) -> Unit {
     if value == 0x2FU && self.has_next_unit() && self.second == 0x2FU {
       self.advance()
       self.advance()
-      while self.has_current() && !is_newline(self.first) {
+      while self.has_current() &&
+            !is_newline(self.first) &&
+            !is_io_error(self.first) {
         self.advance()
       }
       continue

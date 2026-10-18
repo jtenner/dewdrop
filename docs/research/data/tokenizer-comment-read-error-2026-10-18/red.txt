@@ -1,0 +1,7 @@
+[jtenner/dewdrop] test tokenizer/lexer_wbtest.mbt:267 ("line comments preserve a terminal source error") failed: src/tokenizer/lexer_wbtest.mbt:272:5-272:71@jtenner/dewdrop FAILED: `[] != [Error(SourceIo(5))]`
+diff:
+-[] +[Error(SourceIo(5))]
+[jtenner/dewdrop] test tokenizer/lexer_wbtest.mbt:279 ("line comments preserve descriptor refill errors") failed: src/tokenizer/lexer_wbtest.mbt:291:3-291:73@jtenner/dewdrop FAILED: `[] != [Error(SourceIo(9))]`
+diff:
+-[] +[Error(SourceIo(9))]
+Total tests: 25, passed: 23, failed: 2.

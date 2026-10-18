@@ -1,0 +1,1 @@
+{"command": ["bash", "tools/test-native.sh", "--target-dir", "/tmp/dewdrop-implementation-2026-10-18/tokenizer-fd-build"], "packages": "tokenizer/lexer_wbtest.mbt", "elapsed_seconds": 0.38257412500388455, "exit": 2}

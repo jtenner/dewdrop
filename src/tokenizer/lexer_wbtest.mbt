@@ -264,6 +264,37 @@ test "hex string escape preserves a terminal source error" {
 }
 
 ///|
+#cfg(target="native")
+test "line comments preserve a terminal source error" {
+  for input in [b"//", b"// comment", b"  // comment"] {
+    assert_eq(token_kinds(input), [])
+    let tokenizer = tokenizer_with_terminal_error(input, 5)
+    let output = tokenizer.iter().to_array()
+    assert_eq(output.map(token => token.kind()), [Error(SourceIo(5))])
+    assert_eq(output[0].offset(), input.length().to_uint64())
+    assert_eq(tokenizer.next(), None)
+  }
+}
+
+///|
+#cfg(target="native")
+test "line comments preserve descriptor refill errors" {
+  let input = b"// comment"
+  let fd = tokenizer_test_open_bytes(input, input.length())
+  assert_true(fd >= 0)
+  let tokenizer = Tokenizer::from_fd(fd, buffer_size=16)
+  // Keep the comment in the reusable buffer, then force the next read to fail.
+  assert_true(tokenizer.source.ensure(input.length()))
+  assert_eq(tokenizer_test_close_fd(fd), 0)
+  let output = tokenizer.iter().to_array()
+  let error = tokenizer.source.read_error().unwrap()
+  assert_true(error > 0)
+  assert_eq(output.map(token => token.kind()), [Error(SourceIo(error))])
+  assert_eq(output[0].offset(), input.length().to_uint64())
+  assert_eq(tokenizer.next(), None)
+}
+
+///|
 test "b-prefixed strings produce exact byte literals" {
   assert_eq(token_kinds(b"b\"utf8: λ \\x00\\xFF\""), [
     BytesLiteral(b"utf8: λ \x00\xFF"),
