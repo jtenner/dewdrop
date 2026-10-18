@@ -1,0 +1,19 @@
+Command: DEW_NATIVE_TEST_PACKAGES='parser standard_loader' tools/test-native.sh
+Parser: Total tests: 305, passed: 305, failed: 0.
+Parser elapsed: 0.131 seconds.
+Loader: Total tests: 24, passed: 23, failed: 1.
+Loader elapsed: 7.615 seconds.
+Unrelated failure: planning_cache_wbtest.mbt:120 fragment-cache expected hits 5; actual hits 4.
+
+Command: DEW_NATIVE_TEST_PACKAGES=standard_loader tools/test-native.sh --filter '*parse-event*'
+Loader: Total tests: 3, passed: 3, failed: 0.
+Loader elapsed: 0.043 seconds.
+
+Benchmark environment: Moon 0.1.20261012 (748b63c 2026-10-12), native release,
+x86_64 AMD Ryzen 7 8845HS, Linux, no competing Moon build.
+Baseline writer: 9d86b829292b1efa8f1aca32b0ff49565c878ee0.
+Current artifact file SHA-256 before formatting:
+20f8f9f0e781628c0ea51711b39e3d8a456882585c06b2e098be074f787aa2ca
+Fixture: parse_event_binary_benchmark_events, 128 functions, no struct fields.
+Fixture source SHA-256:
+73b6c391d3c46eadda4fef75bc370805d5f1654aa28ce4bfd382385fe5a4984c

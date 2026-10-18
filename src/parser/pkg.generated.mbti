@@ -32,6 +32,8 @@ pub fn parse_bytes(Bytes) -> Iter[ParseEvent]
 
 pub fn serialize_parse_events(Array[ParseEvent]) -> Result[Bytes, String]
 
+pub fn serialize_parse_events_for_cache(Array[ParseEvent]) -> Bytes?
+
 // Errors
 
 // Types and methods

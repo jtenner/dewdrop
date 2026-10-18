@@ -197,9 +197,9 @@ fn store_parse_event_cache(
   events : Array[@parser.ParseEvent],
   pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
-  let payload = match @parser.serialize_parse_events(events) {
-    Ok(value) => value
-    Err(error) => return Err("cannot serialize parse-event cache: \{error}")
+  let payload = match @parser.serialize_parse_events_for_cache(events) {
+    Some(value) => value
+    None => return Ok(())
   }
   match pack {
     Some(session) if session.enabled =>

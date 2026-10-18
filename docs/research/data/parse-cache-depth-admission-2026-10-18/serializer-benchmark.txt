@@ -1,0 +1,8 @@
+[jtenner/dewdrop] bench parser/parse_event_depth_bench_test.mbt:1579 ("bench parse-event depth admission current") ok
+time (mean ± σ)         range (min … max)
+  47.14 µs ± 280.14 ns    46.87 µs …  47.78 µs  in 10 ×   2118 runs
+[jtenner/dewdrop] bench parser/parse_event_depth_bench_test.mbt:1585 ("bench parse-event depth admission baseline") ok
+time (mean ± σ)         range (min … max)
+  47.89 µs ±  87.21 ns    47.76 µs …  48.01 µs  in 10 ×   2094 runs
+Total tests: 2, passed: 2, failed: 0.
+self-host timing: parse-event depth admission benchmark: 20.664 seconds

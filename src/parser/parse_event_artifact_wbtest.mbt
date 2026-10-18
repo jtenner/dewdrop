@@ -125,3 +125,89 @@ test "parse-event artifact rejects malformed payloads without panic" {
   }
   assert_true(deserialize_parse_events(invalid_event_tag.to_bytes()) is Err(_))
 }
+
+///|
+test "parse-event cache admission matches the expression depth boundary" {
+  for terms in [2044, 2045, 2046, 2055] {
+    let source = Buffer()
+    source.write_bytes(b"fn value() -> I32 {\n  1")
+    for _ in 1..<terms {
+      source.write_bytes(b" + 1")
+    }
+    source.write_bytes(b"\n}\n")
+    let events = parse_bytes(source.to_bytes()).to_array()
+    assert_false(events.any(fn(event) { event is Diagnostic(_) }))
+    if terms <= 2045 {
+      let payload = serialize_parse_events_for_cache(events).unwrap()
+      assert_eq(deserialize_parse_events(payload).unwrap(), events)
+      assert_eq(serialize_parse_events(events).unwrap(), payload)
+    } else {
+      assert_eq(serialize_parse_events_for_cache(events), None)
+      assert_eq(
+        serialize_parse_events(events),
+        Err("parse_event_payload: syntax nesting exceeds limit"),
+      )
+    }
+  }
+}
+
+///|
+test "parse-event writer and reader agree on recursive type depth" {
+  for depth in [2047, 2048, 2049] {
+    let mut value = NamedType("I32", 0UL)
+    for _ in 0..<depth {
+      value = ComputedType(value, b"item", 0UL)
+    }
+    let writer = @cache_binary.Writer::new()
+    let admission = { depth_exceeded: false }
+    parse_write_type(writer, value, admission, 0)
+    assert_eq(admission.depth_exceeded, depth > parse_event_maximum_depth)
+    if !admission.depth_exceeded {
+      let reader = @cache_binary.Reader::new(writer.to_bytes(), detailed_paths=false)
+      let _ = parse_read_type(reader, "type", 0)
+      assert_eq(reader.finish(), Ok(()))
+    }
+  }
+}
+
+///|
+test "parse-event writer and reader agree on recursive pattern depth" {
+  for depth in [2047, 2048, 2049] {
+    let mut value = WildcardPattern(0UL)
+    for _ in 0..<depth {
+      value = QualifiedPattern(value, "item", 0UL)
+    }
+    let writer = @cache_binary.Writer::new()
+    let admission = { depth_exceeded: false }
+    parse_write_pattern(writer, value, admission, 0)
+    assert_eq(admission.depth_exceeded, depth > parse_event_maximum_depth)
+    if !admission.depth_exceeded {
+      let reader = @cache_binary.Reader::new(writer.to_bytes(), detailed_paths=false)
+      let _ = parse_read_pattern(reader, "pattern", 0)
+      assert_eq(reader.finish(), Ok(()))
+    }
+  }
+}
+
+///|
+test "parse-event reader still rejects stored syntax above the depth limit" {
+  let writer = @cache_binary.Writer::new()
+  // Raw prefix-expression bytes bypass writer admission, as corrupt stored
+  // bytes can. Positive has discriminant zero; PrefixExpr has tag 25.
+  for _ in 0..<(parse_event_maximum_depth + 1) {
+    writer.write_byte(25)
+    writer.write_byte(0)
+  }
+  writer.write_byte(2)
+  writer.write_var_u64(1UL)
+  writer.write_var_u64(0UL)
+  for _ in 0..<(parse_event_maximum_depth + 1) {
+    writer.write_var_u64(0UL)
+  }
+  let reader = @cache_binary.Reader::new(writer.to_bytes(), detailed_paths=false)
+  let _ = parse_read_expr(reader, "expression", 0)
+  match reader.finish() {
+    Err(error) => assert_true(error.contains("syntax nesting exceeds limit"))
+    Ok(_) => fail("expected an error for corrupt stored deep syntax")
+  }
+}

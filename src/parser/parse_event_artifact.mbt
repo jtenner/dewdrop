@@ -17,6 +17,11 @@ let parse_event_maximum_text = 0x01000000
 let parse_event_maximum_bytes = 0x10000000
 
 ///|
+struct ParseEventAdmission {
+  mut depth_exceeded : Bool
+}
+
+///|
 fn parse_write_offset(writer : @cache_binary.Writer, value : UInt64) -> Unit {
   writer.write_var_u64(value)
 }
@@ -481,11 +486,22 @@ fn parse_read_visibility(
 }
 
 ///|
-fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
+fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr,
+  admission : ParseEventAdmission,
+  depth : Int32,
+) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+  if depth > parse_event_maximum_depth {
+    admission.depth_exceeded = true
+    return
+  }
+
   match value {
     ComputedType(target, selector, offset) => {
       writer.write_byte(5)
-      parse_write_type(writer, target)
+      parse_write_type(writer, target, admission, depth + 1)
       writer.write_bytes(selector)
       parse_write_offset(writer, offset)
     }
@@ -505,16 +521,16 @@ fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
       writer.write_byte(4)
       writer.write_var_u64(fields.length().to_uint64())
       for field in fields {
-        parse_write_type(writer, field)
+        parse_write_type(writer, field, admission, depth + 1)
       }
       parse_write_offset(writer, offset)
     }
     AppliedType(base, arguments, offset) => {
       writer.write_byte(1)
-      parse_write_type(writer, base)
+      parse_write_type(writer, base, admission, depth + 1)
       writer.write_var_u64(arguments.length().to_uint64())
       for argument in arguments {
-        parse_write_type(writer, argument)
+        parse_write_type(writer, argument, admission, depth + 1)
       }
       parse_write_offset(writer, offset)
     }
@@ -522,9 +538,9 @@ fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
       writer.write_byte(2)
       writer.write_var_u64(parameters.length().to_uint64())
       for parameter in parameters {
-        parse_write_type(writer, parameter)
+        parse_write_type(writer, parameter, admission, depth + 1)
       }
-      parse_write_type(writer, result)
+      parse_write_type(writer, result, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
   }
@@ -615,11 +631,17 @@ fn parse_read_type(
 fn parse_write_type_parameter(
   writer : @cache_binary.Writer,
   value : TypeParameter,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_string(value.name)
   writer.write_var_u64(value.bounds.length().to_uint64())
   for bound in value.bounds {
-    parse_write_type(writer, bound)
+    parse_write_type(writer, bound, admission, depth + 1)
   }
   parse_write_offset(writer, value.offset)
 }
@@ -647,10 +669,16 @@ fn parse_read_type_parameter(
 fn parse_write_type_parameters(
   writer : @cache_binary.Writer,
   values : Array[TypeParameter],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
-    parse_write_type_parameter(writer, value)
+    parse_write_type_parameter(writer, value, admission, depth)
   }
 }
 
@@ -673,9 +701,15 @@ fn parse_read_type_parameters(
 fn parse_write_fn_parameter(
   writer : @cache_binary.Writer,
   value : FnParameter,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_string(value.name)
-  parse_write_type(writer, value.type_)
+  parse_write_type(writer, value.type_, admission, depth + 1)
   parse_write_offset(writer, value.offset)
 }
 
@@ -697,10 +731,16 @@ fn parse_read_fn_parameter(
 fn parse_write_fn_parameters(
   writer : @cache_binary.Writer,
   values : Array[FnParameter],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
-    parse_write_fn_parameter(writer, value)
+    parse_write_fn_parameter(writer, value, admission, depth)
   }
 }
 
@@ -723,14 +763,20 @@ fn parse_read_fn_parameters(
 fn parse_write_receiver(
   writer : @cache_binary.Writer,
   value : ReceiverParameter?,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   match value {
     Some(receiver) => {
       parse_write_option_tag(writer, true)
       match receiver.explicit_type {
         Some(type_) => {
           parse_write_option_tag(writer, true)
-          parse_write_type(writer, type_)
+          parse_write_type(writer, type_, admission, depth + 1)
         }
         None => parse_write_option_tag(writer, false)
       }
@@ -854,11 +900,17 @@ fn parse_read_binary(
 fn parse_write_object_fields(
   writer : @cache_binary.Writer,
   values : Array[ObjectField],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
     writer.write_string(value.name)
-    parse_write_expr(writer, value.value)
+    parse_write_expr(writer, value.value, admission, depth + 1)
     parse_write_offset(writer, value.offset)
   }
 }
@@ -887,10 +939,16 @@ fn parse_read_object_fields(
 fn parse_write_exprs(
   writer : @cache_binary.Writer,
   values : Array[Expr],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
-    parse_write_expr(writer, value)
+    parse_write_expr(writer, value, admission, depth + 1)
   }
 }
 
@@ -910,10 +968,17 @@ fn parse_read_exprs(
 }
 
 ///|
-fn parse_write_block(writer : @cache_binary.Writer, value : Block) -> Unit {
+fn parse_write_block(writer : @cache_binary.Writer, value : Block,
+  admission : ParseEventAdmission,
+  depth : Int32,
+) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(value.items.length().to_uint64())
   for item in value.items {
-    parse_write_block_item(writer, item)
+    parse_write_block_item(writer, item, admission, depth + 1)
   }
   parse_write_offset(writer, value.offset)
 }
@@ -942,11 +1007,17 @@ fn parse_read_block(
 fn parse_write_optional_expr(
   writer : @cache_binary.Writer,
   value : Expr?,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   match value {
     Some(expr) => {
       parse_write_option_tag(writer, true)
-      parse_write_expr(writer, expr)
+      parse_write_expr(writer, expr, admission, depth + 1)
     }
     None => parse_write_option_tag(writer, false)
   }
@@ -967,7 +1038,18 @@ fn parse_read_optional_expr(
 }
 
 ///|
-fn parse_write_expr(writer : @cache_binary.Writer, value : Expr) -> Unit {
+fn parse_write_expr(writer : @cache_binary.Writer, value : Expr,
+  admission : ParseEventAdmission,
+  depth : Int32,
+) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+  if depth > parse_event_maximum_depth {
+    admission.depth_exceeded = true
+    return
+  }
+
   match value {
     I8Expr(value, offset) => {
       writer.write_byte(0)
@@ -1046,126 +1128,126 @@ fn parse_write_expr(writer : @cache_binary.Writer, value : Expr) -> Unit {
     }
     ProductExpr(elements, offset) => {
       writer.write_byte(32)
-      parse_write_exprs(writer, elements)
+      parse_write_exprs(writer, elements, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ArrayExpr(elements, offset) => {
       writer.write_byte(33)
-      parse_write_exprs(writer, elements)
+      parse_write_exprs(writer, elements, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     LambdaExpr(parameters, result, body, offset) => {
       writer.write_byte(15)
-      parse_write_fn_parameters(writer, parameters)
-      parse_write_type(writer, result)
-      parse_write_block(writer, body)
+      parse_write_fn_parameters(writer, parameters, admission, depth + 1)
+      parse_write_type(writer, result, admission, depth + 1)
+      parse_write_block(writer, body, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ObjectExpr(fields, offset) => {
       writer.write_byte(16)
-      parse_write_object_fields(writer, fields)
+      parse_write_object_fields(writer, fields, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ConstructExpr(target, fields, offset) => {
       writer.write_byte(17)
-      parse_write_expr(writer, target)
-      parse_write_object_fields(writer, fields)
+      parse_write_expr(writer, target, admission, depth + 1)
+      parse_write_object_fields(writer, fields, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     BlockExpr(block) => {
       writer.write_byte(18)
-      parse_write_block(writer, block)
+      parse_write_block(writer, block, admission, depth + 1)
     }
     IfExpr(condition, then_, else_, offset) => {
       writer.write_byte(19)
-      parse_write_expr(writer, condition)
-      parse_write_block(writer, then_)
-      parse_write_optional_expr(writer, else_)
+      parse_write_expr(writer, condition, admission, depth + 1)
+      parse_write_block(writer, then_, admission, depth + 1)
+      parse_write_optional_expr(writer, else_, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     MatchExpr(scrutinee, arms, offset) => {
       writer.write_byte(20)
-      parse_write_expr(writer, scrutinee)
-      parse_write_pattern_arms(writer, arms)
+      parse_write_expr(writer, scrutinee, admission, depth + 1)
+      parse_write_pattern_arms(writer, arms, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     IsExpr(scrutinee, pattern, offset) => {
       writer.write_byte(21)
-      parse_write_expr(writer, scrutinee)
-      parse_write_pattern(writer, pattern)
+      parse_write_expr(writer, scrutinee, admission, depth + 1)
+      parse_write_pattern(writer, pattern, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     WhileExpr(initial, arms, offset) => {
       writer.write_byte(22)
-      parse_write_expr(writer, initial)
-      parse_write_pattern_arms(writer, arms)
+      parse_write_expr(writer, initial, admission, depth + 1)
+      parse_write_pattern_arms(writer, arms, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ReturnExpr(value, offset) => {
       writer.write_byte(35)
-      parse_write_optional_expr(writer, value)
+      parse_write_optional_expr(writer, value, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     BreakExpr(value, offset) => {
       writer.write_byte(23)
-      parse_write_expr(writer, value)
+      parse_write_expr(writer, value, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ContinueExpr(value, offset) => {
       writer.write_byte(24)
-      parse_write_expr(writer, value)
+      parse_write_expr(writer, value, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     PrefixExpr(operator, operand, offset) => {
       writer.write_byte(25)
       parse_write_prefix(writer, operator)
-      parse_write_expr(writer, operand)
+      parse_write_expr(writer, operand, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     BinaryExpr(operator, left, right, offset) => {
       writer.write_byte(26)
       parse_write_binary(writer, operator)
-      parse_write_expr(writer, left)
-      parse_write_expr(writer, right)
+      parse_write_expr(writer, left, admission, depth + 1)
+      parse_write_expr(writer, right, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     CallExpr(target, arguments, offset) => {
       writer.write_byte(27)
-      parse_write_expr(writer, target)
-      parse_write_exprs(writer, arguments)
+      parse_write_expr(writer, target, admission, depth + 1)
+      parse_write_exprs(writer, arguments, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ExplicitTypeCallExpr(target, types, arguments, offset) => {
       writer.write_byte(28)
-      parse_write_expr(writer, target)
+      parse_write_expr(writer, target, admission, depth + 1)
       writer.write_var_u64(types.length().to_uint64())
       for type_ in types {
-        parse_write_type(writer, type_)
+        parse_write_type(writer, type_, admission, depth + 1)
       }
-      parse_write_exprs(writer, arguments)
+      parse_write_exprs(writer, arguments, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     FieldExpr(target, name, offset) => {
       writer.write_byte(29)
-      parse_write_expr(writer, target)
+      parse_write_expr(writer, target, admission, depth + 1)
       writer.write_string(name)
       parse_write_offset(writer, offset)
     }
     QualifiedExpr(target, name, offset) => {
       writer.write_byte(30)
-      parse_write_expr(writer, target)
+      parse_write_expr(writer, target, admission, depth + 1)
       writer.write_string(name)
       parse_write_offset(writer, offset)
     }
     IndexExpr(target, index, offset) => {
       writer.write_byte(31)
-      parse_write_expr(writer, target)
-      parse_write_expr(writer, index)
+      parse_write_expr(writer, target, admission, depth + 1)
+      parse_write_expr(writer, index, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ProductFieldExpr(target, index, arity, offset) => {
       writer.write_byte(34)
-      parse_write_expr(writer, target)
+      parse_write_expr(writer, target, admission, depth + 1)
       writer.write_var_u64(index.to_uint64())
       writer.write_var_u64(arity.to_uint64())
       parse_write_offset(writer, offset)
@@ -1403,12 +1485,18 @@ fn parse_read_expr(
 fn parse_write_block_item(
   writer : @cache_binary.Writer,
   value : BlockItem,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   match value {
     TypeBindingItem(name, type_, offset) => {
       writer.write_byte(5)
       writer.write_string(name)
-      parse_write_type(writer, type_)
+      parse_write_type(writer, type_, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     LetItem(mutable_, name, name_offset, expression, offset) => {
@@ -1416,24 +1504,24 @@ fn parse_write_block_item(
       writer.write_bool(mutable_)
       writer.write_string(name)
       parse_write_offset(writer, name_offset)
-      parse_write_expr(writer, expression)
+      parse_write_expr(writer, expression, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     AssignmentItem(target, value, offset) => {
       writer.write_byte(2)
-      parse_write_expr(writer, target)
-      parse_write_expr(writer, value)
+      parse_write_expr(writer, target, admission, depth + 1)
+      parse_write_expr(writer, value, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     IndexSetItem(target, value, offset) => {
       writer.write_byte(3)
-      parse_write_expr(writer, target)
-      parse_write_expr(writer, value)
+      parse_write_expr(writer, target, admission, depth + 1)
+      parse_write_expr(writer, value, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ExpressionItem(expression, offset) => {
       writer.write_byte(4)
-      parse_write_expr(writer, expression)
+      parse_write_expr(writer, expression, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
   }
@@ -1494,11 +1582,17 @@ fn parse_read_block_item(
 fn parse_write_pattern_fields(
   writer : @cache_binary.Writer,
   values : Array[PatternField],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
     writer.write_string(value.name)
-    parse_write_pattern(writer, value.pattern)
+    parse_write_pattern(writer, value.pattern, admission, depth + 1)
     parse_write_offset(writer, value.offset)
   }
 }
@@ -1527,10 +1621,16 @@ fn parse_read_pattern_fields(
 fn parse_write_patterns(
   writer : @cache_binary.Writer,
   values : Array[Pattern],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
-    parse_write_pattern(writer, value)
+    parse_write_pattern(writer, value, admission, depth + 1)
   }
 }
 
@@ -1550,7 +1650,18 @@ fn parse_read_patterns(
 }
 
 ///|
-fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern) -> Unit {
+fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern,
+  admission : ParseEventAdmission,
+  depth : Int32,
+) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+  if depth > parse_event_maximum_depth {
+    admission.depth_exceeded = true
+    return
+  }
+
   match value {
     WildcardPattern(offset) => {
       writer.write_byte(0)
@@ -1572,30 +1683,30 @@ fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern) -> Unit {
     }
     LiteralPattern(expression, offset) => {
       writer.write_byte(3)
-      parse_write_expr(writer, expression)
+      parse_write_expr(writer, expression, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     QualifiedPattern(target, name, offset) => {
       writer.write_byte(4)
-      parse_write_pattern(writer, target)
+      parse_write_pattern(writer, target, admission, depth + 1)
       writer.write_string(name)
       parse_write_offset(writer, offset)
     }
     TuplePattern(target, arguments, offset) => {
       writer.write_byte(5)
-      parse_write_pattern(writer, target)
-      parse_write_patterns(writer, arguments)
+      parse_write_pattern(writer, target, admission, depth + 1)
+      parse_write_patterns(writer, arguments, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     ProductPattern(arguments, offset) => {
       writer.write_byte(9)
-      parse_write_patterns(writer, arguments)
+      parse_write_patterns(writer, arguments, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     StructPattern(target, fields, rest, offset) => {
       writer.write_byte(6)
-      parse_write_pattern(writer, target)
-      parse_write_pattern_fields(writer, fields)
+      parse_write_pattern(writer, target, admission, depth + 1)
+      parse_write_pattern_fields(writer, fields, admission, depth + 1)
       match rest {
         Some(value) => {
           parse_write_option_tag(writer, true)
@@ -1607,8 +1718,8 @@ fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern) -> Unit {
     }
     AlternativePattern(first, remaining, offset) => {
       writer.write_byte(7)
-      parse_write_pattern(writer, first)
-      parse_write_patterns(writer, remaining)
+      parse_write_pattern(writer, first, admission, depth + 1)
+      parse_write_patterns(writer, remaining, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
   }
@@ -1696,12 +1807,18 @@ fn parse_read_pattern(
 fn parse_write_pattern_arms(
   writer : @cache_binary.Writer,
   values : Array[PatternArm],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
-    parse_write_pattern(writer, value.pattern)
-    parse_write_optional_expr(writer, value.guard_condition)
-    parse_write_expr(writer, value.body)
+    parse_write_pattern(writer, value.pattern, admission, depth + 1)
+    parse_write_optional_expr(writer, value.guard_condition, admission, depth + 1)
+    parse_write_expr(writer, value.body, admission, depth + 1)
     parse_write_offset(writer, value.offset)
   }
 }
@@ -1764,13 +1881,19 @@ fn parse_read_derive_requests(
 fn parse_write_struct_fields(
   writer : @cache_binary.Writer,
   values : Array[StructField],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
     writer.write_bool(value.mutable_)
     writer.write_bool(value.module_private)
     writer.write_string(value.name)
-    parse_write_type(writer, value.type_)
+    parse_write_type(writer, value.type_, admission, depth + 1)
     parse_write_offset(writer, value.offset)
   }
 }
@@ -1801,7 +1924,13 @@ fn parse_read_struct_fields(
 fn parse_write_enum_variants(
   writer : @cache_binary.Writer,
   values : Array[EnumVariant],
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
     match value {
@@ -1815,14 +1944,14 @@ fn parse_write_enum_variants(
         writer.write_string(name)
         writer.write_var_u64(types.length().to_uint64())
         for type_ in types {
-          parse_write_type(writer, type_)
+          parse_write_type(writer, type_, admission, depth + 1)
         }
         parse_write_offset(writer, offset)
       }
       StructVariant(name, fields, offset) => {
         writer.write_byte(2)
         writer.write_string(name)
-        parse_write_struct_fields(writer, fields)
+        parse_write_struct_fields(writer, fields, admission, depth + 1)
         parse_write_offset(writer, offset)
       }
     }
@@ -1885,15 +2014,21 @@ fn parse_read_enum_variants(
 fn parse_write_function(
   writer : @cache_binary.Writer,
   value : FunctionDeclaration,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   parse_write_visibility(writer, value.visibility)
   writer.write_string(value.name)
   parse_write_offset(writer, value.name_offset)
-  parse_write_type_parameters(writer, value.type_parameters)
-  parse_write_receiver(writer, value.receiver)
-  parse_write_fn_parameters(writer, value.parameters)
-  parse_write_type(writer, value.return_type)
-  parse_write_block(writer, value.body)
+  parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+  parse_write_receiver(writer, value.receiver, admission, depth + 1)
+  parse_write_fn_parameters(writer, value.parameters, admission, depth + 1)
+  parse_write_type(writer, value.return_type, admission, depth + 1)
+  parse_write_block(writer, value.body, admission, depth + 1)
   parse_write_offset(writer, value.offset)
 }
 
@@ -1929,12 +2064,18 @@ fn parse_read_function(
 fn parse_write_foreign_library_member(
   writer : @cache_binary.Writer,
   value : ForeignLibraryMember,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   parse_write_visibility(writer, value.visibility)
   writer.write_string(value.name)
   parse_write_offset(writer, value.name_offset)
-  parse_write_fn_parameters(writer, value.parameters)
-  parse_write_type(writer, value.return_type)
+  parse_write_fn_parameters(writer, value.parameters, admission, depth + 1)
+  parse_write_type(writer, value.return_type, admission, depth + 1)
   writer.write_bytes(value.export_name)
   parse_write_offset(writer, value.export_name_offset)
   parse_write_offset(writer, value.offset)
@@ -1970,7 +2111,13 @@ fn parse_read_foreign_library_member(
 fn parse_write_declaration(
   writer : @cache_binary.Writer,
   value : Declaration,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   match value {
     Import(value) => {
       writer.write_byte(0)
@@ -1995,9 +2142,9 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters)
-      parse_write_fn_parameters(writer, value.parameters)
-      parse_write_type(writer, value.return_type)
+      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_fn_parameters(writer, value.parameters, admission, depth + 1)
+      parse_write_type(writer, value.return_type, admission, depth + 1)
       writer.write_bytes(value.builtin_name)
       parse_write_offset(writer, value.offset)
     }
@@ -2007,7 +2154,7 @@ fn parse_write_declaration(
       writer.write_bool(value.mutable_)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_expr(writer, value.value)
+      parse_write_expr(writer, value.value, admission, depth + 1)
       parse_write_offset(writer, value.offset)
     }
     Trait(value) => {
@@ -2015,22 +2162,22 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters)
+      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
       writer.write_var_u64(value.methods.length().to_uint64())
       for trait_method in value.methods {
         writer.write_string(trait_method.name)
         parse_write_offset(writer, trait_method.name_offset)
-        parse_write_type_parameters(writer, trait_method.type_parameters)
-        parse_write_receiver(writer, trait_method.receiver)
-        parse_write_fn_parameters(writer, trait_method.parameters)
-        parse_write_type(writer, trait_method.return_type)
+        parse_write_type_parameters(writer, trait_method.type_parameters, admission, depth + 1)
+        parse_write_receiver(writer, trait_method.receiver, admission, depth + 1)
+        parse_write_fn_parameters(writer, trait_method.parameters, admission, depth + 1)
+        parse_write_type(writer, trait_method.return_type, admission, depth + 1)
         parse_write_offset(writer, trait_method.offset)
       }
       parse_write_offset(writer, value.offset)
     }
     Function(value) => {
       writer.write_byte(4)
-      parse_write_function(writer, value)
+      parse_write_function(writer, value, admission, depth + 1)
     }
     Test(value) => {
       writer.write_byte(5)
@@ -2043,25 +2190,25 @@ fn parse_write_declaration(
         }
         None => parse_write_option_tag(writer, false)
       }
-      parse_write_type(writer, value.return_type)
-      parse_write_block(writer, value.body)
+      parse_write_type(writer, value.return_type, admission, depth + 1)
+      parse_write_block(writer, value.body, admission, depth + 1)
       parse_write_offset(writer, value.offset)
     }
     Impl(value) => {
       writer.write_byte(6)
       writer.write_bool(value.foreign_)
-      parse_write_type_parameters(writer, value.type_parameters)
+      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
       match value.trait_type {
         Some(type_) => {
           parse_write_option_tag(writer, true)
-          parse_write_type(writer, type_)
+          parse_write_type(writer, type_, admission, depth + 1)
         }
         None => parse_write_option_tag(writer, false)
       }
-      parse_write_type(writer, value.target_type)
+      parse_write_type(writer, value.target_type, admission, depth + 1)
       writer.write_var_u64(value.methods.length().to_uint64())
       for impl_method in value.methods {
-        parse_write_function(writer, impl_method)
+        parse_write_function(writer, impl_method, admission, depth + 1)
       }
       parse_write_offset(writer, value.offset)
     }
@@ -2070,8 +2217,8 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters)
-      parse_write_struct_fields(writer, value.fields)
+      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_struct_fields(writer, value.fields, admission, depth + 1)
       parse_write_derive_requests(writer, value.derives)
       parse_write_offset(writer, value.offset)
     }
@@ -2080,8 +2227,8 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters)
-      parse_write_enum_variants(writer, value.variants)
+      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_enum_variants(writer, value.variants, admission, depth + 1)
       parse_write_derive_requests(writer, value.derives)
       parse_write_offset(writer, value.offset)
     }
@@ -2090,8 +2237,8 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters)
-      parse_write_type(writer, value.target)
+      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type(writer, value.target, admission, depth + 1)
       parse_write_offset(writer, value.offset)
     }
     ForeignType(value) => {
@@ -2110,7 +2257,7 @@ fn parse_write_declaration(
       parse_write_offset(writer, value.alias_offset)
       writer.write_var_u64(value.members.length().to_uint64())
       for foreign_member in value.members {
-        parse_write_foreign_library_member(writer, foreign_member)
+        parse_write_foreign_library_member(writer, foreign_member, admission, depth + 1)
       }
       parse_write_offset(writer, value.offset)
     }
@@ -3032,7 +3179,13 @@ fn parse_read_expression_error(
 fn parse_write_declaration_error(
   writer : @cache_binary.Writer,
   value : DeclarationError,
+  admission : ParseEventAdmission,
+  depth : Int32,
 ) -> Unit {
+  if admission.depth_exceeded {
+    return
+  }
+
   match value {
     ExpectedDeclarationSyntax(expectation, token) => {
       writer.write_byte(0)
@@ -3058,7 +3211,7 @@ fn parse_write_declaration_error(
     }
     InvalidReceiverType(type_, offset) => {
       writer.write_byte(5)
-      parse_write_type(writer, type_)
+      parse_write_type(writer, type_, admission, depth + 1)
       parse_write_offset(writer, offset)
     }
     UnexpectedTypeCloser(offset) => {
@@ -3211,11 +3364,11 @@ fn parse_read_declaration_error(
 }
 
 ///|
-fn parse_write_event(writer : @cache_binary.Writer, event : ParseEvent) -> Unit {
+fn parse_write_event(writer : @cache_binary.Writer, event : ParseEvent, admission : ParseEventAdmission) -> Unit {
   match event {
     Declaration(value) => {
       writer.write_byte(0)
-      parse_write_declaration(writer, value)
+      parse_write_declaration(writer, value, admission, 0)
     }
     Diagnostic(value) => {
       writer.write_byte(1)
@@ -3227,7 +3380,7 @@ fn parse_write_event(writer : @cache_binary.Writer, event : ParseEvent) -> Unit 
           Hint => 3
         },
       )
-      parse_write_declaration_error(writer, value.error)
+      parse_write_declaration_error(writer, value.error, admission, 0)
     }
   }
 }
@@ -3264,16 +3417,33 @@ fn parse_read_event(
 
 ///|
 /// Encodes the complete parser syntax graph directly, without a JSON tree.
+/// Returns an error for syntax deeper than the persistent reader accepts.
 pub fn serialize_parse_events(
   events : Array[ParseEvent],
 ) -> Result[Bytes, String] {
+  match serialize_parse_events_for_cache(events) {
+    Some(payload) => Ok(payload)
+    None => Err("parse_event_payload: syntax nesting exceeds limit")
+  }
+}
+
+///|
+/// Encodes a cache entry in one pass. Deep fresh syntax remains usable but
+/// does not produce an entry that the persistent reader would reject.
+pub fn serialize_parse_events_for_cache(
+  events : Array[ParseEvent],
+) -> Bytes? {
   let writer = @cache_binary.Writer::new(size_hint=events.length() * 24 + 8)
+  let admission = { depth_exceeded: false }
   writer.write_u32_le(parse_event_payload_version)
   writer.write_var_u64(events.length().to_uint64())
   for event in events {
-    parse_write_event(writer, event)
+    parse_write_event(writer, event, admission)
+    if admission.depth_exceeded {
+      return None
+    }
   }
-  Ok(writer.to_bytes())
+  Some(writer.to_bytes())
 }
 
 ///|
