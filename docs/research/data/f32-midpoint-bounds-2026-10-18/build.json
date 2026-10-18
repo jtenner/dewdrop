@@ -1,0 +1,103 @@
+{
+  "repository_head": "fca541b710a0ee043c0a7cac7cee00011cb8dd5c",
+  "repository_status": " M docs/research/data/f32-midpoint-bounds-2026-10-18/build.py\n M docs/research/data/f32-midpoint-bounds-2026-10-18/measure.py\n M docs/research/language-improvement-review-2026-10-18.md\n M self_host/compiler/semantic_body_flow.dew\n M self_host/compiler/semantic_body_flow_test.dew\n M self_host/compiler/semantic_compile_time_recheck.dew\n M self_host/compiler/semantic_program_link_plan.dew\n M self_host/compiler/semantic_program_lowering.dew\n M self_host/compiler/tokenizer.dew\n M src/semantic/body_flow.mbt\n M src/semantic/body_flow_wbtest.mbt\n M tests/abi-consumers/imported-package/dew.lock\n M tests/abi-consumers/imported-package/expected-abi.json\n M tools/check-cli-cache-abi.sh\n?? docs/research/data/f32-long-range-2026-10-18/\n?? docs/research/data/imported-package-abi-2026-10-18/\n?? docs/research/imported-package-abi-2026-10-18.md\n?? docs/research/language-improvement-implementation-2026-10-18.md\n?? docs/research/self-host-flow-error-gate-2026-10-18.md\n?? self_host/compiler/semantic_flow_diagnostics_test.dew\n?? self_host/compiler/semantic_lambda_result_owner_test.dew\n?? self_host/compiler/tokenizer_f32_long_range_test.dew\n?? src/tokenizer/f32_long_range_wbtest.mbt\n",
+  "working_diff_sha256": "bc606e3bb1fefb30230028f45440afc4e5b4da77b33a7ad27f036b1728522d87",
+  "generator": {
+    "path": "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+    "sha256": "8f0aab5540f42bbc0eac2b36be2af9c24c7c2d302ccbe1adfaea8e406f2e480e"
+  },
+  "common_sources": {
+    "compiler_value_primitives.dew": {
+      "path": "/home/dev/Projects/dewdrop/self_host/compiler/compiler_value_primitives.dew",
+      "sha256": "815e841c79f637522dbaa155c786ece00cbd252add74a3dca811a5e4b03de756"
+    },
+    "tokenizer_f32_decimal_test.dew": {
+      "path": "/home/dev/Projects/dewdrop/self_host/compiler/tokenizer_f32_decimal_test.dew",
+      "sha256": "c531dab522ef4f2bfa483da5db7e7e55366f1a2404761ec47f3d94b82748e3ce"
+    },
+    "tokenizer_f32_bounded_test.dew": {
+      "path": "/home/dev/Projects/dewdrop/self_host/compiler/tokenizer_f32_bounded_test.dew",
+      "sha256": "31e453c8f4d2524bc5e761090b93bfc82928e600d76f20153ebee1b83e9102d2"
+    },
+    "scaling.dew": {
+      "path": "/home/dev/Projects/dewdrop/docs/research/data/f32-midpoint-bounds-2026-10-18/scaling.dew",
+      "sha256": "fcaf6ed719cf1bd79bdc0adc120fee1b5b2568d142e20577a307b0d7f0635bb1"
+    }
+  },
+  "harness_sha256": {
+    "build.py": "1af4e79ec9365f400eec3f99f54568162580f88b3b5d4c9c27ea348d07afff7e",
+    "measure.py": "359e5338f48442c1b74be89fa8e586cd2af66c90b97b51103f1e50dca167fa83",
+    "measure.mjs": "e7596ad654e2dfce66995e5e1d599c34ab8699a6d28faad72edc99def100b0ac",
+    "scaling.dew": "fcaf6ed719cf1bd79bdc0adc120fee1b5b2568d142e20577a307b0d7f0635bb1"
+  },
+  "builds": {
+    "before": {
+      "tokenizer_commit": "6a881286bc3f3a99e3f02b08224f313eada894d7",
+      "tokenizer_sha256": "13259ff00c58cdc0da81bee68b47e0d66090bd2ca011588676ba1fc5e8e84d7a",
+      "generator_sha256": "8f0aab5540f42bbc0eac2b36be2af9c24c7c2d302ccbe1adfaea8e406f2e480e",
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/tmp/dewdrop-implementation-2026-10-18/f32-pinned-evidence/before.wasm",
+        "self_host.compiler",
+        "self_host.compiler",
+        "compiler_value_primitives.dew",
+        "/home/dev/Projects/dewdrop/self_host/compiler/compiler_value_primitives.dew",
+        "self_host.compiler",
+        "tokenizer.dew",
+        "/tmp/dewdrop-implementation-2026-10-18/f32-pinned-evidence/tokenizer-before.dew",
+        "self_host.compiler",
+        "tokenizer_f32_decimal_test.dew",
+        "/home/dev/Projects/dewdrop/self_host/compiler/tokenizer_f32_decimal_test.dew",
+        "self_host.compiler",
+        "tokenizer_f32_bounded_test.dew",
+        "/home/dev/Projects/dewdrop/self_host/compiler/tokenizer_f32_bounded_test.dew",
+        "self_host.compiler",
+        "scaling.dew",
+        "/home/dev/Projects/dewdrop/docs/research/data/f32-midpoint-bounds-2026-10-18/scaling.dew"
+      ],
+      "environment": {
+        "DEW_STD_ROOT": "/home/dev/Projects/dewdrop"
+      },
+      "elapsed_seconds": 0.2975648230058141,
+      "exit_status": 0,
+      "log_sha256": "9946604675cc8cb5259278e7aff9744e3847d32abfbc5de62b2f53e81128b1f3",
+      "log": "wrote self-describing Dew test module\n",
+      "wasm_sha256": "d8f3fb790ffc728061861bd3b076950227bb100102c5e43fc9d9c039b79b1a40",
+      "wasm_bytes": 79840
+    },
+    "after": {
+      "tokenizer_commit": "ee41a4b19a19614d3e0175fdb884aec15106e087",
+      "tokenizer_sha256": "abb88363f58e8c7a52655ebac70bef57898fc6ceb478b7ec433cc6a69019f94a",
+      "generator_sha256": "8f0aab5540f42bbc0eac2b36be2af9c24c7c2d302ccbe1adfaea8e406f2e480e",
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/tmp/dewdrop-implementation-2026-10-18/f32-pinned-evidence/after.wasm",
+        "self_host.compiler",
+        "self_host.compiler",
+        "compiler_value_primitives.dew",
+        "/home/dev/Projects/dewdrop/self_host/compiler/compiler_value_primitives.dew",
+        "self_host.compiler",
+        "tokenizer.dew",
+        "/tmp/dewdrop-implementation-2026-10-18/f32-pinned-evidence/tokenizer-after.dew",
+        "self_host.compiler",
+        "tokenizer_f32_decimal_test.dew",
+        "/home/dev/Projects/dewdrop/self_host/compiler/tokenizer_f32_decimal_test.dew",
+        "self_host.compiler",
+        "tokenizer_f32_bounded_test.dew",
+        "/home/dev/Projects/dewdrop/self_host/compiler/tokenizer_f32_bounded_test.dew",
+        "self_host.compiler",
+        "scaling.dew",
+        "/home/dev/Projects/dewdrop/docs/research/data/f32-midpoint-bounds-2026-10-18/scaling.dew"
+      ],
+      "environment": {
+        "DEW_STD_ROOT": "/home/dev/Projects/dewdrop"
+      },
+      "elapsed_seconds": 0.29776984998898115,
+      "exit_status": 0,
+      "log_sha256": "9946604675cc8cb5259278e7aff9744e3847d32abfbc5de62b2f53e81128b1f3",
+      "log": "wrote self-describing Dew test module\n",
+      "wasm_sha256": "d7bd94b90de088efe236dfbe7c6faa7363f7af403a71be47eaed78eb537ff605",
+      "wasm_bytes": 81722
+    }
+  }
+}

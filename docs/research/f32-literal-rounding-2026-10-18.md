@@ -84,7 +84,7 @@ follow-up below, a focused module containing the numeric matrix, original
 witness, and both long-source tests passes all four test groups. Final
 prebuilt-generator time is 0.308 seconds and execution time is 0.051 seconds.
 Its logs are `/tmp/dewdrop-review-2026-10-18/f32-bounds/{generate,test}.log`.
-Final production tokenizer SHA-256: `abb88363f58e8c7a52655ebac70bef57898fc6ceb478b7ec433cc6a69019f94a`.
+Tokenizer SHA-256 for that bounded-scratch validation: `abb88363f58e8c7a52655ebac70bef57898fc6ceb478b7ec433cc6a69019f94a`.
 
 ## Short-literal cost
 
@@ -203,35 +203,32 @@ under 0.34 seconds. No compiler activity reached 30 seconds.
 
 | Added digits | Sample | Before ms | After ms | Before heap growth B | After heap growth B | Before peak RSS KiB | After peak RSS KiB |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1024 | 1 | 0.092524 | 0.006913 | 32416 | 29000 | 57080 | 56996 |
-| 1024 | 2 | 0.093085 | 0.006332 | 32416 | 29000 | 57244 | 57148 |
-| 1024 | 3 | 0.091312 | 0.006953 | 32416 | 29000 | 57004 | 56764 |
-| 4096 | 1 | 1.203951 | 0.021090 | 46176 | 29000 | 56904 | 56872 |
-| 4096 | 2 | 1.144589 | 0.041859 | 46176 | 29000 | 56972 | 56956 |
-| 4096 | 3 | 1.122738 | 0.016982 | 46176 | 29000 | 56912 | 56932 |
-| 16384 | 1 | 19.203839 | 0.059071 | 100624 | 29000 | 57088 | 56808 |
-| 16384 | 2 | 17.385987 | 0.061636 | 99792 | 29000 | 57160 | 56972 |
-| 16384 | 3 | 17.543802 | 0.058610 | 100624 | 29000 | 57052 | 56984 |
-| 65536 | 1 | 277.935321 | 0.228579 | 335352 | 29000 | 56912 | 56908 |
-| 65536 | 2 | 279.650322 | 0.224402 | 335352 | 29000 | 56760 | 57144 |
-| 65536 | 3 | 283.694880 | 0.227888 | 335352 | 29000 | 57272 | 56960 |
+| 1024 | 1 | 0.091913 | 0.006523 | 32416 | 29000 | 57404 | 57356 |
+| 1024 | 2 | 0.093656 | 0.006122 | 32416 | 29000 | 57492 | 57460 |
+| 1024 | 3 | 0.092133 | 0.005761 | 32416 | 29000 | 57404 | 57456 |
+| 4096 | 1 | 1.137870 | 0.016061 | 46176 | 29000 | 57308 | 57120 |
+| 4096 | 2 | 1.183606 | 0.022783 | 46176 | 29000 | 57468 | 57380 |
+| 4096 | 3 | 1.118274 | 0.017644 | 46176 | 29000 | 57332 | 57344 |
+| 16384 | 1 | 19.338522 | 0.056226 | 99792 | 28168 | 57436 | 57328 |
+| 16384 | 2 | 17.428339 | 0.056676 | 99792 | 29000 | 57668 | 57052 |
+| 16384 | 3 | 16.802442 | 0.056306 | 99792 | 28168 | 57584 | 57424 |
+| 65536 | 1 | 287.220859 | 0.235673 | 335352 | 29000 | 57864 | 57580 |
+| 65536 | 2 | 274.691073 | 0.218060 | 335352 | 29000 | 57900 | 57356 |
+| 65536 | 3 | 274.922068 | 0.220134 | 335352 | 29000 | 57872 | 57400 |
 
-For 65,536 added digits, the median isolated call fell from 279.650322 ms to
-0.227888 ms. From 4,096 to 65,536 digits (16 times more source), the old median
-rose from 1.144589 ms to 279.650322 ms (about 244 times), while the new median
-rose from 0.021090 ms to 0.227888 ms (about 11 times). The small timings contain
+For 65,536 added digits, the median isolated call fell from 274.922068 ms to
+0.220134 ms. From 4,096 to 65,536 digits (16 times more source), the old median
+rose from 1.137870 ms to 274.922068 ms (about 242 times), while the new median
+rose from 0.017644 ms to 0.220134 ms (about 12 times). The small timings contain
 fixed call and counter costs, so these ratios are observations, not universal
-speed guarantees. The algorithm now does linear source work plus a bounded
+speed guarantees. The algorithm does linear source work plus a bounded
 midpoint conversion.
 
-Measured heap growth was 29,000 bytes for the new path at every size; the old
-path rose from 32,416 bytes at 1,024 digits to 335,352 bytes at 65,536 digits.
-Heap deltas include V8 bookkeeping and uncollected transient values; they are
-not exact allocation counts or the 452-byte scratch payload. Peak RSS stayed
-near 57 MiB and is too noisy to resolve this small scratch change. The fixed
-scratch claim comes from the array bound, with these heap observations as
-supporting evidence. No peak-RSS reduction or native-machine allocation gain
-is claimed.
+Measured heap growth was 29,000 bytes for the new path at every size. Heap deltas
+include V8 bookkeeping and uncollected transient values; they are not exact
+allocation counts or the 452-byte scratch payload. Peak RSS is too noisy to
+resolve this small scratch change. The fixed scratch claim comes from the array
+bound. No peak-RSS reduction or native-machine allocation gain is claimed.
 
 Reproduce from the repository root, using the existing release test generator:
 
@@ -243,4 +240,16 @@ python3 docs/research/data/f32-midpoint-bounds-2026-10-18/measure.py /tmp/dewdro
 The build harness saves generator output and rejects failures. Each generation
 has a 25-second limit. Each fresh runtime sample has a 20-second limit. The
 measurement harness writes new raw samples beside its Wasm inputs. The checked-in
-`samples.json` retains the original 24 samples, environment, and binary hashes.
+`samples.json` contains the rerun's 24 samples, environment, and binary hashes.
+The before tokenizer is pinned to `6a881286bc3f3a99e3f02b08224f313eada894d7`;
+the after tokenizer is pinned to `ee41a4b19a19614d3e0175fdb884aec15106e087`.
+`build.json` and the sample report record both tokenizer hashes, the exact
+prebuilt generator hash, all common input and harness hashes, actual commands,
+exit status, elapsed build time, output hashes, and complete build logs. The
+build record also captures repository head, working-tree status, and a diff
+hash. No source revision is inferred from a binary hash. The two pinned fixture
+builds each took 0.298 seconds. The matching build logs are checked in beside
+the samples.
+
+Long-literal correctness was checked separately after these pinned controls.
+See [the long-range correction](f32-long-range-rounding-2026-10-18.md).
