@@ -1,0 +1,212 @@
+open probe.vault
+open dew.std.array
+open dew.std.iter
+open dew.std.math
+open dew.std.string
+open dew.std.text
+
+fn absent_value() -> Option<U32> {
+  Option::None
+}
+
+fn success_value() -> Result<U32, String> {
+  Result::Ok(42u32)
+}
+
+fn error_value() -> Result<U32, String> {
+  Result::Err("bad")
+}
+
+fn option_checks() -> Bool {
+  let mut calls = 0u32
+  let mapped = Option::Some(42u32).map(fn(value: U32) -> String {
+    calls = calls + 1u32
+    "mapped"
+  }).and_then(fn(value: String) -> Option<U32> {
+    calls = calls + 1u32
+    Option::Some(value.byte_length())
+  })
+  if !(mapped is Option::Some(6u32)) || calls != 2u32 {
+    return false
+  }
+  let reverse = Option::Some("abc").map(fn(value: String) -> U32 {
+    value.byte_length()
+  })
+  if !(reverse is Option::Some(3u32)) {
+    return false
+  }
+  let missing = absent_value().map(fn(value: U32) -> String {
+    calls = calls + 1u32
+    "wrong"
+  }).and_then(fn(value: String) -> Option<U32> {
+    calls = calls + 1u32
+    Option::Some(0u32)
+  })
+  if !(missing is Option::None) || calls != 2u32 {
+    return false
+  }
+  let present = Option::Some(7u32).unwrap_or_else(fn() -> U32 {
+    calls = calls + 1u32
+    0u32
+  })
+  let defaulted = absent_value().unwrap_or_else(fn() -> U32 {
+    calls = calls + 1u32
+    11u32
+  })
+  present == 7u32 && defaulted == 11u32 && calls == 3u32
+}
+
+fn result_checks() -> Bool {
+  let mut calls = 0u32
+  let mapped = success_value().map(fn(value: U32) -> String {
+    calls = calls + 1u32
+    "ok"
+  }).and_then(fn(value: String) -> Result<U32, String> {
+    calls = calls + 1u32
+    Result::Ok(value.byte_length())
+  })
+  if !(mapped is Result::Ok(2u32)) || calls != 2u32 {
+    return false
+  }
+  let preserved = error_value().map(fn(value: U32) -> Bool {
+    calls = calls + 1u32
+    true
+  })
+  if !(preserved is Result::Err("bad")) || calls != 2u32 {
+    return false
+  }
+  let error = error_value().map_err(fn(value: String) -> U32 {
+    calls = calls + 1u32
+    value.byte_length()
+  })
+  if !(error is Result::Err(3u32)) || calls != 3u32 {
+    return false
+  }
+  let good = success_value().map_err(fn(value: String) -> U32 {
+    calls = calls + 1u32
+    0u32
+  }).unwrap_or_else(fn(value: U32) -> U32 {
+    calls = calls + 1u32
+    0u32
+  })
+  let fallback = error_value().unwrap_or_else(fn(value: String) -> U32 {
+    calls = calls + 1u32
+    value.byte_length()
+  })
+  good == 42u32 && fallback == 3u32 && calls == 4u32
+}
+
+fn conversion_checks() -> Bool {
+  u32_checked_into_i32(2147483647u32) is Option::Some(2147483647i32) &&
+  u32_checked_into_i32(2147483648u32) is Option::None &&
+  i32_checked_into_u32(-1i32) is Option::None &&
+  i32_checked_into_u32(0i32) is Option::Some(0u32) &&
+  u64_checked_into_u32(4294967295u64) is Option::Some(4294967295u32) &&
+  u64_checked_into_u32(4294967296u64) is Option::None &&
+  i64_checked_into_i32(-2147483648i64) is Option::Some(-2147483648i32) &&
+  i64_checked_into_i32(2147483648i64) is Option::None
+}
+
+fn decimal_checks() -> Bool {
+  parse_u32_decimal("xx4294967295yy".view(2u32, 10u32)) is Result::Ok(4294967295u32) &&
+  parse_i32_decimal("x-2147483648y".view(1u32, 11u32)) is Result::Ok(-2147483648i32) &&
+  parse_u32_decimal("4294967296".view(0u32, 10u32)) is Result::Err(DecimalParseError::Overflow(9u32)) &&
+  parse_i32_decimal("-2147483649".view(0u32, 11u32)) is Result::Err(DecimalParseError::Overflow(10u32)) &&
+  parse_u32_decimal("aa12xzz".view(2u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(2u32)) &&
+  parse_u32_decimal("".view(0u32, 0u32)) is Result::Err(DecimalParseError::Empty)
+}
+
+enum Bit {
+  Zero
+  One
+}
+
+enum Nested {
+  Wrap(Bit)
+}
+
+struct Flags {
+  left: Bool
+  right: Bool
+}
+
+fn nested_enum(value: Nested) -> U32 {
+  match value {
+    Nested::Wrap(Bit::Zero) => 1u32
+    Nested::Wrap(Bit::One) => 2u32
+  }
+}
+
+fn nested_bool(value: Flags) -> U32 {
+  match value {
+    Flags {
+      left: true
+      right: true
+    } => 1u32
+    Flags {
+      left: true
+      right: false
+    } => 2u32
+    Flags {
+      left: false
+      right: true
+    } => 3u32
+    Flags {
+      left: false
+      right: false
+    } => 4u32
+  }
+}
+
+fn public_label<t>(value: Vault<t>) -> I32 {
+  match value {
+    Vault {
+      label: result
+      ...
+    } => result
+  }
+}
+
+pub fn main() -> I32 {
+  if !option_checks() {
+    return -1i32
+  }
+  if !result_checks() {
+    return -2i32
+  }
+  if !conversion_checks() {
+    return -3i32
+  }
+  if !decimal_checks() {
+    return -4i32
+  }
+  if nested_enum(Nested::Wrap(Bit::Zero)) != 1u32 || nested_enum(Nested::Wrap(Bit::One)) != 2u32 {
+    return -5i32
+  }
+  if nested_bool(Flags::{
+    left: true
+    right: true
+  }) != 1u32 || nested_bool(Flags::{
+    left: true
+    right: false
+  }) != 2u32 || nested_bool(Flags::{
+    left: false
+    right: true
+  }) != 3u32 || nested_bool(Flags::{
+    left: false
+    right: false
+  }) != 4u32 {
+    return -6i32
+  }
+  let scalar = make_vault(17i32)
+  let reference = make_vault("sealed")
+  if scalar.read() != 17i32 || reference.read().byte_length() != 6u32 || public_label(scalar) != 9i32 {
+    return -7i32
+  }
+  if iter_fold([1u32, 2u32, 3u32].iter(), 0u32, fn(sum: U32, value: U32) -> U32 {
+    sum + value
+  }) != 6u32 {
+    return -8i32
+  }
+  42i32
+}

@@ -1,0 +1,17 @@
+pub struct Vault<t> {
+  private secret: t
+  label: I32
+}
+
+pub fn make_vault<t>(value: t) -> Vault<t> {
+  Vault::{
+    secret: value
+    label: 9i32
+  }
+}
+
+impl<t> Vault<t> {
+  fn read(self) -> t {
+    self.secret
+  }
+}

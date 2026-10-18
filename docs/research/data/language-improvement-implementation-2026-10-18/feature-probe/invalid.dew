@@ -1,0 +1,9 @@
+open probe.vault
+
+pub fn main() -> I32 {
+  let forged = Vault::{
+    secret: 1i32
+    label: 9i32
+  }
+  forged.read()
+}
