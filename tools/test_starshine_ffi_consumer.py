@@ -1,11 +1,70 @@
 #!/usr/bin/env python3
 
+import json
+from pathlib import Path
+import subprocess
+import tempfile
 import unittest
+from unittest.mock import patch
 
 import generate_starshine_ffi_consumer as generator
 
 
 class StarshineFfiConsumerTests(unittest.TestCase):
+    def inspect_provider_exports(
+        self, exports: tuple[str, ...], start_signature: str = "",
+        names: dict[str, str] | None = None,
+    ) -> list[generator.ExportBinding]:
+        printed = '\n'.join([
+            '(module',
+            '  (func (;0;) (param i32) (result i64))',
+            f'  (func (;1;){start_signature})',
+            *(f'  (export "{name}" (func {0 if name == "value" else 1}))'
+              for name in exports),
+            ')',
+        ])
+        with tempfile.TemporaryDirectory() as directory:
+            wasm = Path(directory) / "provider.wasm"
+            wasm.write_bytes(b"provider")
+            metadata = Path(directory) / "exports.json"
+            metadata.write_text(json.dumps({"ffi_value": "value"} if names is None else names))
+            with patch.object(generator, "EXPORT_NAMES", metadata), patch.object(
+                generator.subprocess, "run",
+                return_value=subprocess.CompletedProcess([], 0, stdout=printed),
+            ):
+                bindings, _ = generator.inspect_exports(wasm)
+        return bindings
+
+    def test_runtime_start_export_is_not_an_api_binding(self) -> None:
+        bindings = self.inspect_provider_exports(("_start", "value"))
+        self.assertEqual(len(bindings), 1)
+        self.assertEqual(bindings[0].export_name, "value")
+        self.assertEqual(bindings[0].internal_name, "ffi_value")
+        self.assertEqual(bindings[0].ordinal, 0)
+        self.assertEqual(bindings[0].signature, "(i32) -> i64")
+
+    def test_runtime_start_exception_keeps_unknown_exports_visible(self) -> None:
+        for extra in ("unexpected", "_initialize"):
+            with self.subTest(extra=extra), self.assertRaisesRegex(
+                SystemExit, rf"missing=\[\], extra=\['{extra}'\]"
+            ):
+                self.inspect_provider_exports(("_start", "value", extra))
+
+    def test_runtime_start_exception_keeps_missing_api_exports_visible(self) -> None:
+        with self.assertRaisesRegex(SystemExit, r"missing=\['value'\], extra=\[\]"):
+            self.inspect_provider_exports(("_start",))
+
+    def test_runtime_start_requires_an_entry_point_signature(self) -> None:
+        for signature in (" (param i32)", " (result i32)"):
+            with self.subTest(signature=signature), self.assertRaisesRegex(
+                SystemExit, r"_start must have no parameters or results"
+            ):
+                self.inspect_provider_exports(("_start", "value"), signature)
+
+    def test_runtime_start_alone_is_not_an_api(self) -> None:
+        with self.assertRaisesRegex(SystemExit, "no API function exports"):
+            self.inspect_provider_exports(("_start",), names={})
+
     def test_constructor_alias_keeps_result_nullability(self) -> None:
         rendered = generator.render_dew([self.binding(
             "CodeSec::new", "() -> (ref null 176)",

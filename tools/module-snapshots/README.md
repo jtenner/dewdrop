@@ -188,9 +188,14 @@ caches, the Wago runner binary, and actual WAT files remain temporary. Isolated
 fixture caches prevent concurrent writers and inherited cache configuration from
 cross-contaminating the suite. Concurrent results are buffered and printed in
 sorted fixture order, preserving deterministic visible output and failure
-ordering. The runner's Go module resolves the sibling Wago checkout
-through `tools/module-snapshots/wago-runner/go.mod`. Its Preview 1 imports use
+ordering. The runner requires Go 1.26 or later. Its Go module pins Wago
+`v0.1.0-beta.13` in `tools/module-snapshots/wago-runner/go.mod`; a sibling
+Wago checkout is not required. Its Preview 1 imports use
 Wago's typed `Imports` builder with explicit `i32` parameter and result lists,
 so signature drift fails while the runner is built instead of at invocation.
 The exact `wasm-tools` version is pinned in
 `tools/module-snapshots/WASM_TOOLS_VERSION`.
+Version 1.262.0 prints explicit parameter and result types on function imports.
+The 2026-10-18 refresh reprinted existing WAT with this version and checked that
+each old and new text parsed to identical Wasm bytes. The diagnostic, output,
+and trap expectations in the JSON files did not change.

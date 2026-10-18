@@ -54,7 +54,7 @@
   (type (;51;) (struct (field (ref 48)) (field i32) (field i32)))
   (type (;52;) (struct (field (mut (ref 48))) (field (mut i32)) (field (mut i32))))
   (type (;53;) (struct (field (mut (ref 48))) (field (mut i32)) (field (mut i32))))
-  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 25)))
+  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 25) (param i32 i32 i32 i32) (result i32)))
   (memory (;0;) 1)
   (export "main" (func 16))
   (export "memory" (memory 0))

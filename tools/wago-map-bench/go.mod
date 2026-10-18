@@ -1,9 +1,7 @@
 module jtenner/dewdrop/tools/wago-map-bench
 
-go 1.22
+go 1.26.0
 
-require github.com/wago-org/wago v0.0.0
+require github.com/wago-org/wago v0.1.0-beta.13
 
-require golang.org/x/sys v0.30.0 // indirect
-
-replace github.com/wago-org/wago => ../../../wago
+require golang.org/x/sys v0.49.0 // indirect

@@ -89,7 +89,7 @@ fn bootstrap_collect_files(
   if !@fs.path_exists(root) {
     return
   }
-  let entries = @fs.read_dir(root) catch { _ => [] }
+  let entries = @fs.read_dir(root).to_owned() catch { _ => [] }
   entries.sort()
   for entry in entries {
     let path = bootstrap_join(root, entry)
@@ -350,7 +350,7 @@ fn bootstrap_compile(
   repository : String,
   command : String,
   arguments : Array[String],
-) -> Int {
+) -> Int32 {
   let optimization = bootstrap_optimization_or_fail(arguments)
   if command == "check" && optimization.enabled() {
     bootstrap_fail(
@@ -546,7 +546,7 @@ fn bootstrap_take_output(arguments : Array[String]) -> (String, Array[String]) {
 }
 
 ///|
-fn bootstrap_emit_wat(repository : String, arguments : Array[String]) -> Int {
+fn bootstrap_emit_wat(repository : String, arguments : Array[String]) -> Int32 {
   let (output, remaining) = bootstrap_take_output(arguments)
   let filtered : Array[String] = []
   let mut index = 0
@@ -587,7 +587,10 @@ fn bootstrap_emit_wat(repository : String, arguments : Array[String]) -> Int {
 }
 
 ///|
-fn bootstrap_run_command(repository : String, arguments : Array[String]) -> Int {
+fn bootstrap_run_command(
+  repository : String,
+  arguments : Array[String],
+) -> Int32 {
   let temporary = bootstrap_join(
     repository,
     ".tmp/dew-run-\{bootstrap_process_id()}.wasm",
@@ -614,7 +617,7 @@ fn bootstrap_run_command(repository : String, arguments : Array[String]) -> Int 
 fn bootstrap_test_command(
   repository : String,
   arguments : Array[String],
-) -> Int {
+) -> Int32 {
   let optimization = bootstrap_optimization_or_fail(arguments)
   let expanded = bootstrap_expand_manifest_arguments(
     optimization.arguments,

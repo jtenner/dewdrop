@@ -1,11 +1,11 @@
 # Wago enum representation benchmark
 
-This small Go module compares Dew-generated WasmGC binaries with the sibling
-Wago checkout's `wasm3` API. It measures cold compilation, instance creation,
+This small Go module compares Dew-generated WasmGC binaries with the
+Wago `wasm3` API. It measures cold compilation, instance creation,
 host-to-Wasm execution, Go allocation volume, and encoded bytes.
 
-The module expects the Wago checkout at `../wago` relative to the Dew repository.
-Adjust the `replace` directive in `go.mod` when using another location.
+Use Go 1.26 or later. The module pins Wago `v0.1.0-beta.13` in `go.mod`.
+Go downloads this release; a sibling Wago checkout is not required.
 
 Generate Dew binaries through the normal Starshine-validated emission path, then
 run:

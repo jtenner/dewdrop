@@ -9,7 +9,7 @@ The implementation is split between:
 - `src/semantic/wasmgc_fragment_plan.mbt`: immutable WasmGC-specific planning and stable module-local index assignment;
 - `src/backend/starshine_fragments.mbt`: mechanical translation into `jtenner/starshine/lib` values.
 
-The pinned `starshine-mb/` Git submodule is linked through `moon.work` as `jtenner/starshine@0.1.1`.
+The pinned `starshine-mb/` Git submodule is linked through `moon.work` as `jtenner/starshine@0.3.0`.
 
 ## Planning API
 

@@ -31,7 +31,8 @@ self_host_ensure_starshine_ffi() {
     -newer "$provider" \
     -print -quit | grep -q .; then
     stale=1
-  elif [[ starshine-mb/moon.mod.json -nt "$provider" ]]; then
+  elif [[ starshine-mb/moon.mod -nt "$provider" ||
+    starshine-mb/ffi/moon.mod -nt "$provider" ]]; then
     stale=1
   fi
 

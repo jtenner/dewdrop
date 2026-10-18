@@ -410,6 +410,17 @@ def inspect_exports(wasm: Path) -> tuple[list[ExportBinding], str]:
     reverse_names = {export_name: internal for internal, export_name in name_map.items()}
     if len(reverse_names) != len(name_map):
         raise SystemExit("Starshine FFI export-name metadata contains duplicate exports")
+    # MoonBit foreign libraries can also export the runtime entry point.
+    # Keep every other export subject to the exact API metadata check.
+    for name, index in exports:
+        if name == "_start":
+            line = function_lines.get(index)
+            if line is None:
+                raise SystemExit("missing function body header for export _start")
+            parameters, results = function_signature(line)
+            if parameters or results:
+                raise SystemExit("Starshine FFI _start must have no parameters or results")
+    exports = [(name, index) for name, index in exports if name != "_start"]
     binary_names = {name for name, _ in exports}
     metadata_names = set(reverse_names)
     if binary_names != metadata_names:
@@ -419,6 +430,8 @@ def inspect_exports(wasm: Path) -> tuple[list[ExportBinding], str]:
             "Starshine FFI binary/export metadata mismatch; "
             f"missing={missing[:3]}, extra={extra[:3]}"
         )
+    if not exports:
+        raise SystemExit("Starshine FFI module has no API function exports")
     bindings: list[ExportBinding] = []
     for ordinal, (export_name, function_index) in enumerate(exports):
         line = function_lines.get(function_index)

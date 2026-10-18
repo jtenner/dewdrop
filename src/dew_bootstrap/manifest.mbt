@@ -162,7 +162,7 @@ fn bootstrap_collect_dew_sources(root : String, output : Array[String]) -> Unit 
   if !@fs.path_exists(root) {
     return
   }
-  let entries = @fs.read_dir(root) catch { _ => [] }
+  let entries = @fs.read_dir(root).to_owned() catch { _ => [] }
   entries.sort()
   for entry in entries {
     let path = bootstrap_join(root, entry)
@@ -186,7 +186,7 @@ fn bootstrap_package_sources(
     (@fs.is_dir(source_root) catch { _ => false }) {
     bootstrap_collect_dew_sources(source_root, files)
   } else {
-    let entries = @fs.read_dir(root) catch { _ => [] }
+    let entries = @fs.read_dir(root).to_owned() catch { _ => [] }
     entries.sort()
     for entry in entries {
       if entry.has_suffix(".dew") {
@@ -207,7 +207,7 @@ fn bootstrap_package_sources(
 }
 
 ///|
-fn bootstrap_hash_u32(hash : @crypto.SHA256, value : Int) -> Unit {
+fn bootstrap_hash_u32(hash : @crypto.SHA256, value : Int32) -> Unit {
   let bits = value.reinterpret_as_uint()
   let output = Buffer(size_hint=4)
   output.write_byte((bits & 0xffU).to_byte())

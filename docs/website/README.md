@@ -14,6 +14,8 @@ npm run preview
 ```
 
 `npm run build` runs Astro's type and content checks before it creates `dist/`.
+Astro check `0.9.10` supports TypeScript 5 and 6. This project uses TypeScript
+`6.0.3`; do not install TypeScript 7 until Astro check supports it.
 
 ## Syntax highlighting
 

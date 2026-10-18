@@ -2,6 +2,9 @@
 
 This benchmark generates a deterministic Dew workload containing explicit Map and Set insertions and lookups. Explicit operations avoid depending on future Dew loop lowering and make the generated operation count stable.
 
+Use Go 1.26 or later. The Go module pins Wago `v0.1.0-beta.13` and downloads it
+without a sibling checkout.
+
 Run both Node and Wago Core 3 measurements with:
 
 ```text

@@ -137,7 +137,7 @@
   (type (;134;) (struct (field (ref 131)) (field i32) (field i32)))
   (type (;135;) (struct (field (mut (ref 131))) (field (mut i32)) (field (mut i32))))
   (type (;136;) (struct (field (mut (ref 131))) (field (mut i32)) (field (mut i32))))
-  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 99)))
+  (import "wasi_snapshot_preview1" "fd_write" (func (;0;) (type 99) (param i32 i32 i32 i32) (result i32)))
   (memory (;0;) 1)
   (export "main" (func 76))
   (export "memory" (memory 0))
