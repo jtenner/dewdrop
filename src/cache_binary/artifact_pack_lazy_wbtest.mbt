@@ -160,7 +160,10 @@ test "strict and lazy packs reject a corrupt footer digest" {
   // Only the digest of the covered range is wrong. This pack has two sections.
   artifact_pack_write_section(writer, artifact_pack_footer_kind, [
     artifact_pack_footer_entry(
-      encoded.length(), opened.footer_covered_bytes, 2, wrong_digest,
+      encoded.length(),
+      opened.footer_covered_bytes,
+      2,
+      wrong_digest,
     ),
   ]).unwrap()
   let corrupt = writer.to_bytes()

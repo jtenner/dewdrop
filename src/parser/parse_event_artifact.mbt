@@ -2920,7 +2920,11 @@ fn parse_read_pattern_error(
     10 => EmptyTuplePattern(parse_read_offset(reader, field + ".offset"))
     12 =>
       InvalidProductPatternArity(
-        parse_read_bounded_value(reader, parse_event_maximum_items, field + ".arity"),
+        parse_read_bounded_value(
+          reader,
+          parse_event_maximum_items,
+          field + ".arity",
+        ),
         parse_read_offset(reader, field + ".offset"),
       )
     11 =>

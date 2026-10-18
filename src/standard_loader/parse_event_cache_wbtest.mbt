@@ -175,7 +175,10 @@ test "parse-event pack owners preserve module and file path boundaries" {
   let prepared : Array[Array[@parser.ParseEvent]] = []
   for pair in [("a", first), ("a:b", second)] {
     let (file, status) = prepare_manifest_file_parse_events(
-      pair.0, pair.1, true, pack=Some(session),
+      pair.0,
+      pair.1,
+      true,
+      pack=Some(session),
     ).unwrap()
     assert_true(status is ParseEventCacheMiss)
     prepared.push(file.parse_events.unwrap())
@@ -189,16 +192,16 @@ test "parse-event pack owners preserve module and file path boundaries" {
   for candidate in [session, reopened] {
     for index, pair in [("a", first), ("a:b", second)] {
       let (file, status) = prepare_manifest_file_parse_events(
-        pair.0, pair.1, true, pack=Some(candidate),
+        pair.0,
+        pair.1,
+        true,
+        pack=Some(candidate),
       ).unwrap()
       assert_true(status is ParseEventCacheHit)
       assert_eq(file.parse_events.unwrap(), prepared[index])
     }
     assert_eq(
-      @cache_binary.decode_artifact_pack(candidate.pack.encode().unwrap())
-      .unwrap()
-      .entries
-      .length(),
+      @cache_binary.decode_artifact_pack(candidate.pack.encode().unwrap()).unwrap().entries.length(),
       2,
     )
   }
@@ -214,9 +217,7 @@ test "parse-event pack colliding path pairs cannot create duplicate saved owners
   )
   let session = program_output_test_session()
   ignore(
-    prepare_manifest_file_parse_events(
-      "a", first, true, pack=Some(session),
-    ).unwrap(),
+    prepare_manifest_file_parse_events("a", first, true, pack=Some(session)).unwrap(),
   )
   let reopened = {
     ..session,
@@ -224,11 +225,17 @@ test "parse-event pack colliding path pairs cannot create duplicate saved owners
     dirty: false,
   }
   let (_, status) = prepare_manifest_file_parse_events(
-    "a:b", second, true, pack=Some(reopened),
+    "a:b",
+    second,
+    true,
+    pack=Some(reopened),
   ).unwrap()
   assert_true(status is ParseEventCacheMiss)
   let (_, first_status) = prepare_manifest_file_parse_events(
-    "a", first, true, pack=Some(reopened),
+    "a",
+    first,
+    true,
+    pack=Some(reopened),
   ).unwrap()
   assert_true(first_status is ParseEventCacheHit)
   match reopened.pack.encode() {

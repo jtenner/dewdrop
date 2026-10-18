@@ -38,7 +38,10 @@ test "imported private fields reject reads writes construction and patterns" {
     ),
     (
       b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    value: 3\n    label: 7\n  }\n}\n",
-      [("MissingConstructionField", "value"), ("UnknownConstructionField", "value")],
+      [
+        ("MissingConstructionField", "value"),
+        ("UnknownConstructionField", "value"),
+      ],
     ),
     (
       b"open app.library\npub fn run(value: I32) -> Box<I32> {\n  Box::{\n    label: 7\n  }\n}\n",
@@ -46,7 +49,10 @@ test "imported private fields reject reads writes construction and patterns" {
     ),
     (
       b"open app.library\npub fn run() -> Box<I32> {\n  {\n    value: 3\n    label: 7\n  }\n}\n",
-      [("MissingConstructionField", "value"), ("UnknownConstructionField", "value")],
+      [
+        ("MissingConstructionField", "value"),
+        ("UnknownConstructionField", "value"),
+      ],
     ),
     (
       b"import app.library as @lib\npub fn run(box: @lib.Box<I32>) -> I32 {\n  box.value\n}\n",
@@ -110,10 +116,9 @@ test "frozen interface cache preserves private field source rules" {
   let inferred = infer_module_bodies_with_imports(
     collected, resolved, imports, names,
   )
-  assert_eq(
-    private_field_diagnostic_names(collected, inferred.diagnostics),
-    [("UnknownFieldForType", "value")],
-  )
+  assert_eq(private_field_diagnostic_names(collected, inferred.diagnostics), [
+    ("UnknownFieldForType", "value"),
+  ])
 }
 
 ///|

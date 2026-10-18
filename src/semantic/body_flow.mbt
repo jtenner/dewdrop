@@ -808,16 +808,21 @@ fn BodyFlowAnalyzer::matrix_domain(
       } else {
         let mut current = self.inferred.pattern_types[pattern]
         while true {
-          if !work.spend(1) { return ErrorCoverageDomain }
+          if !work.spend(1) {
+            return ErrorCoverageDomain
+          }
           match self.inferred.type_term(current) {
             BodyAppliedType(base, _) => current = base
             BodyResolvedType(type_) => {
               let mut resolved = type_
               while true {
-                if !work.spend(1) { return ErrorCoverageDomain }
+                if !work.spend(1) {
+                  return ErrorCoverageDomain
+                }
                 match self.resolved.types[resolved] {
                   AppliedType(base, _) => resolved = base
-                  NominalType(declaration) => return EnumCoverageDomain(declaration)
+                  NominalType(declaration) =>
+                    return EnumCoverageDomain(declaration)
                   _ => return ErrorCoverageDomain
                 }
               }

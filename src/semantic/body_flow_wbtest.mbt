@@ -669,7 +669,9 @@ fn flow_noise_library() -> Bytes {
   for index in 0..<5000 {
     output.write_string_utf8("  N\{index}\n")
   }
-  output.write_string_utf8("}\npub enum Bit {\n  Zero\n  One\n}\npub enum Maybe<t> {\n  None\n  Some(t)\n}\n")
+  output.write_string_utf8(
+    "}\npub enum Bit {\n  Zero\n  One\n}\npub enum Maybe<t> {\n  None\n  Some(t)\n}\n",
+  )
   output.to_bytes()
 }
 
@@ -684,7 +686,8 @@ test "matrix coverage ignores 5000 unrelated local variants" {
   output.write_bytes(flow_noise_library())
   output.write_bytes(flow_noise_match())
   let (collected, resolved, inferred, flows) = flow_test_module(
-    294UL, output.to_bytes(),
+    294UL,
+    output.to_bytes(),
   )
   assert_eq(collected.diagnostics, [])
   assert_eq(resolved.diagnostics, [])
@@ -698,23 +701,27 @@ test "matrix coverage ignores 5000 unrelated imported variants" {
   output.write_string_utf8("open app.library\n")
   output.write_bytes(flow_noise_match())
   let (program, frozen, imports, _, inferred) = imported_semantic_program(
-    output.to_bytes(), flow_noise_library(),
+    output.to_bytes(),
+    flow_noise_library(),
   )
   assert_eq(program.diagnostics, [])
   assert_eq(frozen.import_diagnostics, [])
   assert_eq(inferred.diagnostics, [])
   let flows = analyze_module_flows_with_imports(
-    program.modules[0], frozen.interfaces[0].resolved_types, inferred, imports,
+    program.modules[0],
+    frozen.interfaces[0].resolved_types,
+    inferred,
+    imports,
   )
   assert_eq(flows.diagnostics, [])
 }
 
 ///|
 test "poisoned match values do not add coverage errors" {
-  for source in [
-    b"fn run(value: Missing) -> I32 {\n  match value {\n  }\n}\n",
-    b"fn run() -> I32 {\n  match missing {\n  }\n}\n",
-  ] {
+  for
+    source in [
+      b"fn run(value: Missing) -> I32 {\n  match value {\n  }\n}\n", b"fn run() -> I32 {\n  match missing {\n  }\n}\n",
+    ] {
     let (_, _, _, flows) = flow_test_module(249UL, source)
     assert_eq(flows.diagnostics, [])
     assert_eq(flows.missing_cases, [])

@@ -242,7 +242,9 @@ fn workspace_interface_cache_key_from_dependency_records(
 ) -> String {
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_MODULE_PRIVATE_FIELDS\x00")
+  output.write_bytes(
+    b"DEW_WORKSPACE_INTERFACE_KEY_V1_MODULE_PRIVATE_FIELDS\x00",
+  )
   interface_cache_write_string(output, source_fingerprint)
   for record in dependency_records {
     interface_cache_write_string(output, record)

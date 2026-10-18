@@ -124,11 +124,19 @@ test "fragment cache accounting excludes usage-dependent enum bypasses" {
   assert_eq(cold.status.fragment_hits, 0)
   assert_eq(cold.status.fragment_misses, cacheable_count)
   let context = wasmgc_fragment_program_context(
-    program, analyzed.frozen, root, options,
+    program,
+    analyzed.frozen,
+    root,
+    options,
   ).unwrap()
   for module_index, path in program.module_paths {
     let cached = lookup_wasmgc_fragment_cache(
-      program, lowering, module_index, context, options, pack=Some(session),
+      program,
+      lowering,
+      module_index,
+      context,
+      options,
+      pack=Some(session),
     ).unwrap()
     assert_eq(cached is None, bypassed.contains(path), msg=path)
   }
