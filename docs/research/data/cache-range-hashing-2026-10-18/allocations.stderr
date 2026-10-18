@@ -1,0 +1,8 @@
+Warning: [0029]
+   ╭─[ /tmp/dewdrop-range-allocation-j0ilir63/moon.pkg:1:10 ]
+   │
+ 1 │ import { "moonbitlang/core/buffer" }
+   │          ────────────┬────────────  
+   │                      ╰────────────── Warning (unused_package): Unused package 'moonbitlang/core/buffer'
+───╯
+Finished. moon: ran 11 tasks, now up to date (1 warnings, 0 errors)

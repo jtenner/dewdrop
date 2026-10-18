@@ -599,8 +599,11 @@ pub fn decode_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
         expected_sections != section_count.to_uint64() {
         return Err("artifact pack FOOT size or section count mismatch")
       }
-      let covered = artifact_pack_copy_bytes(bytes, 0, section_start)
-      if !artifact_pack_digest_equal(blake3(covered), expected_digest) ||
+      let digest = match blake3_range(bytes, 0, section_start) {
+        Ok(digest) => digest
+        Err(error) => return Err(error)
+      }
+      if !artifact_pack_digest_equal(digest, expected_digest) ||
         !artifact_pack_digest_equal(footer.content_digest, expected_digest) {
         return Err("artifact pack FOOT digest mismatch")
       }

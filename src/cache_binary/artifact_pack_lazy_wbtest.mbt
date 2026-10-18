@@ -119,3 +119,47 @@ test "checked artifact lookup rejects short digests without trapping" {
     Ok(_) => fail("short context digest must be rejected")
   }
 }
+
+///|
+test "range footer verification rejects covered-byte corruption" {
+  let source = ArtifactPack::empty()
+  source
+  .upsert(artifact_pack_test_entry("owner", b"a", b"context", b"payload"))
+  .unwrap()
+  let encoded = source.encode().unwrap()
+  let opened = open_artifact_pack(encoded).unwrap()
+  opened.verify_footer().unwrap()
+  let mutation = opened.indexed_entries[0].offset
+  let buffer = Buffer(size_hint=encoded.length())
+  for index, byte in encoded {
+    buffer.write_byte(if index == mutation { byte ^ 1 } else { byte })
+  }
+  let corrupt = { ..opened, encoded: Some(buffer.to_bytes()), }
+  assert_eq(
+    corrupt.verify_footer(),
+    Err("artifact pack FOOT digest mismatch"),
+  )
+  for covered in [-1, encoded.length() + 1] {
+    assert_eq(
+      { ..opened, footer_covered_bytes: covered, }.verify_footer(),
+      Err("artifact pack footer covered range is invalid"),
+    )
+  }
+}
+
+///|
+test "strict and lazy packs reject a corrupt footer digest" {
+  let source = ArtifactPack::empty()
+  source
+  .upsert(artifact_pack_test_entry("owner", b"a", b"context", b"payload"))
+  .unwrap()
+  let encoded = source.encode().unwrap()
+  // FOOT ends with its 32-byte covered-range digest and has no trailing padding.
+  let buffer = Buffer(size_hint=encoded.length())
+  for index, byte in encoded {
+    buffer.write_byte(if index == encoded.length() - 1 { byte ^ 1 } else { byte })
+  }
+  let corrupt = buffer.to_bytes()
+  assert_true(decode_artifact_pack(corrupt) is Err(_))
+  assert_true(open_artifact_pack(corrupt) is Err(_))
+}

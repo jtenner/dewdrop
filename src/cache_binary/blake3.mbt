@@ -229,18 +229,44 @@ fn blake3_parent_output(
 /// SIMD implementations, while this scalar form remains identical on every
 /// MoonBit target.
 pub fn blake3(input : Bytes) -> FixedArray[Byte] {
-  let chunk_count = if input.length() == 0 {
+  blake3_valid_range(input, 0, input.length())
+}
+
+///|
+/// Hash a checked range without copying the input bytes. Empty ranges are valid,
+/// including a range at the end of the input.
+pub fn blake3_range(
+  input : Bytes,
+  start : Int32,
+  length : Int32,
+) -> Result[FixedArray[Byte], String] {
+  // Subtract only after validating start, so neither bounds check can overflow.
+  if start < 0 || length < 0 || start > input.length() ||
+    length > input.length() - start {
+    return Err("BLAKE3 range is outside the input")
+  }
+  Ok(blake3_valid_range(input, start, length))
+}
+
+///|
+fn blake3_valid_range(
+  input : Bytes,
+  range_start : Int32,
+  range_length : Int32,
+) -> FixedArray[Byte] {
+  let chunk_count = if range_length == 0 {
     1
   } else {
-    (input.length() + 1023) / 1024
+    1 + (range_length - 1) / 1024
   }
   if chunk_count == 1 {
-    return blake3_chunk_output(input, 0, input.length(), 0UL).root_digest()
+    return blake3_chunk_output(input, range_start, range_length, 0UL).root_digest()
   }
   let level : Array[FixedArray[UInt32]] = []
   for chunk_index in 0..<chunk_count {
-    let start = chunk_index * 1024
-    let remaining = input.length() - start
+    let offset = chunk_index * 1024
+    let start = range_start + offset
+    let remaining = range_length - offset
     let length = if remaining < 1024 { remaining } else { 1024 }
     level.push(
       blake3_chunk_output(input, start, length, chunk_index.to_uint64()).chaining_value(),

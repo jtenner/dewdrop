@@ -1,0 +1,11 @@
+{
+  "baseline": "43fd2930435868228c7289fdfe6c4aa678b9d80b",
+  "candidate_sha256": {
+    "src/cache_binary/blake3.mbt": "d806559c9814f6f215a56c8e6f5f7112493ca32515a2e6e5b09639f27752ba24",
+    "src/cache_binary/artifact_pack.mbt": "0cf7732c6ae26b29295f7405a2f105bb509b5318246d910747330d2f3df29823",
+    "src/cache_binary/artifact_pack_lazy.mbt": "8e523d71c38e85863cd30007b1ba08455c96c449d41850c8b72965cf823ff913",
+    "src/cache_binary/blake3_wbtest.mbt": "45c80f6fe826a24d6823bc40b71df0bc05c9011b9a26e8baf79f713f09bcb283",
+    "src/cache_binary/artifact_pack_lazy_wbtest.mbt": "cd722126a1130c4d445751ea937087d264c18cf7f5562a482fdba916e81a2cf4",
+    "src/cache_binary/range_hash_bench_test.mbt": "96fb916e29fcccfa85bf63dcb745d6a7d39f3baf69d580a9740e9b6df11173fe"
+  }
+}

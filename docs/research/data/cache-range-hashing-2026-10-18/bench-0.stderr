@@ -1,0 +1,420 @@
+Warning: [0079]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:23:10 ]
+    │
+ 23 │ } derive(Eq, Debug)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for ArtifactPackEntry` are implicit promoted as regular method for `ArtifactPackEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackEntry with Eq::{not_equal, equal}` declaration or manually define regular methods for type `ArtifactPackEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:23:14 ]
+    │
+ 23 │ } derive(Eq, Debug)
+    │              ──┬──  
+    │                ╰──── Warning (implicit_impl_as_method): The methods to_repr from `impl @moonbitlang/core/debug.Debug for ArtifactPackEntry` are implicit promoted as regular method for `ArtifactPackEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackEntry with @moonbitlang/core/debug.Debug::{to_repr}` declaration or manually define regular methods for type `ArtifactPackEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:32:10 ]
+    │
+ 32 │ } derive(Eq, Debug)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for ArtifactPackIndexedEntry` are implicit promoted as regular method for `ArtifactPackIndexedEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackIndexedEntry with Eq::{not_equal, equal}` declaration or manually define regular methods for type `ArtifactPackIndexedEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:32:14 ]
+    │
+ 32 │ } derive(Eq, Debug)
+    │              ──┬──  
+    │                ╰──── Warning (implicit_impl_as_method): The methods to_repr from `impl @moonbitlang/core/debug.Debug for ArtifactPackIndexedEntry` are implicit promoted as regular method for `ArtifactPackIndexedEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackIndexedEntry with @moonbitlang/core/debug.Debug::{to_repr}` declaration or manually define regular methods for type `ArtifactPackIndexedEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:44:10 ]
+    │
+ 44 │ } derive(Eq, Debug)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for ArtifactPack` are implicit promoted as regular method for `ArtifactPack`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPack with Eq::{not_equal, equal}` declaration or manually define regular methods for type `ArtifactPack` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:44:14 ]
+    │
+ 44 │ } derive(Eq, Debug)
+    │              ──┬──  
+    │                ╰──── Warning (implicit_impl_as_method): The methods to_repr from `impl @moonbitlang/core/debug.Debug for ArtifactPack` are implicit promoted as regular method for `ArtifactPack`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPack with @moonbitlang/core/debug.Debug::{to_repr}` declaration or manually define regular methods for type `ArtifactPack` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0082]
+     ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack.mbt:663:54 ]
+     │
+ 663 │   let result : Map[(UInt32, String), Array[Int32]] = {}
+     │                                                      ─┬  
+     │                                                       ╰── Warning (ambiguous_braces): The `{}` is ambiguous among empty map literal, block expression, empty struct literal and empty JSON object. Use `Map([])` for an empty map, `TypeName::{}` for an empty struct literal, `Json::empty_object()` for an empty JSON object, or `{ () }` for an empty block.
+─────╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:6:14 ]
+   │
+ 6 │   let pack = ArtifactPack::empty()
+   │              ──────┬─────  
+   │                    ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+───╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:14:7 ]
+    │
+ 14 │       ArtifactPackEntry::new(
+    │       ────────┬────────  
+    │               ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:20:9 ]
+    │
+ 20 │         blake3(@utf8.encode("source-\{index}")),
+    │         ───┬──  
+    │            ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:21:9 ]
+    │
+ 21 │         blake3(b"context"),
+    │         ───┬──  
+    │            ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:38:18 ]
+    │
+ 38 │     let digest = blake3(bytes)
+    │                  ───┬──  
+    │                     ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:48:17 ]
+    │
+ 48 │   let content = blake3(@utf8.encode("source-511"))
+    │                 ───┬──  
+    │                    ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:49:17 ]
+    │
+ 49 │   let context = blake3(b"context")
+    │                 ───┬──  
+    │                    ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:51:16 ]
+    │
+ 51 │     let pack = open_artifact_pack(encoded).unwrap()
+    │                ─────────┬────────  
+    │                         ╰────────── Warning (test_unqualified_package): `open_artifact_pack` is implicitly imported in test. Use `@cache_binary.open_artifact_pack` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_bench_test.mbt:66:16 ]
+    │
+ 66 │     let pack = decode_artifact_pack(encoded).unwrap()
+    │                ──────────┬─────────  
+    │                          ╰─────────── Warning (test_unqualified_package): `decode_artifact_pack` is implicitly imported in test. Use `@cache_binary.decode_artifact_pack` instead.
+────╯
+Warning: [0082]
+     ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/artifact_pack_lazy.mbt:112:46 ]
+     │
+ 112 │   let owners : Map[(UInt32, String), Bool] = {}
+     │                                              ─┬  
+     │                                               ╰── Warning (ambiguous_braces): The `{}` is ambiguous among empty map literal, block expression, empty struct literal and empty JSON object. Use `Map([])` for an empty map, `TypeName::{}` for an empty struct literal, `Json::empty_object()` for an empty JSON object, or `{ () }` for an empty block.
+─────╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/byte_decode_bench_test.mbt:9:18 ]
+   │
+ 9 │     let reader = Reader::new(bytes)
+   │                  ───┬──  
+   │                     ╰──── Warning (test_unqualified_package): `Reader` is implicitly imported in test. Use `@cache_binary.Reader` instead.
+───╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/byte_decode_bench_test.mbt:22:16 ]
+    │
+ 22 │   let writer = Writer::new()
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `Writer` is implicitly imported in test. Use `@cache_binary.Writer` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/byte_decode_bench_test.mbt:25:27 ]
+    │
+ 25 │   it.bench(fn() { it.keep(Reader::new(encoded).read_string(4096, "value")) })
+    │                           ───┬──  
+    │                              ╰──── Warning (test_unqualified_package): `Reader` is implicitly imported in test. Use `@cache_binary.Reader` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/byte_decode_bench_test.mbt:36:18 ]
+    │
+ 36 │     let reader = Reader::new(bytes)
+    │                  ───┬──  
+    │                     ╰──── Warning (test_unqualified_package): `Reader` is implicitly imported in test. Use `@cache_binary.Reader` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/byte_decode_bench_test.mbt:49:16 ]
+    │
+ 49 │   let writer = Writer::new()
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `Writer` is implicitly imported in test. Use `@cache_binary.Writer` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/byte_decode_bench_test.mbt:52:27 ]
+    │
+ 52 │   it.bench(fn() { it.keep(Reader::new(encoded).read_string(1048576, "value")) })
+    │                           ───┬──  
+    │                              ╰──── Warning (test_unqualified_package): `Reader` is implicitly imported in test. Use `@cache_binary.Reader` instead.
+────╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:3:14 ]
+   │
+ 3 │   let pack = ArtifactPack::empty()
+   │              ──────┬─────  
+   │                    ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+───╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:4:16 ]
+   │
+ 4 │   let digest = blake3(b"content")
+   │                ───┬──  
+   │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+───╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:10:13 ]
+    │
+ 10 │     .upsert(ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, digest, digest, b"x"))
+    │             ────────┬────────  
+    │                     ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:24:14 ]
+    │
+ 24 │   let pack = ArtifactPack::empty()
+    │              ──────┬─────  
+    │                    ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:25:16 ]
+    │
+ 25 │   let digest = blake3(b"content")
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:31:13 ]
+    │
+ 31 │     .upsert(ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, digest, digest, b"x"))
+    │             ────────┬────────  
+    │                     ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:39:14 ]
+    │
+ 39 │   let pack = ArtifactPack::empty()
+    │              ──────┬─────  
+    │                    ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:40:16 ]
+    │
+ 40 │   let digest = blake3(b"content")
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:46:13 ]
+    │
+ 46 │     .upsert(ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, digest, digest, b"x"))
+    │             ────────┬────────  
+    │                     ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:60:14 ]
+    │
+ 60 │   let pack = ArtifactPack::empty()
+    │              ──────┬─────  
+    │                    ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:61:16 ]
+    │
+ 61 │   let digest = blake3(b"content")
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_bench_test.mbt:67:13 ]
+    │
+ 67 │     .upsert(ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, digest, digest, b"x"))
+    │             ────────┬────────  
+    │                     ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0020]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_wbtest.mbt:9:17 ]
+   │
+ 9 │         (i % 3).to_uint(),
+   │                 ───┬───  
+   │                    ╰───── Warning (deprecated): Use `reinterpret_as_uint` instead
+───╯
+Warning: [0035]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_wbtest.mbt:28:7 ]
+    │
+ 28 │   let lazy = open_artifact_pack(encoded).unwrap()
+    │       ──┬─  
+    │         ╰─── Warning (reserved_keyword): The word `lazy` is reserved for possible future use. Please consider using another name.
+────╯
+Warning: [0035]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_wbtest.mbt:31:7 ]
+    │
+ 31 │       lazy
+    │       ──┬─  
+    │         ╰─── Warning (reserved_keyword): The word `lazy` is reserved for possible future use. Please consider using another name.
+────╯
+Warning: [0035]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_wbtest.mbt:43:7 ]
+    │
+ 43 │       lazy
+    │       ──┬─  
+    │         ╰─── Warning (reserved_keyword): The word `lazy` is reserved for possible future use. Please consider using another name.
+────╯
+Warning: [0035]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_wbtest.mbt:55:7 ]
+    │
+ 55 │       lazy
+    │       ──┬─  
+    │         ╰─── Warning (reserved_keyword): The word `lazy` is reserved for possible future use. Please consider using another name.
+────╯
+Warning: [0035]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/compile_scaling_wbtest.mbt:67:13 ]
+    │
+ 67 │   assert_eq(lazy.encode().unwrap(), encoded)
+    │             ──┬─  
+    │               ╰─── Warning (reserved_keyword): The word `lazy` is reserved for possible future use. Please consider using another name.
+────╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:3:16 ]
+   │
+ 3 │   let source = ArtifactPack::empty()
+   │                ──────┬─────  
+   │                      ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+───╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:5:16 ]
+   │
+ 5 │   let digest = blake3(b"old content")
+   │                ───┬──  
+   │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+───╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:6:17 ]
+   │
+ 6 │   let changed = blake3(b"changed content")
+   │                 ───┬──  
+   │                    ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+───╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:7:17 ]
+   │
+ 7 │   let context = blake3(b"context")
+   │                 ───┬──  
+   │                    ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+───╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:13:7 ]
+    │
+ 13 │       ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, digest, context, b"x"),
+    │       ────────┬────────  
+    │               ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:17:14 ]
+    │
+ 17 │   let pack = open_artifact_pack(source.encode().unwrap()).unwrap()
+    │              ─────────┬────────  
+    │                       ╰────────── Warning (test_unqualified_package): `open_artifact_pack` is implicitly imported in test. Use `@cache_binary.open_artifact_pack` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:31:16 ]
+    │
+ 31 │   let source = ArtifactPack::empty()
+    │                ──────┬─────  
+    │                      ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:33:16 ]
+    │
+ 33 │   let digest = blake3(b"old content")
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:34:17 ]
+    │
+ 34 │   let changed = blake3(b"changed content")
+    │                 ───┬──  
+    │                    ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:35:17 ]
+    │
+ 35 │   let context = blake3(b"context")
+    │                 ───┬──  
+    │                    ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:41:7 ]
+    │
+ 41 │       ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, digest, context, b"x"),
+    │       ────────┬────────  
+    │               ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_bench_test.mbt:45:14 ]
+    │
+ 45 │   let pack = open_artifact_pack(source.encode().unwrap()).unwrap()
+    │              ─────────┬────────  
+    │                       ╰────────── Warning (test_unqualified_package): `open_artifact_pack` is implicitly imported in test. Use `@cache_binary.open_artifact_pack` instead.
+────╯
+Warning: [0020]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/index_search_wbtest.mbt:41:19 ]
+    │
+ 41 │       (index % 3).to_uint(),
+    │                   ───┬───  
+    │                      ╰───── Warning (deprecated): Use `reinterpret_as_uint` instead
+────╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/loaded_index_bench_test.mbt:2:30 ]
+   │
+ 2 │ fn loaded_index_fixture() -> ArtifactPack {
+   │                              ──────┬─────  
+   │                                    ╰─────── Warning (test_unqualified_package): `ArtifactPack` is implicitly imported in test. Use `@cache_binary.ArtifactPack` instead.
+───╯
+Warning: [0025]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/loaded_index_bench_test.mbt:8:7 ]
+   │
+ 8 │       ArtifactPackEntry::new(1U, 1U, 0U, 0U, "owner-\{i}", digest, digest, b"x"),
+   │       ────────┬────────  
+   │               ╰────────── Warning (test_unqualified_package): `ArtifactPackEntry` is implicitly imported in test. Use `@cache_binary.ArtifactPackEntry` instead.
+───╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/loaded_index_bench_test.mbt:24:16 ]
+    │
+ 24 │   let digest = blake3(b"x")
+    │                ───┬──  
+    │                   ╰──── Warning (test_unqualified_package): `blake3` is implicitly imported in test. Use `@cache_binary.blake3` instead.
+────╯
+Warning: [0025]
+    ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/loaded_index_bench_test.mbt:39:14 ]
+    │
+ 39 │   let pack = open_artifact_pack(loaded_index_fixture().encode().unwrap()).unwrap()
+    │              ─────────┬────────  
+    │                       ╰────────── Warning (test_unqualified_package): `open_artifact_pack` is implicitly imported in test. Use `@cache_binary.open_artifact_pack` instead.
+────╯
+Warning: [0029]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/moon.pkg:2:3 ]
+   │
+ 2 │   "moonbitlang/core/bench",
+   │   ────────────┬───────────  
+   │               ╰───────────── Warning (unused_package): Unused package 'moonbitlang/core/bench'
+───╯
+Warning: [0029]
+   ╭─[ /home/dev/Projects/dewdrop/src/cache_binary/moon.pkg:3:3 ]
+   │
+ 3 │   "moonbitlang/core/buffer",
+   │   ────────────┬────────────  
+   │               ╰────────────── Warning (unused_package): Unused package 'moonbitlang/core/buffer'
+───╯

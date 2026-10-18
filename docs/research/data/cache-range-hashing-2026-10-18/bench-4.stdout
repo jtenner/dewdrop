@@ -1,0 +1,7 @@
+[jtenner/dewdrop] bench cache_binary/range_hash_bench_test.mbt:11 ("bench footer hash copy control 1 MiB") ok
+time (mean ± σ)         range (min … max) 
+   7.47 ms ±  17.30 µs     7.45 ms …   7.50 ms  in 10 ×     14 runs
+[jtenner/dewdrop] bench cache_binary/range_hash_bench_test.mbt:21 ("bench footer hash checked range 1 MiB") ok
+time (mean ± σ)         range (min … max) 
+   7.43 ms ±  38.28 µs     7.40 ms …   7.53 ms  in 10 ×     14 runs
+Total tests: 2, passed: 2, failed: 0.

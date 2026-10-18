@@ -1,0 +1,124 @@
+{
+  "baseline": "43fd2930435868228c7289fdfe6c4aa678b9d80b",
+  "candidate_sha256": "d806559c9814f6f215a56c8e6f5f7112493ca32515a2e6e5b09639f27752ba24",
+  "baseline_renamed_sha256": "bfce86cf225b785a67e4c1472be6e0468a27832cded14266b94b31bb146f1670",
+  "baseline.mbt_sha256": "bfce86cf225b785a67e4c1472be6e0468a27832cded14266b94b31bb146f1670",
+  "candidate.mbt_sha256": "d806559c9814f6f215a56c8e6f5f7112493ca32515a2e6e5b09639f27752ba24",
+  "main.mbt_sha256": "af545afe8686c30258efca180ad6d234781dc0ea251360707e93ebf11c158af7",
+  "probe.c_sha256": "9c0a2094e45e3388914a3c0463318b46dc0d6ab011b786ba8bd3561e01fc1635"
+}
+build_seconds=0.675771
+executable_sha256=d536dd33a06d4d1a0a4b6e2dbee69346ad106c327664d6ea2c46bf4a74601243
+executable_bytes=517736
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+copy calls=212017 bytes=14606362 peak_live_bytes=1122705 end_live_bytes=41 largest_request=1048585
+b'\x74'
+range calls=212017 bytes=13557793 peak_live_bytes=74120 end_live_bytes=41 largest_request=8200
+b'\x74'
+time_copy ns=7541287
+b'\x74'
+time_range ns=7503223
+b'\x74'
+time_range ns=7553681
+b'\x74'
+time_copy ns=7565043
+b'\x74'
+time_copy ns=7552519
+b'\x74'
+time_range ns=7499518
+b'\x74'
+time_range ns=7512522
+b'\x74'
+time_copy ns=7539683
+b'\x74'
+time_copy ns=7548541
+b'\x74'
+time_range ns=7535246
+b'\x74'
+time_range ns=7515889
+b'\x74'
+time_copy ns=7562537
+b'\x74'
+time_copy ns=7535165
+b'\x74'
+time_range ns=7513614
+b'\x74'
+time_range ns=7532350
+b'\x74'
+time_copy ns=7550956
+b'\x74'
+time_copy ns=7554613
+b'\x74'
+time_range ns=7508072
+b'\x74'
+time_range ns=7508445
+b'\x74'
+time_copy ns=7541297
+b'\x74'
+time_copy ns=7564111
+b'\x74'
+time_range ns=7511821
+b'\x74'
+time_range ns=7539584
+b'\x74'
+time_copy ns=7548371
+b'\x74'
+time_copy ns=7538682
+b'\x74'
+time_range ns=7492013
+b'\x74'
+time_range ns=7517352
+b'\x74'
+time_copy ns=7543190
+b'\x74'
+time_copy ns=7554693
+b'\x74'
+time_range ns=7503356
+b'\x74'
+time_range ns=7516851
+b'\x74'
+time_copy ns=7546075
+b'\x74'
+time_copy ns=7528632
+b'\x74'
+time_range ns=7496862
+b'\x74'
+time_range ns=7513995
+b'\x74'
+time_copy ns=7570283
+b'\x74'
+time_copy ns=7537731
+b'\x74'
+time_range ns=7507110
+b'\x74'
+time_range ns=7524165
+b'\x74'
+time_copy ns=7539484
+b'\x74'
+time_copy ns=7538132
+b'\x74'
+time_range ns=7539253
+b'\x74'

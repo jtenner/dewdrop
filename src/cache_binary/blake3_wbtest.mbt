@@ -29,10 +29,43 @@ test "BLAKE3 matches official short and tree test vectors" {
     (8193, "bab6c09cb8ce8cf459261398d2e7aef35700bf488116ceb94a36d0f5f1b7bc3b"),
   ]
   for vector in vectors {
+    let input = blake3_vector_input(vector.0)
     assert_eq(
-      @crypto.bytes_to_hex_string(blake3(blake3_vector_input(vector.0))),
+      @crypto.bytes_to_hex_string(blake3(input)),
       vector.1,
     )
+    for start in [0, 19] {
+      let buffer = Buffer(size_hint=start + input.length() + 7)
+      for _ in 0..<start {
+        buffer.write_byte(0xff)
+      }
+      buffer.write_bytes(input)
+      for _ in 0..<7 {
+        buffer.write_byte(0xfe)
+      }
+      assert_eq(
+        @crypto.bytes_to_hex_string(
+          blake3_range(buffer.to_bytes(), start, input.length()).unwrap(),
+        ),
+        vector.1,
+      )
+    }
+  }
+}
+
+///|
+test "BLAKE3 accepts an empty range at the end and rejects invalid bounds" {
+  let input = b"abc"
+  assert_eq(blake3_range(input, 3, 0).unwrap(), blake3(b""))
+  assert_eq(blake3_range(b"", 0, 0).unwrap(), blake3(b""))
+  for range in [
+    (-1, 0), (0, -1), (4, 0), (3, 1), (2, 2),
+    (2147483647, 1), (1, 2147483647),
+  ] {
+    match blake3_range(input, range.0, range.1) {
+      Err(error) => assert_eq(error, "BLAKE3 range is outside the input")
+      Ok(_) => fail("invalid BLAKE3 range must return an error")
+    }
   }
 }
 

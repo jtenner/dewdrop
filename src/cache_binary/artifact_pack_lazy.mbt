@@ -7,12 +7,11 @@ fn ArtifactPack::verify_footer(self : ArtifactPack) -> Result[Unit, String] {
         self.footer_covered_bytes > bytes.length() {
         return Err("artifact pack footer covered range is invalid")
       }
-      let covered = artifact_pack_copy_bytes(
-        bytes,
-        0,
-        self.footer_covered_bytes,
-      )
-      if !artifact_pack_digest_equal(blake3(covered), self.footer_digest) {
+      let digest = match blake3_range(bytes, 0, self.footer_covered_bytes) {
+        Ok(digest) => digest
+        Err(error) => return Err(error)
+      }
+      if !artifact_pack_digest_equal(digest, self.footer_digest) {
         return Err("artifact pack FOOT digest mismatch")
       }
       Ok(())
