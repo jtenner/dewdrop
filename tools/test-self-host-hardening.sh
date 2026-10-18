@@ -262,6 +262,7 @@ self_host_measure 'hardening test link' \
 test_status=0
 self_host_measure 'hardening tests' \
   node tools/dew-test/run.mjs --wasm "$work/tests.wasm" \
+    --allow-unused-host-imports \
     --label 'self-host hardening tests' "$@" || test_status=1
 self_host_measure 'hardening invariant records' \
   node tools/check-self-host-invariants.mjs "$work/tests.wasm" || test_status=1

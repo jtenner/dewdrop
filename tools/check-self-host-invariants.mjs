@@ -1052,13 +1052,23 @@ const module = await WebAssembly.compile(await readFile(process.argv[2]));
 const sections = WebAssembly.Module.customSections(module, "dew.tests");
 assert.equal(sections.length, 1, "one Dew test manifest is required");
 const tests = decodeDewTestMetadata(sections[0]);
+const unusedHostImports = Object.create(null);
+for (const entry of WebAssembly.Module.imports(module)) {
+  assert.equal(entry.kind, "function", `Unsupported host import ${entry.module}.${entry.name}`);
+  unusedHostImports[entry.module] ??= Object.create(null);
+  unusedHostImports[entry.module][entry.name] = () => {
+    throw new Error(`Unexpected host call ${entry.module}.${entry.name}`);
+  };
+}
 for (const probe of probes) {
   const matches = tests.filter((test) => test.name === probe.name);
   assert.equal(matches.length, 1, `missing or duplicate probe: ${probe.name}`);
   let instance;
   const output = [];
   instance = await WebAssembly.instantiate(module, {
+    ...unusedHostImports,
     wasi_snapshot_preview1: {
+      ...unusedHostImports.wasi_snapshot_preview1,
       fd_write(_fd, iovs, count, written) {
         const memory = instance.exports.memory;
         const view = new DataView(memory.buffer);
