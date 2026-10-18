@@ -588,6 +588,7 @@ fn CollectionBuilder::collect_named_fields(
       declaration,
       variant,
       mutable_: field.mutable_,
+      module_private: field.module_private,
       name,
       type_: self.lower_type(field.type_),
       offset: field.offset,

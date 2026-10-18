@@ -112,6 +112,7 @@ pub struct SelfHostCollectedField {
   declaration: U64
   variant: Option<U64>
   mutable_: Bool
+  module_private: Bool
   name: U32
   type_: U32
   offset: U32
@@ -125,6 +126,7 @@ fn self_host_collected_field_identity(
     declaration: field.declaration
     variant: field.variant
     mutable_: field.mutable_
+    module_private: field.module_private
     name: field.name
     type_: field.type_
     offset: field.offset

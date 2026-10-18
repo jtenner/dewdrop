@@ -100,6 +100,7 @@ pub struct SelfHostFrozenInterfaceField {
   declaration: U64
   variant: Option<U64>
   mutable_: Bool
+  module_private: Bool
   name: String
   type_: U32
   location: SelfHostSourceLocation
@@ -818,6 +819,7 @@ fn self_host_freeze_module_signature_interface(
           declaration: field.declaration
           variant: field.variant
           mutable_: field.mutable_
+          module_private: field.module_private
           name: collected.name(field.name)
           type_: resolved.field_types[current]
           location: {

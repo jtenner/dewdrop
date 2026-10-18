@@ -1618,6 +1618,7 @@ pub struct FrozenInterfaceField {
   declaration : DeclId
   variant : VariantId?
   mutable_ : Bool
+  module_private : Bool
   name : String
   type_ : ResolvedTypeId
   location : SourceLocation
@@ -2074,6 +2075,7 @@ fn frozen_declaration_abi_fingerprint(
       None => callable_abi_write_int(output, 0)
     }
     callable_abi_write_int(output, if field.mutable_ { 1 } else { 0 })
+    callable_abi_write_int(output, if field.module_private { 1 } else { 0 })
     callable_abi_write_string(output, field.name)
     callable_abi_write_type(
       output,
@@ -2824,6 +2826,7 @@ fn freeze_module_interface(
       declaration: field.declaration,
       variant: field.variant,
       mutable_: field.mutable_,
+      module_private: field.module_private,
       name: collected.name(field.name),
       type_: resolved.field_types[field_index],
       location: {

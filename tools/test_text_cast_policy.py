@@ -8,11 +8,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class TextCastPolicy(unittest.TestCase):
     def test_bytes_string_uses_raw_cast(self):
-        for relative, name in (("std/text_runtime.dew", "bytes_to_string_unchecked"),
-                               ("std/json.dew", "json_bytes_to_string_unchecked")):
+        for relative, name, visibility in (
+            ("std/text_runtime.dew", "bytes_to_string_unchecked", "pub "),
+            ("std/json.dew", "json_bytes_to_string_unchecked", ""),
+        ):
             with self.subTest(path=relative):
                 source = (ROOT / relative).read_text()
-                self.assertIn(f'pub builtin {name}(value: Bytes) -> String = "ref.cast"', source)
+                self.assertIn(f'\n{visibility}builtin {name}(value: Bytes) -> String = "ref.cast"', source)
+                if not visibility:
+                    self.assertNotIn(f'pub builtin {name}', source)
 
     def test_bytes_string_runtime_is_removed(self):
         for relative in ("src/backend/starshine_program_assembly.mbt",

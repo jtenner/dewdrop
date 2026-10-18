@@ -24,12 +24,14 @@ test "public generic structs preserve ordered fields" {
         fields: [
           {
             mutable_: false,
+            module_private: false,
             name: "x",
             type_: NamedType("t", 27UL),
             offset: 24UL,
           },
           {
             mutable_: false,
+            module_private: false,
             name: "y",
             type_: NamedType("t", 34UL),
             offset: 31UL,

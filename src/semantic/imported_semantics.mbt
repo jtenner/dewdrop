@@ -13,6 +13,7 @@ pub struct ResolvedImportedField {
   declaration : DeclId
   variant : VariantId?
   mutable_ : Bool
+  module_private : Bool
   name : String
   type_ : ResolvedTypeId
 } derive(Eq, Debug)
@@ -749,6 +750,7 @@ pub fn resolve_module_imports(
           declaration: field.declaration,
           variant: field.variant,
           mutable_: field.mutable_,
+          module_private: field.module_private,
           name: field.name,
           type_: importer.import_type(interface_index, field.type_),
         })

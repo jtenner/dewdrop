@@ -80,7 +80,7 @@ fn interface_bundle_cache_key(
     return { fingerprint: "", }
   }
   let output = Buffer()
-  output.write_bytes(b"DEW_INTERFACE_BUNDLE_KEY_V1_MODULE_ORIGIN\x00")
+  output.write_bytes(b"DEW_INTERFACE_BUNDLE_KEY_V1_MODULE_PRIVATE_FIELDS\x00")
   output.write_string_utf8(loaded.fingerprint)
   output.write_byte(0)
   output.write_string_utf8(loaded.dependency_fingerprint)
@@ -211,7 +211,7 @@ fn workspace_interface_source_fingerprint(
   let module_ = program.modules[module_index]
   let output = Buffer()
   output.write_bytes(
-    b"DEW_WORKSPACE_INTERFACE_SOURCE_V1_ARRAY_LITERAL_CALLS\x00",
+    b"DEW_WORKSPACE_INTERFACE_SOURCE_V1_MODULE_PRIVATE_FIELDS\x00",
   )
   interface_cache_write_string(
     output,
@@ -242,7 +242,7 @@ fn workspace_interface_cache_key_from_dependency_records(
 ) -> String {
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_ARRAY_LITERAL_CALLS\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_MODULE_PRIVATE_FIELDS\x00")
   interface_cache_write_string(output, source_fingerprint)
   for record in dependency_records {
     interface_cache_write_string(output, record)
@@ -553,7 +553,7 @@ fn workspace_interface_scc_cache_key(
   dependency_records.sort()
   let output = Buffer()
   output.write_bytes(
-    b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_ARRAY_LITERAL_CALLS\x00",
+    b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_MODULE_PRIVATE_FIELDS\x00",
   )
   for record in source_records {
     interface_cache_write_string(output, record)

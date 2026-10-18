@@ -579,6 +579,7 @@ pub struct CollectedField {
   declaration : UInt64
   variant : UInt64?
   mutable_ : Bool
+  module_private : Bool
   name : Int
   type_ : Int
   offset : UInt64
@@ -925,6 +926,7 @@ pub struct FrozenInterfaceField {
   declaration : UInt64
   variant : UInt64?
   mutable_ : Bool
+  module_private : Bool
   name : String
   type_ : Int
   location : SourceLocation
@@ -2572,6 +2574,7 @@ pub struct ResolvedImportedField {
   declaration : UInt64
   variant : UInt64?
   mutable_ : Bool
+  module_private : Bool
   name : String
   type_ : Int
 } derive(Eq, @debug.Debug)

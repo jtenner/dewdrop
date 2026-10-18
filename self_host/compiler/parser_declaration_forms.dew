@@ -429,6 +429,21 @@ fn self_host_parse_struct_after_keyword(
           break true
         } else {
         }
+        let module_private = match self_host_parser_peek(parser) {
+          Some(token) => match token.kind {
+            Identifier(name, _) if name.equals("private") => {
+              let next = parser.index + 1u32
+              if next < parser.tokens.length() && self_host_token_symbol_code(parser.tokens[next].kind) != 13u32 {
+                parser.index = next
+                true
+              } else {
+                false
+              }
+            }
+            _ => false
+          }
+          None => false
+        }
         let mutable_ = self_host_parser_consume_keyword(
           parser,
           13u32,
@@ -452,6 +467,7 @@ fn self_host_parse_struct_after_keyword(
         match self_host_parse_type(parser) {
           Some(type_) => fields.push({
             mutable_: mutable_
+            module_private: module_private
             name: field_name
             type_: type_
             offset: field_offset
@@ -657,6 +673,7 @@ fn self_host_parse_enum_after_keyword(
                 match self_host_parse_type(parser) {
                   Some(type_) => fields.push({
                     mutable_: false
+                    module_private: false
                     name: field_name
                     type_: type_
                     offset: field_offset

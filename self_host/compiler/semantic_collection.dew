@@ -1110,6 +1110,7 @@ impl SelfHostCollectionBuilder {
             declaration: declaration
             variant: variant
             mutable_: self_host_collection_struct_field_mutable(field)
+            module_private: field.module_private
             name: name
             type_: self.lower_type(
               self_host_collection_struct_field_type(field),

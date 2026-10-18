@@ -1768,6 +1768,7 @@ fn parse_write_struct_fields(
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
     writer.write_bool(value.mutable_)
+    writer.write_bool(value.module_private)
     writer.write_string(value.name)
     parse_write_type(writer, value.type_)
     parse_write_offset(writer, value.offset)
@@ -1787,6 +1788,7 @@ fn parse_read_struct_fields(
     let item = field + "[\{index}]"
     values.push({
       mutable_: reader.read_bool(item + ".mutable"),
+      module_private: reader.read_bool(item + ".module_private"),
       name: reader.read_string(parse_event_maximum_text, item + ".name"),
       type_: parse_read_type(reader, item + ".type", depth + 1),
       offset: parse_read_offset(reader, item + ".offset"),

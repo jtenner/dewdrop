@@ -17,6 +17,7 @@ fn self_host_derived_struct_field_at(
   let field = fields[index]
   {
     mutable_: field.mutable_
+    module_private: field.module_private
     name: field.name
     type_: field.type_
     offset: field.offset

@@ -276,6 +276,7 @@ fn BasicBodyInferencer::constrain_imported_object_fields(
     let mut selected = -1
     for candidate in 0..<declared.length() {
       if declared[candidate].variant == variant &&
+        !declared[candidate].module_private &&
         declared[candidate].name == spelling {
         selected = candidate
         break
@@ -977,7 +978,8 @@ fn BasicBodyInferencer::infer_imported_struct_payload_pattern(
     let name = self.collected.name(pattern_field.name)
     let mut selected = -1
     for candidate in 0..<candidate_indices.length() {
-      if imported_fields[candidate_indices[candidate]].name == name {
+      if !imported_fields[candidate_indices[candidate]].module_private &&
+        imported_fields[candidate_indices[candidate]].name == name {
         selected = candidate
         break
       }

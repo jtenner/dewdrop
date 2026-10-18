@@ -554,6 +554,11 @@ fn BasicBodyInferencer::try_infer_field_expression(
     let spelling = self.collected.name(name)
     for field in imports.fields_of(declaration) {
       if field.variant is None && field.name == spelling {
+        if field.module_private {
+          self.diagnose(UnknownFieldForType(name, declaration, expression, offset))
+          self.fail_expression_selection(expression)
+          return true
+        }
         self.begin_expression_instantiation(
           declaration, base_type, expression, offset,
         )

@@ -493,6 +493,7 @@ pub struct SelfHostForeignLibraryDeclaration {
 
 pub struct SelfHostStructField {
   mutable_: Bool
+  module_private: Bool
   name: String
   type_: SelfHostTypeExpr
   offset: U32

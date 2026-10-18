@@ -480,6 +480,7 @@ pub struct StructDeclaration {
 
 pub struct StructField {
   mutable_ : Bool
+  module_private : Bool
   name : String
   type_ : TypeExpr
   offset : UInt64

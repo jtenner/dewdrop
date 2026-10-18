@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1_ARRAY_LITERAL_CALLS\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1_MODULE_PRIVATE_FIELDS\x00"
 
 ///|
 fn cache_write_int(output : @cache_binary.Writer, value : Int32) -> Unit {
@@ -393,6 +393,7 @@ fn cache_write_interface(
       None => cache_write_bool(output, false)
     }
     cache_write_bool(output, field.mutable_)
+    cache_write_bool(output, field.module_private)
     cache_write_string(output, field.name)
     cache_write_int(output, field.type_)
     cache_write_location(output, field.location)
@@ -897,6 +898,7 @@ fn FrozenInterfaceCacheReader::read_interface(
       declaration,
       variant,
       mutable_: self.read_bool(),
+      module_private: self.read_bool(),
       name: self.read_string(),
       type_: self.read_int(),
       location: self.read_location(),

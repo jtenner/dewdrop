@@ -114,12 +114,14 @@ test "existing generic bounds are retained without duplicates" {
 test "derive accessors preserve exact AST record and variant fields" {
   let fields = [{
     mutable_: true
+    module_private: true
     name: "value"
     type_: NamedType("U64", 19u32)
     offset: 23u32
   }]
   let field = self_host_derived_struct_field_at(fields, 0u32)
   assert(field.mutable_, "derived field mutability")
+  assert(field.module_private, "derived field privacy")
   assert(
     self_host_tokenizer_string_equals(field.name, "value"),
     "derived field name",

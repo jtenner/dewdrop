@@ -1,6 +1,7 @@
 ///|
 pub struct StructField {
   mutable_ : Bool
+  module_private : Bool
   name : String
   type_ : TypeExpr
   offset : UInt64
@@ -40,6 +41,21 @@ fn Parser::parse_struct_field(
   self : Parser,
   struct_offset : UInt64,
 ) -> Result[StructField, RecoveryFailure] {
+  let (module_private, leading_name) = match self.peek_token() {
+    Some(token) =>
+      match token.kind() {
+        @tokenizer.Identifier("private") => {
+          self.consume_lookahead()
+          match self.peek_token() {
+            Some(next) if next.kind() == @tokenizer.Symbol(@tokenizer.Colon) =>
+              (false, Some(("private", token.offset())))
+            _ => (true, None)
+          }
+        }
+        _ => (false, None)
+      }
+    None => (false, None)
+  }
   let mutable_ = match self.peek_token() {
     Some(token) =>
       match token.kind() {
@@ -51,9 +67,12 @@ fn Parser::parse_struct_field(
       }
     None => false
   }
-  let (name, offset) = match self.parse_identifier(StructFieldName) {
-    Ok(value) => value
-    Err(error) => return Err(error)
+  let (name, offset) = match leading_name {
+    Some(value) => value
+    None => match self.parse_identifier(StructFieldName) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
   }
   match self.peek_token() {
     Some(token) =>
@@ -68,7 +87,7 @@ fn Parser::parse_struct_field(
     Err(error) => return Err(error)
   }
   match self.finish_struct_field_line(struct_offset) {
-    Ok(_) => Ok({ mutable_, name, type_, offset, })
+    Ok(_) => Ok({ mutable_, module_private, name, type_, offset, })
     Err(error) => Err(error)
   }
 }

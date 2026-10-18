@@ -3018,7 +3018,7 @@ impl SelfHostBasicBodyInferencer {
               field,
               declaration,
               variant_id,
-            ) && self_host_basic_string_equal(field_name, name) {
+            ) && !field.module_private && self_host_basic_string_equal(field_name, name) {
               selected = field_index
               break self_host_semantic_unit()
             }
@@ -5710,7 +5710,7 @@ impl SelfHostBasicBodyInferencer {
               field,
               declaration,
               variant_id,
-            ) && self_host_basic_string_equal(field_name, name) {
+            ) && !field.module_private && self_host_basic_string_equal(field_name, name) {
               selected = field_index
               break self_host_semantic_unit()
             }
@@ -6163,7 +6163,7 @@ impl SelfHostBasicBodyInferencer {
       current => if current < self.imported.fields.length() {
         let field = self.imported.fields[current]
         let candidate_name = field.name
-        if self_host_u64_equal(field.declaration, declaration) && self_host_basic_string_equal(
+        if !field.module_private && self_host_u64_equal(field.declaration, declaration) && self_host_basic_string_equal(
           candidate_name,
           field_name,
         ) {
