@@ -1,7 +1,7 @@
 ///|
 enum ProgramSpecializationShapeTask {
   VisitSpecializationShape(PlannedValueShape)
-  FinishSpecializationProduct(Int)
+  FinishSpecializationProduct(Int32)
 }
 
 ///|

@@ -2,7 +2,7 @@
 let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1_ARRAY_LITERAL_CALLS\x00"
 
 ///|
-fn cache_write_int(output : @cache_binary.Writer, value : Int) -> Unit {
+fn cache_write_int(output : @cache_binary.Writer, value : Int32) -> Unit {
   output.write_zigzag_int(value)
 }
 
@@ -44,7 +44,7 @@ fn cache_write_location(
 ///|
 fn cache_write_int_array(
   output : @cache_binary.Writer,
-  values : Array[Int],
+  values : Array[Int32],
 ) -> Unit {
   cache_write_int(output, values.length())
   for value in values {
@@ -94,7 +94,7 @@ fn cache_write_primitive(
 }
 
 ///|
-fn cache_primitive_from_rank(rank : Int) -> PrimitiveType? {
+fn cache_primitive_from_rank(rank : Int32) -> PrimitiveType? {
   match rank {
     0 => Some(UnitType)
     1 => Some(BoolType)
@@ -539,7 +539,7 @@ fn FrozenInterfaceCacheReader::fail(
 ///|
 fn FrozenInterfaceCacheReader::read_int(
   self : FrozenInterfaceCacheReader,
-) -> Int {
+) -> Int32 {
   self.reader.read_zigzag_int("integer")
 }
 
@@ -588,9 +588,9 @@ fn FrozenInterfaceCacheReader::read_location(
 ///|
 fn FrozenInterfaceCacheReader::read_count(
   self : FrozenInterfaceCacheReader,
-  item_bytes : Int,
+  item_bytes : Int32,
   label : String,
-) -> Int {
+) -> Int32 {
   if item_bytes <= 0 {
     self.fail("invalid \{label} item width")
     return 0
@@ -613,9 +613,9 @@ fn FrozenInterfaceCacheReader::read_count(
 ///|
 fn FrozenInterfaceCacheReader::read_int_array(
   self : FrozenInterfaceCacheReader,
-) -> Array[Int] {
+) -> Array[Int32] {
   let length = self.read_count(4, "integer array")
-  let values : Array[Int] = []
+  let values : Array[Int32] = []
   for _ in 0..<length {
     values.push(self.read_int())
   }

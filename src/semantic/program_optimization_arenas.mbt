@@ -43,10 +43,10 @@ fn compact_program_optimization_locals(
 
 ///|
 fn record_program_control_nodes(
-  insertions : Map[Int, Array[Int]],
+  insertions : Map[Int32, Array[Int32]],
   owner : HirSpan,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> Unit {
   if start == end {
     return
@@ -60,11 +60,11 @@ fn record_program_control_nodes(
 
 ///|
 fn program_control_arena_order(
-  original_length : Int,
-  length : Int,
-  insertions : Map[Int, Array[Int]],
-) -> (Array[Int], Array[Int]) {
-  let order : Array[Int] = Array::new(capacity=length)
+  original_length : Int32,
+  length : Int32,
+  insertions : Map[Int32, Array[Int32]],
+) -> (Array[Int32], Array[Int32]) {
+  let order : Array[Int32] = Array::new(capacity=length)
   let mapping = Array::make(length, -1)
   for boundary in 0..<(original_length + 1) {
     if insertions.get(boundary) is Some(values) {
@@ -88,9 +88,9 @@ fn program_control_arena_order(
 ///|
 fn program_control_span(
   span : HirSpan,
-  original_length : Int,
-  mapping : Array[Int],
-  insertions : Map[Int, Array[Int]],
+  original_length : Int32,
+  mapping : Array[Int32],
+  insertions : Map[Int32, Array[Int32]],
 ) -> HirSpan {
   let start = if span.start == original_length {
     mapping.length()
@@ -109,7 +109,7 @@ fn program_control_span(
 }
 
 ///|
-fn program_control_reference(mapping : Array[Int], value : Int) -> Int {
+fn program_control_reference(mapping : Array[Int32], value : Int32) -> Int32 {
   if value < 0 {
     return value
   }
@@ -124,8 +124,8 @@ fn program_control_reference(mapping : Array[Int], value : Int) -> Int {
 // arenas below. Keep leaves explicit so new IR edges require a compiler update.
 fn rebase_program_control_expression(
   kind : PlannedExpressionKind,
-  expressions : Array[Int],
-  blocks : Array[Int],
+  expressions : Array[Int32],
+  blocks : Array[Int32],
 ) -> PlannedExpressionKind {
   let e = fn(value) { program_control_reference(expressions, value) }
   let b = fn(value) { program_control_reference(blocks, value) }
@@ -226,12 +226,12 @@ fn rebase_program_control_expression(
 // one linear rebuild. Source offsets and relative local identities stay intact.
 fn relocate_program_control_nodes(
   module_ : PlannedModuleLowering,
-  expression_limit : Int,
-  block_limit : Int,
-  arm_limit : Int,
-  expression_insertions : Map[Int, Array[Int]],
-  block_insertions : Map[Int, Array[Int]],
-  arm_insertions : Map[Int, Array[Int]],
+  expression_limit : Int32,
+  block_limit : Int32,
+  arm_limit : Int32,
+  expression_insertions : Map[Int32, Array[Int32]],
+  block_insertions : Map[Int32, Array[Int32]],
+  arm_insertions : Map[Int32, Array[Int32]],
 ) -> PlannedModuleLowering {
   if expression_insertions.is_empty() {
     return module_
@@ -368,8 +368,8 @@ fn scalar_replace_program_variant_payload_match_recorded(
   module_ : PlannedModuleLowering,
   expression : ExprId,
   variant_expression : ExprId,
-  expression_insertions : Map[Int, Array[Int]],
-  block_insertions : Map[Int, Array[Int]],
+  expression_insertions : Map[Int32, Array[Int32]],
+  block_insertions : Map[Int32, Array[Int32]],
 ) -> Bool {
   let expressions = module_.expressions.length()
   let blocks = module_.blocks.length()

@@ -3,7 +3,7 @@ fn program_mark_resolved_nominal_roots(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
   reachable : Map[DeclId, Bool],
-  discovered? : Array[DeclId] = [],
+  discovered~ : Array[DeclId] = [],
 ) -> Bool {
   let mut changed = false
   let work : Array[ResolvedTypeId] = [root]
@@ -56,7 +56,7 @@ fn program_mark_resolved_nominal_roots(
 ///|
 fn program_variant_declaration(
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   variant : VariantId,
 ) -> DeclId? {
   let owner = match module_lookup.get(semantic_id_module(variant)) {
@@ -79,7 +79,7 @@ fn program_enqueue_expression_evidence(
   reachable : Map[DeclId, Bool],
   work : Array[DeclId],
 ) -> Unit {
-  let pending : Array[Int] = []
+  let pending : Array[Int32] = []
   let roots : HirSpan = if module_.expression_evidence.is_empty() {
     { start: 0, length: 0, }
   } else {
@@ -101,7 +101,7 @@ fn program_enqueue_expression_evidence(
     SelectedInferredTraitObjectCoercion(_, evidence) => pending.push(evidence)
     _ => ()
   }
-  let seen : Map[Int, Bool] = {}
+  let seen : Map[Int32, Bool] = {}
   while pending.length() > 0 {
     let index = pending.pop().unwrap()
     if seen.contains(index) {
@@ -434,9 +434,9 @@ fn program_reachable_callable_roots(
 
 ///|
 priv struct ProgramTraitEvidenceRequest {
-  roots : Array[Int]
+  roots : Array[Int32]
   evidence : Array[PlannedSpecializationTraitEvidence]
-  children : Array[Int]
+  children : Array[Int32]
   arguments : Array[PlannedValueShape]
 }
 
@@ -449,7 +449,7 @@ fn empty_program_trait_evidence_request() -> ProgramTraitEvidenceRequest {
 fn write_program_trait_evidence_key(
   output : Buffer,
   request : ProgramTraitEvidenceRequest,
-  node : Int,
+  node : Int32,
 ) -> Unit {
   output.write_string_utf8(
     trait_evidence_key(RequestEvidenceKey(request), node),
@@ -459,9 +459,9 @@ fn write_program_trait_evidence_key(
 ///|
 fn normalize_program_runtime_evidence_parameters(
   request : ProgramTraitEvidenceRequest,
-) -> Array[Int]? {
-  let parameter_slots : Map[Int, Int] = Map::default()
-  let parameters : Array[Int] = []
+) -> Array[Int32]? {
+  let parameter_slots : Map[Int32, Int32] = Map::default()
+  let parameters : Array[Int32] = []
   for index, node in request.evidence {
     match node.kind {
       PlannedRuntimeTraitEvidence(trait_, source_parameter) => {
@@ -618,7 +618,7 @@ fn program_generic_parameter_shape(
 }
 
 ///|
-fn program_specialization_shape_width(shape : PlannedValueShape) -> Int {
+fn program_specialization_shape_width(shape : PlannedValueShape) -> Int32 {
   match shape {
     ProductPlannedValueShape(fields) => {
       let mut width = 0
@@ -706,9 +706,9 @@ fn program_resolve_specialized_shape(
 ///|
 fn copy_program_specialization_evidence_node(
   source : PlannedModuleWasmGCFragments,
-  source_node : Int,
+  source_node : Int32,
   request : ProgramTraitEvidenceRequest,
-) -> Int {
+) -> Int32 {
   guard source_node >= 0 &&
     source_node < source.specialization_trait_evidence.length() else {
     return -1
@@ -730,7 +730,7 @@ fn copy_program_specialization_evidence_node(
     PlannedRuntimeTraitEvidence(trait_, parameter) =>
       PlannedRuntimeTraitEvidence(trait_, parameter)
   }
-  let direct_children : Array[Int] = []
+  let direct_children : Array[Int32] = []
   for index in 0..<source_evidence.prerequisites.length {
     let child = copy_program_specialization_evidence_node(
       source,
@@ -765,9 +765,9 @@ fn resolve_program_lowering_evidence_node_with_specialization(
   specialization_shapes : HirSpan,
   specialization_evidence : HirSpan,
   has_specialization : Bool,
-  source_node : Int,
+  source_node : Int32,
   request : ProgramTraitEvidenceRequest,
-) -> Int {
+) -> Int32 {
   guard source_node >= 0 && source_node < lowering.trait_evidence.length() else {
     return -1
   }
@@ -817,7 +817,7 @@ fn resolve_program_lowering_evidence_node_with_specialization(
           }
         }
       }
-      let direct_children : Array[Int] = []
+      let direct_children : Array[Int32] = []
       for index in 0..<source.prerequisites.length {
         let child = resolve_program_lowering_evidence_node_with_specialization(
           lowering,
@@ -858,9 +858,9 @@ fn resolve_program_lowering_evidence_node(
   lowering : PlannedModuleLowering,
   fragments : PlannedModuleWasmGCFragments,
   caller : PlannedWasmFunctionFragment?,
-  source_node : Int,
+  source_node : Int32,
   request : ProgramTraitEvidenceRequest,
-) -> Int {
+) -> Int32 {
   match caller {
     Some(value) =>
       resolve_program_lowering_evidence_node_with_specialization(
@@ -888,7 +888,7 @@ fn resolve_program_lowering_evidence_node(
 ///|
 fn program_trait_evidence_request_identity(
   request : ProgramTraitEvidenceRequest,
-  root : Int,
+  root : Int32,
 ) -> (DeclId, String)? {
   guard root >= 0 && root < request.evidence.length() else { return None }
   let key = trait_evidence_key(RequestEvidenceKey(request), root)
@@ -905,7 +905,7 @@ pub fn program_resolved_trait_evidence_identity(
   fragments : PlannedModuleWasmGCFragments,
   specialization_shapes : HirSpan,
   specialization_evidence : HirSpan,
-  source_node : Int,
+  source_node : Int32,
 ) -> (DeclId, String)? {
   let request = empty_program_trait_evidence_request()
   let root = resolve_program_lowering_evidence_node_with_specialization(
@@ -919,8 +919,8 @@ pub fn program_resolved_trait_evidence_identity(
 pub fn program_runtime_trait_evidence_slot_parameter(
   fragments : PlannedModuleWasmGCFragments,
   specialization_evidence : HirSpan,
-  slot : Int,
-) -> (DeclId, Int)? {
+  slot : Int32,
+) -> (DeclId, Int32)? {
   if slot < 0 ||
     slot >= specialization_evidence.length ||
     specialization_evidence.start < 0 ||
@@ -944,8 +944,8 @@ pub fn program_runtime_trait_evidence_parameter(
   lowering : PlannedModuleLowering,
   fragments : PlannedModuleWasmGCFragments,
   specialization_evidence : HirSpan,
-  source_node : Int,
-) -> (DeclId, Int)? {
+  source_node : Int32,
+) -> (DeclId, Int32)? {
   if source_node < 0 || source_node >= lowering.trait_evidence.length() {
     return None
   }
@@ -990,7 +990,7 @@ fn resolve_program_expression_evidence(
 ///|
 fn copy_program_evidence_prerequisites(
   fragments : PlannedModuleWasmGCFragments,
-  root : Int,
+  root : Int32,
 ) -> ProgramTraitEvidenceRequest? {
   guard root >= 0 && root < fragments.specialization_trait_evidence.length() else {
     return None
@@ -1017,13 +1017,13 @@ fn materialize_program_generic_specialization(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   modules : Array[PlannedModuleWasmGCFragments],
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   declaration : DeclId,
   request_shapes : Array[PlannedValueShape],
   request : HirSpan,
   evidence : ProgramTraitEvidenceRequest,
   erased_fallback : Bool,
-  logical_types? : Array[CompileTimeType] = [],
+  logical_types~ : Array[CompileTimeType] = [],
 ) -> String? {
   match
     validate_program_specialization_request_shapes(
@@ -1090,7 +1090,8 @@ fn materialize_program_generic_specialization(
   match base.kind {
     PlannedWasmDefinedFunction(_) => ()
     PlannedWasmInlineBuiltinFunction(name)
-    | PlannedWasmOutlinedBuiltinFunction(name) if name == b"unsafe.bitcast" => ()
+    | PlannedWasmOutlinedBuiltinFunction(name) if name == b"unsafe.bitcast" =>
+      ()
     PlannedWasmInlineHeapFunction(RawArrayGetInstruction(_))
     | PlannedWasmOutlinedHeapFunction(RawArrayGetInstruction(_)) => ()
     _ => return None
@@ -1338,18 +1339,30 @@ fn materialize_program_generic_specialization(
   let specialized_kind = match base.kind {
     PlannedWasmInlineHeapFunction(RawArrayGetInstruction(recipe))
     | PlannedWasmOutlinedHeapFunction(RawArrayGetInstruction(recipe)) => {
-      let checked = raw_array_get_recipe(resolved, selected.functions, callable, recipe.opcode)
+      let checked = raw_array_get_recipe(
+        resolved,
+        selected.functions,
+        callable,
+        recipe.opcode,
+      )
       let element_shape = if checked.element_shape is ErrorPlannedValueShape {
         ErrorPlannedValueShape
       } else {
         program_generic_parameter_shape(
-          resolved, callable.result_type, generic_parameters,
-          module_.specialization_shapes, specialization_shapes,
+          resolved,
+          callable.result_type,
+          generic_parameters,
+          module_.specialization_shapes,
+          specialization_shapes,
         ).unwrap_or(checked.element_shape)
       }
-      let instruction = RawArrayGetInstruction({ opcode: recipe.opcode, element_shape, })
+      let instruction = RawArrayGetInstruction({
+        opcode: recipe.opcode,
+        element_shape,
+      })
       match base.kind {
-        PlannedWasmOutlinedHeapFunction(_) => PlannedWasmOutlinedHeapFunction(instruction)
+        PlannedWasmOutlinedHeapFunction(_) =>
+          PlannedWasmOutlinedHeapFunction(instruction)
         _ => PlannedWasmInlineHeapFunction(instruction)
       }
     }
@@ -1404,13 +1417,13 @@ fn materialize_program_generic_specialization(
 ///|
 fn record_program_specialized_call(
   calls : Array[PlannedProgramSpecializedCall],
-  runtime_evidence_parameters : Array[Int],
+  runtime_evidence_parameters : Array[Int32],
   caller_body : BodyId,
   caller_specialization_abi_key : String,
   expression : ExprId,
   target : DeclId,
   target_specialization_abi_key : String,
-  forwarded_runtime_evidence_parameters : Array[Int],
+  forwarded_runtime_evidence_parameters : Array[Int32],
 ) -> Unit {
   match
     try_record_program_specialized_call(
@@ -1427,13 +1440,13 @@ fn record_program_specialized_call(
 // replay is harmless; a different ABI or hidden operand is not a replay.
 fn try_record_program_specialized_call(
   calls : Array[PlannedProgramSpecializedCall],
-  runtime_evidence_parameters : Array[Int],
+  runtime_evidence_parameters : Array[Int32],
   caller_body : BodyId,
   caller_specialization_abi_key : String,
   expression : ExprId,
   target : DeclId,
   target_specialization_abi_key : String,
-  forwarded_runtime_evidence_parameters : Array[Int],
+  forwarded_runtime_evidence_parameters : Array[Int32],
 ) -> Result[Unit, String] {
   for existing in calls {
     if existing.caller_body == caller_body &&
@@ -1466,10 +1479,10 @@ fn try_record_program_specialized_call(
 ///|
 fn verify_program_specialized_call_replay(
   existing : PlannedProgramSpecializedCall,
-  runtime_evidence_parameters : Array[Int],
+  runtime_evidence_parameters : Array[Int32],
   target : DeclId,
   target_specialization_abi_key : String,
-  forwarded_runtime_evidence_parameters : Array[Int],
+  forwarded_runtime_evidence_parameters : Array[Int32],
 ) -> Result[Unit, String] {
   let context = "body=\{existing.caller_body} caller=\{existing.caller_specialization_abi_key} expression=\{existing.expression}"
   if existing.target != target ||
@@ -1507,13 +1520,13 @@ fn verify_program_specialized_call_replay(
 ///|
 fn record_program_evidence_function_reference(
   references : Array[PlannedProgramEvidenceFunctionReference],
-  runtime_evidence_parameters : Array[Int],
+  runtime_evidence_parameters : Array[Int32],
   caller_body : BodyId,
   caller_specialization_abi_key : String,
   expression : ExprId,
   target : DeclId,
   target_specialization_abi_key : String,
-  forwarded_runtime_evidence_parameters : Array[Int],
+  forwarded_runtime_evidence_parameters : Array[Int32],
 ) -> Unit {
   for existing in references {
     if existing.caller_body == caller_body &&
@@ -1560,7 +1573,7 @@ fn record_program_evidence_function_reference(
 ///|
 fn program_impl_method_for_requirement(
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   implementation : DeclId,
   requirement : DeclId,
 ) -> DeclId? {
@@ -1626,16 +1639,16 @@ fn materialize_program_expression_call(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   modules : Array[PlannedModuleWasmGCFragments],
-  module_lookup : Map[ModuleId, Int],
-  caller_module_index : Int,
+  module_lookup : Map[ModuleId, Int32],
+  caller_module_index : Int32,
   caller : PlannedWasmFunctionFragment?,
   caller_callable : PlannedCallable?,
   body : BodyId,
   expression : ExprId,
   specialized_calls : Array[PlannedProgramSpecializedCall],
-  specialized_call_runtime_evidence_parameters : Array[Int],
+  specialized_call_runtime_evidence_parameters : Array[Int32],
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference],
-  evidence_function_reference_runtime_evidence_parameters : Array[Int],
+  evidence_function_reference_runtime_evidence_parameters : Array[Int32],
 ) -> Unit {
   let caller_key = match caller {
     Some(function_) => function_.specialization_abi_key
@@ -1931,7 +1944,7 @@ fn materialize_program_expression_call(
 fn program_trait_dictionary_evidence_request(
   lowering : PlannedModuleLowering,
   fragments : PlannedModuleWasmGCFragments,
-  root : Int,
+  root : Int32,
 ) -> ProgramTraitEvidenceRequest? {
   guard root >= 0 && root < lowering.trait_evidence.length() else {
     return None
@@ -1959,7 +1972,7 @@ fn materialize_program_trait_dictionary_methods(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   modules : Array[PlannedModuleWasmGCFragments],
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
 ) -> Unit {
   for module_index, module_ in modules {
     let owner = lowering.modules[module_index]
@@ -2030,9 +2043,9 @@ fn materialize_program_trait_dictionary_methods(
 ///|
 fn copy_program_trait_evidence_request_node(
   source : ProgramTraitEvidenceRequest,
-  source_node : Int,
+  source_node : Int32,
   target : ProgramTraitEvidenceRequest,
-) -> Int {
+) -> Int32 {
   guard source_node >= 0 && source_node < source.evidence.length() else {
     return -1
   }
@@ -2077,7 +2090,7 @@ fn copy_program_trait_evidence_request_node(
 ///|
 fn program_trait_evidence_prerequisite_request(
   source : ProgramTraitEvidenceRequest,
-  root : Int,
+  root : Int32,
 ) -> ProgramTraitEvidenceRequest? {
   guard root >= 0 && root < source.evidence.length() else { return None }
   let target = empty_program_trait_evidence_request()
@@ -2101,8 +2114,8 @@ fn materialize_program_specialization_trait_dictionaries(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   modules : Array[PlannedModuleWasmGCFragments],
-  module_lookup : Map[ModuleId, Int],
-  owner_index : Int,
+  module_lookup : Map[ModuleId, Int32],
+  owner_index : Int32,
   caller : PlannedWasmFunctionFragment,
   body : PlannedBodyLowering,
 ) -> Unit {
@@ -2359,7 +2372,7 @@ fn program_resolved_trait_declaration(
 fn program_append_external_runtime_trait(
   traits_by_module : Array[Array[DeclId]],
   seen : Map[String, Bool],
-  module_index : Int,
+  module_index : Int32,
   trait_ : DeclId,
 ) -> Unit {
   if module_index < 0 ||
@@ -2378,7 +2391,7 @@ fn program_append_external_runtime_trait(
 ///|
 fn program_collect_external_runtime_trait_uses(
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   declaration : DeclId,
   visited : Map[DeclId, Bool],
   traits_by_module : Array[Array[DeclId]],
@@ -2501,7 +2514,7 @@ priv enum ProgramExternalRuntimeEvidenceClass {
 ///|
 fn check_external_runtime_evidence_class(
   lowering : PlannedModuleLowering,
-  evidence : Int,
+  evidence : Int32,
   parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
 ) -> Result[ProgramExternalRuntimeEvidenceClass?, TraitEvidenceKeyFailure] {
   let source = LoweringEvidenceKey(lowering)
@@ -2509,7 +2522,7 @@ fn check_external_runtime_evidence_class(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  let results : Map[Int, ProgramExternalRuntimeEvidenceClass?] = {}
+  let results : Map[Int32, ProgramExternalRuntimeEvidenceClass?] = {}
   let work = [(evidence, false)]
   while work.length() > 0 {
     let (index, finish) = work.pop().unwrap()
@@ -2574,7 +2587,7 @@ fn check_external_runtime_evidence_class(
 ///|
 fn program_external_runtime_evidence_class(
   lowering : PlannedModuleLowering,
-  evidence : Int,
+  evidence : Int32,
   parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
 ) -> ProgramExternalRuntimeEvidenceClass? {
   match
@@ -2610,9 +2623,9 @@ fn program_external_runtime_evidence_state_key(
 ///|
 fn program_collect_external_runtime_evidence_implementation_uses(
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   evidence_owner : PlannedModuleLowering,
-  evidence : Int,
+  evidence : Int32,
   visited : Map[DeclId, Bool],
   traits_by_module : Array[Array[DeclId]],
   seen_traits : Map[String, Bool],
@@ -2620,7 +2633,7 @@ fn program_collect_external_runtime_evidence_implementation_uses(
   // Validate every node before collecting any usable dependency.
   ignore(trait_evidence_concrete(evidence_owner, evidence))
   let work = [evidence]
-  let seen : Map[Int, Bool] = {}
+  let seen : Map[Int32, Bool] = {}
   while work.length() > 0 {
     let index = work.pop().unwrap()
     if seen.contains(index) {
@@ -2672,9 +2685,9 @@ fn program_collect_external_runtime_evidence_implementation_uses(
 fn program_runtime_trait_fallback_evidence(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
-  support_states : Map[String, Int],
-  module_index : Int,
+  module_lookup : Map[ModuleId, Int32],
+  support_states : Map[String, Int32],
+  module_index : Int32,
   module_ : PlannedModuleLowering,
   callable : PlannedCallable,
 ) -> ProgramTraitEvidenceRequest? {
@@ -2688,7 +2701,7 @@ fn program_runtime_trait_fallback_evidence(
     return None
   }
   let body = module_.bodies[body_index]
-  let used_traits : Map[Int, DeclId] = Map::default()
+  let used_traits : Map[Int32, DeclId] = Map::default()
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
@@ -2823,8 +2836,8 @@ fn program_runtime_trait_fallback_evidence(
 fn program_generic_enum_instantiations(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
-) -> Map[DeclId, Array[Array[Int]]] {
-  let counts : Map[DeclId, Int] = Map::default()
+) -> Map[DeclId, Array[Array[Int32]]] {
+  let counts : Map[DeclId, Int32] = Map::default()
   for module_ in lowering.modules {
     for layout in module_.type_layouts.layouts {
       match layout.kind {
@@ -2834,7 +2847,7 @@ fn program_generic_enum_instantiations(
       }
     }
   }
-  let output : Map[DeclId, Array[Array[Int]]] = Map::default()
+  let output : Map[DeclId, Array[Array[Int32]]] = Map::default()
   for module_index, interface_ in analyzed.frozen.interfaces {
     wasmgc_collect_generic_enum_instantiations_into(
       interface_.resolved_types,
@@ -2854,7 +2867,7 @@ fn program_generic_enum_instantiations(
 ///|
 fn program_module_has_specialized_generic_enum(
   module_ : PlannedModuleLowering,
-  instantiations : Map[DeclId, Array[Array[Int]]],
+  instantiations : Map[DeclId, Array[Array[Int32]]],
 ) -> Bool {
   for layout in module_.type_layouts.layouts {
     if layout.generic_parameters.length > 0 &&
@@ -2873,9 +2886,9 @@ fn plan_program_wasmgc_fragments_for_root(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
-  erased_fallback_module_index : Int,
+  erased_fallback_module_index : Int32,
   cached_modules : Array[PlannedModuleWasmGCFragments?],
-  store_fresh : (Int, PlannedModuleWasmGCFragments) -> Unit,
+  store_fresh : (Int32, PlannedModuleWasmGCFragments) -> Unit,
 ) -> PlannedProgramSpecializationPlan {
   match check_program_module_index_table(lowering.index, lowering.modules) {
     Ok(_) => ()
@@ -2890,7 +2903,7 @@ fn plan_program_wasmgc_fragments_for_root(
     None,
   )
   let specialization_module_lookup = lowering.index.module_lookup
-  let external_evidence_support_states : Map[String, Int] = Map::default()
+  let external_evidence_support_states : Map[String, Int32] = Map::default()
   let fallback_evidence_by_declaration : Map[
     DeclId,
     ProgramTraitEvidenceRequest,
@@ -3009,11 +3022,11 @@ fn plan_program_wasmgc_fragments_for_root(
     modules.push(slot.unwrap())
   }
   let specialized_calls : Array[PlannedProgramSpecializedCall] = []
-  let specialized_call_runtime_evidence_parameters : Array[Int] = []
+  let specialized_call_runtime_evidence_parameters : Array[Int32] = []
   let evidence_function_references : Array[
     PlannedProgramEvidenceFunctionReference,
   ] = []
-  let evidence_function_reference_runtime_evidence_parameters : Array[Int] = []
+  let evidence_function_reference_runtime_evidence_parameters : Array[Int32] = []
   for module_index, module_ in lowering.modules {
     if module_index != erased_fallback_module_index {
       continue
@@ -3209,7 +3222,7 @@ fn plan_program_wasmgc_fragments_for_root(
 }
 
 ///|
-fn program_specialization_span_is_valid(span : HirSpan, length : Int) -> Bool {
+fn program_specialization_span_is_valid(span : HirSpan, length : Int32) -> Bool {
   span.start >= 0 &&
   span.length >= 0 &&
   span.start <= length &&
@@ -3304,9 +3317,9 @@ pub fn plan_program_wasmgc_fragments_with_options_and_cache_hooks(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   options : WasmGCPlanningOptions,
-  erased_fallback_module_index : Int,
+  erased_fallback_module_index : Int32,
   cached_modules : Array[PlannedModuleWasmGCFragments?],
-  store_fresh : (Int, PlannedModuleWasmGCFragments) -> Unit,
+  store_fresh : (Int32, PlannedModuleWasmGCFragments) -> Unit,
 ) -> PlannedProgramSpecializationPlan {
   plan_program_wasmgc_fragments_for_root(
     analyzed, lowering, options, erased_fallback_module_index, cached_modules, store_fresh,

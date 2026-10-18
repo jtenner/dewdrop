@@ -50,7 +50,7 @@ pub fn StandardLibraryLoad::bootstrap() -> StandardLibraryLoad {
 }
 
 ///|
-fn fingerprint_write_u32(output : Buffer, value : UInt) -> Unit {
+fn fingerprint_write_u32(output : Buffer, value : UInt32) -> Unit {
   output.write_byte((value & 0xffU).to_byte())
   output.write_byte(((value >> 8) & 0xffU).to_byte())
   output.write_byte(((value >> 16) & 0xffU).to_byte())

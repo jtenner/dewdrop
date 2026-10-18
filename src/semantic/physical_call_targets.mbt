@@ -2,18 +2,18 @@
 pub struct PlannedProgramPhysicalCallTarget {
   declaration : DeclId
   specialization_abi_key : String
-  function_index : Int
-  function_table_index : Int
-  runtime_evidence_operands : Array[Int]
+  function_index : Int32
+  function_table_index : Int32
+  runtime_evidence_operands : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
 fn record_program_physical_call_target(
   targets : Map[ProgramSpecializedCallKey, PlannedProgramPhysicalCallTarget],
   call : PlannedProgramSpecializedCall,
-  index : Int,
+  index : Int32,
   function_ : PlannedProgramWasmFunction,
-  evidence_parameters : Array[Int],
+  evidence_parameters : Array[Int32],
 ) -> Result[Unit, ProgramFunctionLookupFailure] {
   guard call.target == function_.declaration else {
     return Err(
@@ -42,7 +42,7 @@ fn record_program_physical_call_target(
       ),
     )
   }
-  let operands : Array[Int] = []
+  let operands : Array[Int32] = []
   for index in 0..<span.length {
     let parameter = evidence_parameters[span.start + index]
     guard parameter >= 0 else {
@@ -131,7 +131,7 @@ fn record_program_physical_call_target(
 ///|
 fn program_physical_call_target_failure(
   call : PlannedProgramSpecializedCall,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,

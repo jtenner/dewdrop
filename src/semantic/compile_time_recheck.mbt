@@ -1,7 +1,7 @@
 ///|
 fn compile_time_body_needs_recheck(
   context : CompileTimeProgramContext,
-  owner_index : Int,
+  owner_index : Int32,
   declaration : DeclId,
 ) -> Bool {
   let owner = context.modules[owner_index]
@@ -22,7 +22,7 @@ fn compile_time_body_needs_recheck(
 ///|
 fn recheck_compile_time_body(
   context : CompileTimeProgramContext,
-  owner_index : Int,
+  owner_index : Int32,
   declaration : DeclId,
   bindings : Map[CompileTimeBindingKey, CompileTimeType],
   conditions : Map[ExprId, Bool],

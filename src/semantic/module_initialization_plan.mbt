@@ -30,7 +30,7 @@ pub struct PlannedModuleInitialization {
   module_id : ModuleId
   dependencies : ModuleValueDependencies
   steps : Array[PlannedModuleInitializationStep]
-  declaration_steps : Array[Int]
+  declaration_steps : Array[Int32]
   cycle_declarations : Array[DeclId]
   diagnostics : Array[ModuleInitializationDiagnostic]
 } derive(Eq, Debug)
@@ -39,7 +39,7 @@ pub struct PlannedModuleInitialization {
 pub fn PlannedModuleInitialization::step_of(
   self : PlannedModuleInitialization,
   declaration : DeclId,
-) -> Int? {
+) -> Int32? {
   if semantic_id_module(declaration) != self.module_id {
     return None
   }
@@ -91,7 +91,8 @@ pub fn plan_module_initialization(
   collected : CollectedModule,
   inferred : InferredModuleValues,
 ) -> PlannedModuleInitialization {
-  let (let_indices, source_bodies) = match check_module_initialization_inputs(collected, inferred) {
+  let (let_indices, source_bodies) = match
+    check_module_initialization_inputs(collected, inferred) {
     Ok(inputs) => inputs
     Err(error) => abort(@debug.to_string(error))
   }

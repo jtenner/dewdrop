@@ -52,7 +52,7 @@ let standard_preamble_file_capacity = 256
 ///|
 pub fn make_program_file_id(
   module_id : ModuleId,
-  manifest_index : Int,
+  manifest_index : Int32,
 ) -> FileId {
   guard manifest_index >= 0 else { abort("negative manifest file index") }
   make_file_id(module_id, standard_preamble_file_capacity + manifest_index)
@@ -62,7 +62,7 @@ pub fn make_program_file_id(
 fn selected_standard_modules(
   files : Array[ProgramFile],
 ) -> (
-  Int,
+  Int32,
   Bool,
   Bool,
   Bool,
@@ -74,9 +74,9 @@ fn selected_standard_modules(
   Bool,
   Bool,
   Bool,
-  Int,
-  Int,
-  Int,
+  Int32,
+  Int32,
+  Int32,
 ) {
   let mut text_mask = 0
   let mut show = false

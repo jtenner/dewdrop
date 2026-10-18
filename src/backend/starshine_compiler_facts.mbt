@@ -11,43 +11,43 @@ pub enum StarshineCompilerFactProofStrength {
 ///|
 /// Test/debug summary. Normal compilation does not print this record.
 pub struct StarshineCompilerFactSummary {
-  mut functions_with_facts : Int
-  mut function_effect_summaries : Int
-  mut parameter_facts : Int
-  mut parameter_no_escape_proofs : Int
-  mut result_facts : Int
-  fresh_result_facts : Int
-  mut signature_facts : Int
-  mut type_facts : Int
-  closed_type_populations : Int
-  mut field_facts : Int
-  mut closed_field_contents : Int
-  array_element_facts : Int
-  mut global_facts : Int
-  mut steady_state_globals : Int
-  table_facts : Int
-  complete_tables : Int
-  mut expression_facts : Int
-  mut integer_range_facts : Int
-  mut known_bit_facts : Int
-  mut float_facts : Int
-  mut reference_nonnull_facts : Int
-  mut exact_heap_types : Int
-  closed_heap_sets : Int
-  mut closed_function_target_sets : Int
-  mut callsite_facts : Int
-  mut exact_call_targets : Int
-  mut allocation_facts : Int
-  no_escape_allocations : Int
-  identity_unobserved_allocations : Int
-  access_facts : Int
-  proven_in_bounds_accesses : Int
-  numeric_facts : Int
-  no_wrap_facts : Int
-  exact_divisions : Int
-  relations : Int
-  hints : Int
-  mut provenance_bearing_site_facts : Int
+  mut functions_with_facts : Int32
+  mut function_effect_summaries : Int32
+  mut parameter_facts : Int32
+  mut parameter_no_escape_proofs : Int32
+  mut result_facts : Int32
+  fresh_result_facts : Int32
+  mut signature_facts : Int32
+  mut type_facts : Int32
+  closed_type_populations : Int32
+  mut field_facts : Int32
+  mut closed_field_contents : Int32
+  array_element_facts : Int32
+  mut global_facts : Int32
+  mut steady_state_globals : Int32
+  table_facts : Int32
+  complete_tables : Int32
+  mut expression_facts : Int32
+  mut integer_range_facts : Int32
+  mut known_bit_facts : Int32
+  mut float_facts : Int32
+  mut reference_nonnull_facts : Int32
+  mut exact_heap_types : Int32
+  closed_heap_sets : Int32
+  mut closed_function_target_sets : Int32
+  mut callsite_facts : Int32
+  mut exact_call_targets : Int32
+  mut allocation_facts : Int32
+  no_escape_allocations : Int32
+  identity_unobserved_allocations : Int32
+  access_facts : Int32
+  proven_in_bounds_accesses : Int32
+  numeric_facts : Int32
+  no_wrap_facts : Int32
+  exact_divisions : Int32
+  relations : Int32
+  hints : Int32
+  mut provenance_bearing_site_facts : Int32
   mut generation_time_us : UInt64
 } derive(Eq, Debug)
 
@@ -162,7 +162,7 @@ pub fn starshine_compiler_fact_family_audit() -> Array[(String, String)] {
 }
 
 ///|
-fn starshine_fact_type_index(type_ : @lib.TypeIdx) -> UInt? {
+fn starshine_fact_type_index(type_ : @lib.TypeIdx) -> UInt32? {
   match type_ {
     @lib.TypeIdx(value) => Some(value)
     @lib.RecIdx(_) => None
@@ -234,7 +234,7 @@ fn starshine_fact_provenance(
 }
 
 ///|
-fn starshine_fact_f32_class(bits : UInt) -> @representation.FloatClassMask {
+fn starshine_fact_f32_class(bits : UInt32) -> @representation.FloatClassMask {
   let negative = (bits & 0x8000_0000U) != 0U
   let exponent = bits & 0x7F80_0000U
   let fraction = bits & 0x007F_FFFFU
@@ -417,7 +417,7 @@ fn starshine_fact_function_parameters(
   lowering : @semantic.PlannedProgramLowering,
   function_ : @semantic.PlannedProgramWasmFunction,
   host_callable : Bool,
-  sites : Array[(UInt, @lib.Instruction)]?,
+  sites : Array[(UInt32, @lib.Instruction)]?,
   summary : StarshineCompilerFactSummary,
 ) -> Array[@representation.ParameterFacts] {
   let body = match starshine_fact_body_for_function(lowering, function_) {
@@ -828,7 +828,7 @@ fn starshine_fact_instruction_effect(
 ///|
 fn starshine_fact_allocation_kind(
   planned : @semantic.PlannedProgramWasmGCLink,
-  type_ : UInt,
+  type_ : UInt32,
   array : Bool,
 ) -> @representation.AllocationKind {
   if array {
@@ -861,7 +861,7 @@ fn starshine_fact_allocation_kind(
 ///|
 priv struct StarshineFactBodyScan {
   effects : @representation.EffectMask
-  direct_callees : Array[UInt]
+  direct_callees : Array[UInt32]
   body : @representation.FunctionBodyFacts?
 }
 
@@ -869,22 +869,22 @@ priv struct StarshineFactBodyScan {
 fn starshine_scan_fact_body(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
-  function : UInt,
+  function : UInt32,
   planned_function : @semantic.PlannedProgramWasmFunction?,
-  sites : Array[(UInt, @lib.Instruction)],
-  singleton_targets : Map[UInt, UInt],
-  alias_parameter_by_function : Map[UInt, UInt],
-  function_signature_by_index : Map[UInt, UInt],
+  sites : Array[(UInt32, @lib.Instruction)],
+  singleton_targets : Map[UInt32, UInt32],
+  alias_parameter_by_function : Map[UInt32, UInt32],
+  function_signature_by_index : Map[UInt32, UInt32],
   summary : StarshineCompilerFactSummary,
 ) -> StarshineFactBodyScan {
   let mut effects = @representation.EffectMask::empty()
-  let direct_callees : Array[UInt] = []
+  let direct_callees : Array[UInt32] = []
   let expression_facts : Array[@representation.ExpressionFact] = []
   let call_facts : Array[@representation.CallSiteFacts] = []
   let allocations : Array[@representation.AllocationSiteFacts] = []
-  let local_targets : Map[UInt, UInt] = Map::default()
+  let local_targets : Map[UInt32, UInt32] = Map::default()
   let provenance = starshine_fact_provenance(lowering, planned_function)
-  let mut previous_target : UInt? = None
+  let mut previous_target : UInt32? = None
   for index, entry in sites {
     let offset = entry.0
     let instruction = entry.1
@@ -1178,8 +1178,10 @@ fn starshine_scan_fact_body(
 }
 
 ///|
-fn starshine_fact_exported_functions(module_ : @lib.Module) -> Map[UInt, Bool] {
-  let out : Map[UInt, Bool] = Map::default()
+fn starshine_fact_exported_functions(
+  module_ : @lib.Module,
+) -> Map[UInt32, Bool] {
+  let out : Map[UInt32, Bool] = Map::default()
   match module_.export_sec {
     Some(@lib.ExportSec(exports)) =>
       for export_entry in exports {
@@ -1196,9 +1198,9 @@ fn starshine_fact_exported_functions(module_ : @lib.Module) -> Map[UInt, Bool] {
 
 ///|
 fn starshine_fact_address_taken(
-  module_sites : Array[Array[(UInt, @lib.Instruction)]],
-) -> Map[UInt, Bool] {
-  let out : Map[UInt, Bool] = Map::default()
+  module_sites : Array[Array[(UInt32, @lib.Instruction)]],
+) -> Map[UInt32, Bool] {
+  let out : Map[UInt32, Bool] = Map::default()
   for sites in module_sites {
     for entry in sites {
       match entry.1 {
@@ -1292,7 +1294,10 @@ fn starshine_fact_global_records(
   builder : @representation.OptimizationFactsBuilder,
   summary : StarshineCompilerFactSummary,
 ) -> Unit {
-  let singletons : Map[UInt, @semantic.PlannedProgramFunctionReferenceSingleton] = Map::default()
+  let singletons : Map[
+    UInt32,
+    @semantic.PlannedProgramFunctionReferenceSingleton,
+  ] = Map::default()
   for singleton in planned.function_reference_singletons {
     singletons[singleton.global_index.reinterpret_as_uint()] = singleton
   }
@@ -1439,12 +1444,12 @@ pub fn attach_starshine_program_compiler_facts(
       host_can_mutate_exported_state=false,
     ),
   )
-  let singleton_targets : Map[UInt, UInt] = Map::default()
+  let singleton_targets : Map[UInt32, UInt32] = Map::default()
   for singleton in planned.function_reference_singletons {
     singleton_targets[singleton.global_index.reinterpret_as_uint()] = singleton.function_index.reinterpret_as_uint()
   }
   let address_taken = starshine_fact_address_taken(sites)
-  let function_signature_by_index : Map[UInt, UInt] = Map::default()
+  let function_signature_by_index : Map[UInt32, UInt32] = Map::default()
   for function_ in planned.functions {
     if function_.function_index >= 0 &&
       function_.signature_type_index >= 0 &&
@@ -1452,7 +1457,7 @@ pub fn attach_starshine_program_compiler_facts(
       function_signature_by_index[function_.function_index.reinterpret_as_uint()] = function_.signature_type_index.reinterpret_as_uint()
     }
   }
-  let alias_parameter_by_function : Map[UInt, UInt] = Map::default()
+  let alias_parameter_by_function : Map[UInt32, UInt32] = Map::default()
   for defined, body_sites in sites {
     if body_sites.length() == 1 {
       match body_sites[0].1 {
@@ -1508,7 +1513,7 @@ pub fn attach_starshine_program_compiler_facts(
       None => ()
     }
   }
-  let callees : Array[Array[UInt]] = []
+  let callees : Array[Array[UInt32]] = []
   for scan in scans {
     callees.push(
       match scan {
@@ -1570,7 +1575,7 @@ pub fn attach_starshine_program_compiler_facts(
     summary.functions_with_facts += 1
     summary.function_effect_summaries += 1
   }
-  let signatures : Map[Int, Array[@semantic.PlannedProgramWasmFunction]] = Map::default()
+  let signatures : Map[Int32, Array[@semantic.PlannedProgramWasmFunction]] = Map::default()
   for function_ in planned.functions {
     if function_.function_index >= 0 &&
       !function_.elided &&
@@ -1638,10 +1643,10 @@ pub fn attach_starshine_program_compiler_facts(
 ///|
 /// Encoded metadata-size measurement for tests and debug tooling.
 pub struct StarshineCompilerFactSize {
-  core_wasm_bytes : Int
-  fact_bearing_wasm_bytes : Int
-  compiler_facts_bytes : Int
-  overhead_basis_points : Int
+  core_wasm_bytes : Int32
+  fact_bearing_wasm_bytes : Int32
+  compiler_facts_bytes : Int32
+  overhead_basis_points : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1674,13 +1679,13 @@ pub fn measure_starshine_compiler_fact_size(
 /// Propagate each new effect bit only to callers that depend on it.
 fn starshine_propagate_fact_effects(
   effects : Array[@representation.EffectMask],
-  callees : Array[Array[UInt]],
+  callees : Array[Array[UInt32]],
 ) -> Unit {
   guard effects.length() == callees.length() else {
     abort("compiler facts: effect and call graph lengths differ")
   }
-  let callers : Array[Array[Int]] = []
-  let pending : Array[Int] = []
+  let callers : Array[Array[Int32]] = []
+  let pending : Array[Int32] = []
   let queued = Array::make(effects.length(), true)
   for function in 0..<effects.length() {
     callers.push([])

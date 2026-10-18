@@ -144,7 +144,7 @@ fn BasicBodyInferencer::record_expression_selection(
   self : BasicBodyInferencer,
   expression : ExprId,
   selected_id : UInt64,
-  kind : Int,
+  kind : Int32,
 ) -> Unit {
   self.call_scratch.constructor_progress += 1
   let start = self.expression_type_arguments.length()
@@ -201,8 +201,8 @@ fn BasicBodyInferencer::type_is_variable(
 ///|
 fn BasicBodyInferencer::object_field_index(
   self : BasicBodyInferencer,
-  field : Int,
-) -> Int {
+  field : Int32,
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyObjectFields, field, 2)
 }
 
@@ -245,7 +245,7 @@ fn BasicBodyInferencer::collect_owned_fields(
 fn BasicBodyInferencer::owned_field_slot(
   self : BasicBodyInferencer,
   name : NameId,
-) -> Int {
+) -> Int32 {
   if self.call_scratch.pattern_field_indices.length() > 8 {
     return self.call_scratch.pattern_field_lookup.get(name).unwrap_or(-1)
   }
@@ -422,7 +422,7 @@ fn BasicBodyInferencer::variant_index_in_declaration(
   self : BasicBodyInferencer,
   declaration : DeclId,
   name : NameId,
-) -> Int {
+) -> Int32 {
   guard semantic_id_module(declaration) == self.collected.module_id else {
     return -1
   }
@@ -489,7 +489,7 @@ fn BasicBodyInferencer::variant_declaration(
 fn BasicBodyInferencer::variant_payload_length(
   self : BasicBodyInferencer,
   variant : VariantId,
-) -> Int {
+) -> Int32 {
   if semantic_id_module(variant) == self.collected.module_id {
     let index = semantic_id_local(variant)
     if index >= 0 && index < self.resolved.variant_payloads.length() {
@@ -512,7 +512,7 @@ fn BasicBodyInferencer::variant_payload_length(
 fn BasicBodyInferencer::variant_payload_type(
   self : BasicBodyInferencer,
   variant : VariantId,
-  index : Int,
+  index : Int32,
 ) -> ResolvedTypeId {
   if semantic_id_module(variant) == self.collected.module_id {
     let local_index = semantic_id_local(variant)
@@ -530,7 +530,7 @@ fn BasicBodyInferencer::variant_payload_type(
 
 ///|
 priv enum SelectedValueVariant {
-  SelectedLocalValueVariant(Int)
+  SelectedLocalValueVariant(Int32)
   SelectedImportedValueVariant(ResolvedImportedVariant)
   NoSelectedValueVariant
 }
@@ -965,7 +965,7 @@ fn BasicBodyInferencer::infer_imported_struct_payload_pattern(
     None => self.record_pattern_constructor(pattern, declaration, false)
   }
   let imported_fields = imports.fields_of(declaration)
-  let candidate_indices : Array[Int] = []
+  let candidate_indices : Array[Int32] = []
   for index, field in imported_fields {
     if field.variant == variant {
       candidate_indices.push(index)

@@ -9,8 +9,8 @@ priv struct CompileTimeLocalScope {
 ///|
 fn compile_time_scope_owners(
   scopes : Array[CompileTimeLocalScope],
-  count : Int,
-) -> Array[Int] {
+  count : Int32,
+) -> Array[Int32] {
   let owners = Array::make(count, -1)
   for index, scope in scopes {
     guard program_specialization_span_is_valid(scope.expressions, count) else {
@@ -28,7 +28,11 @@ fn compile_time_scope_owners(
 }
 
 ///|
-fn compile_time_local_slot(span : HirSpan, relative : Int, count : Int) -> Int {
+fn compile_time_local_slot(
+  span : HirSpan,
+  relative : Int32,
+  count : Int32,
+) -> Int32 {
   guard program_specialization_span_is_valid(span, count) &&
     relative >= 0 &&
     relative < span.length else {
@@ -73,7 +77,7 @@ fn compile_time_source_local_initializers(
   let scopes = compile_time_source_local_scopes(collected, names, body)
   // Each inference job owns only these spans. A module-sized table here made
   // guards in ordinary functions repeatedly scan every other function.
-  let owners : Map[ExprId, Int] = {}
+  let owners : Map[ExprId, Int32] = {}
   for index, scope in scopes {
     guard program_specialization_span_is_valid(
       scope.expressions,

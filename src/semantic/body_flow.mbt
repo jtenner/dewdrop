@@ -24,7 +24,7 @@ let empty_flow_spans : Array[HirSpan] = []
 
 ///|
 pub struct BodyFlowSummary {
-  outcomes : Int
+  outcomes : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -65,7 +65,7 @@ pub enum BodyFlowDiagnostic {
   NonExhaustiveFunctionalLoop(ExprId, HirSpan, UInt64)
   RedundantPatternArm(PatternArmId, UInt64)
   FunctionalLoopArmFallsThrough(PatternArmId, UInt64)
-  UnreachableBlockItem(BlockId, Int, UInt64)
+  UnreachableBlockItem(BlockId, Int32, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -134,7 +134,7 @@ pub fn AnalyzedModuleFlows::lambda(
 }
 
 ///|
-fn flow(outcomes : Int) -> BodyFlowSummary {
+fn flow(outcomes : Int32) -> BodyFlowSummary {
   { outcomes, }
 }
 
@@ -270,7 +270,7 @@ fn BodyFlowAnalyzer::new(
 fn BodyFlowAnalyzer::expression_index(
   self : BodyFlowAnalyzer,
   expression : ExprId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyExpressions, expression, 3)
 }
 
@@ -278,7 +278,7 @@ fn BodyFlowAnalyzer::expression_index(
 fn BodyFlowAnalyzer::pattern_index(
   self : BodyFlowAnalyzer,
   pattern : PatternId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyPatterns, pattern, 3)
 }
 
@@ -286,7 +286,7 @@ fn BodyFlowAnalyzer::pattern_index(
 fn BodyFlowAnalyzer::block_index(
   self : BodyFlowAnalyzer,
   block : BlockId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyBlocks, block, 3)
 }
 
@@ -294,7 +294,7 @@ fn BodyFlowAnalyzer::block_index(
 fn BodyFlowAnalyzer::arm_index(
   self : BodyFlowAnalyzer,
   arm : PatternArmId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyPatternArms, arm, 3)
 }
 
@@ -394,7 +394,7 @@ fn BodyFlowAnalyzer::field_count(
   self : BodyFlowAnalyzer,
   declaration : DeclId,
   variant : VariantId?,
-) -> Int {
+) -> Int32 {
   if semantic_id_module(declaration) != self.collected.module_id {
     return match self.imports {
       Some(imports) => {
@@ -1144,7 +1144,7 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
 }
 
 ///|
-fn body_flow_diagnostic_rank(diagnostic : BodyFlowDiagnostic) -> Int {
+fn body_flow_diagnostic_rank(diagnostic : BodyFlowDiagnostic) -> Int32 {
   match diagnostic {
     RedundantPatternArm(_, _) => 0
     NonExhaustiveMatch(_, _, _) => 1
@@ -1231,7 +1231,7 @@ fn analyze_module_flows_internal(
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
   imports : ResolvedModuleImports?,
-  order : Array[Int],
+  order : Array[Int32],
 ) -> AnalyzedModuleFlows {
   if collected.module_id != resolved.module_id ||
     collected.module_id != inferred.module_id {
@@ -1400,7 +1400,7 @@ fn analyze_module_flows_in_order(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
-  order : Array[Int],
+  order : Array[Int32],
 ) -> AnalyzedModuleFlows {
   analyze_module_flows_internal(collected, resolved, inferred, None, order)
 }
@@ -1411,7 +1411,7 @@ pub fn analyze_module_flows(
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
 ) -> AnalyzedModuleFlows {
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }
@@ -1428,7 +1428,7 @@ fn analyze_module_flows_with_imports(
   guard imports.module_id == collected.module_id else {
     abort("flow import scope belongs to another module")
   }
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }

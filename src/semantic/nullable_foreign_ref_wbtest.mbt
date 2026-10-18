@@ -4,13 +4,23 @@ test "user reference instructions use builtin metadata not declaration order" {
     let source = Buffer()
     source.write_bytes(b"open dew.std.wasm.intrinsics\nforeign type Handle\n")
     source.write_bytes(prefix)
-    source.write_bytes(b"builtin empty<t>() -> NullableRef<t> = \"ref_null\"\nbuiltin absent<t>(value: NullableRef<t>) -> Bool = \"ref_is_null\"\nbuiltin require<t>(value: NullableRef<t>) -> t = \"ref_as_non_null\"\npub fn run(value: NullableRef<Handle>) -> Bool {\n  let _ = empty::<Handle>()\n  let _ = require(value)\n  absent(value)\n}\n")
-    let program = collect_program_manifest(23106UL, ProgramManifest::new([
-      ManifestModule::new("app.refs", [ManifestFile::new("main.dew", source.to_bytes())]),
-    ]))
+    source.write_bytes(
+      b"builtin empty<t>() -> NullableRef<t> = \"ref_null\"\nbuiltin absent<t>(value: NullableRef<t>) -> Bool = \"ref_is_null\"\nbuiltin require<t>(value: NullableRef<t>) -> t = \"ref_as_non_null\"\npub fn run(value: NullableRef<Handle>) -> Bool {\n  let _ = empty::<Handle>()\n  let _ = require(value)\n  absent(value)\n}\n",
+    )
+    let program = collect_program_manifest(
+      23106UL,
+      ProgramManifest::new([
+        ManifestModule::new("app.refs", [
+          ManifestFile::new("main.dew", source.to_bytes()),
+        ]),
+      ]),
+    )
     let analyzed = analyze_program_semantics(program)
     let owner = program.module_index("app.refs").unwrap()
-    assert_eq(analyzed.frozen.interfaces[owner].resolved_types.diagnostics.length(), 0)
+    assert_eq(
+      analyzed.frozen.interfaces[owner].resolved_types.diagnostics.length(),
+      0,
+    )
     assert_eq(analyzed.modules[owner].inferred.diagnostics.length(), 0)
     let lowering = plan_program_lowering(program, analyzed)
     assert_eq(lowering.modules[owner].diagnostics.length(), 0)
@@ -29,10 +39,21 @@ test "user reference instructions use builtin metadata not declaration order" {
 
 ///|
 test "imported reference instructions retain declaration metadata" {
-  let program = collect_program_manifest(23107UL, ProgramManifest::new([
-    ManifestModule::new("app.refs", [ManifestFile::new("refs.dew", b"open dew.std.wasm.intrinsics\npub builtin empty<t>() -> NullableRef<t> = \"ref_null\"\npub builtin absent<t>(value: NullableRef<t>) -> Bool = \"ref_is_null\"\n")]),
-    ManifestModule::new("app.main", [ManifestFile::new("main.dew", b"open dew.std.wasm.intrinsics\nopen app.refs\nforeign type Handle\npub fn run(value: NullableRef<Handle>) -> Bool {\n  let _ = empty::<Handle>()\n  absent(value)\n}\n")]),
-  ]))
+  let program = collect_program_manifest(
+    23107UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.refs", [
+        ManifestFile::new(
+          "refs.dew", b"open dew.std.wasm.intrinsics\npub builtin empty<t>() -> NullableRef<t> = \"ref_null\"\npub builtin absent<t>(value: NullableRef<t>) -> Bool = \"ref_is_null\"\n",
+        ),
+      ]),
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.wasm.intrinsics\nopen app.refs\nforeign type Handle\npub fn run(value: NullableRef<Handle>) -> Bool {\n  let _ = empty::<Handle>()\n  absent(value)\n}\n",
+        ),
+      ]),
+    ]),
+  )
   let analyzed = analyze_program_semantics(program)
   for module_ in analyzed.modules {
     assert_eq(module_.inferred.diagnostics.length(), 0)
@@ -53,9 +74,16 @@ test "imported reference instructions retain declaration metadata" {
 
 ///|
 test "ordinary functions do not inherit reference intrinsic type permissions" {
-  let program = collect_program_manifest(23108UL, ProgramManifest::new([
-    ManifestModule::new("app.main", [ManifestFile::new("main.dew", b"open dew.std.wasm.intrinsics\nfn wasm_ref_is_null<t>(value: NullableRef<t>) -> Bool {\n  false\n}\n")]),
-  ]))
+  let program = collect_program_manifest(
+    23108UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.wasm.intrinsics\nfn wasm_ref_is_null<t>(value: NullableRef<t>) -> Bool {\n  false\n}\n",
+        ),
+      ]),
+    ]),
+  )
   let analyzed = analyze_program_semantics(program)
   let owner = program.module_index("app.main").unwrap()
   let diagnostics = analyzed.frozen.interfaces[owner].resolved_types.diagnostics

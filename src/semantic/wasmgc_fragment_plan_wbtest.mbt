@@ -22,15 +22,17 @@ fn wasmgc_test_inputs(
 
 ///|
 test "unknown builtin names remain intrinsic requests and never imports" {
-  for source in [
-    b"pub builtin unknown(value: I32) -> I32 = \"custom.host\"\n",
-    b"pub builtin unknown(value: I32) -> I32 = \"wasi_snapshot_preview1.args_get\"\n",
-  ] {
+  for
+    source in [
+      b"pub builtin unknown(value: I32) -> I32 = \"custom.host\"\n", b"pub builtin unknown(value: I32) -> I32 = \"wasi_snapshot_preview1.args_get\"\n",
+    ] {
     let (resolved, lowering) = wasmgc_test_inputs(9731UL, source)
     let planned = plan_module_wasmgc_fragments(resolved, lowering)
     assert_eq(planned.imported_function_count, 0)
     assert_eq(planned.functions.length(), 1)
-    assert_true(planned.functions[0].kind is PlannedWasmInlineBuiltinFunction(_))
+    assert_true(
+      planned.functions[0].kind is PlannedWasmInlineBuiltinFunction(_),
+    )
   }
 }
 
@@ -277,7 +279,10 @@ test "foreign host imports preserve arbitrary namespaces and scalar signatures" 
   let encoded = serialize_planned_module_wasmgc_fragments(planned).unwrap()
   let restored = deserialize_planned_module_wasmgc_fragments(encoded).unwrap()
   assert_eq(restored, planned)
-  assert_eq(serialize_planned_module_wasmgc_fragments(restored).unwrap(), encoded)
+  assert_eq(
+    serialize_planned_module_wasmgc_fragments(restored).unwrap(),
+    encoded,
+  )
   let mut found = false
   for function_ in planned.functions {
     if function_.kind is PlannedWasmImportedFunction(identity) {
@@ -286,9 +291,15 @@ test "foreign host imports preserve arbitrary namespaces and scalar signatures" 
       assert_eq(identity.kind, ForeignHostWasmImport)
       assert_eq(identity.lookup_name(), b"custom.host.send")
       assert_eq(function_.parameters.length, 1)
-      assert_eq(planned.function_value_types[function_.parameters.start], WasmI64Value)
+      assert_eq(
+        planned.function_value_types[function_.parameters.start],
+        WasmI64Value,
+      )
       assert_eq(function_.results.length, 1)
-      assert_eq(planned.function_value_types[function_.results.start], WasmI32Value)
+      assert_eq(
+        planned.function_value_types[function_.results.start],
+        WasmI32Value,
+      )
       found = true
     }
   }
@@ -342,15 +353,15 @@ test "WasmGC fragment merge is independent of simulated job order" {
     lowering.type_layouts,
     WasmGCPlanningOptions::optimized_subtype_families(),
   )
-  let type_forward : Array[Int] = []
-  let type_reverse : Array[Int] = []
+  let type_forward : Array[Int32] = []
+  let type_reverse : Array[Int32] = []
   for index in 0..<type_count {
     type_forward.push(index)
     type_reverse.push(type_count - index - 1)
   }
   let function_count = lowering.functions.callables.length()
-  let function_forward : Array[Int] = []
-  let function_reverse : Array[Int] = []
+  let function_forward : Array[Int32] = []
+  let function_reverse : Array[Int32] = []
   for index in 0..<function_count {
     function_forward.push(index)
     function_reverse.push(function_count - index - 1)

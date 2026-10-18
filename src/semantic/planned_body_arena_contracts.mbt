@@ -2,9 +2,9 @@
 fn planned_body_arena_failure(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
-  phase : Int,
-  code : Int,
-  index : Int,
+  phase : Int32,
+  code : Int32,
+  index : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -29,8 +29,8 @@ fn planned_body_arena_failure(
 fn check_planned_body_arenas(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
-  phase : Int,
-  lambda? : LambdaId = -1,
+  phase : Int32,
+  lambda~ : LambdaId = -1,
 ) -> Result[Unit, BodyArenaFailure] {
   let arenas = [
     (1, body.expressions, lowering.expressions.length()),
@@ -86,8 +86,8 @@ fn check_planned_body_arenas(
 pub fn assert_planned_body_arenas(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
-  phase : Int,
-  lambda? : LambdaId = -1,
+  phase : Int32,
+  lambda~ : LambdaId = -1,
 ) -> Unit {
   match check_planned_body_arenas(lowering, body, phase, lambda~) {
     Ok(_) => ()

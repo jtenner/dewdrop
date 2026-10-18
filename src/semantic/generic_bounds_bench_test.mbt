@@ -1,6 +1,6 @@
 ///|
 fn generic_bound_calls_benchmark_source(
-  call_count : Int,
+  call_count : Int32,
   bounded : Bool,
 ) -> Bytes {
   let output = Buffer(size_hint=call_count * 32 + 256)
@@ -52,7 +52,7 @@ test "bench bounded generic calls n=256" (it : @bench.T) {
 
 ///|
 fn generic_bound_body_operator_benchmark_source(
-  operator_count : Int,
+  operator_count : Int32,
   symbolic : Bool,
 ) -> Bytes {
   let output = Buffer(size_hint=operator_count * 40 + 512)
@@ -103,7 +103,7 @@ test "bench symbolic generic-bound body operators n=256" (it : @bench.T) {
 }
 
 ///|
-fn recursive_generic_evidence_benchmark_source(call_count : Int) -> Bytes {
+fn recursive_generic_evidence_benchmark_source(call_count : Int32) -> Bytes {
   let output = Buffer(size_hint=call_count * 36 + 512)
   output.write_string_utf8(
     "trait Marker {}\ntrait Value {}\nstruct Yes {}\nstruct Box<t> {\n  value: t\n}\nimpl Marker for Yes {}\nimpl<t: Marker> Value for Box<t> {}\nfn require<t: Value>(value: t) -> t {\n  value\n}\nfn run(value: Box<Yes>) -> Box<Yes> {\n",
@@ -132,7 +132,7 @@ test "bench recursive generic evidence trees n=256" (it : @bench.T) {
 }
 
 ///|
-fn executable_generic_evidence_benchmark_source(call_count : Int) -> Bytes {
+fn executable_generic_evidence_benchmark_source(call_count : Int32) -> Bytes {
   let output = Buffer(size_hint=call_count * 30 + 768)
   output.write_string_utf8(
     "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    1\n  }\n}\nimpl Value for U32 {\n  fn value(self) -> I32 {\n    2\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\nfn forward<t: Value>(value: t) -> I32 {\n  read(value)\n}\npub fn run() -> I32 {\n",

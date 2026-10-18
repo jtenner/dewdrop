@@ -47,7 +47,7 @@ test "all specialized call consumers must use the frozen instance witness" {
 fn call_witness_lookup_test_link() -> (
   PlannedProgramWasmGCLink,
   ProgramSpecializedCallKey,
-  Int,
+  Int32,
 ) raise {
   let (link, declaration) = ambiguous_specialization_test_link(two=false)
   let keys : Array[ProgramSpecializedCallKey] = []
@@ -66,7 +66,7 @@ fn call_witness_lookup_assert_failure(
   link : PlannedProgramWasmGCLink,
   key : ProgramSpecializedCallKey,
   declaration : DeclId,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,

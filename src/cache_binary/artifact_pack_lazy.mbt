@@ -46,8 +46,8 @@ fn ArtifactPack::decode_indexed_entry(
 ///|
 pub fn ArtifactPack::lookup_checked(
   self : ArtifactPack,
-  kind : UInt,
-  schema_version : UInt,
+  kind : UInt32,
+  schema_version : UInt32,
   owner : String,
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],
@@ -110,7 +110,7 @@ fn ArtifactPack::materialized_entries(
     Ok(_) => ()
   }
   let output = self.entries.copy()
-  let owners : Map[(UInt, String), Bool] = {}
+  let owners : Map[(UInt32, String), Bool] = {}
   for entry in output {
     owners[(entry.kind, entry.owner)] = true
   }
@@ -181,9 +181,9 @@ pub fn open_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
       previous_kind = kind
       has_previous_kind = true
     }
-    let owner_lanes : Array[UInt] = []
-    let content_lanes : Array[UInt] = []
-    let entry_sizes : Array[Int] = []
+    let owner_lanes : Array[UInt32] = []
+    let content_lanes : Array[UInt32] = []
+    let entry_sizes : Array[Int32] = []
     let mut prior_owner_lane = 0U
     let mut prior_content_lane = 0U
     for entry_index in 0..<entry_count {
@@ -307,10 +307,10 @@ pub fn open_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
 /// The immutable index was checked for this order by open_artifact_pack.
 fn artifact_pack_index_lower_bound(
   entries : Array[ArtifactPackIndexedEntry],
-  kind : UInt,
-  owner_lane : UInt,
-  content_lane : UInt,
-) -> Int {
+  kind : UInt32,
+  owner_lane : UInt32,
+  content_lane : UInt32,
+) -> Int32 {
   let mut low = 0
   let mut high = entries.length()
   while low < high {

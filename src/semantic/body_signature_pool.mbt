@@ -3,11 +3,11 @@
 priv struct BodySignaturePool {
   types : Array[ResolvedType]
   arguments : Array[ResolvedTypeId]
-  buckets : Map[Int, Array[ResolvedTypeId]]
+  buckets : Map[Int32, Array[ResolvedTypeId]]
 }
 
 ///|
-fn body_signature_parts(type_ : ResolvedType) -> (Int, Int, HirSpan)? {
+fn body_signature_parts(type_ : ResolvedType) -> (Int32, Int32, HirSpan)? {
   match type_ {
     ProductType(span) => Some((1, -1, span))
     AppliedType(base, span) => Some((2, base, span))
@@ -18,11 +18,11 @@ fn body_signature_parts(type_ : ResolvedType) -> (Int, Int, HirSpan)? {
 
 ///|
 fn body_signature_hash(
-  kind : Int,
-  extra : Int,
-  arguments : Array[Int],
+  kind : Int32,
+  extra : Int32,
+  arguments : Array[Int32],
   span : HirSpan,
-) -> Int {
+) -> Int32 {
   guard arena_span_is_valid(span, arguments.length()) else {
     abort("body signature argument span is outside its arena")
   }
@@ -58,10 +58,10 @@ fn BodySignaturePool::new(resolved : ResolvedModuleTypes) -> BodySignaturePool {
 ///|
 fn BodySignaturePool::intern(
   self : BodySignaturePool,
-  kind : Int,
-  extra : Int,
-  arguments : Array[Int],
-) -> Int {
+  kind : Int32,
+  extra : Int32,
+  arguments : Array[Int32],
+) -> Int32 {
   let hash = body_signature_hash(kind, extra, arguments, {
     start: 0,
     length: arguments.length(),
@@ -112,9 +112,9 @@ fn BodySignaturePool::intern(
 fn body_signature_resolved_id(
   inferred : InferredModuleBodies,
   type_ : BodyTypeId,
-  mapping : Array[Int],
-  resolved_count : Int,
-) -> Int {
+  mapping : Array[Int32],
+  resolved_count : Int32,
+) -> Int32 {
   match inferred.type_term(type_) {
     BodyResolvedType(index) => {
       guard index >= 0 && index < resolved_count else {
@@ -131,7 +131,7 @@ fn materialize_body_function_types(
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
 ) -> ResolvedModuleTypes {
-  let roots : Array[Int] = []
+  let roots : Array[Int32] = []
   for index, type_ in inferred.types {
     if type_ is BodyFunctionType(_, _) {
       roots.push(index)
@@ -203,7 +203,7 @@ fn materialize_body_function_types(
           work.push((inferred.type_arguments[span.start + index], false))
         }
       } else {
-        let arguments : Array[Int] = []
+        let arguments : Array[Int32] = []
         let mut complete = true
         for index in 0..<span.length {
           let argument = body_signature_resolved_id(

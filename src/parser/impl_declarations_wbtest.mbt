@@ -1,5 +1,5 @@
 ///|
-fn large_impl_declaration(method_count : Int) -> Bytes {
+fn large_impl_declaration(method_count : Int32) -> Bytes {
   let output = Buffer(size_hint=method_count * 56)
   output.write_string_utf8("impl Large {\n")
   for index in 0..<method_count {

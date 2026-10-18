@@ -9,7 +9,7 @@ fn object_bench_module(
 }
 
 ///|
-fn wide_object_bench_source(field_count : Int) -> Bytes {
+fn wide_object_bench_source(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 48 + 128)
   output.write_string_utf8("struct Wide {\n")
   for index in 0..<field_count {
@@ -30,7 +30,7 @@ fn wide_object_bench_source(field_count : Int) -> Bytes {
 }
 
 ///|
-fn nested_object_bench_source(depth : Int, fields : Bool) -> Bytes {
+fn nested_object_bench_source(depth : Int32, fields : Bool) -> Bytes {
   let output = Buffer(size_hint=depth * 64 + 256)
   output.write_string_utf8("struct Node0 {\n  value: I32\n}\n")
   for index in 1..<=depth {
@@ -65,7 +65,7 @@ fn nested_object_bench_source(depth : Int, fields : Bool) -> Bytes {
 }
 
 ///|
-fn tuple_variant_bench_source(function_count : Int) -> Bytes {
+fn tuple_variant_bench_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 72 + 96)
   output.write_string_utf8("enum Maybe<t> {\n  None\n  Some(t)\n}\n")
   for index in 0..<function_count {
@@ -79,7 +79,7 @@ fn tuple_variant_bench_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn object_overload_bench_source(call_count : Int) -> Bytes {
+fn object_overload_bench_source(call_count : Int32) -> Bytes {
   let output = Buffer(size_hint=call_count * 64 + 192)
   output.write_string_utf8(
     "struct Point {\n  x: I32\n}\nbuiltin choose(value: I32) -> Bool = \"number\"\nbuiltin choose(value: Point) -> Bool = \"point\"\nfn use() -> Bool {\n",

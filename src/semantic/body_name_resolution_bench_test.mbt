@@ -1,5 +1,5 @@
 ///|
-fn body_name_function_source(function_count : Int) -> Bytes {
+fn body_name_function_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 132 + 32)
   output.write_string_utf8("let global = 1\n")
   for index in 0..<function_count {
@@ -13,7 +13,7 @@ fn body_name_function_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn body_name_match_source(arm_count : Int) -> Bytes {
+fn body_name_match_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 52 + 160)
   output.write_string_utf8(
     "enum State {\n  Value(I32)\n}\nfn select(state: State) -> I32 {\n  match state {\n",
@@ -28,7 +28,7 @@ fn body_name_match_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn body_name_wide_pattern_source(field_count : Int) -> Bytes {
+fn body_name_wide_pattern_source(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 96 + 256)
   output.write_string_utf8("enum Record {\n  A {\n")
   for index in 0..<field_count {
@@ -63,7 +63,7 @@ fn body_name_wide_pattern_source(field_count : Int) -> Bytes {
 }
 
 ///|
-fn body_name_local_source(local_count : Int) -> Bytes {
+fn body_name_local_source(local_count : Int32) -> Bytes {
   let output = Buffer(size_hint=local_count * 40 + 96)
   output.write_string_utf8("fn resolve(initial: I32) -> I32 {\n")
   for index in 0..<local_count {

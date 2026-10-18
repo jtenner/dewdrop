@@ -50,8 +50,8 @@ fn TypeResolver::ensure_substitution_slots(self : TypeResolver) -> Unit {
 fn TypeResolver::push_normalization_task(
   self : TypeResolver,
   type_ : ResolvedTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.normalization_task_types.push(type_)
   self.normalization_task_states.push(state)
@@ -67,8 +67,8 @@ fn TypeResolver::push_normalization_task(
 fn TypeResolver::push_substitution_task(
   self : TypeResolver,
   type_ : ResolvedTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.substitution_task_types.push(type_)
   self.substitution_task_states.push(state)
@@ -84,7 +84,7 @@ fn TypeResolver::push_substitution_task(
 fn TypeResolver::alias_index_for_constructor(
   self : TypeResolver,
   type_ : ResolvedTypeId,
-) -> Int? {
+) -> Int32? {
   match self.interner.types[type_] {
     NominalType(declaration) => self.alias_indices.get(declaration)
     _ => None
@@ -94,7 +94,7 @@ fn TypeResolver::alias_index_for_constructor(
 ///|
 fn TypeResolver::substitute_alias_target(
   self : TypeResolver,
-  alias_index : Int,
+  alias_index : Int32,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
   let declaration = self.collected.aliases[alias_index].declaration
@@ -308,7 +308,7 @@ fn TypeResolver::substitute_declared_type(
 ///|
 fn TypeResolver::can_expand_alias(
   self : TypeResolver,
-  alias_index : Int,
+  alias_index : Int32,
 ) -> Bool {
   if self.alias_is_cyclic[alias_index] {
     return false
@@ -335,7 +335,7 @@ fn TypeResolver::can_expand_alias(
 fn TypeResolver::finish_substituted_product(
   self : TypeResolver,
   original : ResolvedTypeId,
-  result_start : Int,
+  result_start : Int32,
 ) -> Unit {
   self.substitution_application_scratch.clear()
   append_int_result_range(
@@ -358,8 +358,8 @@ fn TypeResolver::finish_substituted_product(
 fn TypeResolver::finish_substituted_function(
   self : TypeResolver,
   original : ResolvedTypeId,
-  result_start : Int,
-  parameter_count : Int,
+  result_start : Int32,
+  parameter_count : Int32,
 ) -> Unit {
   self.substitution_application_scratch.clear()
   for index in 0..<parameter_count {
@@ -382,7 +382,7 @@ fn TypeResolver::finish_substituted_function(
 fn TypeResolver::finish_normal_product(
   self : TypeResolver,
   original : ResolvedTypeId,
-  result_start : Int,
+  result_start : Int32,
 ) -> Unit {
   self.normalization_application_scratch.clear()
   let mut poisoned = false
@@ -411,8 +411,8 @@ fn TypeResolver::finish_normal_product(
 fn TypeResolver::finish_normal_function(
   self : TypeResolver,
   original : ResolvedTypeId,
-  result_start : Int,
-  parameter_count : Int,
+  result_start : Int32,
+  parameter_count : Int32,
 ) -> Unit {
   self.normalization_application_scratch.clear()
   let mut poisoned = false
@@ -448,7 +448,7 @@ fn TypeResolver::finish_normal_function(
 fn TypeResolver::finish_normal_application(
   self : TypeResolver,
   original : ResolvedTypeId,
-  result_start : Int,
+  result_start : Int32,
 ) -> Unit {
   let base = self.normalization_results[result_start]
   self.normalization_application_scratch.clear()
@@ -478,7 +478,7 @@ fn TypeResolver::finish_normal_application(
 fn TypeResolver::finish_alias_arguments(
   self : TypeResolver,
   original : ResolvedTypeId,
-  result_start : Int,
+  result_start : Int32,
 ) -> Unit {
   let alias_index = match self.interner.types[original] {
     NominalType(_) => self.alias_index_for_constructor(original).unwrap()
@@ -745,7 +745,7 @@ fn TypeResolver::resolve_callable_function_types(self : TypeResolver) -> Unit {
 ///|
 fn TypeResolver::normalize_aliases(
   self : TypeResolver,
-  requested_limit : Int,
+  requested_limit : Int32,
 ) -> Unit {
   let scaled_limit = self.interner.types.length() * 64
   self.alias_expansion_limit = if requested_limit >= 0 {

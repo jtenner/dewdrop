@@ -1,5 +1,5 @@
 ///|
-fn large_object_declaration(field_count : Int) -> Bytes {
+fn large_object_declaration(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 16)
   output.write_string_utf8("let object = {\n")
   for index in 0..<field_count {

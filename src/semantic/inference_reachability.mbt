@@ -23,7 +23,7 @@ fn selected_inference_source(
   names : ResolvedModuleNames,
   declaration : DeclId,
   conditions : Map[ExprId, Bool],
-  selected_plan? : PlannedModuleLowering? = None,
+  selected_plan~ : PlannedModuleLowering? = None,
 ) -> (CollectedModule, InferenceReachability) {
   let source = {
     ..collected,
@@ -382,7 +382,7 @@ fn BasicBodyInferencer::live_pattern(
 ///|
 fn BasicBodyInferencer::live_local(
   self : BasicBodyInferencer,
-  local : Int,
+  local : Int32,
 ) -> Bool {
   match self.reachability {
     None => true

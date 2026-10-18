@@ -71,7 +71,7 @@ fn BasicBodyInferencer::guard_refine_with_facts(
   if bindings.is_empty() {
     return root
   }
-  fn refine(root : BodyTypeId, depth : Int) -> BodyTypeId {
+  fn refine(root : BodyTypeId, depth : Int32) -> BodyTypeId {
     if depth >= 256 {
       self.diagnose(
         BodyConstraintDiagnostic(

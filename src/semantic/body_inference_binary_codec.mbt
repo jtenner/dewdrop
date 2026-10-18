@@ -18,12 +18,12 @@ let inference_binary_maximum_text = 0x01000000
 let inference_binary_maximum_section = 0x10000000
 
 ///|
-fn ib_write_int(writer : @cache_binary.Writer, value : Int) -> Unit {
+fn ib_write_int(writer : @cache_binary.Writer, value : Int32) -> Unit {
   writer.write_zigzag_int(value)
 }
 
 ///|
-fn ib_read_int(reader : @cache_binary.Reader, field : String) -> Int {
+fn ib_read_int(reader : @cache_binary.Reader, field : String) -> Int32 {
   reader.read_zigzag_int(field)
 }
 
@@ -51,7 +51,7 @@ fn ib_read_span(reader : @cache_binary.Reader, field : String) -> HirSpan {
 ///|
 fn ib_write_int_array(
   writer : @cache_binary.Writer,
-  values : Array[Int],
+  values : Array[Int32],
 ) -> Unit {
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
@@ -63,9 +63,9 @@ fn ib_write_int_array(
 fn ib_read_int_array(
   reader : @cache_binary.Reader,
   field : String,
-) -> Array[Int] {
+) -> Array[Int32] {
   let count = reader.read_count(inference_binary_maximum_items, field)
-  let values : Array[Int] = []
+  let values : Array[Int32] = []
   for _ in 0..<count {
     values.push(ib_read_int(reader, field))
   }
@@ -1002,12 +1002,13 @@ fn ib_read_inference_diagnostic(
         ib_read_int(reader, field),
         reader.read_var_u64(field),
       )
-    46 => TraitObligationFailure(
-      ib_read_id(reader, field),
-      ib_read_int(reader, field),
-      reader.read_string(inference_binary_maximum_text, field),
-      reader.read_var_u64(field),
-    )
+    46 =>
+      TraitObligationFailure(
+        ib_read_id(reader, field),
+        ib_read_int(reader, field),
+        reader.read_string(inference_binary_maximum_text, field),
+        reader.read_var_u64(field),
+      )
     _ => {
       reader.fail(field, "unknown body-diagnostic discriminant")
       ReturnOutsideCallable(0UL)
@@ -2198,7 +2199,7 @@ fn ib_read_module_bodies(
 }
 
 ///|
-fn ib_span_valid(span : HirSpan, length : Int) -> Bool {
+fn ib_span_valid(span : HirSpan, length : Int32) -> Bool {
   span.start >= 0 &&
   span.length >= 0 &&
   span.start <= length &&
@@ -2206,12 +2207,12 @@ fn ib_span_valid(span : HirSpan, length : Int) -> Bool {
 }
 
 ///|
-fn ib_type_valid(type_ : BodyTypeId, length : Int) -> Bool {
+fn ib_type_valid(type_ : BodyTypeId, length : Int32) -> Bool {
   type_ < -1 || (type_ >= 0 && type_ < length)
 }
 
 ///|
-fn ib_types_valid(values : Array[BodyTypeId], length : Int) -> Bool {
+fn ib_types_valid(values : Array[BodyTypeId], length : Int32) -> Bool {
   for value in values {
     if !ib_type_valid(value, length) {
       return false
@@ -2317,10 +2318,7 @@ fn ib_validate_module_bodies(value : InferredModuleBodies) -> Bool {
     }
     match span {
       Some(arguments) =>
-        if !ib_span_valid(
-            arguments,
-            value.expression_type_arguments.length(),
-          ) {
+        if !ib_span_valid(arguments, value.expression_type_arguments.length()) {
           return false
         }
       None => ()
@@ -2571,7 +2569,7 @@ pub fn deserialize_body_inference_family_artifact(
 }
 
 ///|
-fn ib_hex_nibble(value : Byte) -> Int {
+fn ib_hex_nibble(value : Byte) -> Int32 {
   if value >= b'0' && value <= b'9' {
     value.to_int() - b'0'.to_int()
   } else if value >= b'a' && value <= b'f' {
@@ -2600,7 +2598,7 @@ fn ib_fingerprint_bytes(value : String) -> Bytes? {
 }
 
 ///|
-fn ib_compare_digest_bytes(left : Bytes, right : Bytes) -> Int {
+fn ib_compare_digest_bytes(left : Bytes, right : Bytes) -> Int32 {
   for index in 0..<32 {
     let order = left[index].to_int() - right[index].to_int()
     if order != 0 {
@@ -2615,10 +2613,10 @@ fn ib_compare_digest_bytes(left : Bytes, right : Bytes) -> Int {
 pub struct BodyInferenceFamilyBundleIndex {
   module_id : ModuleId
   fingerprints : Array[Bytes]
-  offsets : Array[Int]
-  lengths : Array[Int]
+  offsets : Array[Int32]
+  lengths : Array[Int32]
   payload : Bytes
-  data_start : Int
+  data_start : Int32
 }
 
 ///|
@@ -2631,7 +2629,7 @@ pub fn BodyInferenceFamilyBundleIndex::owner(
 ///|
 pub fn BodyInferenceFamilyBundleIndex::entry_count(
   self : BodyInferenceFamilyBundleIndex,
-) -> Int {
+) -> Int32 {
   self.fingerprints.length()
 }
 
@@ -2695,7 +2693,7 @@ pub fn serialize_body_inference_family_bundle(
   }
   let fingerprints : Array[Bytes] = []
   let sections : Array[Bytes] = []
-  let offsets : Array[Int] = []
+  let offsets : Array[Int32] = []
   let mut offset = 0
   for entry in bundle.entries {
     let fingerprint = match ib_fingerprint_bytes(entry.fingerprint) {
@@ -2763,8 +2761,8 @@ pub fn open_body_inference_family_bundle(
   }
   let data_start = reader.position()
   let data_length = payload.length() - data_start
-  let offsets : Array[Int] = []
-  let lengths : Array[Int] = []
+  let offsets : Array[Int32] = []
+  let lengths : Array[Int32] = []
   let mut expected_offset = 0UL
   for index in 0..<count {
     let offset = raw_offsets[index]

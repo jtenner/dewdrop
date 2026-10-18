@@ -1,5 +1,5 @@
 ///|
-fn bench_many_inherent_methods_source(method_count : Int) -> Bytes {
+fn bench_many_inherent_methods_source(method_count : Int32) -> Bytes {
   let output = Buffer(size_hint=method_count * 96 + 160)
   output.write_string_utf8("struct Item {}\nimpl Item {\n")
   for index in 0..<method_count {
@@ -22,7 +22,7 @@ fn bench_many_inherent_methods_source(method_count : Int) -> Bytes {
 }
 
 ///|
-fn bench_many_impl_buckets_source(implementation_count : Int) -> Bytes {
+fn bench_many_impl_buckets_source(implementation_count : Int32) -> Bytes {
   let output = Buffer(size_hint=implementation_count * 144 + 96)
   for index in 0..<implementation_count {
     output.write_string_utf8("struct Item")
@@ -37,7 +37,7 @@ fn bench_many_impl_buckets_source(implementation_count : Int) -> Bytes {
 }
 
 ///|
-fn trait_method_calls_source(call_count : Int, generic : Bool) -> Bytes {
+fn trait_method_calls_source(call_count : Int32, generic : Bool) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 256)
   if generic {
     output.write_string_utf8(
@@ -58,7 +58,7 @@ fn trait_method_calls_source(call_count : Int, generic : Bool) -> Bytes {
 }
 
 ///|
-fn bounded_trait_method_calls_source(call_count : Int) -> Bytes {
+fn bounded_trait_method_calls_source(call_count : Int32) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 352)
   output.write_string_utf8(
     "trait Marker {}\ntrait Read<t> {\n  fn read(self) -> t\n}\nstruct Box<a> {\n  value: a\n}\nimpl Marker for I32 {}\nimpl<a: Marker> Read<a> for Box<a> {\n  fn read(self) -> a {\n    self.value\n  }\n}\nfn use(value: Box<I32>) -> I32 {\n",
@@ -73,7 +73,7 @@ fn bounded_trait_method_calls_source(call_count : Int) -> Bytes {
 }
 
 ///|
-fn qualified_method_calls_source(call_count : Int, trait_ : Bool) -> Bytes {
+fn qualified_method_calls_source(call_count : Int32, trait_ : Bool) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 256)
   if trait_ {
     output.write_string_utf8(
@@ -100,7 +100,7 @@ fn qualified_method_calls_source(call_count : Int, trait_ : Bool) -> Bytes {
 }
 
 ///|
-fn imported_impl_library_source(implementation_count : Int) -> Bytes {
+fn imported_impl_library_source(implementation_count : Int32) -> Bytes {
   let output = Buffer(size_hint=implementation_count * 144 + 128)
   output.write_string_utf8("pub trait Value {\n  fn value(self) -> I32\n}\n")
   for index in 0..<implementation_count {
@@ -116,7 +116,7 @@ fn imported_impl_library_source(implementation_count : Int) -> Bytes {
 }
 
 ///|
-fn overlapping_impl_source(implementation_count : Int) -> Bytes {
+fn overlapping_impl_source(implementation_count : Int32) -> Bytes {
   let output = Buffer(size_hint=implementation_count * 96 + 128)
   output.write_string_utf8(
     "trait Value {\n  fn value(self) -> I32\n}\nstruct Box<t> {}\n",

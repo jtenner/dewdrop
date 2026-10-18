@@ -17,24 +17,24 @@ pub struct CompilerSourceDiagnostic {
   primary : SourceLocation
   has_primary : Bool
   secondary : Array[CompilerDiagnosticLabel]
-  module_order : Int
-  file_order : Int
-  rank : Int
+  module_order : Int32
+  file_order : Int32
+  rank : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct SourceLineColumn {
-  line : Int
-  column : Int
-  line_start : Int
-  line_end : Int
+  line : Int32
+  column : Int32
+  line_start : Int32
+  line_end : Int32
 } derive(Eq, Debug)
 
 ///|
 fn CollectedProgram::module_order_for_id(
   self : CollectedProgram,
   module_id : ModuleId,
-) -> Int {
+) -> Int32 {
   for index, module_ in self.modules {
     if module_.module_id == module_id {
       return index
@@ -71,7 +71,7 @@ pub fn CollectedProgram::source_file(
 fn CollectedProgram::source_order(
   self : CollectedProgram,
   location : SourceLocation,
-) -> (Int, Int) {
+) -> (Int32, Int32) {
   let module_order = self.module_order_for_id(file_id_module(location.file))
   if module_order >= self.modules.length() {
     return (module_order, 0)
@@ -121,7 +121,7 @@ fn compiler_diagnostic(
   message : String,
   primary : SourceLocation?,
   secondary : Array[CompilerDiagnosticLabel],
-  rank : Int,
+  rank : Int32,
 ) -> CompilerSourceDiagnostic {
   match primary {
     Some(location) => {
@@ -404,7 +404,7 @@ fn BodyInferenceDiagnostic::primary_location(
 fn BodyInferenceDiagnostic::secondary_labels(
   self : BodyInferenceDiagnostic,
   file : FileId,
-  program? : CollectedProgram? = None,
+  program~ : CollectedProgram? = None,
 ) -> Array[CompilerDiagnosticLabel] {
   let labels : Array[CompilerDiagnosticLabel] = []
   match self {
@@ -533,7 +533,7 @@ fn push_source_diagnostic(
   message : String,
   primary : SourceLocation?,
   secondary : Array[CompilerDiagnosticLabel],
-  rank : Int,
+  rank : Int32,
 ) -> Unit {
   diagnostics.push(
     compiler_diagnostic(program, severity, message, primary, secondary, rank),
@@ -1111,8 +1111,8 @@ fn collect_compiler_phase_diagnostics(
 fn write_source_line(
   output : Buffer,
   source : Bytes,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> Unit {
   for index in start..<end {
     output.write_byte(source[index])
@@ -1123,8 +1123,8 @@ fn write_source_line(
 fn write_caret_padding(
   output : Buffer,
   source : Bytes,
-  start : Int,
-  target : Int,
+  start : Int32,
+  target : Int32,
 ) -> Unit {
   for index in start..<target {
     if source[index] == b'\t' {

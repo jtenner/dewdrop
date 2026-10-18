@@ -9,7 +9,7 @@ fn resolve_compile_time_guarded_evidence(
   if module_.expression_evidence.is_empty() {
     return
   }
-  let seen : Map[Int, Bool] = {}
+  let seen : Map[Int32, Bool] = {}
   for expression, source in module_.expressions {
     if !compile_time_in_body(module_, expression, active) ||
       (active is None && compile_time_generic_expression(module_, expression)) ||

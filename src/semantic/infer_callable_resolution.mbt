@@ -21,7 +21,7 @@ fn BasicBodyInferencer::trait_declaration_named(
 fn BasicBodyInferencer::callable_index_of(
   self : BasicBodyInferencer,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   if semantic_id_module(declaration) != self.collected.module_id {
     -1
   } else {
@@ -91,7 +91,7 @@ fn BasicBodyInferencer::type_qualified_impl_target_head(
 fn BasicBodyInferencer::call_parameter_count(
   self : BasicBodyInferencer,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   if semantic_id_module(declaration) == self.collected.module_id {
     self.collected.parameters_of(declaration).length
   } else {
@@ -106,7 +106,7 @@ fn BasicBodyInferencer::call_parameter_count(
 fn BasicBodyInferencer::call_parameter_is_receiver(
   self : BasicBodyInferencer,
   declaration : DeclId,
-  index : Int,
+  index : Int32,
 ) -> Bool {
   if semantic_id_module(declaration) == self.collected.module_id {
     let parameters = self.collected.parameters_of(declaration)
@@ -123,7 +123,7 @@ fn BasicBodyInferencer::call_parameter_is_receiver(
 fn BasicBodyInferencer::call_parameter_type(
   self : BasicBodyInferencer,
   declaration : DeclId,
-  index : Int,
+  index : Int32,
 ) -> ResolvedTypeId {
   if semantic_id_module(declaration) == self.collected.module_id {
     let parameters = self.collected.parameters_of(declaration)
@@ -230,7 +230,7 @@ fn BasicBodyInferencer::call_function_type(
 fn BasicBodyInferencer::call_generic_count(
   self : BasicBodyInferencer,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   if semantic_id_module(declaration) == self.collected.module_id {
     self.collected.generic_parameters_of(declaration).length
   } else {
@@ -258,8 +258,8 @@ fn BasicBodyInferencer::explicit_call_type_arguments(
 fn BasicBodyInferencer::apply_explicit_call_type_arguments(
   self : BasicBodyInferencer,
   expression : ExprId,
-  candidate_start : Int,
-  candidate_count : Int,
+  candidate_start : Int32,
+  candidate_count : Int32,
 ) -> Bool {
   let explicit = self.explicit_call_type_arguments(expression)
   if explicit.length == 0 {
@@ -301,7 +301,7 @@ fn BasicBodyInferencer::explicit_call_type_arity_matches(
 ///|
 fn BasicBodyInferencer::diagnose_call_type_arity(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   declaration : DeclId,
   offset : UInt64,
@@ -377,7 +377,7 @@ fn BasicBodyInferencer::call_has_object_argument(
 ///|
 fn BasicBodyInferencer::select_call_candidate(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   declaration : DeclId,
@@ -480,7 +480,7 @@ fn BasicBodyInferencer::resolved_function_signature(
 ///|
 fn BasicBodyInferencer::select_function_value_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   target : ExprId,
   arguments : HirSpan,
@@ -520,7 +520,7 @@ fn BasicBodyInferencer::select_function_value_call(
 ///|
 fn BasicBodyInferencer::record_invalid_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   offset : UInt64,
 ) -> Unit {
@@ -532,12 +532,12 @@ fn BasicBodyInferencer::record_invalid_call(
 ///|
 fn BasicBodyInferencer::prepare_imported_value_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   target : ExprId,
   arguments : HirSpan,
   offset : UInt64,
-  head : Int,
+  head : Int32,
 ) -> Unit {
   match self.imports {
     Some(imports) => {
@@ -581,7 +581,7 @@ fn BasicBodyInferencer::prepare_imported_value_call(
 ///|
 fn BasicBodyInferencer::prepare_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   target : ExprId,
   arguments : HirSpan,

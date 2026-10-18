@@ -139,7 +139,9 @@ fn fold_program_compile_time_queries(
       }
     }
     fold_module_compile_time_queries(context, index, module_, bindings, None)
-    lowering.modules[index] = compile_time_initialization(context, index, module_)
+    lowering.modules[index] = compile_time_initialization(
+      context, index, module_,
+    )
   }
   { ..lowering, compile_time: Some(context), }
 }
@@ -147,11 +149,11 @@ fn fold_program_compile_time_queries(
 ///|
 fn fold_module_compile_time_queries(
   context : CompileTimeProgramContext,
-  module_index : Int,
+  module_index : Int32,
   module_ : PlannedModuleLowering,
   bindings : Map[CompileTimeBindingKey, CompileTimeType],
   active : DeclId?,
-  selected_conditions? : Map[ExprId, Bool]? = None,
+  selected_conditions~ : Map[ExprId, Bool]? = None,
 ) -> Unit {
   let mut has_queries = context.program.modules[module_index].expressions.any(source => {
     source is HirTypeBindingExpr(_, _)
@@ -166,7 +168,7 @@ fn fold_module_compile_time_queries(
   if !has_queries {
     return
   }
-  let errors : Map[Int, String] = Map([])
+  let errors : Map[Int32, String] = Map([])
   let mut evidence : CompileTimeEvidenceSearch? = None
   for index, source in module_.expressions {
     if !compile_time_in_body(module_, index, active) ||

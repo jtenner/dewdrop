@@ -1,5 +1,5 @@
 ///|
-fn module_value_chain_bench_source(length : Int) -> Bytes {
+fn module_value_chain_bench_source(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 32)
   for index in 0..<length {
     output.write_string_utf8("let value_")
@@ -17,7 +17,7 @@ fn module_value_chain_bench_source(length : Int) -> Bytes {
 }
 
 ///|
-fn independent_module_values_source(count : Int) -> Bytes {
+fn independent_module_values_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 24)
   for index in 0..<count {
     output.write_string_utf8("let value_")
@@ -30,7 +30,7 @@ fn independent_module_values_source(count : Int) -> Bytes {
 }
 
 ///|
-fn constrained_module_value_cycle_source(count : Int) -> Bytes {
+fn constrained_module_value_cycle_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 32)
   for index in 0..<count {
     output.write_string_utf8("let value_")
@@ -46,7 +46,7 @@ fn constrained_module_value_cycle_source(count : Int) -> Bytes {
 }
 
 ///|
-fn module_value_function_import_source(function_count : Int) -> Bytes {
+fn module_value_function_import_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 80 + 32)
   output.write_string_utf8("let base = 1\n")
   for index in 0..<function_count {
@@ -58,7 +58,7 @@ fn module_value_function_import_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn applied_module_value_function_source(function_count : Int) -> Bytes {
+fn applied_module_value_function_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 72 + 160)
   output.write_string_utf8("struct Box<t> {\n  value: t\n}\n")
   output.write_string_utf8("builtin box<t>(value: t) -> Box<t> = \"box\"\n")

@@ -3,9 +3,9 @@
 /// integer stacks. It is called at push/pop boundaries, not inside indexed hot
 /// loops.
 fn assert_aligned_traversal_stacks(
-  tasks : Int,
-  states : Int,
-  result_starts : Int,
+  tasks : Int32,
+  states : Int32,
+  result_starts : Int32,
 ) -> Unit {
   guard tasks == states && tasks == result_starts else {
     abort("iterative traversal stacks are not aligned")
@@ -14,10 +14,10 @@ fn assert_aligned_traversal_stacks(
 
 ///|
 fn assert_aligned_traversal_stacks4(
-  owners : Int,
-  tasks : Int,
-  states : Int,
-  result_starts : Int,
+  owners : Int32,
+  tasks : Int32,
+  states : Int32,
+  result_starts : Int32,
 ) -> Unit {
   guard owners == tasks && tasks == states && tasks == result_starts else {
     abort("iterative traversal stacks are not aligned")
@@ -27,7 +27,7 @@ fn assert_aligned_traversal_stacks4(
 ///|
 /// Advances reusable generation marks without clearing on ordinary traversals.
 /// A wrapped generation clears marks once and resumes at generation one.
-fn next_traversal_generation(marks : Array[Int], generation : Int) -> Int {
+fn next_traversal_generation(marks : Array[Int32], generation : Int32) -> Int32 {
   let next = generation + 1
   if next == 0 {
     marks.fill(0)
@@ -39,10 +39,10 @@ fn next_traversal_generation(marks : Array[Int], generation : Int) -> Int {
 
 ///|
 fn append_int_result_range(
-  source : Array[Int],
-  start : Int,
-  end : Int,
-  target : Array[Int],
+  source : Array[Int32],
+  start : Int32,
+  end : Int32,
+  target : Array[Int32],
 ) -> Unit {
   guard start >= 0 && start <= end && end <= source.length() else {
     abort("iterative traversal result range is invalid")

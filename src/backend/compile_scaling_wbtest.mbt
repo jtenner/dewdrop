@@ -3,7 +3,7 @@ test "effect worklist equals full fixed point on chains cycles and unknown calls
   let empty = @representation.EffectMask::empty()
   let all = starshine_fact_all_effects()
   // Chain, diamond, cycle, self-call, import and two invalid callee indices.
-  let calls : Array[Array[UInt]] = [
+  let calls : Array[Array[UInt32]] = [
     [1U],
     [2U],
     [3U],
@@ -48,7 +48,7 @@ test "effect worklist equals full fixed point on chains cycles and unknown calls
   assert_eq(actual[10], empty)
   assert_eq(actual[0], all)
   // Reverse declaration order must have the same result.
-  let reverse_calls : Array[Array[UInt]] = [[], [0U], [1U], [2U]]
+  let reverse_calls : Array[Array[UInt32]] = [[], [0U], [1U], [2U]]
   let reverse = [all, empty, empty, empty]
   starshine_propagate_fact_effects(reverse, reverse_calls)
   assert_eq(reverse, [all, all, all, all])

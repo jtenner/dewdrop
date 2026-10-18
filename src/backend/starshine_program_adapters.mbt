@@ -17,8 +17,8 @@ fn starshine_program_adapter_helper_arguments_equal(
 ///|
 fn starshine_program_add_adapter_cycle_helper(
   helpers : Array[StarshineProgramAdapterHelper],
-  adapter_function : Int,
-  module_index : Int,
+  adapter_function : Int32,
+  module_index : Int32,
   declaration : @semantic.DeclId,
   actual_arguments : Array[@semantic.ResolvedTypeId],
 ) -> Unit {
@@ -55,8 +55,8 @@ fn starshine_program_add_adapter_cycle_helper(
 fn starshine_program_collect_adapter_cycle_helpers(
   lowering : @semantic.PlannedModuleLowering,
   helpers : Array[StarshineProgramAdapterHelper],
-  adapter_function : Int,
-  module_index : Int,
+  adapter_function : Int32,
+  module_index : Int32,
   type_ : @semantic.ResolvedTypeId,
   owner_layout : @semantic.PlannedNominalLayout?,
   owner_arguments : Array[@semantic.ResolvedTypeId],
@@ -232,7 +232,7 @@ fn starshine_program_adapter_context_argument(
 }
 
 ///|
-fn starshine_program_callback_result_codes(code : Int) -> Array[Int] {
+fn starshine_program_callback_result_codes(code : Int32) -> Array[Int32] {
   if code >= 0 {
     [code]
   } else {
@@ -244,7 +244,7 @@ fn starshine_program_callback_result_codes(code : Int) -> Array[Int] {
 fn starshine_program_resolved_type_code(
   lowering : @semantic.PlannedModuleLowering,
   type_ : @semantic.ResolvedTypeId,
-) -> Int {
+) -> Int32 {
   if type_ < 0 || type_ >= lowering.resolved_types.length() {
     return -1
   }
@@ -300,7 +300,7 @@ fn starshine_program_add_callback_wrappers(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   wrappers : Array[StarshineProgramCallbackWrapper],
-  adapter_function : Int,
+  adapter_function : Int32,
   function_type : @semantic.ResolvedTypeId,
   owner_layout : @semantic.PlannedNominalLayout?,
   owner_arguments : Array[@semantic.ResolvedTypeId],
@@ -346,8 +346,8 @@ fn starshine_program_add_callback_wrappers(
     }
   }
   let parameter_types : Array[@semantic.ResolvedTypeId] = []
-  let source_parameter_codes : Array[Int] = []
-  let target_parameter_codes : Array[Int] = []
+  let source_parameter_codes : Array[Int32] = []
+  let target_parameter_codes : Array[Int32] = []
   let mut runtime_index = 0
   for index in 0..<parameters.length {
     let parameter = starshine_program_adapter_context_argument(
@@ -408,7 +408,7 @@ fn starshine_program_add_callback_wrappers(
     source_parameter_codes,
     starshine_program_callback_result_codes(source_result_code),
   )
-  let source_entry_parameters : Array[Int] = [5]
+  let source_entry_parameters : Array[Int32] = [5]
   for code in source_parameter_codes {
     source_entry_parameters.push(code)
   }
@@ -422,7 +422,7 @@ fn starshine_program_add_callback_wrappers(
     target_parameter_codes,
     starshine_program_callback_result_codes(target_result_code),
   )
-  let target_entry_parameters : Array[Int] = [5]
+  let target_entry_parameters : Array[Int32] = [5]
   for code in target_parameter_codes {
     target_entry_parameters.push(code)
   }
@@ -459,7 +459,7 @@ fn starshine_program_collect_callback_wrappers(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   wrappers : Array[StarshineProgramCallbackWrapper],
-  adapter_function : Int,
+  adapter_function : Int32,
   root : @semantic.ResolvedTypeId,
   owner_layout : @semantic.PlannedNominalLayout?,
   owner_arguments : Array[@semantic.ResolvedTypeId],
@@ -886,8 +886,8 @@ fn starshine_program_adapter_helper_plan(
 
 ///|
 fn starshine_program_callback_codes_equal(
-  left : Array[Int],
-  right : Array[Int],
+  left : Array[Int32],
+  right : Array[Int32],
 ) -> Bool {
   if left.length() != right.length() {
     return false
@@ -902,8 +902,8 @@ fn starshine_program_callback_codes_equal(
 
 ///|
 fn starshine_program_callback_signature_type(
-  parameter_codes : Array[Int],
-  result_code : Int,
+  parameter_codes : Array[Int32],
+  result_code : Int32,
   entry : Bool,
 ) -> @lib.RecType? {
   let parameters : Array[@lib.ValType] = []
@@ -933,13 +933,13 @@ fn starshine_program_callback_signature_type(
 ///|
 fn starshine_program_callback_signature_index(
   helper_plan : StarshineProgramAdapterHelperPlan,
-  wrapper_index : Int,
-  parameter_codes : Array[Int],
-  result_code : Int,
+  wrapper_index : Int32,
+  parameter_codes : Array[Int32],
+  result_code : Int32,
   entry : Bool,
-  existing : Int,
+  existing : Int32,
   rec_types : Array[@lib.RecType],
-) -> Int {
+) -> Int32 {
   if existing >= 0 {
     return existing
   }
@@ -1165,7 +1165,7 @@ fn starshine_program_adapter_eq_field(
 ///|
 fn starshine_program_erased_adapter_shape_box_slot(
   shape : @semantic.PlannedValueShape,
-) -> Int {
+) -> Int32 {
   match shape {
     @semantic.I8PlannedValueShape
     | @semantic.U8PlannedValueShape
@@ -1218,7 +1218,7 @@ fn starshine_program_append_cycle_adapter_helper_call(
   function_ : @semantic.PlannedProgramWasmFunction,
   declaration : @semantic.DeclId,
   actual_arguments : Array[@semantic.ResolvedTypeId],
-  source_local : Int,
+  source_local : Int32,
   to_erased : Bool,
   output : Array[@lib.Instruction],
 ) -> Bool {
@@ -1260,13 +1260,13 @@ fn starshine_program_append_nominal_enum_adapter(
   callable : @semantic.PlannedCallable,
   declaration : @semantic.DeclId,
   actual_arguments : Array[@semantic.ResolvedTypeId],
-  source_local : Int,
+  source_local : Int32,
   to_erased : Bool,
   output : Array[@lib.Instruction],
   adapter_locals : Array[@lib.ValType],
   active : Array[@semantic.DeclId],
   helper_plan : StarshineProgramAdapterHelperPlan,
-  parameter_count : Int,
+  parameter_count : Int32,
 ) -> Bool {
   for current in active {
     if current == declaration {
@@ -1655,13 +1655,13 @@ fn starshine_program_append_nominal_aggregate_adapter(
   callable : @semantic.PlannedCallable,
   declaration : @semantic.DeclId,
   actual_arguments : Array[@semantic.ResolvedTypeId],
-  source_local : Int,
+  source_local : Int32,
   to_erased : Bool,
   output : Array[@lib.Instruction],
   adapter_locals : Array[@lib.ValType],
   active : Array[@semantic.DeclId],
   helper_plan : StarshineProgramAdapterHelperPlan,
-  parameter_count : Int,
+  parameter_count : Int32,
 ) -> Bool {
   for current in active {
     if current == declaration {
@@ -1965,12 +1965,12 @@ fn starshine_program_append_recursive_aggregate_adapter(
   function_ : @semantic.PlannedProgramWasmFunction,
   callable : @semantic.PlannedCallable,
   type_ : @semantic.ResolvedTypeId,
-  source_local : Int,
+  source_local : Int32,
   to_erased : Bool,
   output : Array[@lib.Instruction],
   adapter_locals : Array[@lib.ValType],
   helper_plan : StarshineProgramAdapterHelperPlan,
-  parameter_count : Int,
+  parameter_count : Int32,
 ) -> Bool {
   if type_ < 0 || type_ >= lowering.resolved_types.length() {
     return false
@@ -2009,9 +2009,9 @@ fn starshine_program_append_recursive_aggregate_adapter(
 ///|
 fn starshine_program_erased_adapter_cast_index(
   planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   type_ : @semantic.PlannedWasmValueType,
-) -> Int {
+) -> Int32 {
   match type_ {
     @semantic.WasmFunctionRefValue(local_type) =>
       planned.signature_type_index(module_index, local_type)
@@ -2031,7 +2031,7 @@ fn starshine_program_erased_adapter_cast_index(
 ///|
 fn starshine_program_erased_adapter_box_slot(
   type_ : @semantic.PlannedWasmValueType,
-) -> Int {
+) -> Int32 {
   match type_ {
     @semantic.WasmI32Value => 0
     @semantic.WasmI64Value => 1
@@ -2080,7 +2080,7 @@ fn starshine_program_callback_wrapper(
 fn starshine_program_append_callback_wrapper_from_local(
   output : Array[@lib.Instruction],
   wrapper : StarshineProgramCallbackWrapper,
-  source_local : Int,
+  source_local : Int32,
 ) -> Unit {
   output.push(
     @lib.Instruction::ref_func(
@@ -2107,7 +2107,8 @@ fn starshine_program_erased_adapter_body(
   helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let target = function_.erased_adapter_target
-  let target_function = match planned.erased_adapter_target_function(function_) {
+  let target_function = match
+    planned.erased_adapter_target_function(function_) {
     Some(value) => value
     None => return Err(MissingFunction(function_.declaration))
   }
@@ -2303,7 +2304,7 @@ fn starshine_program_erased_adapter_body(
 }
 
 ///|
-fn starshine_program_adapter_code_val_type(code : Int) -> @lib.ValType? {
+fn starshine_program_adapter_code_val_type(code : Int32) -> @lib.ValType? {
   match code {
     0 => Some(@lib.ValType::i32())
     1 => Some(@lib.ValType::i64())
@@ -2319,9 +2320,9 @@ fn starshine_program_adapter_code_val_type(code : Int) -> @lib.ValType? {
 fn starshine_program_append_adapter_code_local_conversion(
   planned : @semantic.PlannedProgramWasmGCLink,
   output : Array[@lib.Instruction],
-  local_index : Int,
-  source_code : Int,
-  target_code : Int,
+  local_index : Int32,
+  source_code : Int32,
+  target_code : Int32,
 ) -> Bool {
   output.push(
     @lib.Instruction::local_get(
@@ -2364,8 +2365,8 @@ fn starshine_program_append_adapter_code_local_conversion(
 fn starshine_program_append_adapter_code_result_conversion(
   planned : @semantic.PlannedProgramWasmGCLink,
   output : Array[@lib.Instruction],
-  source_code : Int,
-  target_code : Int,
+  source_code : Int32,
+  target_code : Int32,
 ) -> Bool {
   if source_code == target_code || source_code < 0 || target_code < 0 {
     return source_code == target_code

@@ -1,5 +1,8 @@
 ///|
-fn repeated_benchmark_expression(term_count : Int, operator : String) -> Bytes {
+fn repeated_benchmark_expression(
+  term_count : Int32,
+  operator : String,
+) -> Bytes {
   let output = Buffer(size_hint=term_count * (operator.length() + 1))
   for index in 0..<term_count {
     if index > 0 {
@@ -11,7 +14,7 @@ fn repeated_benchmark_expression(term_count : Int, operator : String) -> Bytes {
 }
 
 ///|
-fn postfix_benchmark_expression(chain_count : Int) -> Bytes {
+fn postfix_benchmark_expression(chain_count : Int32) -> Bytes {
   let output = Buffer(size_hint=chain_count * 16 + 4)
   output.write_string_utf8("root")
   for _ in 0..<chain_count {
@@ -21,7 +24,7 @@ fn postfix_benchmark_expression(chain_count : Int) -> Bytes {
 }
 
 ///|
-fn named_benchmark_expression(term_count : Int) -> Bytes {
+fn named_benchmark_expression(term_count : Int32) -> Bytes {
   let output = Buffer(size_hint=term_count * 8)
   for index in 0..<term_count {
     if index > 0 {
@@ -33,7 +36,7 @@ fn named_benchmark_expression(term_count : Int) -> Bytes {
 }
 
 ///|
-fn qualified_benchmark_expression(property_count : Int) -> Bytes {
+fn qualified_benchmark_expression(property_count : Int32) -> Bytes {
   let output = Buffer(size_hint=property_count * 12 + 4)
   output.write_string_utf8("Root")
   for index in 0..<property_count {

@@ -1,17 +1,30 @@
 ///|
 test "compile time overloads: qualified failures retain source diagnostics" {
-  let program = collect_program_manifest(24010UL, ProgramManifest::new([
-    ManifestModule::new("app.main", [ManifestFile::new("main.dew", b"open dew.std.types\nimport app.library as @raw\nfn select<T>(value: T) -> T {\n  if is_integer::<T>() {\n    @raw.consume(value, true)\n  } else {\n    value\n  }\n}\npub fn main() -> I64 {\n  select(7i32)\n  select(())\n  select(7i64)\n}\n")]),
-    ManifestModule::new("app.library", [ManifestFile::new("library.dew", b"pub builtin consume(value: I32, right: I32) -> I32 = \"i32.add\"\npub builtin consume(value: I64, right: I64) -> I64 = \"i64.add\"\n")]),
-  ]))
+  let program = collect_program_manifest(
+    24010UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.types\nimport app.library as @raw\nfn select<T>(value: T) -> T {\n  if is_integer::<T>() {\n    @raw.consume(value, true)\n  } else {\n    value\n  }\n}\npub fn main() -> I64 {\n  select(7i32)\n  select(())\n  select(7i64)\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.library", [
+        ManifestFile::new(
+          "library.dew", b"pub builtin consume(value: I32, right: I32) -> I32 = \"i32.add\"\npub builtin consume(value: I64, right: I64) -> I64 = \"i64.add\"\n",
+        ),
+      ]),
+    ]),
+  )
   assert_eq(program.diagnostics, [])
   for module_ in program.modules {
     assert_eq(module_.diagnostics, [])
   }
   let analyzed = analyze_program_semantics(program)
-  assert_true(analyzed.modules[0].inferred.diagnostics.any(diagnostic => {
-    diagnostic is NoMatchingCallOverload(_, _, _)
-  }))
+  assert_true(
+    analyzed.modules[0].inferred.diagnostics.any(diagnostic => {
+      diagnostic is NoMatchingCallOverload(_, _, _)
+    }),
+  )
 }
 
 ///|

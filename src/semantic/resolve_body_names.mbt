@@ -71,7 +71,7 @@ priv struct BodyNameResolver {
   locals : Array[BodyLocal]
   controls : Array[BodyControl]
   captures : Array[LambdaCapture]
-  capture_lookup : Map[NameId, Int]
+  capture_lookup : Map[NameId, Int32]
   expression_references : Array[BodyNameReference]
   pattern_references : Array[BodyPatternReference]
   parameter_span : HirSpan
@@ -81,24 +81,24 @@ priv struct BodyNameResolver {
   expression_controls : Array[ControlId]
   diagnostics : Array[BodyResolutionDiagnostic]
   current_locals : Map[NameId, LocalId]
-  scope_markers : Array[Int]
+  scope_markers : Array[Int32]
   scope_names : Array[NameId]
   scope_locals : Array[LocalId]
   scope_previous : Array[LocalId]
   control_stack : Array[ControlId]
-  task_kinds : Array[Int]
-  task_first : Array[Int]
-  task_second : Array[Int]
+  task_kinds : Array[Int32]
+  task_first : Array[Int32]
+  task_second : Array[Int32]
   pattern_stack : Array[PatternId]
   pattern_contexts : Array[Bool]
   binding_names : Array[NameId]
   binding_patterns : Array[PatternId]
   binding_offsets : Array[UInt64]
-  binding_first_lookup : Map[NameId, Int]
+  binding_first_lookup : Map[NameId, Int32]
   canonical_names : Array[NameId]
   canonical_locals : Array[LocalId]
   canonical_offsets : Array[UInt64]
-  canonical_lookup : Map[NameId, Int]
+  canonical_lookup : Map[NameId, Int32]
   alternative_seen : Array[Bool]
   pattern_literal_expressions : Array[ExprId]
   lambda_environment_ids : Array[LambdaId]
@@ -273,7 +273,7 @@ fn BodyNameResolver::module_value_visible(
 fn BodyNameResolver::expression_index(
   self : BodyNameResolver,
   expression : ExprId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyExpressions, expression, 1)
 }
 
@@ -281,15 +281,15 @@ fn BodyNameResolver::expression_index(
 fn BodyNameResolver::pattern_index(
   self : BodyNameResolver,
   pattern : PatternId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyPatterns, pattern, 1)
 }
 
 ///|
 fn BodyNameResolver::block_item_index(
   self : BodyNameResolver,
-  item : Int,
-) -> Int {
+  item : Int32,
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyBlockItems, item, 1)
 }
 
@@ -304,9 +304,9 @@ fn BodyNameResolver::diagnose(
 ///|
 fn BodyNameResolver::push_task(
   self : BodyNameResolver,
-  kind : Int,
-  first : Int,
-  second : Int,
+  kind : Int32,
+  first : Int32,
+  second : Int32,
 ) -> Unit {
   self.task_kinds.push(kind)
   self.task_first.push(first)
@@ -348,7 +348,7 @@ fn BodyNameResolver::allocate_local(
   name : NameId,
   kind : BodyLocalKind,
   mutable_ : Bool,
-  source : Int,
+  source : Int32,
   offset : UInt64,
 ) -> LocalId {
   let id = self.locals.length()
@@ -469,7 +469,7 @@ fn BodyNameResolver::resolve_expression_name(
   expression : ExprId,
   name : NameId,
   offset : UInt64,
-  expectation : Int,
+  expectation : Int32,
 ) -> Unit {
   let local_id = self.current_locals.get(name).unwrap_or(-1)
   if local_id >= 0 {
@@ -995,9 +995,9 @@ fn BodyNameResolver::prepare_binding_lookup(self : BodyNameResolver) -> Unit {
 ///|
 fn BodyNameResolver::binding_first_index(
   self : BodyNameResolver,
-  before : Int,
+  before : Int32,
   name : NameId,
-) -> Int {
+) -> Int32 {
   if self.binding_names.length() > 8 {
     let first = self.binding_first_lookup.get(name).unwrap_or(-1)
     if first < before {
@@ -1029,7 +1029,7 @@ fn BodyNameResolver::rebuild_canonical_lookup(self : BodyNameResolver) -> Unit {
 fn BodyNameResolver::canonical_index(
   self : BodyNameResolver,
   name : NameId,
-) -> Int {
+) -> Int32 {
   if self.canonical_names.length() > 8 {
     self.canonical_lookup.get(name).unwrap_or(-1)
   } else {
@@ -1173,7 +1173,7 @@ fn BodyNameResolver::resolve_arm_pattern(
 }
 
 ///|
-fn BodyResolutionDiagnostic::rank(self : BodyResolutionDiagnostic) -> Int {
+fn BodyResolutionDiagnostic::rank(self : BodyResolutionDiagnostic) -> Int32 {
   match self {
     UnknownValueName(_, _, _) => 0
     AmbiguousImportedValueName(_, _, _) => 1
@@ -1206,7 +1206,7 @@ fn BodyNameResolver::sort_diagnostics(self : BodyNameResolver) -> Unit {
 fn BodyNameResolver::schedule_expression_children(
   self : BodyNameResolver,
   expression : ExprId,
-  expectation : Int,
+  expectation : Int32,
 ) -> Unit {
   match self.collected.expressions[expression] {
     HirTypeBindingExpr(_, _) => ()
@@ -1432,8 +1432,8 @@ fn BodyNameResolver::schedule_block(
 ///|
 fn BodyNameResolver::visit_block_items(
   self : BodyNameResolver,
-  item : Int,
-  remaining : Int,
+  item : Int32,
+  remaining : Int32,
 ) -> Unit {
   if remaining <= 0 {
     return
@@ -1450,7 +1450,7 @@ fn BodyNameResolver::visit_block_items(
 }
 
 ///|
-fn BodyNameResolver::bind_let(self : BodyNameResolver, item : Int) -> Unit {
+fn BodyNameResolver::bind_let(self : BodyNameResolver, item : Int32) -> Unit {
   match self.collected.block_items[item] {
     HirLetItem(mutable_, name, name_offset, _, _) => {
       let local_id = self.allocate_local(
@@ -1470,8 +1470,8 @@ fn BodyNameResolver::bind_let(self : BodyNameResolver, item : Int) -> Unit {
 ///|
 fn BodyNameResolver::visit_arm_list(
   self : BodyNameResolver,
-  start : Int,
-  remaining : Int,
+  start : Int32,
+  remaining : Int32,
 ) -> Unit {
   if remaining <= 0 {
     return
@@ -1798,7 +1798,7 @@ fn propagate_transitive_lambda_captures(
 fn resolve_module_names_with_imports_in_order(
   collected : CollectedModule,
   imports : ModuleImportScope?,
-  order : Array[Int],
+  order : Array[Int32],
 ) -> ResolvedModuleNames {
   guard order.length() == collected.bodies.length() else {
     abort("body name-resolution order has the wrong length")
@@ -1853,7 +1853,7 @@ fn resolve_module_names_with_imports_in_order(
 ///|
 fn resolve_module_names_in_order(
   collected : CollectedModule,
-  order : Array[Int],
+  order : Array[Int32],
 ) -> ResolvedModuleNames {
   resolve_module_names_with_imports_in_order(collected, None, order)
 }
@@ -1866,7 +1866,7 @@ pub fn resolve_module_names_with_imports(
   guard collected.module_id == imports.module_id else {
     abort("name import scope belongs to another module")
   }
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }
@@ -1878,7 +1878,7 @@ pub fn resolve_module_names_with_imports(
 /// control targets for every executable body. Body jobs are independent and
 /// their results are merged in stable BodyId order.
 pub fn resolve_module_names(collected : CollectedModule) -> ResolvedModuleNames {
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }

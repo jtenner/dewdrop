@@ -359,7 +359,7 @@ test "basic inference result is independent of body job order" {
 }
 
 ///|
-fn deeply_negated_function(depth : Int) -> Bytes {
+fn deeply_negated_function(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth + 64)
   output.write_string_utf8("fn deep() -> Bool {\n  ")
   for _ in 0..<depth {

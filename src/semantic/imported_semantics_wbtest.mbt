@@ -1,12 +1,11 @@
 ///|
 test "imported function values retain signatures after private callables" {
-  for consumer in [
-    b"open app.library\npub fn factory() -> fn(I64) -> I64 {\n  read\n}\n",
-    b"import app.library as @lib\npub fn run() -> I64 {\n  @lib.read(42i64)\n}\n",
-  ] {
+  for
+    consumer in [
+      b"open app.library\npub fn factory() -> fn(I64) -> I64 {\n  read\n}\n", b"import app.library as @lib\npub fn run() -> I64 {\n  @lib.read(42i64)\n}\n",
+    ] {
     let (program, frozen, imports, names, inferred) = imported_semantic_program(
-      consumer,
-      b"fn hidden(value: I32) -> I32 {\n  value\n}\npub fn read(value: I64) -> I64 {\n  value\n}\n",
+      consumer, b"fn hidden(value: I32) -> I32 {\n  value\n}\npub fn read(value: I64) -> I64 {\n  value\n}\n",
     )
     assert_eq(frozen.import_diagnostics.length(), 0)
     assert_eq(names.diagnostics.length(), 0)
@@ -35,8 +34,7 @@ test "imported function values retain signatures after private callables" {
 ///|
 test "imported generic function values retain binders after private callables" {
   let (_, frozen, imports, names, inferred) = imported_semantic_program(
-    b"open app.library\npub fn factory() -> fn(I64) -> I64 {\n  read\n}\n",
-    b"fn hidden(value: I32) -> I32 {\n  value\n}\npub fn read<t>(value: t) -> t {\n  value\n}\n",
+    b"open app.library\npub fn factory() -> fn(I64) -> I64 {\n  read\n}\n", b"fn hidden(value: I32) -> I32 {\n  value\n}\npub fn read<t>(value: t) -> t {\n  value\n}\n",
   )
   assert_eq(frozen.import_diagnostics.length(), 0)
   assert_eq(names.diagnostics.length(), 0)
@@ -49,10 +47,11 @@ test "imported generic function values retain binders after private callables" {
       assert_eq(parameters.length, 1)
       assert_eq(resolved.type_arguments[parameters.start], result)
       match resolved.types[result] {
-        GenericParameterType(parameter) => assert_eq(
-          semantic_id_module(parameter),
-          frozen.interfaces[1].module_id,
-        )
+        GenericParameterType(parameter) =>
+          assert_eq(
+            semantic_id_module(parameter),
+            frozen.interfaces[1].module_id,
+          )
         _ => fail("the imported function retains its own generic binder")
       }
     }

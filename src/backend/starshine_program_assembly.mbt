@@ -531,7 +531,8 @@ fn emit_starshine_program_function_body(
         helper_plan: Some(helper_plan),
         result_function: Some(function_),
         parameters: starshine_call_frame_parameters(
-          module_fragments, function_.parameters,
+          module_fragments,
+          function_.parameters,
         ),
       },
       body,
@@ -580,7 +581,7 @@ fn starshine_program_global_function_type_index(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   initializer : @semantic.PlannedProgramModuleInitializer,
-) -> Int {
+) -> Int32 {
   let module_ = lowering.modules[initializer.module_index]
   let body = module_.bodies[@semantic.semantic_id_local(initializer.body)]
   if body.root_type >= -1 {
@@ -1148,7 +1149,7 @@ fn starshine_program_function_reference_element_section(
   planned : @semantic.PlannedProgramWasmGCLink,
   helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> @lib.ElemSec? {
-  let referenced : Map[Int, Bool] = Map::default()
+  let referenced : Map[Int32, Bool] = Map::default()
   for singleton in planned.function_reference_singletons {
     if singleton.function_index >= 0 {
       referenced[singleton.function_index] = true
@@ -1210,12 +1211,20 @@ pub fn emit_starshine_program_module(
   }
   match @semantic.verify_program_physical_type_fragments(planned) {
     Ok(_) => ()
-    Err(failure) => return Err(CompilerInvariantFailure({
-      code: failure.code.reinterpret_as_uint(), phase: 7U,
-      module_id: failure.module_id, declaration: failure.declaration,
-      body: failure.body, expression: failure.expression,
-      expected: failure.expected, actual: failure.actual, detail: failure.detail,
-    }))
+    Err(failure) =>
+      return Err(
+        CompilerInvariantFailure({
+          code: failure.code.reinterpret_as_uint(),
+          phase: 7U,
+          module_id: failure.module_id,
+          declaration: failure.declaration,
+          body: failure.body,
+          expression: failure.expression,
+          expected: failure.expected,
+          actual: failure.actual,
+          detail: failure.detail,
+        }),
+      )
   }
   match @semantic.verify_program_source_function_fragments(planned) {
     Ok(_) => ()

@@ -1,5 +1,5 @@
 ///|
-fn trait_benchmark_source(method_count : Int, receivers : Bool) -> Bytes {
+fn trait_benchmark_source(method_count : Int32, receivers : Bool) -> Bytes {
   let output = Buffer(size_hint=method_count * 52)
   output.write_string_utf8("pub trait Benchmark<t> {\n")
   for index in 0..<method_count {

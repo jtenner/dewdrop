@@ -1,10 +1,10 @@
 ///|
 fn program_runtime_trait_callable_supports_external_evidence_for_classes(
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   declaration : DeclId,
   parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
-  states : Map[String, Int],
+  states : Map[String, Int32],
 ) -> Bool {
   let key = program_external_runtime_evidence_state_key(
     declaration, parameter_classes,
@@ -80,7 +80,7 @@ fn program_runtime_trait_callable_supports_external_evidence_for_classes(
 ///|
 fn program_collect_runtime_trait_support_dependencies(
   lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   declaration : DeclId,
   parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
   dependency : (DeclId, Array[ProgramExternalRuntimeEvidenceClass]) -> Unit,

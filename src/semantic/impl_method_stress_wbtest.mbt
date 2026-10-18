@@ -1,5 +1,5 @@
 ///|
-fn many_inherent_methods_source(method_count : Int) -> Bytes {
+fn many_inherent_methods_source(method_count : Int32) -> Bytes {
   let output = Buffer(size_hint=method_count * 96 + 160)
   output.write_string_utf8("struct Item {}\nimpl Item {\n")
   for index in 0..<method_count {
@@ -22,7 +22,7 @@ fn many_inherent_methods_source(method_count : Int) -> Bytes {
 }
 
 ///|
-fn many_impl_buckets_source(implementation_count : Int) -> Bytes {
+fn many_impl_buckets_source(implementation_count : Int32) -> Bytes {
   let output = Buffer(size_hint=implementation_count * 144 + 96)
   for index in 0..<implementation_count {
     output.write_string_utf8("struct Item")
@@ -40,7 +40,7 @@ fn many_impl_buckets_source(implementation_count : Int) -> Bytes {
 }
 
 ///|
-fn deeply_specialized_impl_source(depth : Int) -> Bytes {
+fn deeply_specialized_impl_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 10 + 320)
   output.write_string_utf8(
     "trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {}\nimpl<t> Read for Box<t> {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Read for ",

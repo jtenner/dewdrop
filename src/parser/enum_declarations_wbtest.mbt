@@ -1,5 +1,5 @@
 ///|
-fn large_enum_declaration(variant_count : Int) -> Bytes {
+fn large_enum_declaration(variant_count : Int32) -> Bytes {
   let output = Buffer(size_hint=variant_count * 20)
   output.write_string_utf8("enum Large {\n")
   for index in 0..<variant_count {

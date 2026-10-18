@@ -1,17 +1,21 @@
 ///|
 priv struct CoreWasmIndexMap {
-  type_indices : Array[Int]
-  function_indices : Array[Int]
-  table_indices : Array[Int]
-  memory_indices : Array[Int]
-  global_indices : Array[Int]
-  tag_indices : Array[Int]
-  element_indices : Array[Int]
-  data_indices : Array[Int]
+  type_indices : Array[Int32]
+  function_indices : Array[Int32]
+  table_indices : Array[Int32]
+  memory_indices : Array[Int32]
+  global_indices : Array[Int32]
+  tag_indices : Array[Int32]
+  element_indices : Array[Int32]
+  data_indices : Array[Int32]
 }
 
 ///|
-fn core_remap_index(indices : Array[Int], index : UInt, space : String) -> UInt {
+fn core_remap_index(
+  indices : Array[Int32],
+  index : UInt32,
+  space : String,
+) -> UInt32 {
   let source = index.reinterpret_as_int()
   if source < 0 || source >= indices.length() || indices[source] < 0 {
     abort("invalid " + space + " index during Core Wasm link")

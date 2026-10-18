@@ -152,7 +152,7 @@ test "source table preflight requires the complete declaration slot arena" {
 fn imported_function_lookup_fixture() -> (
   PlannedModuleWasmGCFragments,
   DeclId,
-  Int,
+  Int32,
 ) raise {
   let stages = compiler_test_stages(23970UL, [
     CompilerTestModule::new("lookup.traits", [

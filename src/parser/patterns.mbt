@@ -57,7 +57,7 @@ pub enum PatternError {
   UnclosedTuplePattern(UInt64)
   UnclosedStructPattern(UInt64)
   EmptyTuplePattern(UInt64)
-  InvalidProductPatternArity(Int, UInt64)
+  InvalidProductPatternArity(Int32, UInt64)
   PatternLexicalError(@tokenizer.LexError, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
 
@@ -111,7 +111,7 @@ fn Parser::consume_pattern_right_paren(self : Parser) -> Bool {
 fn Parser::parse_tuple_pattern_arguments(
   self : Parser,
   open_offset : UInt64,
-  allow_empty? : Bool = false,
+  allow_empty~ : Bool = false,
 ) -> Result[(Array[Pattern], Bool), RecoveryFailure] {
   let arguments : Array[Pattern] = []
   let mut has_rest = false

@@ -228,7 +228,7 @@ fn Parser::parse_foreign_library_body(
 fn Parser::parse_foreign_library_after_impl(
   self : Parser,
   declaration_offset : UInt64,
-  host_import? : Bool = false,
+  host_import~ : Bool = false,
 ) -> Result[Declaration, RecoveryFailure] {
   let (logical_name, logical_name_offset) = match self.peek_token() {
     Some(token) =>

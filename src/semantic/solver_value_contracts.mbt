@@ -3,7 +3,7 @@ fn LocalTypeSolver::check_union_size(
   self : LocalTypeSolver,
   left : TypeVariableId,
   right : TypeVariableId,
-) -> Result[Int, SolverInvariantFailure] {
+) -> Result[Int32, SolverInvariantFailure] {
   let left_root = match self.check_variable_root(left) {
     Ok(root) => root
     Err(error) => return Err(error)

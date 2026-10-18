@@ -6,19 +6,24 @@ fn check_declared_storage_type(
   owner : DeclId,
   root : ResolvedTypeId,
 ) -> Result[Unit, ProgramPhysicalTypeFailure] {
-  let failure = fn(code, expected : Int, actual : Int, bad : Int) {
+  let failure = fn(code, expected : Int32, actual : Int32, bad : Int32) {
     ProgramPhysicalTypeFailure::{
-      code, phase: 4, module_id, declaration: owner, body: 0UL,
+      code,
+      phase: 4,
+      module_id,
+      declaration: owner,
+      body: 0UL,
       expression: 0xffffffffU,
       expected: expected.reinterpret_as_uint().to_uint64(),
       actual: actual.reinterpret_as_uint().to_uint64(),
-      detail: (root.reinterpret_as_uint().to_uint64() << 32) | bad.reinterpret_as_uint().to_uint64(),
+      detail: (root.reinterpret_as_uint().to_uint64() << 32) |
+      bad.reinterpret_as_uint().to_uint64(),
     }
   }
   // Nominals are leaves, including recursive nominal groups. Structural
   // arguments and callback signatures must retain valid logical evidence.
-  let states : Map[Int, Int] = {}
-  let work : Array[(Int, Bool)] = [(root, false)]
+  let states : Map[Int32, Int32] = {}
+  let work : Array[(Int32, Bool)] = [(root, false)]
   while !work.is_empty() {
     let (id, finish) = work.pop().unwrap()
     guard id >= 0 && id < types.length() else {
@@ -40,12 +45,14 @@ fn check_declared_storage_type(
       PrimitiveType(CompileTimeTypeType) => 3
       _ => 0
     }
-    if error != 0 { return Err(failure(301, 0, error, id)) }
+    if error != 0 {
+      return Err(failure(301, 0, error, id))
+    }
     states[id] = 1
     work.push((id, true))
     let span = match node {
       ProductType(span) | AppliedType(_, span) | FunctionType(span, _) => span
-      _ => {start: 0, length: 0}
+      _ => { start: 0, length: 0, }
     }
     guard arena_span_is_valid(span, arguments.length()) else {
       return Err(failure(101, arguments.length(), span.length, id))
@@ -63,9 +70,21 @@ fn check_declared_storage_type(
 }
 
 ///|
-fn assert_declared_storage_type(resolved : ResolvedModuleTypes, owner : DeclId, root : ResolvedTypeId) -> Unit {
-  match check_declared_storage_type(resolved.module_id, resolved.types, resolved.type_arguments, owner, root) {
+fn assert_declared_storage_type(
+  resolved : ResolvedModuleTypes,
+  owner : DeclId,
+  root : ResolvedTypeId,
+) -> Unit {
+  match
+    check_declared_storage_type(
+      resolved.module_id,
+      resolved.types,
+      resolved.type_arguments,
+      owner,
+      root,
+    ) {
     Ok(_) => ()
-    Err(failure) => abort("declared storage invariant failure: " + @debug.to_string(failure))
+    Err(failure) =>
+      abort("declared storage invariant failure: " + @debug.to_string(failure))
   }
 }

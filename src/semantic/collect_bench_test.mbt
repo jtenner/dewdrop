@@ -1,5 +1,5 @@
 ///|
-fn semantic_alias_module_source(declaration_count : Int) -> Bytes {
+fn semantic_alias_module_source(declaration_count : Int32) -> Bytes {
   let output = Buffer(size_hint=declaration_count * 48)
   for index in 0..<declaration_count {
     output.write_string_utf8("type Alias_")
@@ -10,7 +10,7 @@ fn semantic_alias_module_source(declaration_count : Int) -> Bytes {
 }
 
 ///|
-fn semantic_mixed_module_source(declaration_groups : Int) -> Bytes {
+fn semantic_mixed_module_source(declaration_groups : Int32) -> Bytes {
   let output = Buffer(size_hint=declaration_groups * 320)
   for index in 0..<declaration_groups {
     output.write_string_utf8("struct Record_")
@@ -29,7 +29,7 @@ fn semantic_mixed_module_source(declaration_groups : Int) -> Bytes {
 }
 
 ///|
-fn semantic_function_body_module_source(function_count : Int) -> Bytes {
+fn semantic_function_body_module_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 120)
   for index in 0..<function_count {
     output.write_string_utf8("fn compute_")
@@ -42,7 +42,7 @@ fn semantic_function_body_module_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn semantic_match_body_source(arm_count : Int) -> Bytes {
+fn semantic_match_body_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 24 + 48)
   output.write_string_utf8("let result = match state {\n")
   for index in 0..<arm_count {
@@ -57,7 +57,7 @@ fn semantic_match_body_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn semantic_nested_alias_source(depth : Int) -> Bytes {
+fn semantic_nested_alias_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 5 + 32)
   output.write_string_utf8("type Deep<t> = ")
   for _ in 0..<depth {

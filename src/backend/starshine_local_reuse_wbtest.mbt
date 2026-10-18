@@ -81,8 +81,7 @@ test "runtime evidence parameters do not alias body locals" {
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.main", [
         @semantic.ManifestFile::new(
-          "main.dew",
-          b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn consume_value<t: Value>(value: t) -> I32 {\n  let boxed = Box::{\n    value: value\n  }\n  consume(boxed)\n}\npub fn main() -> I32 {\n  consume_value(42)\n}\n",
+          "main.dew", b"pub trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\npub trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn consume<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn consume_value<t: Value>(value: t) -> I32 {\n  let boxed = Box::{\n    value: value\n  }\n  consume(boxed)\n}\npub fn main() -> I32 {\n  consume_value(42)\n}\n",
         ),
       ]),
     ]),

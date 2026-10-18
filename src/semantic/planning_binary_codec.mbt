@@ -42,7 +42,7 @@ fn pb_read_visibility(
 ///|
 fn pb_write_int_array(
   writer : @cache_binary.Writer,
-  values : Array[Int],
+  values : Array[Int32],
 ) -> Unit {
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
@@ -54,9 +54,9 @@ fn pb_write_int_array(
 fn pb_read_int_array(
   reader : @cache_binary.Reader,
   field : String,
-) -> Array[Int] {
+) -> Array[Int32] {
   let count = reader.read_count(planning_binary_maximum_items, field)
-  let values : Array[Int] = []
+  let values : Array[Int32] = []
   for _ in 0..<count {
     values.push(ib_read_int(reader, field))
   }
@@ -180,7 +180,7 @@ fn pb_read_variant_payload(
 }
 
 ///|
-fn pb_span_is_valid(span : HirSpan, length : Int) -> Bool {
+fn pb_span_is_valid(span : HirSpan, length : Int32) -> Bool {
   span.start >= 0 &&
   span.length >= 0 &&
   span.start + span.length >= span.start &&
@@ -906,8 +906,8 @@ fn pb_read_span_array(
 ///|
 fn pb_rebuild_imported_function_indices(
   functions : Array[PlannedWasmFunctionFragment],
-) -> Map[Bytes, Int] {
-  let imported : Map[Bytes, Int] = Map::default()
+) -> Map[Bytes, Int32] {
+  let imported : Map[Bytes, Int32] = Map::default()
   for function_ in functions {
     if function_.elided || function_.function_index < 0 {
       continue
@@ -944,7 +944,9 @@ pub fn validate_cached_module_wasmgc_fragments(
   }
   for function_ in value.functions {
     if function_.kind is PlannedWasmErasedAdapterFunction {
-      return Err("cached WasmGC fragment contains a program-only erased adapter")
+      return Err(
+        "cached WasmGC fragment contains a program-only erased adapter",
+      )
     }
     if function_.specialization_shapes.length != 0 ||
       function_.specialization_evidence.length != 0 ||

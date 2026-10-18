@@ -2,7 +2,7 @@
 fn CompileTimeProgramContext::declaration_module(
   self : CompileTimeProgramContext,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   for index, module_ in self.modules {
     if module_.module_id == semantic_id_module(declaration) {
       return index
@@ -32,7 +32,7 @@ fn compile_time_witness_node(
   context : CompileTimeProgramContext,
   module_ : PlannedModuleLowering,
   witness : CompileTimeTraitWitness,
-) -> Int {
+) -> Int32 {
   let declaration = witness.implementation.declaration
   let collected = context.program.modules[context.declaration_module(
       declaration,

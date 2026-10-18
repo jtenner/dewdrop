@@ -1,7 +1,7 @@
 ///|
 // Canonical Wasm text: exactly sixteen decimal indices in 0..31.
 // The compiler does not own a table of library permutation recipes.
-pub fn raw_wasm_shuffle_immediates(name : Bytes) -> Array[Int]? {
+pub fn raw_wasm_shuffle_immediates(name : Bytes) -> Array[Int32]? {
   let prefix = b"i8x16.shuffle "
   if name.length() < 45 || name.length() > 61 {
     return None

@@ -9,7 +9,7 @@ pub type ModuleId = UInt64
 pub type FileId = UInt64
 
 ///|
-fn make_file_id(module_id : ModuleId, local_index : Int) -> FileId {
+fn make_file_id(module_id : ModuleId, local_index : Int32) -> FileId {
   make_semantic_id(module_id, local_index)
 }
 
@@ -48,7 +48,7 @@ pub type BodyId = UInt64
 
 ///|
 /// Module-local interned name index.
-pub type NameId = Int
+pub type NameId = Int32
 
 ///|
 let semantic_id_mask : UInt64 = 0xffffffffUL
@@ -74,7 +74,7 @@ fn semantic_modules_share_package(left : ModuleId, right : ModuleId) -> Bool {
 }
 
 ///|
-fn make_semantic_id(module_id : ModuleId, local_index : Int) -> UInt64 {
+fn make_semantic_id(module_id : ModuleId, local_index : Int32) -> UInt64 {
   guard module_id <= semantic_id_mask else {
     abort("semantic module ID exceeds 32 bits")
   }
@@ -88,6 +88,6 @@ pub fn semantic_id_module(id : UInt64) -> ModuleId {
 }
 
 ///|
-pub fn semantic_id_local(id : UInt64) -> Int {
+pub fn semantic_id_local(id : UInt64) -> Int32 {
   (id & semantic_id_mask).to_uint().reinterpret_as_int()
 }

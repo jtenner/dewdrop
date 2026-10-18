@@ -26,7 +26,7 @@ def rendered_source() -> str:
     lines.extend(
         [
             "///|",
-            "fn standard_indexed_trait_kind(declaration : DeclId) -> Int {",
+            "fn standard_indexed_trait_kind(declaration : DeclId) -> Int32 {",
             "  match semantic_id_local(declaration) {",
             f"    {indexed_traits['indexed_get']} => 1",
             f"    {indexed_traits['indexed_set']} => 2",
@@ -140,7 +140,7 @@ def rendered_source() -> str:
             "}",
             "",
             "///|",
-            "fn standard_lane_module_path(index : Int) -> String {",
+            "fn standard_lane_module_path(index : Int32) -> String {",
             "  match index {",
         ]
     )

@@ -1,21 +1,21 @@
 ///|
 priv struct SolverInvariantFailure {
-  code : Int
+  code : Int32
   module_id : ModuleId
-  expected : Int
-  actual : Int
-  detail : Int
+  expected : Int32
+  actual : Int32
+  detail : Int32
 } derive(Eq, Debug)
 
 ///|
 fn LocalTypeSolver::solver_failure(
   self : LocalTypeSolver,
-  code : Int,
-  expected : Int,
-  actual : Int,
-  detail : Int,
+  code : Int32,
+  expected : Int32,
+  actual : Int32,
+  detail : Int32,
 ) -> SolverInvariantFailure {
-  { code, module_id: self.resolved.module_id, expected, actual, detail }
+  { code, module_id: self.resolved.module_id, expected, actual, detail, }
 }
 
 ///|
@@ -28,7 +28,9 @@ fn LocalTypeSolver::check_variable_root(
     return Err(self.solver_failure(201, count, self.variable_sizes.length(), 1))
   }
   if self.variable_bindings.length() != count {
-    return Err(self.solver_failure(201, count, self.variable_bindings.length(), 2))
+    return Err(
+      self.solver_failure(201, count, self.variable_bindings.length(), 2),
+    )
   }
   if self.variable_types.length() != count {
     return Err(self.solver_failure(201, count, self.variable_types.length(), 3))
@@ -82,7 +84,14 @@ fn LocalTypeSolver::check_representative_type(
     if current < -1 {
       let resolved = -(current + 2)
       if resolved >= self.resolved.types.length() {
-        return Err(self.solver_failure(104, self.resolved.types.length(), resolved, type_))
+        return Err(
+          self.solver_failure(
+            104,
+            self.resolved.types.length(),
+            resolved,
+            type_,
+          ),
+        )
       }
       return Ok(current)
     }
@@ -103,7 +112,9 @@ fn LocalTypeSolver::check_representative_type(
         let binding = self.variable_bindings[root]
         if binding == -1 {
           let result = self.variable_types[root]
-          if result < 0 || result >= self.types.length() || self.types[result] != BodyVariableType(root) {
+          if result < 0 ||
+            result >= self.types.length() ||
+            self.types[result] != BodyVariableType(root) {
             return Err(self.solver_failure(201, root, result, 4))
           }
           return Ok(result)
@@ -112,7 +123,14 @@ fn LocalTypeSolver::check_representative_type(
       }
       BodyResolvedType(resolved) => {
         if resolved < 0 || resolved >= self.resolved.types.length() {
-          return Err(self.solver_failure(104, self.resolved.types.length(), resolved, type_))
+          return Err(
+            self.solver_failure(
+              104,
+              self.resolved.types.length(),
+              resolved,
+              type_,
+            ),
+          )
         }
         return Ok(current)
       }

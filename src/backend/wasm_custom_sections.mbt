@@ -1,5 +1,5 @@
 ///|
-fn write_wasm_u32_leb(output : Buffer, initial : Int) -> Unit {
+fn write_wasm_u32_leb(output : Buffer, initial : Int32) -> Unit {
   let mut value = initial
   while value >= 128 {
     output.write_byte(((value & 127) | 128).to_byte())
@@ -9,7 +9,7 @@ fn write_wasm_u32_leb(output : Buffer, initial : Int) -> Unit {
 }
 
 ///|
-fn wasm_u32_leb_length(initial : Int) -> Int {
+fn wasm_u32_leb_length(initial : Int32) -> Int32 {
   let mut value = initial
   let mut length = 1
   while value >= 128 {
@@ -20,7 +20,7 @@ fn wasm_u32_leb_length(initial : Int) -> Int {
 }
 
 ///|
-fn write_wasm_u32_le(output : Buffer, value : Int) -> Unit {
+fn write_wasm_u32_le(output : Buffer, value : Int32) -> Unit {
   output.write_byte((value & 255).to_byte())
   output.write_byte(((value >> 8) & 255).to_byte())
   output.write_byte(((value >> 16) & 255).to_byte())
@@ -67,7 +67,7 @@ pub fn append_wasm_abi_section(
 /// unsigned 32-bit integer.
 pub fn append_wasm_metrics_section(
   module_ : Bytes,
-  materialized_specializations : Int,
+  materialized_specializations : Int32,
 ) -> Bytes {
   guard materialized_specializations >= 0 else {
     abort("materialized specialization count cannot be negative")

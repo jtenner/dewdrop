@@ -9,7 +9,7 @@ test "emission rejects a duplicate linked source fragment before writing section
     Ok(()),
   )
   let declaration = stages.program.modules[0].lookup_value("signed").unwrap()
-  let selected : Array[Int] = []
+  let selected : Array[Int32] = []
   for _, index in link.specialized_call_lookup {
     if link.functions[index].declaration == declaration {
       selected.push(index)

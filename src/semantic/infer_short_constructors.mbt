@@ -208,7 +208,7 @@ fn BasicBodyInferencer::constrain_short_constructors(
 ///|
 fn BasicBodyInferencer::try_contextual_factory(
   self : BasicBodyInferencer,
-  slot : Int,
+  slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   name : NameId,

@@ -1,15 +1,15 @@
 ///|
 /// Module-local index into `CollectedModule.type_syntax`.
-pub type HirTypeId = Int
+pub type HirTypeId = Int32
 
 ///|
 pub struct HirSpan {
-  start : Int
-  length : Int
+  start : Int32
+  length : Int32
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
-fn empty_hir_span(at : Int) -> HirSpan {
+fn empty_hir_span(at : Int32) -> HirSpan {
   { start: at, length: 0, }
 }
 

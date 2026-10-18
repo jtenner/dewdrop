@@ -1,4 +1,5 @@
-///| Checked undo records share the solver's numeric failure context.
+///|
+/// Checked undo records share the solver's numeric failure context.
 fn LocalTypeSolver::check_undo_arrays(
   self : LocalTypeSolver,
 ) -> Result[Unit, SolverInvariantFailure] {
@@ -15,7 +16,7 @@ fn LocalTypeSolver::check_undo_arrays(
 ///|
 fn LocalTypeSolver::check_undo_record(
   self : LocalTypeSolver,
-  slot : Int,
+  slot : Int32,
 ) -> Result[Unit, SolverInvariantFailure] {
   match self.check_undo_arrays() {
     Err(error) => return Err(error)
@@ -47,12 +48,21 @@ fn LocalTypeSolver::check_undo_record(
     _ =>
       if value >= 0 {
         if value >= self.types.length() {
-          return Err(self.solver_failure(205, self.types.length(), value, index))
+          return Err(
+            self.solver_failure(205, self.types.length(), value, index),
+          )
         }
       } else if value < -1 {
         let resolved = -(value + 2)
         if resolved >= self.resolved.types.length() {
-          return Err(self.solver_failure(205, self.resolved.types.length(), resolved, index))
+          return Err(
+            self.solver_failure(
+              205,
+              self.resolved.types.length(),
+              resolved,
+              index,
+            ),
+          )
         }
       }
   }
@@ -62,7 +72,7 @@ fn LocalTypeSolver::check_undo_record(
 ///|
 fn LocalTypeSolver::check_undo_restore(
   self : LocalTypeSolver,
-  start : Int,
+  start : Int32,
 ) -> Result[Unit, SolverInvariantFailure] {
   match self.check_undo_arrays() {
     Err(error) => return Err(error)
@@ -74,13 +84,19 @@ fn LocalTypeSolver::check_undo_restore(
   }
   let variables = self.variable_parents.length()
   if self.variable_sizes.length() != variables {
-    return Err(self.solver_failure(201, variables, self.variable_sizes.length(), 1))
+    return Err(
+      self.solver_failure(201, variables, self.variable_sizes.length(), 1),
+    )
   }
   if self.variable_bindings.length() != variables {
-    return Err(self.solver_failure(201, variables, self.variable_bindings.length(), 2))
+    return Err(
+      self.solver_failure(201, variables, self.variable_bindings.length(), 2),
+    )
   }
   if self.variable_types.length() != variables {
-    return Err(self.solver_failure(201, variables, self.variable_types.length(), 3))
+    return Err(
+      self.solver_failure(201, variables, self.variable_types.length(), 3),
+    )
   }
   // Validate the whole range before the first restoration write. An invalid
   // older record cannot leave a partially restored solver or consume evidence.

@@ -5,7 +5,7 @@ test "compile time builtin calls become IR constants without optimizer" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-        "main.dew", b"builtin query<t>() -> Bool = \"types.is_unit\"\ntype Nothing = Unit\npub fn yes() -> Bool {\n  query::<Nothing>()\n}\npub fn no() -> Bool {\n  query::<I32>()\n}\n",
+          "main.dew", b"builtin query<t>() -> Bool = \"types.is_unit\"\ntype Nothing = Unit\npub fn yes() -> Bool {\n  query::<Nothing>()\n}\npub fn no() -> Bool {\n  query::<I32>()\n}\n",
         ),
       ]),
     ]),
@@ -30,7 +30,9 @@ test "compile time builtin calls become IR constants without optimizer" {
   }
   assert_eq(constants, 2)
   assert_eq(calls, 0)
-  let yes = program.modules[0].body_of(program.modules[0].lookup_value("yes").unwrap()).unwrap()
+  let yes = program.modules[0]
+    .body_of(program.modules[0].lookup_value("yes").unwrap())
+    .unwrap()
   let tail = optimization_test_body_tail(lowering.modules[0], yes.id)
   assert_eq(lowering.modules[0].expressions[tail].kind, PlannedBoolConst(true))
 }
@@ -42,7 +44,7 @@ test "compile time builtin declaration result mismatch is a source diagnostic" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-        "main.dew", b"builtin query<t>() -> I32 = \"types.is_unit\"\npub fn main() -> I32 {\n  query::<Unit>()\n}\n",
+          "main.dew", b"builtin query<t>() -> I32 = \"types.is_unit\"\npub fn main() -> I32 {\n  query::<Unit>()\n}\n",
         ),
       ]),
     ]),
@@ -68,7 +70,7 @@ test "ordinary functions named is_unit are not compile time builtins" {
     ProgramManifest::new([
       ManifestModule::new("app.main", [
         ManifestFile::new(
-        "main.dew", b"fn is_unit() -> Bool {\n  false\n}\npub fn main() -> Bool {\n  is_unit()\n}\n",
+          "main.dew", b"fn is_unit() -> Bool {\n  false\n}\npub fn main() -> Bool {\n  is_unit()\n}\n",
         ),
       ]),
     ]),

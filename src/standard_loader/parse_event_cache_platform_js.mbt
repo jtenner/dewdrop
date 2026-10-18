@@ -6,9 +6,9 @@ fn cache_platform_supported() -> Bool {
 ///|
 extern "js" fn cache_platform_atomic_write(
   path : Bytes,
-  path_length : Int,
+  path_length : Int32,
   content : Bytes,
-) -> Int =
+) -> Int32 =
   #| function(path, pathLength, content) {
   #|   const fs = process.getBuiltinModule('fs');
   #|   const destination = Buffer.from(path)

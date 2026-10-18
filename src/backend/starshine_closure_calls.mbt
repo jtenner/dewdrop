@@ -1,15 +1,15 @@
 ///|
 priv struct StarshineClosureCallPlan {
   expression : @semantic.ExprId
-  direct_type : Int
-  entry_type : Int
-  erased_direct_type : Int
-  erased_entry_type : Int
-  closure_type : Int
-  closure_local : Int
+  direct_type : Int32
+  entry_type : Int32
+  erased_direct_type : Int32
+  erased_entry_type : Int32
+  closure_type : Int32
+  closure_local : Int32
   result_shape : @semantic.PlannedValueShape
-  result_local : Int
-  result_cast_type : Int
+  result_local : Int32
+  result_cast_type : Int32
   argument_casts : Array[Array[@lib.Instruction]]
 }
 
@@ -36,7 +36,7 @@ fn starshine_append_closure_pointer(
 fn starshine_closure_call_branch(
   plan : StarshineClosureCallPlan,
   fragments : Array[Array[@lib.Instruction]],
-  signature : Int,
+  signature : Int32,
   captured : Bool,
 ) -> Array[@lib.Instruction] {
   let output : Array[@lib.Instruction] = []
@@ -90,7 +90,7 @@ fn starshine_emit_closure_call(
   if product && plan.result_local < 0 {
     return Err(UnsupportedExpression(body, plan.expression))
   }
-  let alternatives : Array[(Int, Bool)] = [(plan.direct_type, false)]
+  let alternatives : Array[(Int32, Bool)] = [(plan.direct_type, false)]
   if plan.erased_direct_type != plan.direct_type {
     alternatives.push((plan.erased_direct_type, false))
   }

@@ -127,8 +127,7 @@ test "source diagnostics render line columns excerpts and secondary labels" {
 test "source diagnostics keep every body flow diagnostic" {
   let (program, analyzed, lowering, link) = source_diagnostic_program([
     ManifestFile::new(
-      "main.dew",
-      b"enum Flag {\n  On\n  Off\n}\nfn read(value: Flag) -> I32 {\n  match value {\n    On => 1\n    On => 2\n  }\n}\nfn run(state: Flag) -> I32 {\n  while state {\n    On => 1\n  }\n}\n",
+      "main.dew", b"enum Flag {\n  On\n  Off\n}\nfn read(value: Flag) -> I32 {\n  match value {\n    On => 1\n    On => 2\n  }\n}\nfn run(state: Flag) -> I32 {\n  while state {\n    On => 1\n  }\n}\n",
     ),
   ])
   let diagnostics = collect_compiler_source_diagnostics(

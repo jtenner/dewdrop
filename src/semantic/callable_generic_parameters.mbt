@@ -4,7 +4,7 @@
 pub struct CallableGenericParameters {
   owner : HirSpan
   method : HirSpan
-  length : Int
+  length : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -22,8 +22,8 @@ pub fn PlannedCallable::all_generic_parameters(
 ///|
 pub fn CallableGenericParameters::source_index(
   self : CallableGenericParameters,
-  index : Int,
-) -> Int {
+  index : Int32,
+) -> Int32 {
   guard index >= 0 && index < self.length else {
     abort("ARN-102 callable generic parameter is outside its logical sequence")
   }
@@ -37,8 +37,8 @@ pub fn CallableGenericParameters::source_index(
 ///|
 pub fn CallableGenericParameters::relative_index(
   self : CallableGenericParameters,
-  source : Int,
-) -> Int? {
+  source : Int32,
+) -> Int32? {
   if source >= self.owner.start && source - self.owner.start < self.owner.length {
     Some(source - self.owner.start)
   } else if source >= self.method.start &&

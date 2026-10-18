@@ -130,7 +130,7 @@ fn starshine_function_reference_element_section(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
 ) -> @lib.ElemSec? {
-  let referenced : Map[Int, Bool] = Map::default()
+  let referenced : Map[Int32, Bool] = Map::default()
   for function_ in planned.functions {
     match function_.kind {
       @semantic.PlannedWasmTraitAdapterFunction(_, _) if function_.function_index >=

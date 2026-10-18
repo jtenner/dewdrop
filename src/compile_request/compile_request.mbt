@@ -1,61 +1,61 @@
 ///|
-const COMPILER_REQUEST_MAGIC : UInt = 0x44574352U
+const COMPILER_REQUEST_MAGIC : UInt32 = 0x44574352U
 
 ///|
-const COMPILER_REQUEST_VERSION : UInt = 1U
+const COMPILER_REQUEST_VERSION : UInt32 = 1U
 
 ///|
-pub fn max_request_bytes() -> Int {
+pub fn max_request_bytes() -> Int32 {
   256 * 1024 * 1024
 }
 
 ///|
-pub fn max_module_count() -> Int {
+pub fn max_module_count() -> Int32 {
   1024
 }
 
 ///|
-pub fn max_files_per_module() -> Int {
+pub fn max_files_per_module() -> Int32 {
   4096
 }
 
 ///|
-pub fn max_total_files() -> Int {
+pub fn max_total_files() -> Int32 {
   65536
 }
 
 ///|
-pub fn max_source_bytes() -> Int {
+pub fn max_source_bytes() -> Int32 {
   16 * 1024 * 1024
 }
 
 ///|
-pub fn max_dependency_count() -> Int {
+pub fn max_dependency_count() -> Int32 {
   4096
 }
 
 ///|
-pub fn max_provider_count() -> Int {
+pub fn max_provider_count() -> Int32 {
   64
 }
 
 ///|
-pub fn max_provider_bytes() -> Int {
+pub fn max_provider_bytes() -> Int32 {
   64 * 1024 * 1024
 }
 
 ///|
-pub fn max_name_bytes() -> Int {
+pub fn max_name_bytes() -> Int32 {
   255
 }
 
 ///|
-pub fn max_path_bytes() -> Int {
+pub fn max_path_bytes() -> Int32 {
   4096
 }
 
 ///|
-pub fn max_compiler_fingerprint_bytes() -> Int {
+pub fn max_compiler_fingerprint_bytes() -> Int32 {
   4096
 }
 
@@ -149,7 +149,7 @@ pub(all) struct CompilerRequest {
 ///|
 priv struct CompilerRequestReader {
   bytes : Bytes
-  mut offset : Int
+  mut offset : Int32
   mut error : String?
 }
 
@@ -164,7 +164,7 @@ fn CompilerRequestReader::fail(
 }
 
 ///|
-fn CompilerRequestReader::read_byte(self : CompilerRequestReader) -> UInt {
+fn CompilerRequestReader::read_byte(self : CompilerRequestReader) -> UInt32 {
   if self.offset >= self.bytes.length() {
     self.fail("truncated compile request")
     return 0U
@@ -175,7 +175,7 @@ fn CompilerRequestReader::read_byte(self : CompilerRequestReader) -> UInt {
 }
 
 ///|
-fn CompilerRequestReader::read_u32(self : CompilerRequestReader) -> UInt {
+fn CompilerRequestReader::read_u32(self : CompilerRequestReader) -> UInt32 {
   let b0 = self.read_byte()
   let b1 = self.read_byte()
   let b2 = self.read_byte()
@@ -187,8 +187,8 @@ fn CompilerRequestReader::read_u32(self : CompilerRequestReader) -> UInt {
 fn CompilerRequestReader::read_count(
   self : CompilerRequestReader,
   kind : String,
-  maximum : Int,
-) -> Int {
+  maximum : Int32,
+) -> Int32 {
   let value = self.read_u32().reinterpret_as_int()
   if value < 0 || value > maximum {
     self.fail("invalid \{kind} count in compile request")
@@ -202,8 +202,8 @@ fn CompilerRequestReader::read_count(
 fn CompilerRequestReader::read_tag(
   self : CompilerRequestReader,
   kind : String,
-  maximum : Int,
-) -> Int {
+  maximum : Int32,
+) -> Int32 {
   let value = self.read_u32().reinterpret_as_int()
   if value < 0 || value > maximum {
     self.fail("invalid \{kind} tag in compile request")
@@ -232,7 +232,7 @@ fn CompilerRequestReader::read_bool(
 fn CompilerRequestReader::read_bytes(
   self : CompilerRequestReader,
   kind : String,
-  maximum : Int,
+  maximum : Int32,
 ) -> Bytes {
   let length = self.read_count("\{kind} byte", maximum)
   if self.offset > self.bytes.length() - length {
@@ -252,7 +252,7 @@ fn CompilerRequestReader::read_bytes(
 fn CompilerRequestReader::read_string(
   self : CompilerRequestReader,
   kind : String,
-  maximum : Int,
+  maximum : Int32,
 ) -> String {
   let bytes = self.read_bytes(kind, maximum)
   @utf8.decode(bytes) catch {
@@ -264,7 +264,7 @@ fn CompilerRequestReader::read_string(
 }
 
 ///|
-fn compiler_request_write_u32(output : Buffer, value : UInt) -> Unit {
+fn compiler_request_write_u32(output : Buffer, value : UInt32) -> Unit {
   output.write_byte((value & 0xffU).to_byte())
   output.write_byte(((value >> 8) & 0xffU).to_byte())
   output.write_byte(((value >> 16) & 0xffU).to_byte())
@@ -285,10 +285,10 @@ fn compiler_request_write_string(output : Buffer, value : String) -> Unit {
 ///|
 fn compiler_request_string_size(
   value : String,
-  maximum : Int,
+  maximum : Int32,
   kind : String,
   allow_empty : Bool,
-) -> Result[Int, String] {
+) -> Result[Int32, String] {
   let bytes = @utf8.encode(value)
   if !allow_empty && bytes.length() == 0 {
     Err("compile request \{kind} must not be empty")
@@ -333,10 +333,10 @@ fn compiler_request_fingerprint_valid(value : String) -> Bool {
 
 ///|
 fn compiler_request_add_payload(
-  total : Int,
-  size : Int,
+  total : Int32,
+  size : Int32,
   kind : String,
-) -> Result[Int, String] {
+) -> Result[Int32, String] {
   if size < 0 || total > max_request_bytes() - size {
     Err("compile request \{kind} exceeds total request bound")
   } else {
@@ -345,7 +345,7 @@ fn compiler_request_add_payload(
 }
 
 ///|
-fn compiler_request_bounded_size_add(total : Int, size : Int) -> Int {
+fn compiler_request_bounded_size_add(total : Int32, size : Int32) -> Int32 {
   if size < 0 || total > max_request_bytes() - size {
     max_request_bytes() + 1
   } else {
@@ -354,7 +354,7 @@ fn compiler_request_bounded_size_add(total : Int, size : Int) -> Int {
 }
 
 ///|
-fn compiler_request_encoded_size(request : CompilerRequest) -> Int {
+fn compiler_request_encoded_size(request : CompilerRequest) -> Int32 {
   let mut total = 104
   match request.response {
     CompilerStatusOnly => ()

@@ -15,7 +15,7 @@ fn initializer_source_test_module() -> PlannedModuleLowering raise {
 
 ///|
 fn initializer_source_test_failure(
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,

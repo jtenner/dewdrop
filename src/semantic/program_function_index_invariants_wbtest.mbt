@@ -9,7 +9,7 @@ test "physical function indices are a total unique partition" {
   assert_eq(link.diagnostics.length(), 0)
   assert_eq(verify_program_function_indices(link), Ok(()))
   // Table order is not physical identity in the native compiler.
-  let slots : Array[Int] = []
+  let slots : Array[Int32] = []
   for index, function_ in link.functions {
     if function_.function_index >= 0 {
       slots.push(index)

@@ -1,6 +1,6 @@
 ///|
 test "source loader follows actual imports once and fingerprints dependencies" {
-  let reads : Map[String, Int] = Map([])
+  let reads : Map[String, Int32] = Map([])
   let sources : Map[String, Bytes] = Map([
     ("std/ordering.dew", b"open dew.std.string\n"),
     ("std/string.dew", b"open dew.std.ordering\n"),

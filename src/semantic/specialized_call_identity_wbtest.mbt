@@ -1,7 +1,7 @@
 ///|
 test "specialized call replay checks declaration ABI and hidden operands" {
   let calls : Array[PlannedProgramSpecializedCall] = []
-  let evidence : Array[Int] = []
+  let evidence : Array[Int32] = []
   assert_eq(
     try_record_program_specialized_call(
       calls,
@@ -138,7 +138,7 @@ test "specialized call replay checks declaration ABI and hidden operands" {
 ///|
 test "specialized call replay checks its owned evidence span" {
   let calls : Array[PlannedProgramSpecializedCall] = []
-  let evidence : Array[Int] = []
+  let evidence : Array[Int32] = []
   record_program_specialized_call(
     calls,
     evidence,

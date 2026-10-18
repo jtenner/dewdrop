@@ -1,5 +1,5 @@
 ///|
-fn subtype_link_benchmark_module(count : Int) -> @lib.Module {
+fn subtype_link_benchmark_module(count : Int32) -> @lib.Module {
   let original = core_link_bench_dew(false)
   let groups = match original.type_sec {
     Some(@lib.TypeSec(groups)) => groups.copy()

@@ -85,7 +85,7 @@ pub(all) enum LexError {
   InvalidFloat(String)
   InvalidEscape(UtfCodepoint)
   UnterminatedString
-  SourceIo(Int)
+  SourceIo(Int32)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -117,10 +117,19 @@ pub(all) enum TokenKind {
 
 ///|
 /// A token, its absolute UTF-8 byte offset, and its sequential token index.
-pub struct Token(TokenKind, ByteOffset, Int) derive(Eq, Debug, ToJson, FromJson)
+pub struct Token(TokenKind, ByteOffset, Int32) derive (
+  Eq,
+  Debug,
+  ToJson,
+  FromJson,
+)
 
 ///|
-pub fn Token::new(kind : TokenKind, offset : ByteOffset, index : Int) -> Token {
+pub fn Token::new(
+  kind : TokenKind,
+  offset : ByteOffset,
+  index : Int32,
+) -> Token {
   Token(kind, offset, index)
 }
 
@@ -137,7 +146,7 @@ pub fn Token::offset(self : Token) -> ByteOffset {
 }
 
 ///|
-pub fn Token::index(self : Token) -> Int {
+pub fn Token::index(self : Token) -> Int32 {
   let Token(_, _, index) = self
   index
 }

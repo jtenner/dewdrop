@@ -11,9 +11,21 @@ fn planning_codec_test_stages() -> SemanticCompilerTestStages {
 
 ///|
 test "raw array getter recipes retain element shapes in the fragment codec" {
-  for shape in [I8PlannedValueShape, U8PlannedValueShape, UnitPlannedValueShape,
-    ProductPlannedValueShape([I32PlannedValueShape, UnitPlannedValueShape, I64PlannedValueShape])] {
-    let instruction = RawArrayGetInstruction({ opcode: b"array.get", element_shape: shape, })
+  for
+    shape in [
+      I8PlannedValueShape,
+      U8PlannedValueShape,
+      UnitPlannedValueShape,
+      ProductPlannedValueShape([
+        I32PlannedValueShape,
+        UnitPlannedValueShape,
+        I64PlannedValueShape,
+      ]),
+    ] {
+    let instruction = RawArrayGetInstruction({
+      opcode: b"array.get",
+      element_shape: shape,
+    })
     let writer = @cache_binary.Writer::new()
     pb_write_raw_heap_instruction(writer, instruction)
     let reader = @cache_binary.Reader::new(writer.to_bytes())
@@ -40,13 +52,18 @@ test "module caches reject program-only erased adapters" {
   let fragments = plan_module_wasmgc_fragments(resolved, lowering)
   assert_eq(fragments.functions.length(), 1)
   let original = fragments.functions[0]
-  fragments.functions[0] = { ..original, kind: PlannedWasmErasedAdapterFunction, }
+  fragments.functions[0] = {
+    ..original,
+    kind: PlannedWasmErasedAdapterFunction,
+  }
   let bytes = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
   let restored = deserialize_planned_module_wasmgc_fragments(bytes).unwrap()
   assert_eq(restored.functions[0].kind, PlannedWasmErasedAdapterFunction)
   assert_eq(
     validate_cached_module_wasmgc_fragments(
-      restored, fragments.module_id, WasmGCPlanningOptions::optimized_subtype_families(),
+      restored,
+      fragments.module_id,
+      WasmGCPlanningOptions::optimized_subtype_families(),
     ),
     Err("cached WasmGC fragment contains a program-only erased adapter"),
   )
@@ -69,7 +86,10 @@ test "WasmGC codec retains outlined intrinsic identity" {
     fragments.functions[0].kind is PlannedWasmOutlinedBuiltinFunction(_),
   )
   let encoded = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
-  assert_eq(deserialize_planned_module_wasmgc_fragments(encoded).unwrap(), fragments)
+  assert_eq(
+    deserialize_planned_module_wasmgc_fragments(encoded).unwrap(),
+    fragments,
+  )
 }
 
 ///|
@@ -81,7 +101,10 @@ test "WasmGC codec retains raw reference cast targets" {
       ),
     ]),
   ])
-  let fragments = plan_program_wasmgc_fragments(stages.analyzed, stages.lowering).modules[0]
+  let fragments = plan_program_wasmgc_fragments(
+      stages.analyzed,
+      stages.lowering,
+    ).modules[0]
   match fragments.functions[0].kind {
     PlannedWasmOutlinedHeapFunction(RawRefCastInstruction(recipe)) => {
       assert_eq(recipe.target, PrimitiveRawHeapOwner(StringType))
@@ -90,7 +113,10 @@ test "WasmGC codec retains raw reference cast targets" {
     _ => fail("expected an outlined reference cast recipe")
   }
   let encoded = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
-  assert_eq(deserialize_planned_module_wasmgc_fragments(encoded).unwrap(), fragments)
+  assert_eq(
+    deserialize_planned_module_wasmgc_fragments(encoded).unwrap(),
+    fragments,
+  )
 }
 
 ///|

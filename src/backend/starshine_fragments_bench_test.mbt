@@ -1,5 +1,5 @@
 ///|
-fn backend_bench_chain_source(count : Int, cycle : Bool) -> Bytes {
+fn backend_bench_chain_source(count : Int32, cycle : Bool) -> Bytes {
   let output = Buffer(size_hint=count * 48)
   for index in 0..<count {
     output.write_string_utf8("struct Node")
@@ -17,7 +17,7 @@ fn backend_bench_chain_source(count : Int, cycle : Bool) -> Bytes {
 }
 
 ///|
-fn backend_bench_enum_source(count : Int) -> Bytes {
+fn backend_bench_enum_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 32)
   output.write_string_utf8("enum Value {\n  Empty\n")
   for index in 0..<count {

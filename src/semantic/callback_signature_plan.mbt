@@ -22,8 +22,8 @@ fn wasmgc_append_erased_callback_signature(
   signatures : Array[PlannedWasmFunctionTypeFragment],
   values : Array[PlannedWasmValueType],
   source : PlannedWasmFunctionTypeFragment,
-  next_signature : Int,
-) -> Int {
+  next_signature : Int32,
+) -> Int32 {
   let mut changed = false
   for span in [source.parameters, source.results] {
     if span.start < 0 ||

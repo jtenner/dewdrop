@@ -1,5 +1,5 @@
 ///|
-fn type_alias_module_source(alias_count : Int) -> Bytes {
+fn type_alias_module_source(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 48)
   for index in 0..<alias_count {
     output.write_string_utf8("type Alias_")
@@ -10,7 +10,7 @@ fn type_alias_module_source(alias_count : Int) -> Bytes {
 }
 
 ///|
-fn recovering_type_alias_module_source(alias_count : Int) -> Bytes {
+fn recovering_type_alias_module_source(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 64)
   for index in 0..<alias_count {
     output.write_string_utf8("malformed line\n")
@@ -22,7 +22,7 @@ fn recovering_type_alias_module_source(alias_count : Int) -> Bytes {
 }
 
 ///|
-fn recovering_impl_module_source(declaration_count : Int) -> Bytes {
+fn recovering_impl_module_source(declaration_count : Int32) -> Bytes {
   let output = Buffer(size_hint=declaration_count * 160)
   for index in 0..<declaration_count {
     output.write_string_utf8("impl Value_")
@@ -37,7 +37,7 @@ fn recovering_impl_module_source(declaration_count : Int) -> Bytes {
 }
 
 ///|
-fn recovering_nested_function_module_source(declaration_count : Int) -> Bytes {
+fn recovering_nested_function_module_source(declaration_count : Int32) -> Bytes {
   let output = Buffer(size_hint=declaration_count * 160)
   for index in 0..<declaration_count {
     output.write_string_utf8("fn Broken_")
@@ -52,7 +52,7 @@ fn recovering_nested_function_module_source(declaration_count : Int) -> Bytes {
 }
 
 ///|
-fn count_parse_events(events : Iter[ParseEvent]) -> Int {
+fn count_parse_events(events : Iter[ParseEvent]) -> Int32 {
   let mut count = 0
   while events.next() is Some(_) {
     count += 1

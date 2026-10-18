@@ -2,7 +2,7 @@
 fn startup_dependency_fixture() -> (
   PlannedProgramLowering,
   Array[PlannedProgramModuleInitializer],
-  Map[DeclId, Int],
+  Map[DeclId, Int32],
 ) raise {
   let stages = compiler_test_stages(24913UL, [
     CompilerTestModule::new("app.initializers", [
@@ -17,7 +17,7 @@ fn startup_dependency_fixture() -> (
   let candidates = stages.link.initializers
   assert_eq(candidates[0].declaration, 24913UL << 32)
   assert_eq(candidates[1].declaration, (24913UL << 32) | 2UL)
-  let lookup : Map[DeclId, Int] = {}
+  let lookup : Map[DeclId, Int32] = {}
   for index, candidate in candidates {
     lookup[candidate.declaration] = index
   }
@@ -72,7 +72,7 @@ test "startup dependencies reject a missing called body instead of losing its ed
 
 ///|
 fn startup_call_failure(
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
 ) -> ProgramFunctionLookupFailure {
@@ -91,7 +91,7 @@ fn startup_call_failure(
 
 ///|
 fn startup_global_failure(
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
 ) -> ProgramFunctionLookupFailure {
@@ -315,7 +315,7 @@ test "startup dependencies terminate recursive calls and keep unique global edge
   ])
   assert_eq(stages.link.diagnostics, [])
   let candidates = stages.link.initializers
-  let lookup : Map[DeclId, Int] = {}
+  let lookup : Map[DeclId, Int32] = {}
   for index, candidate in candidates {
     lookup[candidate.declaration] = index
   }
@@ -370,7 +370,7 @@ test "startup dependencies follow exact bodies across modules" {
   assert_eq(candidates.length(), 2)
   assert_eq(candidates[0].declaration, 24914UL << 32)
   assert_eq(candidates[1].declaration, 24913UL << 32)
-  let lookup : Map[DeclId, Int] = {}
+  let lookup : Map[DeclId, Int32] = {}
   for index, candidate in candidates {
     lookup[candidate.declaration] = index
   }

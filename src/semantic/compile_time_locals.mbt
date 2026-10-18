@@ -27,11 +27,16 @@ fn compile_time_push_pattern(
       }
     }
     HirProductPattern(children, _) => {
-      guard program_specialization_span_is_valid(children, module_.pattern_children.length()) else {
+      guard program_specialization_span_is_valid(
+        children,
+        module_.pattern_children.length(),
+      ) else {
         abort("ARN-101 reachable product pattern children")
       }
       for offset in 0..<children.length {
-        work.push(CtReachPattern(module_.pattern_children[children.start + offset]))
+        work.push(
+          CtReachPattern(module_.pattern_children[children.start + offset]),
+        )
       }
     }
     HirStructPattern(base, fields, _, _, _) => {

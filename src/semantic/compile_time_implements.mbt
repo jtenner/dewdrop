@@ -63,7 +63,7 @@ struct CompileTimeEvidenceSearch {
 
 ///|
 struct CompileTimeEvidenceBudget {
-  mut steps : Int
+  mut steps : Int32
 }
 
 ///|

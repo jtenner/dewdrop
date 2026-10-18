@@ -3,7 +3,7 @@
 fn module_initialization_failure(
   module_id : ModuleId,
   declaration : DeclId,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -74,9 +74,9 @@ fn check_module_initializer_source_body(
 ///|
 fn check_module_initialization_value_index(
   collected : CollectedModule,
-  indices : Array[Int],
+  indices : Array[Int32],
   declaration : DeclId,
-) -> Result[Int, ProgramFunctionLookupFailure] {
+) -> Result[Int32, ProgramFunctionLookupFailure] {
   let failure = fn(code, expected, actual) {
     module_initialization_failure(
       collected.module_id,
@@ -122,7 +122,7 @@ fn check_module_initialization_value_index(
 fn check_module_initialization_inputs(
   collected : CollectedModule,
   inferred : InferredModuleValues,
-) -> Result[(Array[Int], Array[HirBody]), ProgramFunctionLookupFailure] {
+) -> Result[(Array[Int32], Array[HirBody]), ProgramFunctionLookupFailure] {
   let dependencies = inferred.dependencies
   let module_id = collected.module_id
   let failure = fn(code, expected, actual, detail) {

@@ -1,5 +1,5 @@
 ///|
-fn semantic_large_array_source(length : Int) -> Bytes {
+fn semantic_large_array_source(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 2 + 64)
   output.write_string_utf8(
     "open dew.std.array\nfn values() -> Array<I32> {\n  [",

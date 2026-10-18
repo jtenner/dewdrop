@@ -1,7 +1,7 @@
 ///|
 pub enum PlannedWasmTypeReference {
-  WasmModuleTypeReference(Int)
-  WasmRecursiveTypeReference(Int)
+  WasmModuleTypeReference(Int32)
+  WasmRecursiveTypeReference(Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -18,10 +18,10 @@ pub enum PlannedWasmStorageType {
   WasmStringRefStorage
   WasmNullableEqRefStorage
   WasmNullableFunctionRefStorage
-  WasmFunctionRefStorage(Int)
+  WasmFunctionRefStorage(Int32)
   WasmNominalRefStorage(PlannedWasmTypeReference)
   WasmExternalNominalRefStorage(DeclId)
-  WasmFixedArrayRefStorage(Int)
+  WasmFixedArrayRefStorage(Int32)
   WasmNullableNominalRefStorage(PlannedWasmTypeReference)
   WasmNullableExternalNominalRefStorage(DeclId)
 } derive(Eq, Debug)
@@ -30,20 +30,20 @@ pub enum PlannedWasmStorageType {
 pub enum PlannedWasmFieldRole {
   WasmStructField(FieldId)
   WasmEnumTagField
-  WasmTuplePayloadField(VariantId, Int)
+  WasmTuplePayloadField(VariantId, Int32)
   WasmStructPayloadField(FieldId)
   WasmClosureEntryField
-  WasmCaptureCellValueField(Int)
-  WasmLambdaCaptureField(LambdaId, Int)
+  WasmCaptureCellValueField(Int32)
+  WasmLambdaCaptureField(LambdaId, Int32)
   WasmTraitObjectReceiverField(DeclId)
   WasmTraitObjectVTableField(DeclId)
-  WasmTraitMethodField(DeclId, DeclId, Int)
+  WasmTraitMethodField(DeclId, DeclId, Int32)
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedWasmField {
   role : PlannedWasmFieldRole
-  physical_index : Int
+  physical_index : Int32
   storage : PlannedWasmStorageType
   mutable_ : Bool
   offset : UInt64
@@ -98,9 +98,9 @@ pub enum PlannedWasmPhysicalTypeKind {
   PlannedWasmStructType(DeclId)
   PlannedWasmForeignMarkerType(DeclId)
   PlannedWasmEnumBaseType(DeclId)
-  PlannedWasmEnumSubtypeType(DeclId, VariantId, Int)
+  PlannedWasmEnumSubtypeType(DeclId, VariantId, Int32)
   PlannedWasmClosureType
-  PlannedWasmCaptureCellType(Int)
+  PlannedWasmCaptureCellType(Int32)
   PlannedWasmLambdaClosureType(LambdaId)
   PlannedWasmTraitMethodSignatureType(DeclId)
   PlannedWasmTraitVTableType(DeclId)
@@ -110,8 +110,8 @@ pub enum PlannedWasmPhysicalTypeKind {
 ///|
 pub struct PlannedWasmPhysicalType {
   kind : PlannedWasmPhysicalTypeKind
-  type_index : Int
-  group_index : Int
+  type_index : Int32
+  group_index : Int32
   fields : HirSpan
   offset : UInt64
 } derive(Eq, Debug)
@@ -119,7 +119,7 @@ pub struct PlannedWasmPhysicalType {
 ///|
 pub struct PlannedWasmRecursiveGroup {
   types : HirSpan
-  first_type_index : Int
+  first_type_index : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -131,18 +131,18 @@ pub enum PlannedWasmValueType {
   WasmV128Value
   WasmStringRefValue
   WasmNullableEqRefValue
-  WasmFunctionRefValue(Int)
-  WasmNominalRefValue(Int)
+  WasmFunctionRefValue(Int32)
+  WasmNominalRefValue(Int32)
   WasmExternalNominalRefValue(DeclId)
-  WasmFixedArrayRefValue(Int)
-  WasmNullableNominalRefValue(Int)
+  WasmFixedArrayRefValue(Int32)
+  WasmNullableNominalRefValue(Int32)
   WasmNullableExternalNominalRefValue(DeclId)
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedWasmFunctionTypeFragment {
   resolved_type : ResolvedTypeId
-  signature_type_index : Int
+  signature_type_index : Int32
   parameters : HirSpan
   results : HirSpan
 } derive(Eq, Debug)
@@ -216,7 +216,7 @@ pub enum PlannedWasmFunctionKind {
 ///|
 pub enum PlannedSpecializationTraitEvidenceKind {
   PlannedConcreteTraitEvidence(DeclId, HirSpan)
-  PlannedRuntimeTraitEvidence(DeclId, Int)
+  PlannedRuntimeTraitEvidence(DeclId, Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -237,8 +237,8 @@ pub struct PlannedWasmFunctionFragment {
   kind : PlannedWasmFunctionKind
   direct_builtin : Bytes
   elided : Bool
-  signature_type_index : Int
-  function_index : Int
+  signature_type_index : Int32
+  function_index : Int32
   parameters : HirSpan
   results : HirSpan
   specialization_shapes : HirSpan
@@ -255,19 +255,19 @@ pub struct PlannedWasmTraitMethod {
   receiver_shape : PlannedValueShape
   receiver_nominal : DeclId
   implementation_specialization_abi_key : String
-  slot : Int
-  signature_type_index : Int
-  adapter_function : Int
+  slot : Int32
+  signature_type_index : Int32
+  adapter_function : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedWasmTraitDictionary {
   trait_declaration : DeclId
   implementation : DeclId
-  evidence : Int
+  evidence : Int32
   evidence_key : String
-  vtable_type_index : Int
-  object_type_index : Int
+  vtable_type_index : Int32
+  object_type_index : Int32
   methods : HirSpan
   runtime_evidence_parameters : HirSpan
   runtime_materialized : Bool
@@ -276,15 +276,15 @@ pub struct PlannedWasmTraitDictionary {
 ///|
 pub struct PlannedWasmTraitLayout {
   trait_declaration : DeclId
-  vtable_type_index : Int
-  object_type_index : Int
+  vtable_type_index : Int32
+  object_type_index : Int32
   methods : HirSpan
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedWasmVariantField {
   role : PlannedWasmFieldRole
-  physical_index : Int
+  physical_index : Int32
   storage : PlannedWasmStorageType
 } derive(Eq, Debug)
 
@@ -296,44 +296,44 @@ pub struct PlannedModuleWasmGCFragments {
   type_groups : Array[PlannedWasmRecursiveGroup]
   physical_types : Array[PlannedWasmPhysicalType]
   fields : Array[PlannedWasmField]
-  type_index_by_declaration : Array[Int]
-  payload_type_index_by_variant : Array[Int]
+  type_index_by_declaration : Array[Int32]
+  payload_type_index_by_variant : Array[Int32]
   variant_declarations : Array[DeclId]
-  variant_tags : Array[Int]
+  variant_tags : Array[Int32]
   variant_field_spans : Array[HirSpan]
   variant_fields : Array[PlannedWasmVariantField]
   field_names : Array[String]
-  closure_type_index : Int
-  capture_cell_type_indices : Array[Int]
-  lambda_closure_type_indices : Array[Int]
-  lambda_capture_field_indices : Array[Int]
+  closure_type_index : Int32
+  capture_cell_type_indices : Array[Int32]
+  lambda_closure_type_indices : Array[Int32]
+  lambda_capture_field_indices : Array[Int32]
   function_types : Array[PlannedWasmFunctionTypeFragment]
-  function_type_by_resolved : Array[Int]
-  closure_entry_type_by_resolved : Array[Int]
-  erased_closure_direct_type_by_resolved : Array[Int]
-  erased_closure_entry_type_by_resolved : Array[Int]
-  lambda_entry_signature_indices : Array[Int]
-  lambda_capture_parameter_indices : Array[Int]
+  function_type_by_resolved : Array[Int32]
+  closure_entry_type_by_resolved : Array[Int32]
+  erased_closure_direct_type_by_resolved : Array[Int32]
+  erased_closure_entry_type_by_resolved : Array[Int32]
+  lambda_entry_signature_indices : Array[Int32]
+  lambda_capture_parameter_indices : Array[Int32]
   specialized_lambda_layouts : Map[String, CompileTimeLambdaLayout]
   trait_layouts : Array[PlannedWasmTraitLayout]
   trait_layout_methods : Array[DeclId]
-  trait_method_signature_indices : Array[Int]
+  trait_method_signature_indices : Array[Int32]
   trait_dictionaries : Array[PlannedWasmTraitDictionary]
-  trait_dictionary_runtime_evidence_parameters : Array[Int]
+  trait_dictionary_runtime_evidence_parameters : Array[Int32]
   trait_methods : Array[PlannedWasmTraitMethod]
   functions : Array[PlannedWasmFunctionFragment]
-  function_by_declaration : Array[Int]
-  lambda_function_indices : Array[Int]
+  function_by_declaration : Array[Int32]
+  lambda_function_indices : Array[Int32]
   function_value_types : Array[PlannedWasmValueType]
   specialization_shapes : Array[PlannedValueShape]
-  specialization_evidence_roots : Array[Int]
+  specialization_evidence_roots : Array[Int32]
   specialization_trait_evidence : Array[PlannedSpecializationTraitEvidence]
-  specialization_evidence_children : Array[Int]
+  specialization_evidence_children : Array[Int32]
   specialization_evidence_arguments : Array[PlannedValueShape]
-  signature_type_count : Int
-  imported_function_count : Int
-  defined_function_count : Int
-  imported_function_indices : Map[Bytes, Int]
+  signature_type_count : Int32
+  imported_function_count : Int32
+  defined_function_count : Int32
+  imported_function_indices : Map[Bytes, Int32]
   uses_text_runtime : Bool
   uses_fixed_array_runtime : Bool
   uses_linear_memory : Bool
@@ -343,7 +343,7 @@ pub struct PlannedModuleWasmGCFragments {
 pub fn PlannedModuleWasmGCFragments::imported_function_index(
   self : PlannedModuleWasmGCFragments,
   name : Bytes,
-) -> Int {
+) -> Int32 {
   self.imported_function_indices.get(name).unwrap_or(-1)
 }
 
@@ -351,7 +351,7 @@ pub fn PlannedModuleWasmGCFragments::imported_function_index(
 pub fn PlannedModuleWasmGCFragments::type_index_of(
   self : PlannedModuleWasmGCFragments,
   declaration : DeclId,
-) -> Int? {
+) -> Int32? {
   if semantic_id_module(declaration) != self.module_id {
     return None
   }
@@ -371,7 +371,7 @@ pub fn PlannedModuleWasmGCFragments::type_index_of(
 pub fn PlannedModuleWasmGCFragments::payload_type_index_of(
   self : PlannedModuleWasmGCFragments,
   variant : VariantId,
-) -> Int? {
+) -> Int32? {
   if semantic_id_module(variant) != self.module_id {
     return None
   }
@@ -409,7 +409,7 @@ pub fn PlannedModuleWasmGCFragments::variant_declaration_of(
 pub fn PlannedModuleWasmGCFragments::variant_tag_of(
   self : PlannedModuleWasmGCFragments,
   variant : VariantId,
-) -> Int? {
+) -> Int32? {
   if semantic_id_module(variant) != self.module_id {
     return None
   }
@@ -468,12 +468,12 @@ pub fn PlannedModuleWasmGCFragments::function_of(
 priv struct WasmPhysicalTypeSource {
   kind : PlannedWasmPhysicalTypeKind
   offset : UInt64
-  generic_carriers : Array[Int]
+  generic_carriers : Array[Int32]
 }
 
 ///|
 priv struct WasmPhysicalTypeJob {
-  dependencies : Array[Int]
+  dependencies : Array[Int32]
 }
 
 ///|
@@ -491,7 +491,7 @@ fn wasmgc_reachable_defined_functions(
   program_roots : Map[DeclId, Bool],
 ) -> Array[Bool] {
   let reachable = Array::make(functions.callables.length(), false)
-  let work : Array[Int] = []
+  let work : Array[Int32] = []
   for callable_index, callable in functions.callables {
     if (
         program_roots.contains(callable.declaration) ||
@@ -652,7 +652,7 @@ fn wasmgc_variant_shapes_equal(
 fn wasmgc_physical_type_count_with_options(
   layouts : PlannedModuleTypeLayouts,
   options : WasmGCPlanningOptions,
-) -> Int {
+) -> Int32 {
   let (sources, _, _) = wasmgc_build_physical_sources(
     layouts,
     options,
@@ -668,9 +668,9 @@ fn wasmgc_physical_type_count_with_options(
 fn wasmgc_physical_type_count_with_instantiations(
   layouts : PlannedModuleTypeLayouts,
   options : WasmGCPlanningOptions,
-  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int32]]],
   raw_array_declarations : Map[DeclId, Bool],
-) -> Int {
+) -> Int32 {
   let (sources, _, _) = wasmgc_build_physical_sources(
     layouts,
     options,
@@ -684,8 +684,8 @@ fn wasmgc_physical_type_count_with_instantiations(
 
 ///|
 fn wasmgc_variant_uses_same_generic_carriers(
-  left : Array[Int],
-  right : Array[Int],
+  left : Array[Int32],
+  right : Array[Int32],
 ) -> Bool {
   if left.length() != right.length() {
     return false
@@ -704,9 +704,9 @@ fn wasmgc_build_physical_sources(
   options : WasmGCPlanningOptions,
   required_declarations : Map[DeclId, Bool],
   prune_unrequired : Bool,
-  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int32]]],
   raw_array_declarations : Map[DeclId, Bool],
-) -> (Array[WasmPhysicalTypeSource], Array[Int], Array[Int]) {
+) -> (Array[WasmPhysicalTypeSource], Array[Int32], Array[Int32]) {
   let sources : Array[WasmPhysicalTypeSource] = []
   let entity_by_declaration = Array::make(
     layouts.layout_by_declaration.length(),
@@ -839,14 +839,14 @@ fn wasmgc_nominal_declaration(
 
 ///|
 fn wasmgc_record_generic_enum_instantiation(
-  output : Map[DeclId, Array[Array[Int]]],
+  output : Map[DeclId, Array[Array[Int32]]],
   declaration : DeclId,
-  carriers : Array[Int],
+  carriers : Array[Int32],
 ) -> Unit {
   let demands = match output.get(declaration) {
     Some(values) => values
     None => {
-      let values : Array[Array[Int]] = []
+      let values : Array[Array[Int32]] = []
       output[declaration] = values
       values
     }
@@ -863,8 +863,8 @@ fn wasmgc_record_generic_enum_instantiation(
 fn wasmgc_collect_inferred_enum_instantiations(
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleBodies,
-  generic_parameter_counts : Map[DeclId, Int],
-  output : Map[DeclId, Array[Array[Int]]],
+  generic_parameter_counts : Map[DeclId, Int32],
+  output : Map[DeclId, Array[Array[Int32]]],
 ) -> Unit {
   for type_ in inferred.types {
     let (base, arguments) = match type_ {
@@ -882,7 +882,7 @@ fn wasmgc_collect_inferred_enum_instantiations(
       arguments.length <= inferred.type_arguments.length() - arguments.start else {
       abort("generic enum inference argument span is invalid")
     }
-    let carriers : Array[Int] = []
+    let carriers : Array[Int32] = []
     for index in 0..<arguments.length {
       let shape = planned_value_shape(
         resolved,
@@ -904,8 +904,8 @@ fn wasmgc_collect_inferred_enum_instantiations(
 ///|
 pub fn wasmgc_collect_generic_enum_instantiations_into(
   resolved : ResolvedModuleTypes,
-  generic_parameter_counts : Map[DeclId, Int],
-  output : Map[DeclId, Array[Array[Int]]],
+  generic_parameter_counts : Map[DeclId, Int32],
+  output : Map[DeclId, Array[Array[Int32]]],
 ) -> Unit {
   for type_ in resolved.types {
     let (base, arguments) = match type_ {
@@ -923,7 +923,7 @@ pub fn wasmgc_collect_generic_enum_instantiations_into(
     if arguments.length != expected {
       continue
     }
-    let carriers : Array[Int] = []
+    let carriers : Array[Int32] = []
     for index in 0..<arguments.length {
       carriers.push(
         wasmgc_fixed_array_carrier_for_resolved_type(
@@ -940,8 +940,8 @@ pub fn wasmgc_collect_generic_enum_instantiations_into(
 fn wasmgc_collect_generic_enum_instantiations(
   resolved : ResolvedModuleTypes,
   layouts : PlannedModuleTypeLayouts,
-) -> Map[DeclId, Array[Array[Int]]] {
-  let counts : Map[DeclId, Int] = Map::default()
+) -> Map[DeclId, Array[Array[Int32]]] {
+  let counts : Map[DeclId, Int32] = Map::default()
   for layout in layouts.layouts {
     match layout.kind {
       PlannedEnumLayout(_) if layout.generic_parameters.length > 0 =>
@@ -949,7 +949,7 @@ fn wasmgc_collect_generic_enum_instantiations(
       _ => ()
     }
   }
-  let output : Map[DeclId, Array[Array[Int]]] = Map::default()
+  let output : Map[DeclId, Array[Array[Int32]]] = Map::default()
   wasmgc_collect_generic_enum_instantiations_into(resolved, counts, output)
   output
 }
@@ -1136,15 +1136,16 @@ fn wasmgc_required_nominal_declarations(
 fn wasmgc_storage_type(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
-  type_index_by_declaration : Array[Int],
-  current_group : Int,
-  group_index_by_type : Array[Int],
-  group_first_type_indices : Array[Int],
+  type_index_by_declaration : Array[Int32],
+  current_group : Int32,
+  group_index_by_type : Array[Int32],
+  group_first_type_indices : Array[Int32],
 ) -> PlannedWasmStorageType? {
   let mut current = root
   while true {
     match resolved.types[current] {
-      ErrorType => abort("SPC-301 invalid type bypassed declared storage verification")
+      ErrorType =>
+        abort("SPC-301 invalid type bypassed declared storage verification")
       MemberTypeProjection(_, _, _) =>
         abort("SPC-301 unresolved member projection reached physical storage")
       PrimitiveType(UnitType | NeverType | CompileTimeTypeType) => return None
@@ -1287,10 +1288,10 @@ fn wasmgc_storage_type(
 fn wasmgc_add_type_dependency(
   resolved : ResolvedModuleTypes,
   type_ : ResolvedTypeId,
-  entity_by_declaration : Array[Int],
-  marks : Array[Int],
-  generation : Int,
-  dependencies : Array[Int],
+  entity_by_declaration : Array[Int32],
+  marks : Array[Int32],
+  generation : Int32,
+  dependencies : Array[Int32],
 ) -> Unit {
   match wasmgc_nominal_declaration(resolved, type_) {
     Some(declaration) => {
@@ -1315,11 +1316,11 @@ fn wasmgc_plan_physical_type_job(
   resolved : ResolvedModuleTypes,
   layouts : PlannedModuleTypeLayouts,
   source : WasmPhysicalTypeSource,
-  entity_by_declaration : Array[Int],
-  marks : Array[Int],
-  generation : Int,
+  entity_by_declaration : Array[Int32],
+  marks : Array[Int32],
+  generation : Int32,
 ) -> WasmPhysicalTypeJob {
-  let dependencies : Array[Int] = []
+  let dependencies : Array[Int32] = []
   match source.kind {
     PlannedWasmStructType(declaration) =>
       match layouts.layout_of(declaration).unwrap().kind {
@@ -1387,14 +1388,14 @@ fn wasmgc_plan_physical_type_job(
 ///|
 fn wasmgc_type_sccs(
   jobs : Array[WasmPhysicalTypeJob],
-) -> (Array[HirSpan], Array[Int]) {
+) -> (Array[HirSpan], Array[Int32]) {
   let count = jobs.length()
   if count == 0 {
     return ([], [])
   }
   let visited = Array::make(count, false)
-  let work : Array[Int] = []
-  let finish_order : Array[Int] = []
+  let work : Array[Int32] = []
+  let finish_order : Array[Int32] = []
   for start in 0..<count {
     if visited[start] {
       continue
@@ -1449,10 +1450,10 @@ fn wasmgc_type_sccs(
     finish_rank[entity] = rank
   }
   let assigned = Array::make(count, false)
-  let component : Array[Int] = []
+  let component : Array[Int32] = []
   let raw_spans : Array[HirSpan] = []
-  let raw_members : Array[Int] = []
-  let raw_ranks : Array[Int] = []
+  let raw_members : Array[Int32] = []
+  let raw_ranks : Array[Int32] = []
   let mut order_index = finish_order.length()
   while order_index > 0 {
     order_index -= 1
@@ -1487,7 +1488,7 @@ fn wasmgc_type_sccs(
     raw_spans.push({ start, length: raw_members.length() - start, })
     raw_ranks.push(rank)
   }
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<raw_spans.length() {
     order.push(index)
   }
@@ -1500,7 +1501,7 @@ fn wasmgc_type_sccs(
     }
   })
   let spans : Array[HirSpan] = []
-  let members : Array[Int] = []
+  let members : Array[Int32] = []
   for component_index in order {
     let source = raw_spans[component_index]
     let start = members.length()
@@ -1626,7 +1627,7 @@ fn wasmgc_append_specialized_generic_field(
   resolved : ResolvedModuleTypes,
   type_ : ResolvedTypeId,
   generic_parameters : HirSpan,
-  carriers : Array[Int],
+  carriers : Array[Int32],
   fields : Array[PlannedWasmField],
   role : PlannedWasmFieldRole,
   mutable_ : Bool,
@@ -1664,10 +1665,10 @@ fn wasmgc_append_physical_type_fields(
   resolved : ResolvedModuleTypes,
   layouts : PlannedModuleTypeLayouts,
   source : WasmPhysicalTypeSource,
-  type_index_by_declaration : Array[Int],
-  current_group : Int,
-  group_index_by_type : Array[Int],
-  group_first_type_indices : Array[Int],
+  type_index_by_declaration : Array[Int32],
+  current_group : Int32,
+  group_index_by_type : Array[Int32],
+  group_first_type_indices : Array[Int32],
   target : Array[PlannedWasmField],
 ) -> HirSpan {
   let start = target.length()
@@ -1840,7 +1841,7 @@ fn wasmgc_capture_value_type(
 }
 
 ///|
-pub fn wasmgc_capture_cell_slot(shape : PlannedValueShape) -> Int {
+pub fn wasmgc_capture_cell_slot(shape : PlannedValueShape) -> Int32 {
   match shape {
     UnitPlannedValueShape | NeverPlannedValueShape => -1
     I8PlannedValueShape
@@ -1862,7 +1863,7 @@ pub fn wasmgc_capture_cell_slot(shape : PlannedValueShape) -> Int {
 }
 
 ///|
-pub fn wasmgc_capture_cell_storage(slot : Int) -> PlannedWasmStorageType {
+pub fn wasmgc_capture_cell_storage(slot : Int32) -> PlannedWasmStorageType {
   match slot {
     0 => WasmI32Storage
     1 => WasmI64Storage
@@ -1907,7 +1908,7 @@ fn wasmgc_capture_storage(
 pub fn wasmgc_fixed_array_carrier_for_resolved_type(
   types : Array[ResolvedType],
   root : ResolvedTypeId,
-) -> Int {
+) -> Int32 {
   if root < 0 || root >= types.length() {
     return 5
   }
@@ -1970,7 +1971,7 @@ pub fn wasmgc_fixed_array_carrier_for_resolved_type(
 }
 
 ///|
-pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int {
+pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int32 {
   match shape {
     I8PlannedValueShape | U8PlannedValueShape => 6
     I16PlannedValueShape | U16PlannedValueShape => 7
@@ -1990,7 +1991,7 @@ pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int {
 ///|
 // Raw array storage is distinct from expression and enum payload carriers.
 // Unit occupies a null marker cell; unknown evidence never selects that cell.
-pub fn wasmgc_raw_array_storage_carrier(shape : PlannedValueShape) -> Int {
+pub fn wasmgc_raw_array_storage_carrier(shape : PlannedValueShape) -> Int32 {
   if shape is ProductPlannedValueShape(_) {
     let work = [shape]
     while work.length() > 0 {
@@ -2020,8 +2021,8 @@ fn wasmgc_value_type(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
   self_type : ResolvedTypeId,
-  type_index_by_declaration : Array[Int],
-  function_type_by_resolved : Array[Int],
+  type_index_by_declaration : Array[Int32],
+  function_type_by_resolved : Array[Int32],
   closure_abi : Bool,
 ) -> PlannedWasmValueType? {
   let mut current = root
@@ -2256,8 +2257,8 @@ fn wasmgc_append_resolved_abi_type(
   resolved : ResolvedModuleTypes,
   type_ : ResolvedTypeId,
   self_type : ResolvedTypeId,
-  type_index_by_declaration : Array[Int],
-  function_type_by_resolved : Array[Int],
+  type_index_by_declaration : Array[Int32],
+  function_type_by_resolved : Array[Int32],
   closure_abi : Bool,
 ) -> Unit {
   let shape = planned_resolved_value_shape(resolved, type_)
@@ -2281,10 +2282,10 @@ fn wasmgc_plan_function_job(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
-  type_index_by_declaration : Array[Int],
-  function_type_by_resolved : Array[Int],
+  type_index_by_declaration : Array[Int32],
+  function_type_by_resolved : Array[Int32],
   closure_abi : Bool,
-  deferred? : Bool = false,
+  deferred~ : Bool = false,
 ) -> WasmFunctionFragmentJob {
   let parameters : Array[PlannedWasmValueType] = []
   for index in 0..<(if deferred { 0 } else { callable.parameters.length }) {
@@ -2341,11 +2342,15 @@ fn wasmgc_plan_function_job(
         PlannedWasmSignatureOnlyFunction
       } else if raw_array_opcode(name) == 2 {
         PlannedWasmInlineHeapFunction(
-          RawArrayGetInstruction(raw_array_get_recipe(resolved, functions, callable, name)),
+          RawArrayGetInstruction(
+            raw_array_get_recipe(resolved, functions, callable, name),
+          ),
         )
       } else if raw_struct_get_opcode(name) {
         PlannedWasmInlineHeapFunction(
-          RawStructGetInstruction(raw_struct_get_recipe(resolved, functions, callable, name)),
+          RawStructGetInstruction(
+            raw_struct_get_recipe(resolved, functions, callable, name),
+          ),
         )
       } else if raw_ref_cast_opcode(name) {
         PlannedWasmInlineHeapFunction(
@@ -2458,7 +2463,8 @@ fn wasmgc_direct_builtin_of(
     PlannedExpressionItem(expression) => expression
     PlannedLetItem(_, _, _) | PlannedElidedLetItem(_) => return b""
   }
-  if expression < 0 || expression >= lowering.expressions.length() ||
+  if expression < 0 ||
+    expression >= lowering.expressions.length() ||
     expression < body.expressions.start ||
     expression - body.expressions.start >= body.expressions.length {
     return b""
@@ -2525,12 +2531,7 @@ fn wasmgc_direct_builtin_of(
     }
   }
   match builtin_names.get(target) {
-    Some(name) =>
-      if wasmgc_builtin_is_inline(name) {
-        name
-      } else {
-        b""
-      }
+    Some(name) => if wasmgc_builtin_is_inline(name) { name } else { b"" }
     _ => b""
   }
 }
@@ -2542,8 +2543,8 @@ fn wasmgc_forwarding_builtins(
 ) -> Array[Bytes] {
   let callables = lowering.functions.callables
   let result = Array::make(callables.length(), b"")
-  let dependents : Map[DeclId, Array[Int]] = {}
-  let queue : Array[Int] = []
+  let dependents : Map[DeclId, Array[Int32]] = {}
+  let queue : Array[Int32] = []
   let pending = Array::make(callables.length(), true)
   for index, callable in callables {
     queue.push(index)
@@ -2615,7 +2616,7 @@ fn wasmgc_forwarding_builtins(
 }
 
 ///|
-fn wasmgc_validate_order(order : Array[Int], count : Int) -> Unit {
+fn wasmgc_validate_order(order : Array[Int32], count : Int32) -> Unit {
   if order.length() != count {
     abort("WasmGC fragment job order has the wrong length")
   }
@@ -2664,7 +2665,7 @@ fn wasmgc_lambda_declaration(module_id : ModuleId, lambda : LambdaId) -> DeclId 
 ///|
 fn wasmgc_trait_adapter_declaration(
   module_id : ModuleId,
-  adapter : Int,
+  adapter : Int32,
 ) -> DeclId {
   make_semantic_id(module_id, 0x71000000 + adapter)
 }
@@ -2700,7 +2701,7 @@ fn wasmgc_runtime_trait_declarations(
 }
 
 ///|
-fn wasmgc_trait_evidence_shape_code(shape : PlannedValueShape) -> Int {
+fn wasmgc_trait_evidence_shape_code(shape : PlannedValueShape) -> Int32 {
   match shape {
     ErrorPlannedValueShape => 0
     UnitPlannedValueShape => 1
@@ -2727,7 +2728,7 @@ fn wasmgc_trait_evidence_shape_code(shape : PlannedValueShape) -> Int {
 ///|
 pub fn wasmgc_trait_evidence_key(
   lowering : PlannedModuleLowering,
-  evidence : Int,
+  evidence : Int32,
 ) -> String {
   trait_evidence_key(LoweringEvidenceKey(lowering), evidence)
 }
@@ -2735,7 +2736,7 @@ pub fn wasmgc_trait_evidence_key(
 ///|
 fn wasmgc_trait_evidence_implementation(
   lowering : PlannedModuleLowering,
-  evidence : Int,
+  evidence : Int32,
 ) -> DeclId? {
   if evidence < 0 || evidence >= lowering.trait_evidence.length() {
     return None
@@ -2903,7 +2904,7 @@ fn wasmgc_nominal_type_declaration(
 }
 
 ///|
-fn wasmgc_trait_receiver_box_slot(shape : PlannedValueShape) -> Int {
+fn wasmgc_trait_receiver_box_slot(shape : PlannedValueShape) -> Int32 {
   match shape {
     I8PlannedValueShape
     | I16PlannedValueShape
@@ -2957,13 +2958,13 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   lowering : PlannedModuleLowering,
   imports : ResolvedModuleImports?,
   options : WasmGCPlanningOptions,
-  type_order : Array[Int],
-  function_order : Array[Int],
+  type_order : Array[Int32],
+  function_order : Array[Int32],
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
-  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
-  deferred_callables? : Map[DeclId, Bool] = {},
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int32]]],
+  deferred_callables~ : Map[DeclId, Bool] = {},
 ) -> PlannedModuleWasmGCFragments {
   if resolved.module_id != lowering.module_id {
     abort("WasmGC fragment inputs belong to different modules")
@@ -3008,7 +3009,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     lowering.raw_array_declarations,
   )
   let effective_type_order = if program_roots.length() > 0 {
-    let order : Array[Int] = []
+    let order : Array[Int32] = []
     for index in 0..<sources.length() {
       order.push(index)
     }
@@ -3076,7 +3077,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     }
   }
   let group_index_by_type = Array::make(sources.length(), -1)
-  let group_first_type_indices : Array[Int] = []
+  let group_first_type_indices : Array[Int32] = []
   for group_index, component in component_spans {
     let first_entity = component_members[component.start]
     group_first_type_indices.push(entity_type_indices[first_entity])
@@ -3230,8 +3231,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   }
   let trait_layouts : Array[PlannedWasmTraitLayout] = []
   let trait_layout_methods : Array[DeclId] = []
-  let trait_method_signature_indices : Array[Int] = []
-  let runtime_requirement_signatures : Map[DeclId, Int] = Map::default()
+  let trait_method_signature_indices : Array[Int32] = []
+  let runtime_requirement_signatures : Map[DeclId, Int32] = Map::default()
   for trait_declaration in runtime_traits {
     let method_start = trait_layout_methods.length()
     for
@@ -3622,14 +3623,18 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     elided_functions[callable_index] = compile_time_projected_signature(
         lowering, callable,
       ) ||
-      (direct_builtin.length() > 0 && callable.visibility == ModuleVisible &&
+      (
+        direct_builtin.length() > 0 &&
+        callable.visibility == ModuleVisible &&
         !local_function_value_roots.contains(callable.declaration) &&
-        !program_function_value_roots.contains(callable.declaration)) ||
+        !program_function_value_roots.contains(callable.declaration)
+      ) ||
       (match function_jobs[callable_index].unwrap().kind {
         PlannedWasmImportedFunction(_)
         | PlannedWasmDefinedFunction(_)
         | PlannedWasmOutlinedBuiltinFunction(_)
-        | PlannedWasmOutlinedHeapFunction(_) => !reachable_functions[callable_index]
+        | PlannedWasmOutlinedHeapFunction(_) =>
+          !reachable_functions[callable_index]
         _ => false
       })
   }
@@ -4347,7 +4352,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       break
     }
   }
-  let imported_function_indices : Map[Bytes, Int] = Map::default()
+  let imported_function_indices : Map[Bytes, Int32] = Map::default()
   for function_ in planned_functions {
     if function_.elided || function_.function_index < 0 {
       continue
@@ -4416,8 +4421,8 @@ fn plan_module_wasmgc_fragments_in_orders(
   lowering : PlannedModuleLowering,
   imports : ResolvedModuleImports?,
   options : WasmGCPlanningOptions,
-  type_order : Array[Int],
-  function_order : Array[Int],
+  type_order : Array[Int32],
+  function_order : Array[Int32],
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
@@ -4445,10 +4450,10 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   program_roots : Map[DeclId, Bool],
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
-  generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
-  deferred_callables? : Map[DeclId, Bool] = {},
+  generic_enum_instantiations : Map[DeclId, Array[Array[Int32]]],
+  deferred_callables~ : Map[DeclId, Bool] = {},
 ) -> PlannedModuleWasmGCFragments {
-  let type_order : Array[Int] = []
+  let type_order : Array[Int32] = []
   for
     index in 0..<wasmgc_physical_type_count_with_instantiations(
       lowering.type_layouts,
@@ -4458,7 +4463,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
     ) {
     type_order.push(index)
   }
-  let function_order : Array[Int] = []
+  let function_order : Array[Int32] = []
   for index in 0..<lowering.functions.callables.length() {
     function_order.push(index)
   }

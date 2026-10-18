@@ -42,7 +42,7 @@ fn call_frame_test_data() -> (
   assert_eq(keys.length(), 1)
   let key = keys[0]
   let span = link.specialized_call_runtime_evidence_lookup[key]
-  let callers : Array[Int] = []
+  let callers : Array[Int32] = []
   for index, function_ in link.functions {
     if function_.specialization_abi_key == key.specialization_abi_key &&
       !function_.elided {

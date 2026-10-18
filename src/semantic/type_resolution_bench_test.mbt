@@ -1,5 +1,5 @@
 ///|
-fn resolved_alias_source(alias_count : Int) -> Bytes {
+fn resolved_alias_source(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 52 + 64)
   output.write_string_utf8("struct List<t> {}\nenum Result<t> {\n  Ok(t)\n}\n")
   for index in 0..<alias_count {
@@ -11,7 +11,7 @@ fn resolved_alias_source(alias_count : Int) -> Bytes {
 }
 
 ///|
-fn resolved_signature_source(function_count : Int) -> Bytes {
+fn resolved_signature_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 104 + 32)
   output.write_string_utf8("struct Pair<a, b> {}\n")
   for index in 0..<function_count {
@@ -25,7 +25,7 @@ fn resolved_signature_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn resolved_cycle_source(alias_count : Int) -> Bytes {
+fn resolved_cycle_source(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 40)
   for index in 0..<alias_count {
     output.write_string_utf8("type Alias_")
@@ -38,7 +38,7 @@ fn resolved_cycle_source(alias_count : Int) -> Bytes {
 }
 
 ///|
-fn normalized_alias_chain_source(alias_count : Int) -> Bytes {
+fn normalized_alias_chain_source(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 44 + 80)
   output.write_string_utf8("type Alias_0 = I32\n")
   for index in 1..<alias_count {
@@ -55,7 +55,7 @@ fn normalized_alias_chain_source(alias_count : Int) -> Bytes {
 }
 
 ///|
-fn normalized_generic_alias_chain_source(alias_count : Int) -> Bytes {
+fn normalized_generic_alias_chain_source(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 72 + 128)
   output.write_string_utf8(
     "struct Pair<a, b> {}\ntype Alias_0<t> = Pair<t, I32>\n",

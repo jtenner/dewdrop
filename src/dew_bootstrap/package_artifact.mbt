@@ -1,21 +1,21 @@
 ///|
 struct BootstrapArtifactReader {
   bytes : Bytes
-  mut offset : Int
+  mut offset : Int32
   mut error : String?
 }
 
 ///|
-const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES : Int = 268435456
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES : Int32 = 268435456
 
 ///|
-const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_DEPENDENCIES : Int = 256
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_DEPENDENCIES : Int32 = 256
 
 ///|
-const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES : Int = 65536
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES : Int32 = 65536
 
 ///|
-const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_PATH_BYTES : Int = 4096
+const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_PATH_BYTES : Int32 = 4096
 
 ///|
 fn bootstrap_package_artifact_source_path_valid(path : String) -> Bool {
@@ -95,7 +95,7 @@ fn bootstrap_validate_package_artifact_files(
 }
 
 ///|
-fn BootstrapArtifactReader::read_u32(self : BootstrapArtifactReader) -> Int {
+fn BootstrapArtifactReader::read_u32(self : BootstrapArtifactReader) -> Int32 {
   if self.offset + 4 > self.bytes.length() {
     self.error = Some("truncated package artifact")
     return 0
@@ -236,7 +236,7 @@ fn bootstrap_store_package_artifact(
 }
 
 ///|
-fn bootstrap_hash_u32_buffer(output : Buffer, value : Int) -> Unit {
+fn bootstrap_hash_u32_buffer(output : Buffer, value : Int32) -> Unit {
   let bits = value.reinterpret_as_uint()
   output.write_byte((bits & 0xffU).to_byte())
   output.write_byte(((bits >> 8) & 0xffU).to_byte())

@@ -1,7 +1,7 @@
 ///|
 fn assert_standard_registry_declaration(
   module_ : CollectedModule,
-  local_index : Int,
+  local_index : Int32,
   name : String,
 ) -> Unit {
   guard local_index >= 0 && local_index < module_.declarations.length() else {
@@ -59,26 +59,11 @@ test "generated standard builtin registry matches collected bootstrap declaratio
     standard_nullable_ref_type_declaration(),
     make_semantic_id(wasm_intrinsics.module_id, 1),
   )
-  assert_eq(
-    raw_reference_operation(b"array.new"),
-    None,
-  )
-  assert_eq(
-    raw_reference_operation(b"array.get"),
-    None,
-  )
-  assert_eq(
-    raw_reference_operation(b"array.set"),
-    None,
-  )
-  assert_eq(
-    raw_reference_operation(b"ref_null"),
-    Some(RawRefNull),
-  )
-  assert_eq(
-    raw_reference_operation(b"ref_as_non_null"),
-    Some(RawRefAsNonNull),
-  )
+  assert_eq(raw_reference_operation(b"array.new"), None)
+  assert_eq(raw_reference_operation(b"array.get"), None)
+  assert_eq(raw_reference_operation(b"array.set"), None)
+  assert_eq(raw_reference_operation(b"ref_null"), Some(RawRefNull))
+  assert_eq(raw_reference_operation(b"ref_as_non_null"), Some(RawRefAsNonNull))
 
   let stack = program.modules[program
     .module_index("dew.std.collections.stack")

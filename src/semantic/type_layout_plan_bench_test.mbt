@@ -1,5 +1,5 @@
 ///|
-fn layout_structs_source(count : Int) -> Bytes {
+fn layout_structs_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 96)
   for index in 0..<count {
     output.write_string_utf8("struct Struct")
@@ -10,7 +10,7 @@ fn layout_structs_source(count : Int) -> Bytes {
 }
 
 ///|
-fn layout_enum_source(variant_count : Int) -> Bytes {
+fn layout_enum_source(variant_count : Int32) -> Bytes {
   let output = Buffer(size_hint=variant_count * 32 + 64)
   output.write_string_utf8("enum Wide<t> {\n")
   for index in 0..<variant_count {

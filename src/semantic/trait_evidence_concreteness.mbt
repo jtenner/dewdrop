@@ -1,7 +1,7 @@
 ///|
 priv enum TraitEvidenceConcreteWork {
-  CheckConcreteEvidenceNode(Int)
-  CheckConcreteEvidenceShape(PlannedValueShape, Int)
+  CheckConcreteEvidenceNode(Int32)
+  CheckConcreteEvidenceShape(PlannedValueShape, Int32)
 }
 
 ///|
@@ -10,19 +10,19 @@ priv enum TraitEvidenceConcreteWork {
 // hide a malformed child or a cycle elsewhere in the evidence tree.
 fn check_trait_evidence_concrete(
   source : TraitEvidenceKeySource,
-  root : Int,
+  root : Int32,
 ) -> Result[Bool, TraitEvidenceKeyFailure] {
   match check_trait_evidence_key_graph(source, root) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
   let work = [CheckConcreteEvidenceNode(root)]
-  let seen : Map[Int, Bool] = {}
+  let seen : Map[Int32, Bool] = {}
   let mut concrete = true
   let mut steps = 0
   fn room(
-    current : Int,
-    additional : Int,
+    current : Int32,
+    additional : Int32,
   ) -> Result[Unit, TraitEvidenceKeyFailure] {
     if additional > 65536 - current {
       Err(source.failure(root, 213, 65536 - current, additional, 4))
@@ -110,7 +110,7 @@ fn check_trait_evidence_concrete(
 ///|
 fn trait_evidence_concrete(
   lowering : PlannedModuleLowering,
-  root : Int,
+  root : Int32,
 ) -> Bool {
   match check_trait_evidence_concrete(LoweringEvidenceKey(lowering), root) {
     Ok(concrete) => concrete
@@ -125,14 +125,14 @@ fn trait_evidence_concrete(
 // erroneous sibling. Forwardability is not a concrete-carrier certificate.
 fn check_trait_evidence_forwardable(
   source : TraitEvidenceKeySource,
-  root : Int,
+  root : Int32,
 ) -> Result[Bool, TraitEvidenceKeyFailure] {
   match check_trait_evidence_concrete(source, root) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
   let work = [root]
-  let seen : Map[Int, Bool] = {}
+  let seen : Map[Int32, Bool] = {}
   let mut forwardable = true
   while work.length() > 0 {
     let index = work.pop().unwrap()
@@ -158,7 +158,7 @@ fn check_trait_evidence_forwardable(
 ///|
 fn program_runtime_trait_evidence_is_forwardable(
   lowering : PlannedModuleLowering,
-  root : Int,
+  root : Int32,
 ) -> Bool {
   match check_trait_evidence_forwardable(LoweringEvidenceKey(lowering), root) {
     Ok(forwardable) => forwardable

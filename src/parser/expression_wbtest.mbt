@@ -4,7 +4,7 @@ fn parse_test_expression(source : Bytes) -> Result[Expr, ExpressionError] {
 }
 
 ///|
-fn repeated_test_expression(term_count : Int, operator : String) -> Bytes {
+fn repeated_test_expression(term_count : Int32, operator : String) -> Bytes {
   let output = Buffer(size_hint=term_count * (operator.length() + 1))
   for index in 0..<term_count {
     if index > 0 {
@@ -16,7 +16,7 @@ fn repeated_test_expression(term_count : Int, operator : String) -> Bytes {
 }
 
 ///|
-fn flat_array_test_expression(length : Int) -> Bytes {
+fn flat_array_test_expression(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 2 + 2)
   output.write_byte(b'[')
   for index in 0..<length {
@@ -30,7 +30,7 @@ fn flat_array_test_expression(length : Int) -> Bytes {
 }
 
 ///|
-fn flat_product_test_expression(length : Int) -> Bytes {
+fn flat_product_test_expression(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 2 + 2)
   output.write_byte(b'(')
   for index in 0..<length {
@@ -44,7 +44,7 @@ fn flat_product_test_expression(length : Int) -> Bytes {
 }
 
 ///|
-fn nested_group_test_expression(depth : Int) -> Bytes {
+fn nested_group_test_expression(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 2 + 1)
   for _ in 0..<depth {
     output.write_byte(b'(')

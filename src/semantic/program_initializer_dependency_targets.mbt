@@ -1,6 +1,6 @@
 ///|
 priv struct ProgramInitializerDependencyBody {
-  module_index : Int
+  module_index : Int32
   declaration : DeclId
   body : BodyId
   kind : HirBodyKind
@@ -11,8 +11,8 @@ priv struct ProgramInitializerDependencyBody {
 fn program_initializer_dependency_failure(
   declaration : DeclId,
   body : BodyId,
-  expression : UInt,
-  code : Int,
+  expression : UInt32,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -111,6 +111,15 @@ fn check_program_initializer_call_target(
   // Check identity even when another call edge already visited this body.
   match check_program_link_body_identity(module_, target, body) {
     Err(error) => return Err(error)
-    Ok(_) => Ok(Some({ module_index: owner, declaration: target, body, kind, specialization_key: "", }))
+    Ok(_) =>
+      Ok(
+        Some({
+          module_index: owner,
+          declaration: target,
+          body,
+          kind,
+          specialization_key: "",
+        }),
+      )
   }
 }

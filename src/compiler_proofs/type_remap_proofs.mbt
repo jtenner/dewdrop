@@ -3,9 +3,9 @@
 ///
 /// The caller must count only removed types that occur before this type.
 pub fn proven_dense_type_index(
-  old_index : Int,
-  removed_before : Int,
-) -> Int where {
+  old_index : Int32,
+  removed_before : Int32,
+) -> Int32 where {
   proof_require: 0 <= removed_before,
   proof_require: removed_before <= old_index,
   proof_ensure: result => result == old_index - removed_before,

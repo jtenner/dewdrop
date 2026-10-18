@@ -303,7 +303,7 @@ test "alias dependency analysis reports deterministic SCC cycles" {
 }
 
 ///|
-fn cyclic_alias_module(alias_count : Int) -> Bytes {
+fn cyclic_alias_module(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 40)
   for index in 0..<alias_count {
     output.write_string_utf8("type Alias_")
@@ -473,7 +473,7 @@ test "normalization propagates poison through applied arguments" {
 }
 
 ///|
-fn acyclic_alias_module(alias_count : Int) -> Bytes {
+fn acyclic_alias_module(alias_count : Int32) -> Bytes {
   let output = Buffer(size_hint=alias_count * 44 + 80)
   output.write_string_utf8("type Alias_0 = I32\n")
   for index in 1..<alias_count {

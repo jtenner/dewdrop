@@ -1,5 +1,5 @@
 ///|
-fn runtime_trait_flow_benchmark_source(call_count : Int) -> Bytes {
+fn runtime_trait_flow_benchmark_source(call_count : Int32) -> Bytes {
   let output = Buffer(size_hint=call_count * 112 + 768)
   output.write_string_utf8(
     "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t: Value> Read for Box<t> {\n  fn read(self) -> I32 {\n    self.value.value()\n  }\n}\nfn identity(value: Read) -> Read {\n  value\n}\nfn invoke(value: Read) -> I32 {\n  let selected = if true {\n    value\n  } else {\n    value\n  }\n  selected.read()\n}\nfn forward(value: Read) -> I32 {\n  invoke(identity(value))\n}\npub fn main() -> I32 {\n",
@@ -36,7 +36,7 @@ test "bench exact runtime trait flow lowering calls=256" (it : @bench.T) {
 
 ///|
 fn open_generic_runtime_trait_benchmark_source(
-  call_count : Int,
+  call_count : Int32,
   dynamic : Bool,
 ) -> Bytes {
   let output = Buffer(size_hint=call_count * 72 + 512)
@@ -115,7 +115,7 @@ test "bench dynamic open-generic trait erasure link calls=256" (it : @bench.T) {
 
 ///|
 fn external_runtime_trait_static_call_benchmark_source(
-  call_count : Int,
+  call_count : Int32,
 ) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 384)
   output.write_string_utf8(
@@ -159,7 +159,7 @@ test "bench external runtime-evidence prerequisite forwarding calls=256" (
 
 ///|
 fn external_runtime_trait_recursive_static_call_benchmark_source(
-  call_count : Int,
+  call_count : Int32,
 ) -> Bytes {
   let output = Buffer(size_hint=call_count * 48 + 640)
   output.write_string_utf8(
@@ -203,7 +203,7 @@ test "bench external runtime-evidence recursive prerequisites calls=256" (
 
 ///|
 fn external_runtime_trait_captured_dictionary_benchmark_source(
-  call_count : Int,
+  call_count : Int32,
 ) -> Bytes {
   let output = Buffer(size_hint=call_count * 56 + 720)
   output.write_string_utf8(
@@ -246,7 +246,7 @@ test "bench external runtime-evidence captured dictionaries calls=256" (
 }
 
 ///|
-fn open_generic_selector_chain_benchmark_source(depth : Int) -> Bytes {
+fn open_generic_selector_chain_benchmark_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 96 + 512)
   output.write_string_utf8(
     "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\n",
@@ -293,7 +293,7 @@ test "bench open-generic selector propagation depth=256" (it : @bench.T) {
 }
 
 ///|
-fn public_effect_summary_chain_benchmark_source(depth : Int) -> Bytes {
+fn public_effect_summary_chain_benchmark_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 64 + 640)
   output.write_string_utf8(
     "trait Read {\n  fn read(self) -> I32\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\n",

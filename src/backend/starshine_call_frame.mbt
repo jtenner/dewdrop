@@ -1,8 +1,8 @@
 ///|
 priv struct StarshineCallFrameParameters {
   values : Array[@semantic.PlannedWasmValueType]
-  start : Int
-  length : Int
+  start : Int32
+  length : Int32
 }
 
 ///|

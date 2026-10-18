@@ -2,14 +2,14 @@
 pub enum RawHeapOwner {
   DeclaredRawHeapOwner(DeclId)
   PrimitiveRawHeapOwner(PrimitiveType)
-  InvalidRawHeapOwner(Int)
+  InvalidRawHeapOwner(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub struct RawStructGetRecipe {
   opcode : Bytes
   owner : RawHeapOwner
-  field_index : Int
+  field_index : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -28,7 +28,7 @@ pub fn raw_struct_get_opcode(name : Bytes) -> Bool {
 }
 
 ///|
-pub fn raw_struct_get_field(name : Bytes) -> Int? {
+pub fn raw_struct_get_field(name : Bytes) -> Int32? {
   if !raw_struct_get_opcode(name) || name.length() < 12 || name[10] != b' ' {
     return None
   }
@@ -61,7 +61,10 @@ fn raw_struct_get_owner(
     callable.parameters.start >= functions.parameters.length() {
     return InvalidRawHeapOwner(1)
   }
-  raw_heap_owner(resolved, functions.parameters[callable.parameters.start].type_)
+  raw_heap_owner(
+    resolved,
+    functions.parameters[callable.parameters.start].type_,
+  )
 }
 
 ///|

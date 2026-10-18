@@ -1,5 +1,5 @@
 ///|
-fn aggregate_expression_source(field_count : Int, qualified : Bool) -> Bytes {
+fn aggregate_expression_source(field_count : Int32, qualified : Bool) -> Bytes {
   let output = Buffer(size_hint=field_count * 28 + 32)
   if qualified {
     output.write_string_utf8("Message::Data::{\n")
@@ -18,7 +18,7 @@ fn aggregate_expression_source(field_count : Int, qualified : Bool) -> Bytes {
 }
 
 ///|
-fn if_chain_benchmark_source(depth : Int) -> Bytes {
+fn if_chain_benchmark_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 32 + 24)
   for index in 0..<depth {
     if index == 0 {
@@ -36,7 +36,7 @@ fn if_chain_benchmark_source(depth : Int) -> Bytes {
 }
 
 ///|
-fn if_block_benchmark_source(item_count : Int) -> Bytes {
+fn if_block_benchmark_source(item_count : Int32) -> Bytes {
   let output = Buffer(size_hint=item_count * 32 + 64)
   output.write_string_utf8("if condition {\n")
   for index in 0..<item_count {

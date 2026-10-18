@@ -12,39 +12,39 @@ let blake3_parent = 4U
 let blake3_root = 8U
 
 ///|
-let blake3_iv : FixedArray[UInt] = [
+let blake3_iv : FixedArray[UInt32] = [
   0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU, 0x510e527fU, 0x9b05688cU, 0x1f83d9abU,
   0x5be0cd19U,
 ]
 
 ///|
-let blake3_message_permutation : FixedArray[Int] = [
+let blake3_message_permutation : FixedArray[Int32] = [
   2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8,
 ]
 
 ///|
 priv struct Blake3Output {
-  input_chaining_value : FixedArray[UInt]
-  block_words : FixedArray[UInt]
+  input_chaining_value : FixedArray[UInt32]
+  block_words : FixedArray[UInt32]
   counter : UInt64
-  block_length : UInt
-  flags : UInt
+  block_length : UInt32
+  flags : UInt32
 }
 
 ///|
-fn blake3_rotate_right(value : UInt, count : Int) -> UInt {
+fn blake3_rotate_right(value : UInt32, count : Int32) -> UInt32 {
   (value >> count) | (value << (32 - count))
 }
 
 ///|
 fn blake3_mix(
-  state : FixedArray[UInt],
-  a : Int,
-  b : Int,
-  c : Int,
-  d : Int,
-  left : UInt,
-  right : UInt,
+  state : FixedArray[UInt32],
+  a : Int32,
+  b : Int32,
+  c : Int32,
+  d : Int32,
+  left : UInt32,
+  right : UInt32,
 ) -> Unit {
   state[a] = state[a] + state[b] + left
   state[d] = blake3_rotate_right(state[d] ^ state[a], 16)
@@ -57,7 +57,10 @@ fn blake3_mix(
 }
 
 ///|
-fn blake3_round(state : FixedArray[UInt], message : FixedArray[UInt]) -> Unit {
+fn blake3_round(
+  state : FixedArray[UInt32],
+  message : FixedArray[UInt32],
+) -> Unit {
   blake3_mix(state, 0, 4, 8, 12, message[0], message[1])
   blake3_mix(state, 1, 5, 9, 13, message[2], message[3])
   blake3_mix(state, 2, 6, 10, 14, message[4], message[5])
@@ -69,7 +72,7 @@ fn blake3_round(state : FixedArray[UInt], message : FixedArray[UInt]) -> Unit {
 }
 
 ///|
-fn blake3_permute(message : FixedArray[UInt]) -> FixedArray[UInt] {
+fn blake3_permute(message : FixedArray[UInt32]) -> FixedArray[UInt32] {
   let permuted = FixedArray::make(16, 0U)
   for index in 0..<16 {
     permuted[index] = message[blake3_message_permutation[index]]
@@ -80,8 +83,8 @@ fn blake3_permute(message : FixedArray[UInt]) -> FixedArray[UInt] {
 ///|
 fn blake3_compress(
   output : Blake3Output,
-  root_counter? : UInt64 = output.counter,
-) -> FixedArray[UInt] {
+  root_counter~ : UInt64 = output.counter,
+) -> FixedArray[UInt32] {
   let state = FixedArray::make(16, 0U)
   for index in 0..<8 {
     state[index] = output.input_chaining_value[index]
@@ -109,7 +112,7 @@ fn blake3_compress(
 }
 
 ///|
-fn Blake3Output::chaining_value(self : Blake3Output) -> FixedArray[UInt] {
+fn Blake3Output::chaining_value(self : Blake3Output) -> FixedArray[UInt32] {
   let words = blake3_compress(self)
   let output = FixedArray::make(8, 0U)
   for index in 0..<8 {
@@ -136,9 +139,9 @@ fn Blake3Output::root_digest(self : Blake3Output) -> FixedArray[Byte] {
 ///|
 fn blake3_block_words(
   input : Bytes,
-  start : Int,
-  length : Int,
-) -> FixedArray[UInt] {
+  start : Int32,
+  length : Int32,
+) -> FixedArray[UInt32] {
   let words = FixedArray::make(16, 0U)
   for byte_index in 0..<length {
     let word_index = byte_index / 4
@@ -152,8 +155,8 @@ fn blake3_block_words(
 ///|
 fn blake3_chunk_output(
   input : Bytes,
-  start : Int,
-  length : Int,
+  start : Int32,
+  length : Int32,
   chunk_counter : UInt64,
 ) -> Blake3Output {
   let block_count = if length == 0 { 1 } else { (length + 63) / 64 }
@@ -204,8 +207,8 @@ fn blake3_chunk_output(
 
 ///|
 fn blake3_parent_output(
-  left : FixedArray[UInt],
-  right : FixedArray[UInt],
+  left : FixedArray[UInt32],
+  right : FixedArray[UInt32],
 ) -> Blake3Output {
   let block = FixedArray::make(16, 0U)
   for index in 0..<8 {
@@ -234,7 +237,7 @@ pub fn blake3(input : Bytes) -> FixedArray[Byte] {
   if chunk_count == 1 {
     return blake3_chunk_output(input, 0, input.length(), 0UL).root_digest()
   }
-  let level : Array[FixedArray[UInt]] = []
+  let level : Array[FixedArray[UInt32]] = []
   for chunk_index in 0..<chunk_count {
     let start = chunk_index * 1024
     let remaining = input.length() - start
@@ -246,7 +249,7 @@ pub fn blake3(input : Bytes) -> FixedArray[Byte] {
   let mut current = level
   let mut root : Blake3Output? = None
   while current.length() > 1 {
-    let next : Array[FixedArray[UInt]] = []
+    let next : Array[FixedArray[UInt32]] = []
     let mut index = 0
     while index < current.length() {
       if index + 1 == current.length() {
@@ -268,7 +271,7 @@ pub fn blake3(input : Bytes) -> FixedArray[Byte] {
 }
 
 ///|
-pub fn blake3_hash32(input : Bytes) -> UInt {
+pub fn blake3_hash32(input : Bytes) -> UInt32 {
   let digest = blake3(input)
   digest[0].to_uint() |
   (digest[1].to_uint() << 8) |

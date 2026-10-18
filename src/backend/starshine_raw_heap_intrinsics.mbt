@@ -1,8 +1,8 @@
 ///|
 priv enum StarshineRawStructHeap {
-  PrimitiveStructHeap(Int)
+  PrimitiveStructHeap(Int32)
   DeclaredStructHeap(
-    Int,
+    Int32,
     @semantic.PlannedModuleWasmGCFragments,
     @semantic.PlannedWasmPhysicalType
   )
@@ -130,7 +130,12 @@ fn starshine_raw_heap_instructions(
         recipe, caller, program, types, parameters, results,
       )
     @semantic.RawArrayGetInstruction(recipe) =>
-      Err(InvalidHeapIntrinsic(recipe.opcode, "raw array reads require their typed operand recipe"))
+      Err(
+        InvalidHeapIntrinsic(
+          recipe.opcode,
+          "raw array reads require their typed operand recipe",
+        ),
+      )
   }
 }
 

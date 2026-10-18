@@ -11,10 +11,10 @@ priv enum RecoveryFailure {
 
 ///|
 priv struct RecoveryFence {
-  mut braces : Int
-  mut parentheses : Int
-  mut brackets : Int
-  mut angles : Int
+  mut braces : Int32
+  mut parentheses : Int32
+  mut brackets : Int32
+  mut angles : Int32
 }
 
 ///|
@@ -47,7 +47,7 @@ fn RecoveryFailure::inside_parenthesis(
 ///|
 fn RecoveryFailure::inside_parentheses_count(
   self : RecoveryFailure,
-  count : Int,
+  count : Int32,
 ) -> RecoveryFailure {
   let mut failure = self
   let mut remaining = count

@@ -1,5 +1,5 @@
 ///|
-fn function_plan_functions_source(count : Int) -> Bytes {
+fn function_plan_functions_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 72)
   for index in 0..<count {
     output.write_string_utf8("fn function_")
@@ -10,7 +10,7 @@ fn function_plan_functions_source(count : Int) -> Bytes {
 }
 
 ///|
-fn function_plan_methods_source(count : Int) -> Bytes {
+fn function_plan_methods_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 72 + 64)
   output.write_string_utf8("struct Item {}\nimpl Item {\n")
   for index in 0..<count {

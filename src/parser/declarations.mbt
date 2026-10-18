@@ -225,7 +225,7 @@ pub enum DeclarationError {
   UnclosedTupleVariant(UInt64)
   UnclosedStructVariant(UInt64)
   EmptyTupleVariant(UInt64)
-  InvalidProductTypeArity(Int, UInt64)
+  InvalidProductTypeArity(Int32, UInt64)
   UnclosedProductType(UInt64)
   PublicImplNotAllowed(UInt64)
   ForeignImplRequiresTrait(UInt64)
@@ -354,7 +354,7 @@ fn Parser::parse_identifier(
 
 ///|
 priv struct TypeCloserState {
-  mut pending : Int
+  mut pending : Int32
   mut offset : UInt64
 }
 
@@ -1410,9 +1410,16 @@ fn Parser::parse_declaration_recoverable(
                 @tokenizer.Keyword(@tokenizer.Import) => {
                   self.consume_lookahead()
                   if visibility == Public {
-                    return Err(declaration_failure(PublicForeignLibraryNotAllowed(declaration_offset)))
+                    return Err(
+                      declaration_failure(
+                        PublicForeignLibraryNotAllowed(declaration_offset),
+                      ),
+                    )
                   }
-                  self.parse_foreign_library_after_impl(declaration_offset, host_import=true)
+                  self.parse_foreign_library_after_impl(
+                    declaration_offset,
+                    host_import=true,
+                  )
                 }
                 @tokenizer.Keyword(@tokenizer.Type) => {
                   self.consume_lookahead()

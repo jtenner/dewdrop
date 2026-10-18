@@ -50,7 +50,7 @@ fn bootstrap_write_u64(output : Buffer, value : UInt64) -> Unit {
 }
 
 ///|
-fn bootstrap_read_u64(bytes : Bytes, offset : Int) -> UInt64 {
+fn bootstrap_read_u64(bytes : Bytes, offset : Int32) -> UInt64 {
   let mut value = 0UL
   for index in 0..<8 {
     value = value | (bytes[offset + index].to_uint64() << (index * 8))

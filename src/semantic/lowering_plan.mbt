@@ -43,8 +43,8 @@ pub enum PlannedExpressionKind {
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
   PlannedLocalSet(LocalId, ExprId)
-  PlannedCaptureGet(Int)
-  PlannedCaptureSet(Int, ExprId)
+  PlannedCaptureGet(Int32)
+  PlannedCaptureSet(Int32, ExprId)
   PlannedModuleValueGet(DeclId, DeclId)
   PlannedFunctionReference(DeclId, HirSpan)
   PlannedLambdaClosure(LambdaId, HirSpan)
@@ -55,7 +55,7 @@ pub enum PlannedExpressionKind {
   PlannedVariantTupleNew(VariantId, HirSpan, HirSpan)
   PlannedVariantStructNew(VariantId, HirSpan, HirSpan)
   PlannedUnitVariant(VariantId, HirSpan)
-  PlannedPackedEnumPayload(Int, ExprId)
+  PlannedPackedEnumPayload(Int32, ExprId)
   PlannedBlockExpression(BlockId)
   PlannedIfExpression(ExprId, BlockId, ExprId)
   PlannedMatchExpression(ExprId, HirSpan)
@@ -68,7 +68,7 @@ pub enum PlannedExpressionKind {
   PlannedOperatorCall(DeclId, HirBinaryOperator, ExprId, ExprId, HirSpan)
   PlannedBoundOperatorCall(
     DeclId,
-    Int,
+    Int32,
     HirBinaryOperator,
     ExprId,
     ExprId,
@@ -95,12 +95,12 @@ pub enum PlannedExpressionKind {
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedTailCall(DeclId, ExprId, HirSpan, HirSpan)
-  PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
-  PlannedParameterSelect(HirSpan, Int)
+  PlannedBoundDirectCall(DeclId, Int32, ExprId, HirSpan, HirSpan)
+  PlannedParameterSelect(HirSpan, Int32)
   PlannedFunctionValueCall(ExprId, HirSpan, ResolvedTypeId)
-  PlannedDynamicTraitCall(DeclId, DeclId, Int, ExprId, HirSpan, HirSpan)
+  PlannedDynamicTraitCall(DeclId, DeclId, Int32, ExprId, HirSpan, HirSpan)
   PlannedFieldGet(FieldId, ExprId, Bool)
-  PlannedProductField(ExprId, Int, Int)
+  PlannedProductField(ExprId, Int32, Int32)
   PlannedFieldSet(FieldId, ExprId, ExprId)
 } derive(Eq, Debug)
 
@@ -202,7 +202,7 @@ pub struct PlannedLocal {
 ///|
 pub struct PlannedCapture {
   lambda : LambdaId
-  capture : Int
+  capture : Int32
   source : LambdaCaptureSource
   mutable_ : Bool
   type_ : BodyTypeId
@@ -272,7 +272,7 @@ pub struct PlannedModuleLowering {
   resolved_types : Array[ResolvedType]
   resolved_type_arguments : Array[ResolvedTypeId]
   raw_array_declarations : Map[DeclId, Bool]
-  raw_array_operations : Map[DeclId, Int]
+  raw_array_operations : Map[DeclId, Int32]
   raw_reference_operations : Map[DeclId, RawReferenceOperation]
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
@@ -281,9 +281,9 @@ pub struct PlannedModuleLowering {
   call_type_arguments : Array[BodyTypeId]
   call_type_argument_shapes : Array[PlannedValueShape]
   expression_evidence : Array[HirSpan]
-  trait_evidence_roots : Array[Int]
+  trait_evidence_roots : Array[Int32]
   trait_evidence : Array[InferredTraitEvidence]
-  trait_evidence_children : Array[Int]
+  trait_evidence_children : Array[Int32]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   pattern_type_arguments : Array[BodyTypeId]
   flow_diagnostics : Array[BodyFlowDiagnostic]
@@ -1072,7 +1072,7 @@ fn plan_body_lowering_job(
   flows : AnalyzedModuleFlows,
   body : HirBody,
   lambda : LambdaId,
-  reachability? : InferenceReachability? = None,
+  reachability~ : InferenceReachability? = None,
 ) -> BodyLoweringPlanJob {
   let diagnostics : Array[LoweringPlanDiagnostic] = []
   let consumed = Array::make(body.expressions.length, false)
@@ -1298,7 +1298,7 @@ fn copy_body_lowering_job(
   target : PlannedModuleLowering,
   body : HirBody,
   job : BodyLoweringPlanJob,
-  diagnostic_start : Int,
+  diagnostic_start : Int32,
 ) -> Unit {
   for index, expression in job.expressions {
     target.expressions[body.expressions.start + index] = expression
@@ -1587,8 +1587,8 @@ fn plan_module_lowering_in_order(
   names : ResolvedModuleNames,
   inferred : InferredModuleBodies,
   flows : AnalyzedModuleFlows,
-  order : Array[Int],
-  reachability? : InferenceReachability? = None,
+  order : Array[Int32],
+  reachability~ : InferenceReachability? = None,
 ) -> PlannedModuleLowering {
   if collected.module_id != resolved.module_id ||
     collected.module_id != type_layouts.module_id ||
@@ -1871,7 +1871,7 @@ pub fn plan_module_lowering(
   inferred : InferredModuleBodies,
   flows : AnalyzedModuleFlows,
 ) -> PlannedModuleLowering {
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }

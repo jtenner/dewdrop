@@ -29,7 +29,7 @@ pub(all) enum CoreWasmLinkError {
   CoreWasmMissingExport(String, String)
   CoreWasmUnsupportedImport(String)
   CoreWasmSignatureMismatch(String, String)
-  CoreWasmInvalidMarkerGroup(Int)
+  CoreWasmInvalidMarkerGroup(Int32)
   CoreWasmValidationError(String)
   CoreWasmEncodeError(String)
 } derive(Eq, Debug)
@@ -152,11 +152,11 @@ fn core_exports(module_ : @lib.Module) -> Array[@lib.Export] {
 
 ///|
 priv struct CoreImportCounts {
-  functions : Int
-  tables : Int
-  memories : Int
-  globals : Int
-  tags : Int
+  functions : Int32
+  tables : Int32
+  memories : Int32
+  globals : Int32
+  tags : Int32
 }
 
 ///|
@@ -212,7 +212,7 @@ fn core_import_matches_provider(value : @lib.Name, provider : String) -> Bool {
 }
 
 ///|
-fn core_type_index(value : @lib.TypeIdx) -> Int? {
+fn core_type_index(value : @lib.TypeIdx) -> Int32? {
   match value {
     @lib.TypeIdx(index) => Some(index.reinterpret_as_int())
     @lib.RecIdx(_) => None
@@ -222,8 +222,8 @@ fn core_type_index(value : @lib.TypeIdx) -> Int? {
 ///|
 fn core_function_signature_type(
   module_ : @lib.Module,
-  function_index : Int,
-) -> Int? {
+  function_index : Int32,
+) -> Int32? {
   let imports = core_imports(module_)
   let mut imported_function = 0
   for import_ in imports {
@@ -249,9 +249,9 @@ fn core_function_signature_type(
 }
 
 ///|
-fn core_exported_function_index(module_ : @lib.Module) -> Map[String, Int] {
+fn core_exported_function_index(module_ : @lib.Module) -> Map[String, Int32] {
   let exports = core_exports(module_)
-  let result : Map[String, Int] = Map([], capacity=exports.length() * 2 + 1)
+  let result : Map[String, Int32] = Map([], capacity=exports.length() * 2 + 1)
   for export_ in exports {
     match export_ {
       @lib.Export(name, @lib.FuncExternIdx(@lib.FuncIdx(index))) =>
@@ -265,7 +265,7 @@ fn core_exported_function_index(module_ : @lib.Module) -> Map[String, Int] {
 ///|
 fn core_function_comp_type(
   arena : CoreTypeArena,
-  index : Int,
+  index : Int32,
 ) -> (Array[@lib.ValType], Array[@lib.ValType])? {
   if index < 0 || index >= arena.subtypes.length() {
     return None
@@ -277,14 +277,14 @@ fn core_function_comp_type(
 }
 
 ///|
-fn core_type_has_declared_subtype(arena : CoreTypeArena, index : Int) -> Bool {
+fn core_type_has_declared_subtype(arena : CoreTypeArena, index : Int32) -> Bool {
   index >= 0 &&
   index < arena.has_declared_subtype.length() &&
   arena.has_declared_subtype[index]
 }
 
 ///|
-fn core_empty_struct_marker(arena : CoreTypeArena, index : Int) -> Bool {
+fn core_empty_struct_marker(arena : CoreTypeArena, index : Int32) -> Bool {
   if index < 0 ||
     index >= arena.subtypes.length() ||
     core_type_has_declared_subtype(arena, index) {
@@ -297,7 +297,7 @@ fn core_empty_struct_marker(arena : CoreTypeArena, index : Int) -> Bool {
 }
 
 ///|
-fn core_ref_defined_type(value : @lib.ValType) -> (Bool, Bool, Int)? {
+fn core_ref_defined_type(value : @lib.ValType) -> (Bool, Bool, Int32)? {
   match value {
     @lib.RefTypeValType(
       @lib.HeapTypeRefType(nullable, exact, @lib.HeapType(index))
@@ -314,8 +314,8 @@ fn core_ref_defined_type(value : @lib.ValType) -> (Bool, Bool, Int)? {
 fn core_same_non_nominal_array_type(
   dew_arena : CoreTypeArena,
   guest_arena : CoreTypeArena,
-  dew : Int,
-  guest : Int,
+  dew : Int32,
+  guest : Int32,
 ) -> Bool {
   if dew < 0 ||
     dew >= dew_arena.subtypes.length() ||
@@ -347,8 +347,8 @@ fn core_bind_value_type(
   guest_arena : CoreTypeArena,
   dew : @lib.ValType,
   guest : @lib.ValType,
-  marker_guest_types : Array[Int],
-  concrete_guest_types : Array[Int],
+  marker_guest_types : Array[Int32],
+  concrete_guest_types : Array[Int32],
 ) -> Bool {
   match (core_ref_defined_type(dew), core_ref_defined_type(guest)) {
     (
@@ -394,7 +394,7 @@ fn core_is_nullable_eqref(value : @lib.ValType) -> Bool {
 }
 
 ///|
-fn core_is_moonbit_string_type(arena : CoreTypeArena, index : Int) -> Bool {
+fn core_is_moonbit_string_type(arena : CoreTypeArena, index : Int32) -> Bool {
   if index < 0 || index >= arena.subtypes.length() {
     return false
   }
@@ -410,7 +410,7 @@ fn core_is_moonbit_string_type(arena : CoreTypeArena, index : Int) -> Bool {
 
 ///|
 priv struct CoreSignatureAdapterPlan {
-  string_parameters : Array[Int]
+  string_parameters : Array[Int32]
   reference_adapter : Bool
 }
 
@@ -429,10 +429,10 @@ fn core_bind_signature(
   export_name : String,
   dew_arena : CoreTypeArena,
   guest_arena : CoreTypeArena,
-  dew_type : Int,
-  guest_type : Int,
-  marker_guest_types : Array[Int],
-  concrete_guest_types : Array[Int],
+  dew_type : Int32,
+  guest_type : Int32,
+  marker_guest_types : Array[Int32],
+  concrete_guest_types : Array[Int32],
 ) -> Result[CoreSignatureAdapterPlan, CoreWasmLinkError] {
   let (dew_parameters, dew_results) = match
     core_function_comp_type(dew_arena, dew_type) {
@@ -448,7 +448,7 @@ fn core_bind_signature(
     dew_results.length() != guest_results.length() {
     return Err(CoreWasmSignatureMismatch(provider, export_name))
   }
-  let string_parameters : Array[Int] = []
+  let string_parameters : Array[Int32] = []
   let mut reference_adapter = false
   for index in 0..<dew_parameters.length() {
     if core_is_nullable_eqref(dew_parameters[index]) {
@@ -529,7 +529,7 @@ fn core_reference_signature_adapter(
   guest_results : Array[@lib.ValType],
   dew_map : CoreWasmIndexMap,
   guest_map : CoreWasmIndexMap,
-  target_function : Int,
+  target_function : Int32,
 ) -> @lib.Func {
   let body : Array[@lib.Instruction] = []
   for index in 0..<dew_parameters.length() {
@@ -561,7 +561,7 @@ fn core_reference_signature_adapter(
 }
 
 ///|
-fn core_make_sequential_indices(length : Int, base : Int) -> Array[Int] {
+fn core_make_sequential_indices(length : Int32, base : Int32) -> Array[Int32] {
   let result = Array::make(length, -1)
   for index in 0..<length {
     result[index] = base + index
@@ -571,10 +571,10 @@ fn core_make_sequential_indices(length : Int, base : Int) -> Array[Int] {
 
 ///|
 fn core_append_defined_indices(
-  target : Array[Int],
-  imported : Int,
-  defined : Int,
-  base : Int,
+  target : Array[Int32],
+  imported : Int32,
+  defined : Int32,
+  base : Int32,
 ) -> Unit {
   for index in 0..<defined {
     target[imported + index] = base + index

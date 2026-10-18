@@ -17,7 +17,7 @@ fn program_output_cache_enabled() -> Bool {
 }
 
 ///|
-fn program_output_cache_kind(command : Int, emit : Int) -> UInt {
+fn program_output_cache_kind(command : Int32, emit : Int32) -> UInt32 {
   if command == 0 {
     cache_pack_check_kind
   } else {
@@ -30,7 +30,7 @@ fn program_output_cache_kind(command : Int, emit : Int) -> UInt {
 }
 
 ///|
-fn program_output_write_int(output : Buffer, value : Int) -> Unit {
+fn program_output_write_int(output : Buffer, value : Int32) -> Unit {
   let bits = value.reinterpret_as_uint()
   output.write_byte((bits & 0xffU).to_byte())
   output.write_byte(((bits >> 8) & 0xffU).to_byte())
@@ -59,10 +59,10 @@ fn program_output_content_digest(
 
 ///|
 fn program_output_context_digest(
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
-  command : Int,
-  emit : Int,
+  command : Int32,
+  emit : Int32,
   dependency_modules : Array[String],
   dependency_fingerprints : Array[String],
   static_link_providers : Array[String],
@@ -116,7 +116,7 @@ fn program_output_context_digest(
 ///|
 fn program_output_owner(
   manifest : @semantic.ProgramManifest,
-  root_module_index : Int,
+  root_module_index : Int32,
 ) -> String {
   if root_module_index >= 0 && root_module_index < manifest.modules.length() {
     "program:" + manifest.modules[root_module_index].path
@@ -129,14 +129,14 @@ fn program_output_owner(
 pub fn lookup_program_output_cache(
   pack : CompilationCachePack,
   manifest : @semantic.ProgramManifest,
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
-  command : Int,
-  emit : Int,
+  command : Int32,
+  emit : Int32,
   dependency_modules : Array[String],
   dependency_fingerprints : Array[String],
-  static_link_providers? : Array[String] = [],
-  static_link_modules? : Array[Bytes] = [],
+  static_link_providers~ : Array[String] = [],
+  static_link_modules~ : Array[Bytes] = [],
 ) -> Result[Bytes?, String] {
   if !pack.enabled || !program_output_cache_enabled() {
     return Ok(None)
@@ -157,15 +157,15 @@ pub fn lookup_program_output_cache(
 pub fn store_program_output_cache(
   pack : CompilationCachePack,
   manifest : @semantic.ProgramManifest,
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
-  command : Int,
-  emit : Int,
+  command : Int32,
+  emit : Int32,
   dependency_modules : Array[String],
   dependency_fingerprints : Array[String],
   payload : Bytes,
-  static_link_providers? : Array[String] = [],
-  static_link_modules? : Array[Bytes] = [],
+  static_link_providers~ : Array[String] = [],
+  static_link_modules~ : Array[Bytes] = [],
 ) -> Result[Unit, String] {
   if !pack.enabled || !program_output_cache_enabled() {
     return Ok(())

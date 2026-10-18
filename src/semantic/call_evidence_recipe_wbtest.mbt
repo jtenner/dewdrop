@@ -83,7 +83,7 @@ fn call_evidence_recipe_assert_failure(
   link : PlannedProgramWasmGCLink,
   key : ProgramSpecializedCallKey,
   declaration : DeclId,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,

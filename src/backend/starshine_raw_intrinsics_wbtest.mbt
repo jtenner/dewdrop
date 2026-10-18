@@ -1,5 +1,8 @@
 ///|
-fn backend_test_raw_text_cast_instruction(source : Bytes, target_offset : Int) -> Unit raise {
+fn backend_test_raw_text_cast_instruction(
+  source : Bytes,
+  target_offset : Int32,
+) -> Unit raise {
   let stages = backend_test_single_module_stages(28239UL, source)
   assert_eq(stages.diagnostic_count(), 0)
   let mut declaration = 0UL
@@ -18,13 +21,24 @@ fn backend_test_raw_text_cast_instruction(source : Bytes, target_offset : Int) -
       if function_.declaration == declaration &&
         function_.kind is @semantic.PlannedWasmInlineHeapFunction(instruction) {
         let actual = starshine_raw_heap_instructions(
-          instruction, module_, Some(stages.link), module_.function_value_types,
-          function_.parameters, function_.results,
+          instruction,
+          module_,
+          Some(stages.link),
+          module_.function_value_types,
+          function_.parameters,
+          function_.results,
         ).unwrap()
-        let target = starshine_text_runtime_base_for_body(module_, Some(stages.link)) + target_offset
-        assert_eq(actual, [@lib.Instruction::ref_cast(
-          false, @lib.HeapType::new(@lib.TypeIdx::new(target.reinterpret_as_uint())),
-        )])
+        let target = starshine_text_runtime_base_for_body(
+            module_,
+            Some(stages.link),
+          ) +
+          target_offset
+        assert_eq(actual, [
+          @lib.Instruction::ref_cast(
+            false,
+            @lib.HeapType::new(@lib.TypeIdx::new(target.reinterpret_as_uint())),
+          ),
+        ])
         checked += 1
       }
     }
@@ -80,24 +94,50 @@ test "raw reference casts retain result heaps in returned function values" {
 
 ///|
 test "raw reference casts reject missing or inconsistent type contracts" {
-  for case in [
-    (b"struct Box<t> {\n  value: t\n}\nbuiltin cast(value: Bytes) -> Box<I32> = \"ref.cast\"\npub fn run(value: Bytes) -> Box<I32> {\n  cast(value)\n}\n", "invalid heap owner (1=parameters, 2=arena, 3=nonconcrete, 4=cycle): 3"),
-    (b"builtin cast(value: I32) -> String = \"ref.cast\"\npub fn run(value: I32) -> String {\n  cast(value)\n}\n", "ref.cast requires reference carriers"),
-    (b"builtin cast(value: Bytes) -> I32 = \"ref.cast\"\npub fn run(value: Bytes) -> I32 {\n  cast(value)\n}\n", "ref.cast requires reference carriers"),
-    (b"builtin cast(value: Bytes) -> String = \"ref.cast 17\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n", "ref.cast takes its target from the declared result type"),
-    (b"builtin cast() -> String = \"ref.cast\"\npub fn run() -> String {\n  cast()\n}\n", "ref.cast requires one operand and one result"),
-  ] {
+  for
+    case in [
+      (
+        b"struct Box<t> {\n  value: t\n}\nbuiltin cast(value: Bytes) -> Box<I32> = \"ref.cast\"\npub fn run(value: Bytes) -> Box<I32> {\n  cast(value)\n}\n",
+        "invalid heap owner (1=parameters, 2=arena, 3=nonconcrete, 4=cycle): 3",
+      ),
+      (
+        b"builtin cast(value: I32) -> String = \"ref.cast\"\npub fn run(value: I32) -> String {\n  cast(value)\n}\n",
+        "ref.cast requires reference carriers",
+      ),
+      (
+        b"builtin cast(value: Bytes) -> I32 = \"ref.cast\"\npub fn run(value: Bytes) -> I32 {\n  cast(value)\n}\n",
+        "ref.cast requires reference carriers",
+      ),
+      (
+        b"builtin cast(value: Bytes) -> String = \"ref.cast 17\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",
+        "ref.cast takes its target from the declared result type",
+      ),
+      (
+        b"builtin cast() -> String = \"ref.cast\"\npub fn run() -> String {\n  cast()\n}\n",
+        "ref.cast requires one operand and one result",
+      ),
+    ] {
     let (source, expected) = case
     let stages = backend_test_single_module_stages(28238UL, source)
     let diagnostics = @semantic.collect_compiler_source_diagnostics(
-      stages.program, stages.analyzed, stages.lowering, stages.link,
+      stages.program,
+      stages.analyzed,
+      stages.lowering,
+      stages.link,
     )
     if !diagnostics.is_empty() {
-      fail("reference cast source diagnostic: " + @debug.to_string((source, diagnostics)))
+      fail(
+        "reference cast source diagnostic: " +
+        @debug.to_string((source, diagnostics)),
+      )
     }
     match emit_starshine_program_module(stages.lowering, stages.link) {
       Err(InvalidHeapIntrinsic(_, actual)) => assert_eq(actual, expected)
-      other => fail("expected an exact reference cast contract error, got " + @debug.to_string(other))
+      other =>
+        fail(
+          "expected an exact reference cast contract error, got " +
+          @debug.to_string(other),
+        )
     }
   }
 }
@@ -108,10 +148,16 @@ test "raw reference casts reject generic source targets before emission" {
     28238UL, b"builtin cast<t>(value: Bytes) -> t = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",
   )
   let diagnostics = @semantic.collect_compiler_source_diagnostics(
-    stages.program, stages.analyzed, stages.lowering, stages.link,
+    stages.program,
+    stages.analyzed,
+    stages.lowering,
+    stages.link,
   )
   assert_eq(diagnostics.length(), 1)
-  assert_eq(diagnostics[0].message, "UnsupportedProgramGenericCall(28238, 121281286504448, 91)")
+  assert_eq(
+    diagnostics[0].message,
+    "UnsupportedProgramGenericCall(28238, 121281286504448, 91)",
+  )
   assert_eq(diagnostics[0].has_primary, true)
   assert_eq(diagnostics[0].primary.file, 121281286504704UL)
   assert_eq(diagnostics[0].primary.offset, 91UL)

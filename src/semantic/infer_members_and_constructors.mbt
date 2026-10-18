@@ -48,7 +48,7 @@ fn BasicBodyInferencer::select_variant_construction(
   self : BasicBodyInferencer,
   expression : ExprId,
   fields : HirSpan,
-  variant_index : Int,
+  variant_index : Int32,
   offset : UInt64,
 ) -> Unit {
   let variant = self.collected.variants[variant_index]
@@ -78,10 +78,10 @@ fn BasicBodyInferencer::select_variant_construction(
 ///|
 fn BasicBodyInferencer::infer_tuple_variant_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
-  variant_index : Int,
+  variant_index : Int32,
   offset : UInt64,
 ) -> Unit {
   let variant = self.collected.variants[variant_index]
@@ -132,7 +132,7 @@ fn BasicBodyInferencer::infer_tuple_variant_call(
 fn BasicBodyInferencer::infer_unit_variant_value(
   self : BasicBodyInferencer,
   expression : ExprId,
-  variant_index : Int,
+  variant_index : Int32,
   offset : UInt64,
 ) -> Unit {
   let variant = self.collected.variants[variant_index]
@@ -199,7 +199,7 @@ fn BasicBodyInferencer::select_imported_variant_construction(
 ///|
 fn BasicBodyInferencer::infer_imported_tuple_variant_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   variant : ResolvedImportedVariant,

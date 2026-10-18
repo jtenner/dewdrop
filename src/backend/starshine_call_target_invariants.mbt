@@ -1,11 +1,11 @@
 ///|
 pub struct StarshineCompilerInvariantFailure {
-  code : UInt
-  phase : UInt
+  code : UInt32
+  phase : UInt32
   module_id : @semantic.ModuleId
   declaration : @semantic.DeclId
   body : @semantic.BodyId
-  expression : UInt
+  expression : UInt32
   expected : UInt64
   actual : UInt64
   detail : UInt64

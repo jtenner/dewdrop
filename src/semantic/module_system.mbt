@@ -57,7 +57,7 @@ pub struct StandardLibrarySources {
   paths : Array[String]
   sources : Array[Bytes]
   parse_events : Array[Array[@parser.ParseEvent]?]
-  lookup : Map[String, Int]
+  lookup : Map[String, Int32]
 }
 
 ///|
@@ -67,7 +67,7 @@ pub fn StandardLibrarySources::new(
   let paths : Array[String] = []
   let sources : Array[Bytes] = []
   let parse_events : Array[Array[@parser.ParseEvent]?] = []
-  let lookup : Map[String, Int] = Map::default()
+  let lookup : Map[String, Int32] = Map::default()
   for file in files {
     guard !lookup.contains(file.path) else {
       abort("duplicate standard-library source path")
@@ -126,10 +126,10 @@ pub fn StandardLibrarySources::with_parse_events(
 
 ///|
 pub enum ManifestDiagnostic {
-  EmptyModulePath(Int)
-  DuplicateModulePath(String, Int, Int)
-  EmptyFilePath(Int, Int)
-  DuplicateFilePath(String, Int, Int, Int)
+  EmptyModulePath(Int32)
+  DuplicateModulePath(String, Int32, Int32)
+  EmptyFilePath(Int32, Int32)
+  DuplicateFilePath(String, Int32, Int32, Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -137,9 +137,9 @@ pub struct CollectedProgram {
   module_id_base : ModuleId
   default_preamble : Bool
   // The manifest prefix is followed by modules supplied by the source loader.
-  manifest_module_count : Int
+  manifest_module_count : Int32
   module_paths : Array[String]
-  module_lookup : Map[String, Int]
+  module_lookup : Map[String, Int32]
   modules : Array[CollectedModule]
   diagnostics : Array[ManifestDiagnostic]
 }
@@ -148,12 +148,12 @@ pub struct CollectedProgram {
 pub fn CollectedProgram::module_index(
   self : CollectedProgram,
   path : String,
-) -> Int? {
+) -> Int32? {
   self.module_lookup.get(path)
 }
 
 ///|
-fn manifest_module_id(base : ModuleId, index : Int) -> ModuleId {
+fn manifest_module_id(base : ModuleId, index : Int32) -> ModuleId {
   let id = base + index.reinterpret_as_uint().to_uint64()
   guard id < 0xffff0000UL else {
     abort("manifest module ID overlaps compiler-owned standard modules")
@@ -162,7 +162,7 @@ fn manifest_module_id(base : ModuleId, index : Int) -> ModuleId {
 }
 
 ///|
-fn standard_library_module_id(slot : Int) -> ModuleId {
+fn standard_library_module_id(slot : Int32) -> ModuleId {
   guard slot >= 0 && slot < 256 else {
     abort("standard library module slot is outside the reserved range")
   }
@@ -513,7 +513,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let modules : Array[CollectedModule] = []
   let module_paths : Array[String] = []
   let diagnostics : Array[ManifestDiagnostic] = []
-  let first_module : Map[String, Int] = Map::default()
+  let first_module : Map[String, Int32] = Map::default()
   let selection_files = standard_dependency_selection_files(
     manifest, standard_sources,
   )
@@ -549,7 +549,7 @@ pub fn collect_program_manifest_with_standard_sources(
       None => first_module[module_.path] = module_index
     }
     module_paths.push(module_.path)
-    let first_file : Map[String, Int] = Map::default()
+    let first_file : Map[String, Int32] = Map::default()
     let files : Array[ProgramFile] = []
     for file_index, file in module_.files {
       if file.path.length() == 0 {
@@ -1325,24 +1325,24 @@ pub enum ModuleGraphDiagnostic {
 pub struct ModuleDependencyGraph {
   module_ids : Array[ModuleId]
   dependencies : Array[HirSpan]
-  dependency_modules : Array[Int]
+  dependency_modules : Array[Int32]
   sccs : Array[HirSpan]
-  scc_modules : Array[Int]
+  scc_modules : Array[Int32]
   diagnostics : Array[ModuleGraphDiagnostic]
 } derive(Eq, Debug)
 
 ///|
 fn module_dependency_sccs(
   dependencies : Array[HirSpan],
-  members : Array[Int],
-) -> (Array[HirSpan], Array[Int]) {
+  members : Array[Int32],
+) -> (Array[HirSpan], Array[Int32]) {
   let count = dependencies.length()
   if count == 0 {
     return ([], [])
   }
   let visited = Array::make(count, false)
-  let work : Array[Int] = []
-  let finish_order : Array[Int] = []
+  let work : Array[Int32] = []
+  let finish_order : Array[Int32] = []
   for start in 0..<count {
     if visited[start] {
       continue
@@ -1396,9 +1396,9 @@ fn module_dependency_sccs(
     }
   }
   let assigned = Array::make(count, false)
-  let component : Array[Int] = []
+  let component : Array[Int32] = []
   let raw_spans : Array[HirSpan] = []
-  let raw_members : Array[Int] = []
+  let raw_members : Array[Int32] = []
   let mut order_index = finish_order.length()
   while order_index > 0 {
     order_index -= 1
@@ -1433,7 +1433,7 @@ fn module_dependency_sccs(
     })
   }
   let spans : Array[HirSpan] = []
-  let ordered_members : Array[Int] = []
+  let ordered_members : Array[Int32] = []
   let mut raw_index = raw_spans.length()
   while raw_index > 0 {
     raw_index -= 1
@@ -1479,7 +1479,7 @@ pub fn build_module_dependency_graph(
 ) -> ModuleDependencyGraph {
   let module_ids : Array[ModuleId] = []
   let dependencies : Array[HirSpan] = []
-  let dependency_modules : Array[Int] = []
+  let dependency_modules : Array[Int32] = []
   let diagnostics : Array[ModuleGraphDiagnostic] = []
   let marks = Array::make(program.modules.length(), 0)
   let preamble_module = program.module_index("dew.std.preamble").unwrap()
@@ -1488,7 +1488,7 @@ pub fn build_module_dependency_graph(
   for module_index, module_ in program.modules {
     module_ids.push(module_.module_id)
     let start = dependency_modules.length()
-    let local_dependencies : Array[Int] = []
+    let local_dependencies : Array[Int32] = []
     let generation = module_index + 1
     let defaults_enabled = program.default_preamble ||
       program.module_paths[module_index].has_prefix("dew.std.")
@@ -1598,7 +1598,7 @@ pub struct FrozenInterfaceDeclaration {
   name : String
   kind : FrozenInterfaceDeclarationKind
   source_kind : CollectedDeclKind
-  generic_parameter_count : Int
+  generic_parameter_count : Int32
   generic_parameters : HirSpan
   semantic_type : ResolvedTypeId
   location : SourceLocation
@@ -1676,7 +1676,7 @@ pub struct FrozenInterfaceDependency {
 pub struct FrozenModuleInterface {
   module_id : ModuleId
   path : String
-  preamble_declaration_count : Int
+  preamble_declaration_count : Int32
   resolved_types : ResolvedModuleTypes
   generic_parameter_bounds : Array[HirSpan]
   declarations : Array[FrozenInterfaceDeclaration]
@@ -1693,7 +1693,7 @@ pub struct FrozenModuleInterface {
 } derive(Eq, Debug)
 
 ///|
-fn callable_abi_write_int(output : Buffer, value : Int) -> Unit {
+fn callable_abi_write_int(output : Buffer, value : Int32) -> Unit {
   let bits = value.reinterpret_as_uint()
   output.write_byte((bits & 0xffU).to_byte())
   output.write_byte(((bits >> 8) & 0xffU).to_byte())
@@ -1756,7 +1756,7 @@ fn callable_abi_write_shape(output : Buffer, shape : PlannedValueShape) -> Unit 
 priv struct CallableAbiDeclarationIdentity {
   path : String
   name : String
-  generic_parameter_count : Int
+  generic_parameter_count : Int32
 }
 
 ///|
@@ -1981,7 +1981,7 @@ fn frozen_callable_abi_fingerprint(
 }
 
 ///|
-fn frozen_abi_collected_kind_rank(kind : CollectedDeclKind) -> Int {
+fn frozen_abi_collected_kind_rank(kind : CollectedDeclKind) -> Int32 {
   match kind {
     BuiltinDecl => 0
     LetDecl => 1
@@ -1998,7 +1998,7 @@ fn frozen_abi_collected_kind_rank(kind : CollectedDeclKind) -> Int {
 }
 
 ///|
-fn frozen_abi_variant_kind_rank(kind : CollectedVariantKind) -> Int {
+fn frozen_abi_variant_kind_rank(kind : CollectedVariantKind) -> Int32 {
   match kind {
     UnitVariantDecl => 0
     TupleVariantDecl => 1
@@ -2201,13 +2201,13 @@ fn frozen_interface_with_content_fingerprint(
 
 ///|
 fn frozen_program_interface_fingerprint_with_records(
-  module_index : Int,
+  module_index : Int32,
   graph : ModuleDependencyGraph,
-  record_order : Array[Int],
+  record_order : Array[Int32],
   records : Array[String],
 ) -> String {
   let reachable = Array::make(records.length(), false)
-  let pending : Array[Int] = [module_index]
+  let pending : Array[Int32] = [module_index]
   let mut reachable_count = 0
   while pending.length() > 0 {
     let current = pending.pop().unwrap()
@@ -2241,7 +2241,7 @@ pub fn frozen_program_interfaces_with_fingerprints(
   let identities = frozen_interface_declaration_identities(initial)
   let content : Array[FrozenModuleInterface] = []
   let records : Array[String] = []
-  let record_order : Array[Int] = []
+  let record_order : Array[Int32] = []
   for index, interface_ in initial {
     let interface_ = frozen_interface_with_content_fingerprint(
       interface_, identities,
@@ -2253,7 +2253,7 @@ pub fn frozen_program_interfaces_with_fingerprints(
   record_order.sort_by(fn(left, right) { records[left].compare(records[right]) })
   let output : Array[FrozenModuleInterface] = []
   for module_index, interface_ in content {
-    let dependency_indices : Array[Int] = []
+    let dependency_indices : Array[Int32] = []
     let dependencies = graph.dependencies[module_index]
     for index in 0..<dependencies.length {
       dependency_indices.push(
@@ -2286,8 +2286,8 @@ pub fn frozen_program_interfaces_with_fingerprints(
 fn frozen_available_interfaces_with_fingerprints(
   graph : ModuleDependencyGraph,
   slots : Array[FrozenModuleInterface?],
-  only_module? : Int? = None,
-  completed_content? : Array[Bool]? = None,
+  only_module~ : Int32? = None,
+  completed_content~ : Array[Bool]? = None,
 ) -> Array[FrozenModuleInterface?] {
   if completed_content is Some(completed) {
     guard completed.length() == slots.length() else {
@@ -2335,7 +2335,7 @@ fn frozen_available_interfaces_with_fingerprints(
       Some(value) => value
       None => continue
     }
-    let dependency_indices : Array[Int] = []
+    let dependency_indices : Array[Int32] = []
     let dependencies = graph.dependencies[module_index]
     let mut complete = true
     for edge in 0..<dependencies.length {
@@ -2361,7 +2361,7 @@ fn frozen_available_interfaces_with_fingerprints(
       })
     }
     let reachable = Array::make(content.length(), false)
-    let pending : Array[Int] = [module_index]
+    let pending : Array[Int32] = [module_index]
     let records : Array[String] = []
     while pending.length() > 0 {
       let current = pending.pop().unwrap()
@@ -2411,9 +2411,9 @@ fn frozen_available_interfaces_with_fingerprints(
 ///|
 fn frozen_module_interface_with_available_fingerprints(
   graph : ModuleDependencyGraph,
-  module_index : Int,
+  module_index : Int32,
   slots : Array[FrozenModuleInterface?],
-  completed_content? : Array[Bool]? = None,
+  completed_content~ : Array[Bool]? = None,
 ) -> FrozenModuleInterface {
   frozen_available_interfaces_with_fingerprints(
     graph,
@@ -2779,8 +2779,8 @@ fn freeze_module_interface(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
-  module_values? : InferredModuleValues? = None,
-  imports? : ModuleImportScope? = None,
+  module_values~ : InferredModuleValues? = None,
+  imports~ : ModuleImportScope? = None,
 ) -> FrozenModuleInterface {
   guard collected.module_id == resolved.module_id &&
     collected.module_id == functions.module_id else {
@@ -3078,31 +3078,31 @@ pub enum ImportScopeDiagnostic {
 pub struct ImportedDeclarationBinding {
   declaration : DeclId
   source_kind : CollectedDeclKind
-  generic_parameter_count : Int
+  generic_parameter_count : Int32
   generic_parameters : HirSpan
-  interface_index : Int
+  interface_index : Int32
   semantic_type : ResolvedTypeId
 } derive(Eq, Debug)
 
 ///|
 pub struct ImportedCallableReference {
-  interface_index : Int
-  callable_index : Int
-  mut next : Int
+  interface_index : Int32
+  callable_index : Int32
+  mut next : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct ImportedValueBinding {
-  interface_index : Int
-  head : Int
-  mut tail : Int
+  interface_index : Int32
+  head : Int32
+  mut tail : Int32
   mut ambiguous : Bool
 } derive(Eq, Debug)
 
 ///|
 pub struct ImportedModuleValueBinding {
-  interface_index : Int
-  declaration_index : Int
+  interface_index : Int32
+  declaration_index : Int32
   mut ambiguous : Bool
 } derive(Eq, Debug)
 
@@ -3110,18 +3110,18 @@ pub struct ImportedModuleValueBinding {
 pub struct ModuleImportScope {
   module_id : ModuleId
   declarations : Array[ImportedDeclarationBinding]
-  declaration_bindings : Map[DeclId, Int]
-  imported_interfaces : Array[Int]
-  type_bindings : Map[String, Int]
-  trait_bindings : Map[String, Int]
-  module_type_bindings : Array[Map[String, Int]]
-  module_trait_bindings : Array[Map[String, Int]]
+  declaration_bindings : Map[DeclId, Int32]
+  imported_interfaces : Array[Int32]
+  type_bindings : Map[String, Int32]
+  trait_bindings : Map[String, Int32]
+  module_type_bindings : Array[Map[String, Int32]]
+  module_trait_bindings : Array[Map[String, Int32]]
   value_bindings : Map[String, ImportedValueBinding]
   module_value_bindings : Array[Map[String, ImportedValueBinding]]
   module_let_bindings : Array[Map[String, ImportedModuleValueBinding]]
   let_bindings : Map[String, ImportedModuleValueBinding]
   callable_references : Array[ImportedCallableReference]
-  alias_bindings : Map[String, Int]
+  alias_bindings : Map[String, Int32]
   interfaces : Array[FrozenModuleInterface?]
   diagnostics : Array[ImportScopeDiagnostic]
 }
@@ -3141,7 +3141,7 @@ pub fn ModuleImportScope::lookup_type(
 pub fn ModuleImportScope::lookup_alias(
   self : ModuleImportScope,
   name : String,
-) -> Int? {
+) -> Int32? {
   match self.alias_bindings.get(name) {
     Some(index) if index >= 0 => Some(index)
     _ => None
@@ -3151,7 +3151,7 @@ pub fn ModuleImportScope::lookup_alias(
 ///|
 pub fn ModuleImportScope::lookup_module_declaration(
   self : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   name : String,
   kind : FrozenInterfaceDeclarationKind,
 ) -> ImportedDeclarationBinding? {
@@ -3176,7 +3176,7 @@ pub fn ModuleImportScope::lookup_module_declaration(
 ///|
 pub fn ModuleImportScope::lookup_module_type(
   self : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   name : String,
 ) -> ImportedDeclarationBinding? {
   self.lookup_module_declaration(interface_index, name, FrozenTypeDeclaration)
@@ -3185,7 +3185,7 @@ pub fn ModuleImportScope::lookup_module_type(
 ///|
 pub fn ModuleImportScope::lookup_module_trait(
   self : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   name : String,
 ) -> ImportedDeclarationBinding? {
   self.lookup_module_declaration(interface_index, name, FrozenTraitDeclaration)
@@ -3194,9 +3194,9 @@ pub fn ModuleImportScope::lookup_module_trait(
 ///|
 pub fn ModuleImportScope::lookup_module_callable(
   self : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   name : String,
-) -> Int? {
+) -> Int32? {
   guard interface_index >= 0 &&
     interface_index < self.module_value_bindings.length() else {
     return None
@@ -3210,7 +3210,7 @@ pub fn ModuleImportScope::lookup_module_callable(
 ///|
 pub fn ModuleImportScope::lookup_module_value(
   self : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   name : String,
 ) -> DeclId? {
   guard interface_index >= 0 &&
@@ -3281,9 +3281,9 @@ pub fn ModuleImportScope::trait_is_ambiguous(
 ///|
 fn register_imported_declaration(
   scope : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   declaration : FrozenInterfaceDeclaration,
-) -> Int {
+) -> Int32 {
   match scope.declaration_bindings.get(declaration.declaration) {
     Some(index) => index
     None => {
@@ -3310,7 +3310,7 @@ fn register_imported_declaration(
 ///|
 fn insert_imported_declaration(
   scope : ModuleImportScope,
-  interface_index : Int,
+  interface_index : Int32,
   name : String,
   declaration : FrozenInterfaceDeclaration,
 ) -> Unit {
@@ -3414,8 +3414,8 @@ fn expose_imported_module_value_binding(
 ///|
 fn insert_imported_module_value(
   scope : ModuleImportScope,
-  interface_index : Int,
-  declaration_index : Int,
+  interface_index : Int32,
+  declaration_index : Int32,
   declaration : FrozenInterfaceDeclaration,
   open_names : Bool,
 ) -> Unit {
@@ -3479,8 +3479,8 @@ fn expose_imported_value_binding(
 ///|
 fn insert_imported_callable(
   scope : ModuleImportScope,
-  interface_index : Int,
-  callable_index : Int,
+  interface_index : Int32,
+  callable_index : Int32,
   callable : FrozenInterfaceCallable,
   open_names : Bool,
 ) -> Unit {
@@ -3528,7 +3528,7 @@ fn insert_imported_callable(
 fn open_frozen_interface_in_scope(
   scope : ModuleImportScope,
   interfaces : Array[FrozenModuleInterface?],
-  dependency : Int,
+  dependency : Int32,
 ) -> Unit {
   match interfaces[dependency] {
     Some(interface_) => {
@@ -3557,7 +3557,7 @@ fn open_frozen_interface_in_scope(
 fn import_frozen_interface_into_scope(
   scope : ModuleImportScope,
   interfaces : Array[FrozenModuleInterface?],
-  dependency : Int,
+  dependency : Int32,
   open_names : Bool,
 ) -> Unit {
   scope.imported_interfaces.push(dependency)
@@ -3594,7 +3594,7 @@ fn import_frozen_interface_into_scope(
 fn build_module_import_scope(
   program : CollectedProgram,
   interfaces : Array[FrozenModuleInterface?],
-  module_index : Int,
+  module_index : Int32,
 ) -> ModuleImportScope {
   guard module_index >= 0 && module_index < program.modules.length() else {
     abort("module import scope index is outside the manifest")
@@ -3603,8 +3603,8 @@ fn build_module_import_scope(
     abort("module import interfaces do not match the manifest")
   }
   let module_ = program.modules[module_index]
-  let module_type_bindings : Array[Map[String, Int]] = []
-  let module_trait_bindings : Array[Map[String, Int]] = []
+  let module_type_bindings : Array[Map[String, Int32]] = []
+  let module_trait_bindings : Array[Map[String, Int32]] = []
   let module_value_bindings : Array[Map[String, ImportedValueBinding]] = []
   let module_let_bindings : Array[Map[String, ImportedModuleValueBinding]] = []
   for _ in program.modules {
@@ -3803,10 +3803,10 @@ fn infer_frozen_module_values(
 fn freeze_program_interfaces_with_cached_hook(
   program : CollectedProgram,
   cached : Array[FrozenModuleInterface?],
-  resolve_cached : (Int, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?,
-  on_frozen : (Int, FrozenModuleInterface) -> Unit,
-  resolve_cached_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
-  on_frozen_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
+  resolve_cached : (Int32, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?,
+  on_frozen : (Int32, FrozenModuleInterface) -> Unit,
+  resolve_cached_scc : (HirSpan, Array[Int32], Array[FrozenModuleInterface?]) -> Unit,
+  on_frozen_scc : (HirSpan, Array[Int32], Array[FrozenModuleInterface?]) -> Unit,
 ) -> FrozenProgramInterfaces {
   install_program_constructor_wrappers(program)
   guard cached.length() == program.modules.length() else {
@@ -4026,10 +4026,10 @@ pub fn freeze_program_interfaces_with_cached(
 pub fn freeze_program_interfaces_with_cache_hooks(
   program : CollectedProgram,
   cached : Array[FrozenModuleInterface?],
-  resolve_cached : (Int, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?,
-  on_frozen : (Int, FrozenModuleInterface) -> Unit,
-  resolve_cached_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
-  on_frozen_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
+  resolve_cached : (Int32, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?,
+  on_frozen : (Int32, FrozenModuleInterface) -> Unit,
+  resolve_cached_scc : (HirSpan, Array[Int32], Array[FrozenModuleInterface?]) -> Unit,
+  on_frozen_scc : (HirSpan, Array[Int32], Array[FrozenModuleInterface?]) -> Unit,
 ) -> FrozenProgramInterfaces {
   freeze_program_interfaces_with_cached_hook(
     program, cached, resolve_cached, on_frozen, resolve_cached_scc, on_frozen_scc,

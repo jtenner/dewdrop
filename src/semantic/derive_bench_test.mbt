@@ -1,6 +1,6 @@
 ///|
 fn derive_collection_benchmark_source(
-  declaration_count : Int,
+  declaration_count : Int32,
   derived : Bool,
 ) -> Bytes {
   let output = Buffer(size_hint=declaration_count * 48)
@@ -18,7 +18,7 @@ fn derive_collection_benchmark_source(
 
 ///|
 fn derive_named_collection_benchmark_source(
-  declaration_count : Int,
+  declaration_count : Int32,
   prefix : String,
   trait_name : String,
 ) -> Bytes {

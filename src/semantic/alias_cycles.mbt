@@ -1,5 +1,8 @@
 ///|
-fn TypeResolver::alias_offset(self : TypeResolver, alias_index : Int) -> UInt64 {
+fn TypeResolver::alias_offset(
+  self : TypeResolver,
+  alias_index : Int32,
+) -> UInt64 {
   let declaration = self.collected.aliases[alias_index].declaration
   match self.collected.declaration(declaration) {
     Some(TopLevelReference(value)) => value.offset
@@ -10,7 +13,7 @@ fn TypeResolver::alias_offset(self : TypeResolver, alias_index : Int) -> UInt64 
 ///|
 fn TypeResolver::alias_has_self_edge(
   self : TypeResolver,
-  alias_index : Int,
+  alias_index : Int32,
 ) -> Bool {
   let declaration = self.collected.aliases[alias_index].declaration
   let span = self.alias_dependencies[alias_index]
@@ -29,8 +32,8 @@ fn TypeResolver::find_alias_cycles(self : TypeResolver) -> Unit {
     return
   }
   let visited = Array::make(alias_count, false)
-  let work : Array[Int] = []
-  let finish_order : Array[Int] = []
+  let work : Array[Int32] = []
+  let finish_order : Array[Int32] = []
   for start in 0..<alias_count {
     if visited[start] {
       continue
@@ -90,7 +93,7 @@ fn TypeResolver::find_alias_cycles(self : TypeResolver) -> Unit {
   }
 
   let assigned = Array::make(alias_count, false)
-  let component : Array[Int] = []
+  let component : Array[Int32] = []
   let mut order_index = finish_order.length()
   while order_index > 0 {
     order_index -= 1

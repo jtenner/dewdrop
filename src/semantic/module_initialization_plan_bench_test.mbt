@@ -1,5 +1,5 @@
 ///|
-fn initialization_chain_source(length : Int) -> Bytes {
+fn initialization_chain_source(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 32)
   for index in 0..<length {
     output.write_string_utf8("let value_")
@@ -17,7 +17,7 @@ fn initialization_chain_source(length : Int) -> Bytes {
 }
 
 ///|
-fn initialization_independent_source(length : Int) -> Bytes {
+fn initialization_independent_source(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 24)
   for index in 0..<length {
     output.write_string_utf8("let value_")
@@ -30,7 +30,7 @@ fn initialization_independent_source(length : Int) -> Bytes {
 }
 
 ///|
-fn initialization_cycles_source(cycle_count : Int) -> Bytes {
+fn initialization_cycles_source(cycle_count : Int32) -> Bytes {
   let output = Buffer(size_hint=cycle_count * 72)
   for index in 0..<cycle_count {
     output.write_string_utf8("let first_")

@@ -33,42 +33,42 @@ priv struct TypeResolver {
   alias_cycle_declarations : Array[DeclId]
   normalizations : Array[ResolvedTypeId]
   diagnostics : Array[TypeDiagnostic]
-  alias_indices : Map[DeclId, Int]
+  alias_indices : Map[DeclId, Int32]
   task_syntax : Array[HirTypeId]
-  task_states : Array[Int]
-  task_expectations : Array[Int]
+  task_states : Array[Int32]
+  task_expectations : Array[Int32]
   task_constructor_positions : Array[Bool]
   application_scratch : Array[ResolvedTypeId]
   computed_active : Array[Bool]
-  computed_depth : Int
+  computed_depth : Int32
   import_type_memos : Array[Array[ResolvedTypeId]]
-  import_task_interfaces : Array[Int]
+  import_task_interfaces : Array[Int32]
   import_task_types : Array[ResolvedTypeId]
-  import_task_states : Array[Int]
-  import_result_starts : Array[Int]
+  import_task_states : Array[Int32]
+  import_result_starts : Array[Int32]
   import_results : Array[ResolvedTypeId]
   import_application_scratch : Array[ResolvedTypeId]
   type_visit_stack : Array[ResolvedTypeId]
-  mut type_visit_marks : Array[Int]
-  alias_visit_marks : Array[Int]
-  alias_dependency_scratch : Array[Int]
+  mut type_visit_marks : Array[Int32]
+  alias_visit_marks : Array[Int32]
+  alias_dependency_scratch : Array[Int32]
   normalization_task_types : Array[ResolvedTypeId]
-  normalization_task_states : Array[Int]
-  normalization_result_starts : Array[Int]
+  normalization_task_states : Array[Int32]
+  normalization_result_starts : Array[Int32]
   normalization_results : Array[ResolvedTypeId]
   normalization_application_scratch : Array[ResolvedTypeId]
   substitution_task_types : Array[ResolvedTypeId]
-  substitution_task_states : Array[Int]
-  substitution_result_starts : Array[Int]
+  substitution_task_states : Array[Int32]
+  substitution_result_starts : Array[Int32]
   substitution_results : Array[ResolvedTypeId]
   substitution_application_scratch : Array[ResolvedTypeId]
-  substitution_marks : Array[Int]
+  substitution_marks : Array[Int32]
   substitution_values : Array[ResolvedTypeId]
   alias_expansion_limited : Array[Bool]
-  mut visit_generation : Int
-  mut substitution_generation : Int
-  mut alias_expansion_work : Int
-  mut alias_expansion_limit : Int
+  mut visit_generation : Int32
+  mut substitution_generation : Int32
+  mut alias_expansion_work : Int32
+  mut alias_expansion_limit : Int32
 }
 
 ///|
@@ -82,7 +82,7 @@ fn TypeResolver::new(
   for parameter in collected.generic_parameters {
     generic_parameter_types.push(interner.intern_generic(parameter.id))
   }
-  let alias_indices : Map[DeclId, Int] = Map::default()
+  let alias_indices : Map[DeclId, Int32] = Map::default()
   for index, alias_entry in collected.aliases {
     alias_indices[alias_entry.declaration] = index
   }
@@ -197,10 +197,10 @@ fn TypeResolver::diagnose(
 ///|
 fn TypeResolver::push_import_type_task(
   self : TypeResolver,
-  interface_index : Int,
+  interface_index : Int32,
   type_ : ResolvedTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.import_task_interfaces.push(interface_index)
   self.import_task_types.push(type_)
@@ -211,7 +211,7 @@ fn TypeResolver::push_import_type_task(
 ///|
 fn TypeResolver::import_interface_type(
   self : TypeResolver,
-  interface_index : Int,
+  interface_index : Int32,
   root : ResolvedTypeId,
 ) -> ResolvedTypeId {
   if self.import_type_memos[interface_index].length() == 0 {
@@ -471,7 +471,7 @@ fn TypeResolver::self_context(self : TypeResolver, owner : DeclId) -> DeclId? {
 fn TypeResolver::declaration_arity(
   self : TypeResolver,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   if semantic_id_module(declaration) == self.collected.module_id {
     self.collected.generic_parameters_of(declaration).length
   } else {
@@ -493,7 +493,7 @@ fn TypeResolver::declaration_arity(
 fn TypeResolver::constructor_arity(
   self : TypeResolver,
   type_ : ResolvedTypeId,
-) -> Int? {
+) -> Int32? {
   match self.interner.types[type_] {
     ErrorType => None
     PrimitiveType(_) => Some(0)
@@ -624,7 +624,7 @@ fn TypeResolver::qualified_import_binding(
   self : TypeResolver,
   module_alias : NameId,
   name : NameId,
-  expectation : Int,
+  expectation : Int32,
 ) -> ImportedDeclarationBinding? {
   let imports = match self.imports {
     Some(value) => value
@@ -655,7 +655,7 @@ fn TypeResolver::resolve_qualified_type(
   name : NameId,
   offset : UInt64,
   name_offset : UInt64,
-  expectation : Int,
+  expectation : Int32,
   constructor_position : Bool,
 ) -> ResolvedTypeId {
   let binding = match
@@ -708,7 +708,7 @@ fn TypeResolver::resolve_named_type(
   self_owner : DeclId?,
   name : NameId,
   offset : UInt64,
-  expectation : Int,
+  expectation : Int32,
   constructor_position : Bool,
 ) -> ResolvedTypeId {
   let type_ = if expectation == trait_type_name {
@@ -754,8 +754,8 @@ fn TypeResolver::resolve_named_type(
 fn TypeResolver::push_type_task(
   self : TypeResolver,
   syntax : HirTypeId,
-  state : Int,
-  expectation : Int,
+  state : Int32,
+  expectation : Int32,
   constructor_position : Bool,
 ) -> Unit {
   self.task_syntax.push(syntax)
@@ -811,7 +811,8 @@ fn TypeResolver::nullable_ref_intrinsic_owner(
   self : TypeResolver,
   owner : DeclId,
 ) -> Bool {
-  raw_reference_operation(planned_builtin_name(self.collected, owner)) is Some(_)
+  raw_reference_operation(planned_builtin_name(self.collected, owner))
+  is Some(_)
 }
 
 ///|
@@ -922,7 +923,7 @@ fn TypeResolver::resolve_syntax(
   self : TypeResolver,
   owner : DeclId,
   syntax : HirTypeId,
-  expectation : Int,
+  expectation : Int32,
 ) -> ResolvedTypeId {
   if self.computed_active[syntax] || self.computed_depth >= 256 {
     self.diagnose(
@@ -1300,7 +1301,7 @@ fn TypeResolver::collect_alias_dependencies(self : TypeResolver) -> Unit {
 }
 
 ///|
-fn TypeDiagnostic::rank(self : TypeDiagnostic) -> Int {
+fn TypeDiagnostic::rank(self : TypeDiagnostic) -> Int32 {
   match self {
     ReservedTypeName(_, _, _) => 0
     UnknownType(_, _, _) => 1
@@ -1377,7 +1378,7 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
 fn resolve_module_types_with_imports_and_alias_expansion_limit(
   collected : CollectedModule,
   imports : ModuleImportScope?,
-  alias_expansion_limit : Int,
+  alias_expansion_limit : Int32,
 ) -> ResolvedModuleTypes {
   let resolver = TypeResolver::new(collected, imports)
   resolver.resolve_signatures()
@@ -1391,7 +1392,7 @@ fn resolve_module_types_with_imports_and_alias_expansion_limit(
 ///|
 fn resolve_module_types_with_alias_expansion_limit(
   collected : CollectedModule,
-  alias_expansion_limit : Int,
+  alias_expansion_limit : Int32,
 ) -> ResolvedModuleTypes {
   resolve_module_types_with_imports_and_alias_expansion_limit(
     collected,

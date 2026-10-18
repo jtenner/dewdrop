@@ -1,9 +1,9 @@
 ///|
 priv struct ModuleGraphInvariantFailure {
-  module_index : Int
-  expected : Int
-  actual : Int
-  detail : Int
+  module_index : Int32
+  expected : Int32
+  actual : Int32
+  detail : Int32
 } derive(Eq, Debug)
 
 ///|

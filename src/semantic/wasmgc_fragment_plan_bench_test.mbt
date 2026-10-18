@@ -1,5 +1,5 @@
 ///|
-fn wasmgc_bench_chain_source(count : Int) -> Bytes {
+fn wasmgc_bench_chain_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 48)
   output.write_string_utf8("struct Node0 {\n  value: I32\n}\n")
   for index in 1..<count {
@@ -13,7 +13,7 @@ fn wasmgc_bench_chain_source(count : Int) -> Bytes {
 }
 
 ///|
-fn wasmgc_bench_cycle_source(count : Int) -> Bytes {
+fn wasmgc_bench_cycle_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 48)
   for index in 0..<count {
     output.write_string_utf8("struct Node")
@@ -26,7 +26,7 @@ fn wasmgc_bench_cycle_source(count : Int) -> Bytes {
 }
 
 ///|
-fn wasmgc_bench_enum_source(count : Int) -> Bytes {
+fn wasmgc_bench_enum_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 32)
   output.write_string_utf8("enum Value {\n  Empty\n")
   for index in 0..<count {

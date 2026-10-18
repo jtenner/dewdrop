@@ -6,8 +6,8 @@ fn cache_platform_supported() -> Bool {
 ///|
 fn cache_platform_atomic_write(
   _path : Bytes,
-  _path_length : Int,
+  _path_length : Int32,
   _content : Bytes,
-) -> Int {
+) -> Int32 {
   -38
 }

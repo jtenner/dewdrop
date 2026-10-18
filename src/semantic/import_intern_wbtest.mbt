@@ -33,8 +33,14 @@ test "import interning separates projections and structural heads" {
   let b = importer.intern_simple(0, MemberTypeProjection(0, b"b", "Item"))
   assert_true(a != b)
   assert_eq(importer.intern_simple(0, MemberTypeProjection(0, b"a", "Item")), a)
-  assert_true(importer.intern_function([a], a) != importer.intern_function([a], b))
-  assert_true(importer.intern_applied(a, [a]) != importer.intern_applied(b, [a]))
-  assert_true(importer.intern_product([a, b]) != importer.intern_product([b, a]))
+  assert_true(
+    importer.intern_function([a], a) != importer.intern_function([a], b),
+  )
+  assert_true(
+    importer.intern_applied(a, [a]) != importer.intern_applied(b, [a]),
+  )
+  assert_true(
+    importer.intern_product([a, b]) != importer.intern_product([b, a]),
+  )
   assert_eq(importer.intern_product([]), importer.intern_product([]))
 }

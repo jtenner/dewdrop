@@ -1,5 +1,5 @@
 ///|
-fn functional_while_benchmark_source(arm_count : Int) -> Bytes {
+fn functional_while_benchmark_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 72 + 48)
   output.write_string_utf8("while state {\n")
   for index in 0..<arm_count {

@@ -7,9 +7,9 @@ fn program_function_span_code(span : HirSpan) -> UInt64 {
 ///|
 fn check_program_function_span_copy(
   declaration : DeclId,
-  slot : Int,
+  slot : Int32,
   role : UInt64,
-  arena_length : Int,
+  arena_length : Int32,
   source : HirSpan,
   linked : HirSpan,
 ) -> Result[Unit, ProgramFunctionLookupFailure] {
@@ -45,7 +45,7 @@ fn check_program_function_span_copy(
 ///|
 fn check_program_function_signature_copy(
   link : PlannedProgramWasmGCLink,
-  slot : Int,
+  slot : Int32,
   module_ : PlannedModuleWasmGCFragments,
   source : PlannedWasmFunctionFragment,
   linked : PlannedProgramWasmFunction,

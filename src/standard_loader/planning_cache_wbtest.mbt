@@ -102,8 +102,10 @@ test "fragment cache accounting excludes usage-dependent enum bypasses" {
   let analyzed = @semantic.analyze_program_semantics(program)
   let session = program_output_test_session()
   let lowering = plan_program_lowering_with_cache(
-    program, analyzed, pack=Some(session),
-  ).unwrap().lowering
+      program,
+      analyzed,
+      pack=Some(session),
+    ).unwrap().lowering
   let root = program.module_index("main").unwrap()
   let options = @semantic.WasmGCPlanningOptions::optimized_subtype_families()
   let cold = plan_program_wasmgc_link_with_cache(

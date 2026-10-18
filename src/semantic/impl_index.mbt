@@ -32,10 +32,10 @@ pub struct IndexedImpl {
   trait_type : ResolvedTypeId
   target_type : ResolvedTypeId
   methods : HirSpan
-  bucket : Int
+  bucket : Int32
   valid : Bool
   coherent : Bool
-  specificity : Int
+  specificity : Int32
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -51,8 +51,8 @@ pub struct IndexedMethodDispatch {
   name : NameId
   inherent : Bool
   instance : Bool
-  implementation : Int
-  method_index : Int
+  implementation : Int32
+  method_index : Int32
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -60,8 +60,8 @@ pub struct IndexedTraitMethodDispatch {
   trait_declaration : DeclId
   name : NameId
   instance : Bool
-  implementation : Int
-  method_index : Int
+  implementation : Int32
+  method_index : Int32
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -74,9 +74,9 @@ pub enum ImplIndexDiagnostic {
   MissingTraitMethod(DeclId, DeclId, UInt64)
   DuplicateTraitImplMethod(DeclId, DeclId, DeclId, UInt64)
   TraitMethodReceiverMismatch(DeclId, DeclId, UInt64)
-  TraitMethodParameterCountMismatch(DeclId, DeclId, Int, Int, UInt64)
-  TraitMethodGenericParameterCountMismatch(DeclId, DeclId, Int, Int, UInt64)
-  TraitMethodParameterTypeMismatch(DeclId, DeclId, Int, UInt64)
+  TraitMethodParameterCountMismatch(DeclId, DeclId, Int32, Int32, UInt64)
+  TraitMethodGenericParameterCountMismatch(DeclId, DeclId, Int32, Int32, UInt64)
+  TraitMethodParameterTypeMismatch(DeclId, DeclId, Int32, UInt64)
   TraitMethodReturnTypeMismatch(DeclId, DeclId, UInt64)
   DuplicateInherentMethod(NameId, DeclId, DeclId, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
@@ -106,7 +106,7 @@ pub struct ModuleImplIndex {
   implementations : Array[IndexedImpl]
   methods : Array[IndexedImplMethod]
   buckets : Array[ImplBucket]
-  bucket_implementations : Array[Int]
+  bucket_implementations : Array[Int32]
   method_dispatch : Array[IndexedMethodDispatch]
   trait_method_dispatch : Array[IndexedTraitMethodDispatch]
   diagnostics : Array[ImplIndexDiagnostic]
@@ -132,7 +132,7 @@ pub fn ModuleImplIndex::implementation(
 pub fn ModuleImplIndex::bucket_implementations_of(
   self : ModuleImplIndex,
   bucket : ImplBucket,
-) -> ArrayView[Int] {
+) -> ArrayView[Int32] {
   self.bucket_implementations[bucket.implementations.start:bucket.implementations.start +
   bucket.implementations.length]
 }
@@ -186,7 +186,7 @@ fn impl_primitive_key(primitive : PrimitiveType) -> UInt64 {
 }
 
 ///|
-fn impl_head_key(head : ImplTargetHead) -> (Int, UInt64) {
+fn impl_head_key(head : ImplTargetHead) -> (Int32, UInt64) {
   match head {
     ErrorImplTargetHead => (-1, 0UL)
     PrimitiveImplTargetHead(primitive) => (0, impl_primitive_key(primitive))
@@ -221,7 +221,7 @@ fn method_dispatch_key_compare(
   name : NameId,
   inherent : Bool,
   instance : Bool,
-) -> Int {
+) -> Int32 {
   let (entry_kind, entry_value) = impl_head_key(entry.target_head)
   let (target_kind, target_value) = impl_head_key(target_head)
   let kind_order = entry_kind - target_kind
@@ -298,7 +298,7 @@ fn trait_method_dispatch_key_compare(
   trait_declaration : DeclId,
   name : NameId,
   instance : Bool,
-) -> Int {
+) -> Int32 {
   let trait_order = entry.trait_declaration.compare(trait_declaration)
   if trait_order != 0 {
     return trait_order
@@ -461,7 +461,7 @@ fn method_has_receiver(
 fn value_parameter_count(
   collected : CollectedModule,
   method_info : DeclId,
-) -> Int {
+) -> Int32 {
   let parameters = collected.parameters_of(method_info)
   if parameters.length > 0 &&
     collected.parameters[parameters.start].kind == ReceiverParameterDecl {
@@ -472,7 +472,7 @@ fn value_parameter_count(
 }
 
 ///|
-fn impl_diagnostic_rank(diagnostic : ImplIndexDiagnostic) -> Int {
+fn impl_diagnostic_rank(diagnostic : ImplIndexDiagnostic) -> Int32 {
   match diagnostic {
     InvalidImplTraitHead(_, _) => 0
     InvalidImplTargetHead(_, _) => 1
@@ -496,7 +496,7 @@ fn find_trait_requirement(
   method_spans : Array[HirSpan],
   trait_declaration : DeclId,
   name : NameId,
-) -> Int {
+) -> Int32 {
   let span = method_span_of(method_spans, trait_declaration)
   for index in span.start..<(span.start + span.length) {
     if collected.methods[index].name == name {
@@ -535,7 +535,7 @@ fn impl_signature_types_equal(
 }
 
 ///|
-fn impl_callable_indices(collected : CollectedModule) -> Array[Int] {
+fn impl_callable_indices(collected : CollectedModule) -> Array[Int32] {
   let indices = Array::make(collected.declaration_locations.length(), -1)
   for index, callable in collected.callables {
     indices[semantic_id_local(callable.declaration)] = index
@@ -569,7 +569,7 @@ fn impl_trait_context(
 fn validate_trait_impl_methods(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
-  callable_indices : Array[Int],
+  callable_indices : Array[Int32],
   method_spans : Array[HirSpan],
   implementation : CollectedImpl,
   trait_declaration : DeclId,
@@ -818,13 +818,13 @@ fn collect_imported_trait_methods(
 priv struct ImplPatternScratch {
   solver : LocalTypeSolver
   task_types : Array[ResolvedTypeId]
-  task_states : Array[Int]
-  task_result_starts : Array[Int]
+  task_states : Array[Int32]
+  task_result_starts : Array[Int32]
   results : Array[BodyTypeId]
   arguments : Array[BodyTypeId]
-  marks : Array[Int]
+  marks : Array[Int32]
   values : Array[BodyTypeId]
-  mut generation : Int
+  mut generation : Int32
   mut generic_parameters : HirSpan
   mut any_generic_parameter : Bool
 }
@@ -863,8 +863,8 @@ fn ImplPatternScratch::next_generation(self : ImplPatternScratch) -> Unit {
 fn ImplPatternScratch::push_task(
   self : ImplPatternScratch,
   type_ : ResolvedTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.task_types.push(type_)
   self.task_states.push(state)
@@ -1040,7 +1040,7 @@ fn impl_type_contains_generic(
 fn compiler_indexed_trait_kind(
   collected : CollectedModule,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   let owner = semantic_id_module(declaration)
   if owner == collected.module_id {
     if semantic_id_local(declaration) >= collected.preamble_declaration_count {
@@ -1318,10 +1318,10 @@ fn build_module_impl_index_internal(
     })
   }
 
-  let bucket_lookup : Map[(Int, UInt64, Int, UInt64), Int] = Map::default()
+  let bucket_lookup : Map[(Int32, UInt64, Int32, UInt64), Int32] = Map::default()
   let bucket_kinds : Array[ImplBucketKind] = []
   let bucket_heads : Array[ImplTargetHead] = []
-  let bucket_counts : Array[Int] = []
+  let bucket_counts : Array[Int32] = []
   for index, implementation in implementations {
     if !implementation.valid {
       continue
@@ -1365,7 +1365,7 @@ fn build_module_impl_index_internal(
 
   let buckets : Array[ImplBucket] = []
   let bucket_implementations = Array::make(implementations.length(), -1)
-  let cursors : Array[Int] = []
+  let cursors : Array[Int32] = []
   let mut start = 0
   for bucket in 0..<bucket_kinds.length() {
     buckets.push({
@@ -1624,10 +1624,10 @@ pub fn build_module_impl_index(
 
 ///|
 fn rebuild_impl_buckets(index : ModuleImplIndex) -> Unit {
-  let bucket_lookup : Map[(Int, UInt64, Int, UInt64), Int] = Map::default()
+  let bucket_lookup : Map[(Int32, UInt64, Int32, UInt64), Int32] = Map::default()
   let bucket_kinds : Array[ImplBucketKind] = []
   let bucket_heads : Array[ImplTargetHead] = []
-  let bucket_counts : Array[Int] = []
+  let bucket_counts : Array[Int32] = []
   for implementation_index, implementation in index.implementations {
     if !implementation.valid {
       continue
@@ -1659,7 +1659,7 @@ fn rebuild_impl_buckets(index : ModuleImplIndex) -> Unit {
   }
   index.buckets.clear()
   index.bucket_implementations.clear()
-  let cursors : Array[Int] = []
+  let cursors : Array[Int32] = []
   let mut start = 0
   for bucket in 0..<bucket_kinds.length() {
     index.buckets.push({
@@ -1818,7 +1818,7 @@ pub fn build_module_impl_index_with_imports(
   }
   rebuild_impl_buckets(index)
   let coherence : Array[Bool] = []
-  let specificity : Array[Int] = []
+  let specificity : Array[Int32] = []
   for implementation in index.implementations {
     coherence.push(implementation.coherent)
     specificity.push(implementation.specificity)

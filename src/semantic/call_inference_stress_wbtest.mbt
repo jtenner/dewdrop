@@ -1,5 +1,5 @@
 ///|
-fn nested_call_type(output : Buffer, depth : Int, leaf : String) -> Unit {
+fn nested_call_type(output : Buffer, depth : Int32, leaf : String) -> Unit {
   for _ in 0..<depth {
     output.write_string_utf8("Box<")
   }
@@ -10,7 +10,7 @@ fn nested_call_type(output : Buffer, depth : Int, leaf : String) -> Unit {
 }
 
 ///|
-fn deep_generic_call_source(depth : Int) -> Bytes {
+fn deep_generic_call_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 10 + 192)
   output.write_string_utf8("struct Box<t> {\n  value: t\n}\n")
   output.write_string_utf8("builtin extract<t>(value: ")

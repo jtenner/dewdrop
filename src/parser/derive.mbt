@@ -618,7 +618,7 @@ fn derived_struct_debug_body(
 fn derived_debug_variant_pattern(
   enum_name : String,
   variant : EnumVariant,
-  variant_index : Int,
+  variant_index : Int32,
   offset : UInt64,
 ) -> (Pattern, Array[String]) {
   let base = QualifiedPattern(

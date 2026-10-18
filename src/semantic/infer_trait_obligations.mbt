@@ -23,7 +23,7 @@ priv struct DeclaredBodyTraitEvidence {
   bound_type : ResolvedTypeId
   trait_declaration : DeclId
   requirement : DeclId
-  evidence_index : Int
+  evidence_index : Int32
 }
 
 ///|
@@ -48,7 +48,7 @@ fn BasicBodyInferencer::body_generic_parameter_spans(
 fn BasicBodyInferencer::body_generic_parameter_ordinal(
   self : BasicBodyInferencer,
   parameter : GenericParameterId,
-) -> Int? {
+) -> Int32? {
   let (owner, method_parameters) = self.body_generic_parameter_spans()
   let parameter_index = semantic_id_local(parameter)
   if parameter_index >= owner.start &&
@@ -134,7 +134,7 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
   target_type : BodyTypeId,
   trait_filter : DeclId?,
   method_name : NameId,
-  expression? : ExprId = -1,
+  expression~ : ExprId = -1,
 ) -> Array[DeclaredBodyTraitEvidence] {
   let parameter = self.direct_body_generic_parameter(target_type)
   let (owner, method_parameters) = self.body_generic_parameter_spans()
@@ -243,7 +243,7 @@ fn BasicBodyInferencer::body_declared_trait_obligation_evidence(
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
-) -> Int? {
+) -> Int32? {
   let parameter = match self.direct_body_generic_parameter(target) {
     Some(value) => value
     None => return None
@@ -329,7 +329,7 @@ fn BasicBodyInferencer::body_impl_target_head(
 ///|
 fn BasicBodyInferencer::begin_obligation_impl_candidate(
   self : BasicBodyInferencer,
-  implementation_index : Int,
+  implementation_index : Int32,
 ) -> (BodyTypeId, BodyTypeId) {
   let implementation = self.impl_index.implementations[implementation_index]
   self.call_scratch.instantiation_generics = self.implementation_generic_parameters(
@@ -361,7 +361,7 @@ priv struct PendingImplTraitObligation {
 ///|
 fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
   self : BasicBodyInferencer,
-  implementation_index : Int,
+  implementation_index : Int32,
   origin : TypeConstraintOrigin,
 ) -> Bool {
   let implementation = self.impl_index.implementations[implementation_index]
@@ -516,7 +516,7 @@ fn BasicBodyInferencer::validate_method_call_obligations(
   expression : ExprId,
   declaration : DeclId,
   type_arguments : HirSpan,
-  implementation_generic_count : Int,
+  implementation_generic_count : Int32,
   offset : UInt64,
 ) -> Unit {
   let method_generic_count = self.call_generic_count(declaration)
@@ -591,9 +591,9 @@ fn BasicBodyInferencer::trait_obligation_candidates(
 ///|
 fn BasicBodyInferencer::select_impl_candidate_prerequisite_evidence_nodes(
   self : BasicBodyInferencer,
-  implementation_index : Int,
+  implementation_index : Int32,
   origin : TypeConstraintOrigin,
-) -> Array[Int]? {
+) -> Array[Int32]? {
   let implementation = self.impl_index.implementations[implementation_index]
   let local_impl = semantic_id_module(implementation.declaration) ==
     self.collected.module_id
@@ -662,7 +662,7 @@ fn BasicBodyInferencer::select_impl_candidate_prerequisite_evidence_nodes(
       })
     }
   }
-  let nodes : Array[Int] = []
+  let nodes : Array[Int32] = []
   for obligation in obligations {
     match
       self.select_trait_obligation_evidence_in_search(
@@ -717,7 +717,7 @@ fn BasicBodyInferencer::trait_obligation_candidate_evidence(
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
-) -> Int? {
+) -> Int32? {
   match
     self.body_declared_trait_obligation_evidence(
       target, bound, trait_declaration, origin,
@@ -828,7 +828,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence(
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
-) -> Int? {
+) -> Int32? {
   self.select_trait_obligation_evidence_in_search(
     target, bound, trait_declaration, origin,
   )
@@ -850,7 +850,7 @@ fn BasicBodyInferencer::ensure_expression_evidence(
 fn BasicBodyInferencer::append_expression_evidence_nodes(
   self : BasicBodyInferencer,
   expression : ExprId,
-  nodes : Array[Int],
+  nodes : Array[Int32],
 ) -> Unit {
   if nodes.length() == 0 {
     return
@@ -880,7 +880,7 @@ fn BasicBodyInferencer::append_expression_evidence_nodes(
 fn BasicBodyInferencer::record_selected_impl_prerequisite_evidence(
   self : BasicBodyInferencer,
   expression : ExprId,
-  implementation_index : Int,
+  implementation_index : Int32,
   origin : TypeConstraintOrigin,
 ) -> Unit {
   match
@@ -899,7 +899,7 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
   expression : ExprId,
   declaration : DeclId,
   type_arguments : HirSpan,
-  generic_offset : Int,
+  generic_offset : Int32,
   parameter : GenericParameterId,
   bounds : HirSpan,
   bound_types : Array[ResolvedTypeId],
@@ -959,7 +959,8 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
       ) {
       Some(evidence) => self.trait_evidence_roots.push(evidence)
       None =>
-        if self.trait_search.failure is None && !self.defer_expression_check(expression, [
+        if self.trait_search.failure is None &&
+          !self.defer_expression_check(expression, [
             self.call_type_arguments[type_arguments.start + generic_offset],
             bound,
           ]) {

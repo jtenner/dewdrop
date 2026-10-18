@@ -385,7 +385,7 @@ test "body job merge is independent of execution order" {
 }
 
 ///|
-fn wide_alternative_pattern(field_count : Int) -> Bytes {
+fn wide_alternative_pattern(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 96 + 256)
   output.write_string_utf8("enum Record {\n  A {\n")
   for index in 0..<field_count {
@@ -428,7 +428,7 @@ test "wide alternative binding lookup uses the large-scope path" {
 }
 
 ///|
-fn deep_local_body(local_count : Int) -> Bytes {
+fn deep_local_body(local_count : Int32) -> Bytes {
   let output = Buffer(size_hint=local_count * 40 + 96)
   output.write_string_utf8("fn deep(initial: I32) -> I32 {\n")
   for index in 0..<local_count {

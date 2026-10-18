@@ -1,8 +1,8 @@
 ///|
 fn PlannedBodyChildChecker::capture(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  capture : Int,
+  parent : Int32,
+  capture : Int32,
 ) -> Unit {
   ignore(self.owned(parent, self.capture_span, capture, 17))
 }
@@ -10,7 +10,7 @@ fn PlannedBodyChildChecker::capture(
 ///|
 fn PlannedBodyChildChecker::capture_table(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   lambda : LambdaId,
 ) -> HirSpan? {
   if !self.lambda(parent, lambda) {
@@ -54,7 +54,7 @@ fn PlannedBodyChildChecker::capture_table(
 ///|
 fn PlannedBodyChildChecker::closure_captures(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   lambda : LambdaId,
   captures : HirSpan,
 ) -> Unit {

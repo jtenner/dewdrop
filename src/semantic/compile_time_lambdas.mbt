@@ -58,10 +58,10 @@ fn compile_time_fragment_template(
 // function key cannot distinguish two closures with different query results.
 fn materialize_compile_time_lambdas(
   lowering : PlannedProgramLowering,
-  module_index : Int,
+  module_index : Int32,
   fragments : PlannedModuleWasmGCFragments,
   owner : PlannedWasmFunctionFragment,
-) -> Int {
+) -> Int32 {
   let context = match lowering.compile_time {
     Some(value) => value
     None => return 0

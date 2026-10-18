@@ -17,7 +17,7 @@ let pending_binary_base = 16
 let expression_stop_left_brace = 1
 
 ///|
-fn expression_stops_at(stop_bits : Int, flag : Int) -> Bool {
+fn expression_stops_at(stop_bits : Int32, flag : Int32) -> Bool {
   (stop_bits & flag) != 0
 }
 
@@ -124,7 +124,7 @@ fn binary_operator(symbol : @tokenizer.Symbol) -> BinaryOperator? {
 }
 
 ///|
-fn binary_precedence(operator : BinaryOperator) -> Int {
+fn binary_precedence(operator : BinaryOperator) -> Int32 {
   match operator {
     LogicalOr => 3
     LogicalAnd => 4
@@ -146,7 +146,7 @@ fn is_left_associative(operator : BinaryOperator) -> Bool {
 }
 
 ///|
-fn binary_operator_code(operator : BinaryOperator) -> Int {
+fn binary_operator_code(operator : BinaryOperator) -> Int32 {
   pending_binary_base +
   (match operator {
     LogicalOr => 0
@@ -172,7 +172,7 @@ fn binary_operator_code(operator : BinaryOperator) -> Int {
 }
 
 ///|
-fn binary_operator_from_code(code : Int) -> BinaryOperator {
+fn binary_operator_from_code(code : Int32) -> BinaryOperator {
   match code - pending_binary_base {
     0 => LogicalOr
     1 => LogicalAnd
@@ -198,7 +198,7 @@ fn binary_operator_from_code(code : Int) -> BinaryOperator {
 }
 
 ///|
-fn prefix_operator_code(operator : PrefixOperator) -> Int {
+fn prefix_operator_code(operator : PrefixOperator) -> Int32 {
   match operator {
     Positive => pending_positive_code
     Negative => pending_negative_code
@@ -207,7 +207,7 @@ fn prefix_operator_code(operator : PrefixOperator) -> Int {
 }
 
 ///|
-fn prefix_operator_from_code(code : Int) -> PrefixOperator {
+fn prefix_operator_from_code(code : Int32) -> PrefixOperator {
   match code {
     1 => Positive
     2 => Negative
@@ -267,7 +267,7 @@ fn pop_expression(values : Array[Expr]) -> Expr? {
 ///|
 fn reduce_top(
   values : Array[Expr],
-  operator_codes : Array[Int],
+  operator_codes : Array[Int32],
   operator_offsets : Array[UInt64],
 ) -> Result[Unit, RecoveryFailure] {
   guard operator_codes.length() > 0 else {
@@ -304,7 +304,7 @@ fn reduce_top(
 ///|
 fn push_binary_operator(
   values : Array[Expr],
-  operator_codes : Array[Int],
+  operator_codes : Array[Int32],
   operator_offsets : Array[UInt64],
   operator : BinaryOperator,
   offset : UInt64,
@@ -340,7 +340,7 @@ fn push_binary_operator(
 ///|
 fn reduce_for_is(
   values : Array[Expr],
-  operator_codes : Array[Int],
+  operator_codes : Array[Int32],
   operator_offsets : Array[UInt64],
   offset : UInt64,
 ) -> Result[Unit, RecoveryFailure] {
@@ -369,7 +369,7 @@ fn reduce_for_is(
 ///|
 fn finish_expression(
   values : Array[Expr],
-  operator_codes : Array[Int],
+  operator_codes : Array[Int32],
   operator_offsets : Array[UInt64],
 ) -> Result[Expr, RecoveryFailure] {
   while operator_codes.length() > 0 {
@@ -779,9 +779,9 @@ fn Parser::parse_lambda_expression(
 /// between value-seeking and binary-operator-seeking modes. A token that does
 /// not continue the expression remains in the parser's one-token lookahead.
 fn finish_expression_with_groups(
-  nested_groups : Int,
+  nested_groups : Int32,
   values : Array[Expr],
-  operator_codes : Array[Int],
+  operator_codes : Array[Int32],
   operator_offsets : Array[UInt64],
 ) -> Result[Expr, RecoveryFailure] {
   match finish_expression(values, operator_codes, operator_offsets) {
@@ -793,13 +793,13 @@ fn finish_expression_with_groups(
 ///|
 fn Parser::parse_expression_context(
   self : Parser,
-  stop_bits : Int,
+  stop_bits : Int32,
 ) -> Result[Expr, RecoveryFailure] {
   let values : Array[Expr] = []
-  let operator_codes : Array[Int] = []
+  let operator_codes : Array[Int32] = []
   let operator_offsets : Array[UInt64] = []
-  let group_value_starts : Array[Int] = []
-  let group_element_counts : Array[Int] = []
+  let group_value_starts : Array[Int32] = []
+  let group_element_counts : Array[Int32] = []
   let group_offsets : Array[UInt64] = []
   let mut mode = SeekingUnaryValue
   let mut nested_groups = 0

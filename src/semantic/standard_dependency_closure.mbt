@@ -4,7 +4,7 @@
 pub fn required_standard_library_source_paths(
   manifest : ProgramManifest,
   default_preamble : Bool,
-  sources? : StandardLibrarySources? = None,
+  sources~ : StandardLibrarySources? = None,
 ) -> Array[String] {
   let required = direct_standard_library_source_paths(
     manifest, default_preamble,

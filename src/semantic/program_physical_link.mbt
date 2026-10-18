@@ -76,7 +76,7 @@ fn program_erased_adapter_compatible(
 }
 
 ///|
-fn program_erased_box_slot_for_shape(shape : PlannedValueShape) -> Int {
+fn program_erased_box_slot_for_shape(shape : PlannedValueShape) -> Int32 {
   match program_canonical_specialization_shape(shape) {
     I32PlannedValueShape => 0
     I64PlannedValueShape => 1
@@ -111,7 +111,7 @@ fn program_mark_product_erased_boxes(
 }
 
 ///|
-fn program_erased_box_slot_for_value(type_ : PlannedWasmValueType) -> Int {
+fn program_erased_box_slot_for_value(type_ : PlannedWasmValueType) -> Int32 {
   match type_ {
     WasmI32Value => 0
     WasmI64Value => 1
@@ -143,7 +143,7 @@ fn program_erased_adapter_export_name(
 }
 
 ///|
-fn program_test_export_name(ordinal : Int) -> Bytes {
+fn program_test_export_name(ordinal : Int32) -> Bytes {
   let output = Buffer(size_hint=24)
   output.write_string_utf8("__dew_test_")
   output.write_string_utf8(ordinal.to_string())
@@ -154,10 +154,10 @@ fn program_test_export_name(ordinal : Int) -> Bytes {
 fn program_initializer_dependencies(
   lowering : PlannedProgramLowering,
   initializer : PlannedProgramModuleInitializer,
-  initializer_lookup : Map[DeclId, Int],
+  initializer_lookup : Map[DeclId, Int32],
   candidates : Array[PlannedProgramModuleInitializer],
   calls : Map[ProgramSpecializedCallKey, PlannedProgramSpecializedCall],
-) -> Array[Int] {
+) -> Array[Int32] {
   match
     check_program_initializer_dependencies(
       lowering,
@@ -186,7 +186,7 @@ fn program_schedule_initializers(
     Ok(value) => value
     Err(failure) => abort(@debug.to_string(failure))
   }
-  let dependencies : Array[Array[Int]] = []
+  let dependencies : Array[Array[Int32]] = []
   let remaining_dependencies = Array::make(candidates.length(), 0)
   for index, initializer in candidates {
     let values = program_initializer_dependencies(
@@ -255,15 +255,15 @@ fn program_schedule_initializers(
 
 ///|
 fn program_physical_type_sccs(
-  dependencies : Array[Array[Int]],
-) -> (Array[HirSpan], Array[Int]) {
+  dependencies : Array[Array[Int32]],
+) -> (Array[HirSpan], Array[Int32]) {
   let count = dependencies.length()
   if count == 0 {
     return ([], [])
   }
   let visited = Array::make(count, false)
-  let work : Array[Int] = []
-  let finish_order : Array[Int] = []
+  let work : Array[Int32] = []
+  let finish_order : Array[Int32] = []
   for start in 0..<count {
     if visited[start] {
       continue
@@ -318,10 +318,10 @@ fn program_physical_type_sccs(
     finish_rank[entity] = rank
   }
   let assigned = Array::make(count, false)
-  let component : Array[Int] = []
+  let component : Array[Int32] = []
   let raw_spans : Array[HirSpan] = []
-  let raw_members : Array[Int] = []
-  let raw_ranks : Array[Int] = []
+  let raw_members : Array[Int32] = []
+  let raw_ranks : Array[Int32] = []
   let mut order_index = finish_order.length()
   while order_index > 0 {
     order_index -= 1
@@ -356,7 +356,7 @@ fn program_physical_type_sccs(
     raw_spans.push({ start, length: raw_members.length() - start, })
     raw_ranks.push(rank)
   }
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<raw_spans.length() {
     order.push(index)
   }
@@ -369,7 +369,7 @@ fn program_physical_type_sccs(
     }
   })
   let spans : Array[HirSpan] = []
-  let members : Array[Int] = []
+  let members : Array[Int32] = []
   for component_index in order {
     let source = raw_spans[component_index]
     let start = members.length()
@@ -384,24 +384,24 @@ fn program_physical_type_sccs(
 ///|
 fn program_cross_module_type_groups(
   fragments : PlannedProgramSpecializationPlan,
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
-  type_base : Int,
+  type_base : Int32,
 ) -> (
-  Array[Array[Int]],
+  Array[Array[Int32]],
   Array[PlannedProgramWasmRecursiveGroup],
   Array[PlannedProgramWasmPhysicalType],
-  Map[DeclId, Int],
+  Map[DeclId, Int32],
 ) {
-  let node_by_module_type : Array[Array[Int]] = []
+  let node_by_module_type : Array[Array[Int32]] = []
   for module_ in fragments.modules {
     node_by_module_type.push(Array::make(module_.physical_types.length(), -1))
   }
   let nodes : Array[PlannedProgramWasmPhysicalType] = []
   let mut canonical_closure_node = -1
-  let trait_method_nodes : Map[DeclId, Int] = Map::default()
-  let trait_vtable_nodes : Map[DeclId, Int] = Map::default()
-  let trait_object_nodes : Map[DeclId, Int] = Map::default()
+  let trait_method_nodes : Map[DeclId, Int32] = Map::default()
+  let trait_vtable_nodes : Map[DeclId, Int32] = Map::default()
+  let trait_object_nodes : Map[DeclId, Int32] = Map::default()
   for scc in fragments.graph.sccs {
     for member_index in 0..<scc.length {
       let module_index = fragments.graph.scc_modules[scc.start + member_index]
@@ -456,13 +456,13 @@ fn program_cross_module_type_groups(
       }
     }
   }
-  let dependencies : Array[Array[Int]] = []
+  let dependencies : Array[Array[Int32]] = []
   for node in nodes {
     let module_ = fragments.modules[node.module_index]
     let physical = module_.physical_types[node.fragment_index]
-    let values : Array[Int] = []
-    let marks : Map[Int, Bool] = Map::default()
-    let add_local = fn(local_type_index : Int) {
+    let values : Array[Int32] = []
+    let marks : Map[Int32, Bool] = Map::default()
+    let add_local = fn(local_type_index : Int32) {
       if local_type_index < 0 ||
         local_type_index >= node_by_module_type[node.module_index].length() {
         return
@@ -525,13 +525,13 @@ fn program_cross_module_type_groups(
   let (component_spans, component_members) = program_physical_type_sccs(
     dependencies,
   )
-  let module_type_indices : Array[Array[Int]] = []
+  let module_type_indices : Array[Array[Int32]] = []
   for module_ in fragments.modules {
     module_type_indices.push(Array::make(module_.physical_types.length(), -1))
   }
   let groups : Array[PlannedProgramWasmRecursiveGroup] = []
   let physical_types : Array[PlannedProgramWasmPhysicalType] = []
-  let type_lookup : Map[DeclId, Int] = Map::default()
+  let type_lookup : Map[DeclId, Int32] = Map::default()
   let final_index_by_node = Array::make(nodes.length(), -1)
   for component in component_spans {
     let first_type_index = type_base + physical_types.length()
@@ -574,17 +574,17 @@ fn program_cross_module_type_groups(
 
 ///|
 priv struct PlannedProgramValueTypePair {
-  left_module : Int
+  left_module : Int32
   left : PlannedWasmValueType
-  right_module : Int
+  right_module : Int32
   right : PlannedWasmValueType
 }
 
 ///|
 fn planned_program_function_type_fragment(
   modules : Array[PlannedModuleWasmGCFragments],
-  module_index : Int,
-  signature_type_index : Int,
+  module_index : Int32,
+  signature_type_index : Int32,
 ) -> PlannedWasmFunctionTypeFragment? {
   for function_type in modules[module_index].function_types {
     if function_type.signature_type_index == signature_type_index {
@@ -597,8 +597,8 @@ fn planned_program_function_type_fragment(
 ///|
 fn planned_program_local_nominal_declaration(
   modules : Array[PlannedModuleWasmGCFragments],
-  module_index : Int,
-  type_index : Int,
+  module_index : Int32,
+  type_index : Int32,
 ) -> DeclId? {
   if type_index < 0 ||
     type_index >= modules[module_index].physical_types.length() {
@@ -621,9 +621,9 @@ fn planned_program_local_nominal_declaration(
 ///|
 fn planned_program_function_types_equal(
   modules : Array[PlannedModuleWasmGCFragments],
-  left_module : Int,
+  left_module : Int32,
   left : PlannedWasmFunctionTypeFragment,
-  right_module : Int,
+  right_module : Int32,
   right : PlannedWasmFunctionTypeFragment,
 ) -> Bool {
   if left.parameters.length != right.parameters.length ||
@@ -817,7 +817,7 @@ fn planned_program_function_types_equal(
 pub fn link_program_wasmgc_fragments(
   fragments : PlannedProgramSpecializationPlan,
   lowering : PlannedProgramLowering,
-  root_module_index : Int,
+  root_module_index : Int32,
 ) -> PlannedProgramWasmGCLink {
   assert_module_dependency_graph(fragments.graph)
   guard root_module_index >= 0 && root_module_index < lowering.modules.length() else {
@@ -836,13 +836,13 @@ pub fn link_program_wasmgc_fragments(
     Err(error) => abort(error)
   }
   let module_type_bases = Array::make(lowering.modules.length(), -1)
-  let module_type_indices : Array[Array[Int]] = []
+  let module_type_indices : Array[Array[Int32]] = []
   for module_ in fragments.modules {
     module_type_indices.push(Array::make(module_.physical_types.length(), -1))
   }
   let functions : Array[PlannedProgramWasmFunction] = []
-  let function_lookup : Map[DeclId, Int] = Map::default()
-  let type_lookup : Map[DeclId, Int] = Map::default()
+  let function_lookup : Map[DeclId, Int32] = Map::default()
+  let type_lookup : Map[DeclId, Int32] = Map::default()
   let module_lookup = lowering.index.module_lookup
   let diagnostics : Array[ProgramWasmGCLinkDiagnostic] = []
   match lowering.compile_time {
@@ -876,7 +876,7 @@ pub fn link_program_wasmgc_fragments(
       }
     None => ()
   }
-  let test_ordinals : Map[DeclId, Int] = Map::default()
+  let test_ordinals : Map[DeclId, Int32] = Map::default()
   let mut next_test_ordinal = 0
   for module_ in fragments.modules {
     for function_ in module_.functions {
@@ -938,9 +938,9 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let mut cross_module_type_scc = closure_base_count > 1
-  let trait_method_owners : Map[DeclId, Int] = Map::default()
-  let trait_vtable_owners : Map[DeclId, Int] = Map::default()
-  let trait_object_owners : Map[DeclId, Int] = Map::default()
+  let trait_method_owners : Map[DeclId, Int32] = Map::default()
+  let trait_vtable_owners : Map[DeclId, Int32] = Map::default()
+  let trait_object_owners : Map[DeclId, Int32] = Map::default()
   for module_index, module_ in fragments.modules {
     for physical in module_.physical_types {
       let owners = match physical.kind {
@@ -996,7 +996,7 @@ pub fn link_program_wasmgc_fragments(
     program_link_validate_types(fragments, type_lookup, diagnostics)
     type_count = nominal_type_base
   }
-  let module_signature_indices : Array[Array[Int]] = []
+  let module_signature_indices : Array[Array[Int32]] = []
   for module_ in fragments.modules {
     module_signature_indices.push(Array::make(module_.signature_type_count, -1))
   }
@@ -1418,7 +1418,7 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let initializer_candidates : Array[PlannedProgramModuleInitializer] = []
-  let global_lookup : Map[DeclId, Int] = Map::default()
+  let global_lookup : Map[DeclId, Int32] = Map::default()
   let mut global_index = 0
   for scc in lowering.graph.sccs {
     for member_index in 0..<scc.length {
@@ -1482,7 +1482,7 @@ pub fn link_program_wasmgc_fragments(
   let function_reference_singletons : Array[
     PlannedProgramFunctionReferenceSingleton,
   ] = []
-  let singleton_functions : Map[Int, Bool] = Map::default()
+  let singleton_functions : Map[Int32, Bool] = Map::default()
   for module_index, module_ in lowering.modules {
     for expression_index, expression in module_.expressions {
       match expression.kind {
@@ -1626,7 +1626,7 @@ pub fn link_program_wasmgc_fragments(
   }
   // References in generic bodies need their caller-specific target, not the
   // unspecialized expression shape. Keep one singleton per physical function.
-  let function_by_specialization : Map[String, Int] = Map::default()
+  let function_by_specialization : Map[String, Int32] = Map::default()
   for index, function_ in functions {
     if function_.specialization_abi_key != "" && function_.function_index >= 0 {
       function_by_specialization[function_.specialization_abi_key] = index
@@ -1741,7 +1741,7 @@ pub fn link_program_wasmgc_fragments(
     fragments.evidence_function_references,
     diagnostics,
   )
-  let specialized_call_lookup : Map[ProgramSpecializedCallKey, Int] = Map::default()
+  let specialized_call_lookup : Map[ProgramSpecializedCallKey, Int32] = Map::default()
   let specialized_call_targets : Map[
     ProgramSpecializedCallKey,
     PlannedProgramPhysicalCallTarget,
@@ -1789,7 +1789,7 @@ pub fn link_program_wasmgc_fragments(
       }
     }
   }
-  let imported_function_indices : Map[Bytes, Int] = Map::default()
+  let imported_function_indices : Map[Bytes, Int32] = Map::default()
   for function_ in functions {
     if function_.elided || function_.function_index < 0 {
       continue
@@ -1850,7 +1850,7 @@ pub fn link_program_wasmgc_fragments(
 pub fn plan_program_wasmgc_link_with_options(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
-  root_module_index : Int,
+  root_module_index : Int32,
   options : WasmGCPlanningOptions,
 ) -> PlannedProgramWasmGCLink {
   link_program_wasmgc_fragments(
@@ -1871,7 +1871,7 @@ pub fn plan_program_wasmgc_link_with_options(
 pub fn plan_program_wasmgc_link(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
-  root_module_index : Int,
+  root_module_index : Int32,
 ) -> PlannedProgramWasmGCLink {
   plan_program_wasmgc_link_with_options(
     analyzed,

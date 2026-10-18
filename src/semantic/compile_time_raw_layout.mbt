@@ -1,7 +1,7 @@
 ///|
 // The raw tuple encoding is independent of the runtime GC tuple representation.
 // Fields keep source order and natural alignment; the total includes tail padding.
-fn compile_time_raw_align(size : UInt, alignment : UInt) -> UInt? {
+fn compile_time_raw_align(size : UInt32, alignment : UInt32) -> UInt32? {
   let remainder = size % alignment
   let padding = if remainder == 0U { 0U } else { alignment - remainder }
   if padding > 4294967295U - size {
@@ -14,8 +14,8 @@ fn compile_time_raw_align(size : UInt, alignment : UInt) -> UInt? {
 ///|
 fn compile_time_raw_layout(
   type_ : CompileTimeType,
-  depth : Int,
-) -> Result[(UInt, UInt, Array[UInt]), CompileTimeTypeError] {
+  depth : Int32,
+) -> Result[(UInt32, UInt32, Array[UInt32]), CompileTimeTypeError] {
   if depth >= 256 {
     return Err(CtTypeLimitExceeded)
   }
@@ -67,7 +67,7 @@ fn compile_time_raw_layout(
 ///|
 fn evaluate_compile_time_field_offset(
   types : Array[CompileTimeType],
-  index : UInt,
+  index : UInt32,
 ) -> Result[CompileTimeConstant?, CompileTimeTypeError] {
   let name = b"types.field_offset"
   if types.length() != 1 {

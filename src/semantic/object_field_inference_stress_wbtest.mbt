@@ -1,5 +1,5 @@
 ///|
-fn wide_construction_source(field_count : Int) -> Bytes {
+fn wide_construction_source(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 48 + 128)
   output.write_string_utf8("struct Wide {\n")
   for index in 0..<field_count {
@@ -20,7 +20,7 @@ fn wide_construction_source(field_count : Int) -> Bytes {
 }
 
 ///|
-fn nested_member_source(depth : Int, objects : Bool) -> Bytes {
+fn nested_member_source(depth : Int32, objects : Bool) -> Bytes {
   let output = Buffer(size_hint=depth * 64 + 256)
   output.write_string_utf8("struct Node0 {\n  value: I32\n}\n")
   for index in 1..<=depth {

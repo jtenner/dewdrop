@@ -11,7 +11,7 @@ struct BackendCompilerTestStages {
 fn backend_test_single_module_stages(
   module_id_base : @semantic.ModuleId,
   source : Bytes,
-  emit_tests? : Bool = false,
+  emit_tests~ : Bool = false,
 ) -> BackendCompilerTestStages {
   let program = @semantic.collect_program_manifest(
     module_id_base,
@@ -39,7 +39,7 @@ fn backend_test_single_module_stages(
 ///|
 fn BackendCompilerTestStages::diagnostic_count(
   self : BackendCompilerTestStages,
-) -> Int {
+) -> Int32 {
   @semantic.collect_compiler_source_diagnostics(
     self.program,
     self.analyzed,

@@ -1,5 +1,7 @@
 ///|
-fn backend_link_chain_manifest(module_count : Int) -> @semantic.ProgramManifest {
+fn backend_link_chain_manifest(
+  module_count : Int32,
+) -> @semantic.ProgramManifest {
   let modules : Array[@semantic.ManifestModule] = []
   for index in 0..<module_count {
     let source = Buffer(size_hint=128)
@@ -29,7 +31,7 @@ fn backend_link_chain_manifest(module_count : Int) -> @semantic.ProgramManifest 
 }
 
 ///|
-fn backend_generic_call_chain_source(call_count : Int) -> Bytes {
+fn backend_generic_call_chain_source(call_count : Int32) -> Bytes {
   let source = Buffer(size_hint=call_count * 48 + 256)
   source.write_string_utf8(
     "fn identity<t>(value: t) -> t {\n  value\n}\nfn chain<t>(value: t) -> t {\n",
@@ -119,7 +121,7 @@ test "bench generic call-chain module emission calls=4096" (it : @bench.T) {
 }
 
 ///|
-fn backend_evidence_closure_source(reference_count : Int) -> Bytes {
+fn backend_evidence_closure_source(reference_count : Int32) -> Bytes {
   let source = Buffer(size_hint=reference_count * 72 + 320)
   source.write_string_utf8(
     "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\nfn read<t: Value>(value: t) -> I32 {\n  value.value()\n}\n",
@@ -176,7 +178,7 @@ test "bench program binary emission modules=64" (it : @bench.T) {
 
 ///|
 fn backend_aggregate_chain_manifest(
-  module_count : Int,
+  module_count : Int32,
 ) -> @semantic.ProgramManifest {
   let modules : Array[@semantic.ManifestModule] = []
   for index in 0..<module_count {
@@ -278,7 +280,7 @@ test "bench imported struct semantic backend pipeline fields=32" (it : @bench.T)
 }
 
 ///|
-fn backend_enum_chain_manifest(count : Int) -> @semantic.ProgramManifest {
+fn backend_enum_chain_manifest(count : Int32) -> @semantic.ProgramManifest {
   let modules : Array[@semantic.ManifestModule] = []
   for index in 0..<count {
     let source = Buffer(size_hint=192)
@@ -298,7 +300,7 @@ fn backend_enum_chain_manifest(count : Int) -> @semantic.ProgramManifest {
 
 ///|
 fn backend_imported_enum_manifest(
-  variant_count : Int,
+  variant_count : Int32,
 ) -> @semantic.ProgramManifest {
   let library = Buffer(size_hint=1024)
   library.write_string_utf8("pub enum Message {\n  Idle\n")
@@ -326,7 +328,7 @@ fn backend_imported_enum_manifest(
 
 ///|
 fn backend_imported_struct_variant_manifest(
-  field_count : Int,
+  field_count : Int32,
 ) -> @semantic.ProgramManifest {
   let library = Buffer(size_hint=field_count * 24 + 64)
   let main = Buffer(size_hint=field_count * 28 + 128)
@@ -372,7 +374,7 @@ fn backend_imported_enum_match_manifest() -> @semantic.ProgramManifest {
 
 ///|
 fn backend_dense_enum_match_manifest(
-  variant_count : Int,
+  variant_count : Int32,
 ) -> @semantic.ProgramManifest {
   let library = Buffer(size_hint=variant_count * 16 + 48)
   let main = Buffer(size_hint=variant_count * 32 + 160)
@@ -410,7 +412,7 @@ fn backend_dense_enum_match_manifest(
 
 ///|
 fn backend_repeated_enum_shape_manifest(
-  enum_count : Int,
+  enum_count : Int32,
 ) -> @semantic.ProgramManifest {
   let source = Buffer(size_hint=enum_count * 48 + 48)
   for index in 0..<enum_count {

@@ -38,7 +38,7 @@ fn report_dew_test_diagnostics(
 }
 
 ///|
-fn metadata_hex_digit(value : Int) -> Byte {
+fn metadata_hex_digit(value : Int32) -> Byte {
   if value < 10 {
     (0x30 + value).to_byte()
   } else {

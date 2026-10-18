@@ -53,7 +53,7 @@ fn BasicBodyInferencer::implementation_generic_parameters(
 ///|
 fn BasicBodyInferencer::begin_method_candidate(
   self : BasicBodyInferencer,
-  implementation_index : Int,
+  implementation_index : Int32,
   declaration : DeclId,
 ) -> BodyTypeId {
   let implementation = self.impl_index.implementations[implementation_index]
@@ -91,7 +91,7 @@ fn BasicBodyInferencer::begin_method_candidate(
 fn BasicBodyInferencer::apply_explicit_method_type_arguments(
   self : BasicBodyInferencer,
   expression : ExprId,
-  implementation_index : Int,
+  implementation_index : Int32,
   declaration : DeclId,
 ) -> Bool {
   let owner_count = self.implementation_generic_parameters(
@@ -113,7 +113,7 @@ fn BasicBodyInferencer::try_method_candidate(
   receiver : ExprId,
   arguments : HirSpan,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Bool {
   if !self.callable_exists(declaration) {
@@ -167,9 +167,7 @@ fn BasicBodyInferencer::try_method_candidate(
     )
   }
   if viable {
-    viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin,
-    )
+    viable = self.impl_candidate_bounds_satisfied(implementation_index, origin)
   }
   if viable {
     viable = self.method_candidate_bounds_satisfied(declaration, origin)
@@ -181,12 +179,12 @@ fn BasicBodyInferencer::try_method_candidate(
 ///|
 fn BasicBodyInferencer::select_method_candidate(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   receiver : ExprId,
   arguments : HirSpan,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Unit {
   let target = self.begin_method_candidate(implementation_index, declaration)
@@ -312,7 +310,7 @@ fn BasicBodyInferencer::try_operator_candidate(
   left : ExprId,
   right : ExprId,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Bool {
   if !self.callable_exists(declaration) ||
@@ -353,9 +351,7 @@ fn BasicBodyInferencer::try_operator_candidate(
     )
   }
   if viable {
-    viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin,
-    )
+    viable = self.impl_candidate_bounds_satisfied(implementation_index, origin)
   }
   self.solver.rollback(snapshot)
   viable
@@ -368,7 +364,7 @@ fn BasicBodyInferencer::select_operator_candidate(
   left : ExprId,
   right : ExprId,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Unit {
   let target = self.begin_method_candidate(implementation_index, declaration)
@@ -412,7 +408,7 @@ fn BasicBodyInferencer::try_index_candidate(
   self : BasicBodyInferencer,
   expression : ExprId,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Bool {
   let (base, index, value) = match self.collected.expressions[expression] {
@@ -459,9 +455,7 @@ fn BasicBodyInferencer::try_index_candidate(
     )
   }
   if viable {
-    viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin,
-    )
+    viable = self.impl_candidate_bounds_satisfied(implementation_index, origin)
   }
   self.solver.rollback(snapshot)
   viable
@@ -472,7 +466,7 @@ fn BasicBodyInferencer::select_index_candidate(
   self : BasicBodyInferencer,
   expression : ExprId,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Unit {
   let (base, index, value) = match self.collected.expressions[expression] {
@@ -620,7 +614,7 @@ fn BasicBodyInferencer::trait_requirement_slot(
   self : BasicBodyInferencer,
   trait_declaration : DeclId,
   requirement : DeclId,
-) -> Int {
+) -> Int32 {
   let mut slot = 0
   if semantic_id_module(trait_declaration) == self.collected.module_id {
     for method_info in self.collected.methods {
@@ -772,7 +766,7 @@ fn BasicBodyInferencer::trait_requirement_is_object_safe(
 ///|
 fn BasicBodyInferencer::select_trait_object_method(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   receiver : ExprId,
   name : NameId,
@@ -846,7 +840,7 @@ fn BasicBodyInferencer::select_trait_object_method(
 ///|
 fn BasicBodyInferencer::select_declared_bound_method(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   receiver : ExprId,
   name : NameId,
@@ -1191,7 +1185,7 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
   expression : ExprId,
   arguments : HirSpan,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Bool {
   if !self.callable_exists(declaration) ||
@@ -1229,9 +1223,7 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
     )
   }
   if viable {
-    viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin,
-    )
+    viable = self.impl_candidate_bounds_satisfied(implementation_index, origin)
   }
   self.solver.rollback(snapshot)
   viable
@@ -1240,11 +1232,11 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
 ///|
 fn BasicBodyInferencer::select_qualified_method_candidate(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   declaration : DeclId,
-  implementation_index : Int,
+  implementation_index : Int32,
   offset : UInt64,
 ) -> Unit {
   self.begin_method_candidate(implementation_index, declaration) |> ignore
@@ -1325,7 +1317,7 @@ fn BasicBodyInferencer::collect_trait_qualified_candidates(
 ///|
 fn BasicBodyInferencer::resolve_type_qualified_method_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   target_head : ImplTargetHead,
@@ -1341,7 +1333,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
 ///|
 fn BasicBodyInferencer::resolve_trait_qualified_method_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   trait_declaration : DeclId,
@@ -1357,7 +1349,7 @@ fn BasicBodyInferencer::resolve_trait_qualified_method_call(
 ///|
 fn BasicBodyInferencer::resolve_qualified_method_candidates(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
   expression : ExprId,
   arguments : HirSpan,
   name : NameId,
@@ -1442,7 +1434,7 @@ fn BasicBodyInferencer::body_nominal_type(
 ///|
 fn BasicBodyInferencer::try_resolve_method_call(
   self : BasicBodyInferencer,
-  call_slot : Int,
+  call_slot : Int32,
 ) -> Bool {
   let expression = self.call_expressions[call_slot]
   let (target, arguments, offset) = match

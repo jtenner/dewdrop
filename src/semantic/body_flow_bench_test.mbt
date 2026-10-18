@@ -10,7 +10,7 @@ fn flow_bench_module(
 }
 
 ///|
-fn repeated_variant_flow_source(arm_count : Int) -> Bytes {
+fn repeated_variant_flow_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 20 + 128)
   output.write_string_utf8(
     "enum Flag {\n  On\n  Off\n}\nfn read(flag: Flag) -> I32 {\n  match flag {\n",
@@ -23,7 +23,7 @@ fn repeated_variant_flow_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn unreachable_flow_source(item_count : Int) -> Bytes {
+fn unreachable_flow_source(item_count : Int32) -> Bytes {
   let output = Buffer(size_hint=item_count * 12 + 64)
   output.write_string_utf8("fn stop() -> I32 {\n  return 0\n")
   for index in 0..<item_count {
@@ -36,7 +36,7 @@ fn unreachable_flow_source(item_count : Int) -> Bytes {
 }
 
 ///|
-fn ordinary_flow_source(function_count : Int) -> Bytes {
+fn ordinary_flow_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 64)
   for index in 0..<function_count {
     output.write_string_utf8("fn value_")

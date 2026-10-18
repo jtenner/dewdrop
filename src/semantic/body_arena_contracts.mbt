@@ -14,12 +14,12 @@ priv enum BodyArenaKind {
 
 ///|
 priv struct BodyArenaFailure {
-  code : Int
-  phase : Int
+  code : Int32
+  phase : Int32
   module_id : ModuleId
   declaration : DeclId
   body : BodyId
-  expression : UInt
+  expression : UInt32
   expected : UInt64
   actual : UInt64
   detail : UInt64
@@ -31,7 +31,7 @@ fn body_arena_info(
   collected : CollectedModule,
   body : HirBody,
   kind : BodyArenaKind,
-) -> (HirSpan, Int, Int) {
+) -> (HirSpan, Int32, Int32) {
   match kind {
     BodyExpressions => (body.expressions, collected.expressions.length(), 0)
     BodyExpressionChildren =>
@@ -54,13 +54,13 @@ fn body_arena_info(
 fn body_arena_failure(
   collected : CollectedModule,
   body : HirBody,
-  phase : Int,
-  code : Int,
-  index : Int,
-  expected : Int,
-  actual : Int,
-  tag : Int,
-  detail : Int,
+  phase : Int32,
+  code : Int32,
+  index : Int32,
+  expected : Int32,
+  actual : Int32,
+  tag : Int32,
+  detail : Int32,
 ) -> BodyArenaFailure {
   {
     code,
@@ -84,9 +84,9 @@ fn check_body_relative_index(
   collected : CollectedModule,
   body : HirBody,
   kind : BodyArenaKind,
-  index : Int,
-  phase : Int,
-) -> Result[Int, BodyArenaFailure] {
+  index : Int32,
+  phase : Int32,
+) -> Result[Int32, BodyArenaFailure] {
   let (span, count, tag) = body_arena_info(collected, body, kind)
   if !program_specialization_span_is_valid(span, count) {
     return Err(
@@ -126,9 +126,9 @@ fn body_relative_index(
   collected : CollectedModule,
   body : HirBody,
   kind : BodyArenaKind,
-  index : Int,
-  phase : Int,
-) -> Int {
+  index : Int32,
+  phase : Int32,
+) -> Int32 {
   match check_body_relative_index(collected, body, kind, index, phase) {
     Ok(relative) => relative
     Err(error) => abort("body arena invariant: " + @debug.to_string(error))
@@ -140,7 +140,7 @@ fn body_relative_index(
 fn check_body_owned_spans(
   collected : CollectedModule,
   body : HirBody,
-  phase : Int,
+  phase : Int32,
 ) -> Result[Unit, BodyArenaFailure] {
   for
     kind in [
@@ -179,7 +179,7 @@ fn check_body_owned_spans(
 fn assert_body_owned_spans(
   collected : CollectedModule,
   body : HirBody,
-  phase : Int,
+  phase : Int32,
 ) -> Unit {
   match check_body_owned_spans(collected, body, phase) {
     Ok(_) => ()

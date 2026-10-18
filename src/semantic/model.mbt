@@ -104,7 +104,7 @@ pub struct CollectedVariant {
 pub struct CollectedGenericParameter {
   id : GenericParameterId
   declaration : DeclId
-  index : Int
+  index : Int32
   name : NameId
   bounds : HirSpan
   offset : UInt64
@@ -114,7 +114,7 @@ pub struct CollectedGenericParameter {
 pub struct CollectedParameter {
   id : ParameterId
   declaration : DeclId
-  index : Int
+  index : Int32
   kind : CollectedParameterKind
   name : NameId
   type_ : HirTypeId
@@ -241,13 +241,13 @@ pub enum CollectionDiagnostic {
 ///|
 pub struct ValueBindingCandidate {
   declaration : DeclId
-  mut next : Int
+  mut next : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct ValueBinding {
-  head : Int
-  mut tail : Int
+  head : Int32
+  mut tail : Int32
   kind : CollectedDeclKind
   offset : UInt64
 } derive(Eq, Debug)
@@ -267,7 +267,7 @@ pub struct CollectedTest {
 pub struct CollectedModule {
   constructor_wrappers : Map[VariantId, DeclId]
   module_id : ModuleId
-  preamble_declaration_count : Int
+  preamble_declaration_count : Int32
   files : Array[FileId]
   file_paths : Array[String]
   file_sources : Array[Bytes]
@@ -277,7 +277,7 @@ pub struct CollectedModule {
   names : Array[String]
   declarations : Array[CollectedDeclaration]
   methods : Array[CollectedMethod]
-  declaration_locations : Array[Int]
+  declaration_locations : Array[Int32]
   fields : Array[CollectedField]
   variants : Array[CollectedVariant]
   generic_parameters : Array[CollectedGenericParameter]
@@ -302,7 +302,7 @@ pub struct CollectedModule {
   lambda_parameter_files : Array[FileId]
   lambdas : Array[HirLambda]
   bodies : Array[HirBody]
-  body_by_declaration : Array[Int]
+  body_by_declaration : Array[Int32]
   expressions : Array[HirExpr]
   expression_files : Array[FileId]
   expression_children : Array[ExprId]

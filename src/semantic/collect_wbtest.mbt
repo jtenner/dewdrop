@@ -109,7 +109,7 @@ test "collection lowers signature types into flat child-first HIR" {
 }
 
 ///|
-fn deeply_applied_alias(depth : Int) -> Bytes {
+fn deeply_applied_alias(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 5 + 32)
   output.write_string_utf8("type Deep<t> = ")
   for _ in 0..<depth {
@@ -189,7 +189,7 @@ test "collection preserves parse diagnostics and continues" {
 }
 
 ///|
-fn wide_duplicate_scope_module(width : Int) -> Bytes {
+fn wide_duplicate_scope_module(width : Int32) -> Bytes {
   let output = Buffer(size_hint=width * 40 + 96)
   output.write_string_utf8("type Wide<")
   for index in 0..<width {
@@ -224,7 +224,7 @@ test "large owner scopes switch to hash duplicate detection" {
 }
 
 ///|
-fn large_collection_module(declaration_count : Int) -> Bytes {
+fn large_collection_module(declaration_count : Int32) -> Bytes {
   let output = Buffer(size_hint=declaration_count * 32)
   for index in 0..<declaration_count {
     output.write_string_utf8("type Alias_")

@@ -239,7 +239,7 @@ test "double quoted strings decode escapes" {
 
 ///|
 #cfg(target="native")
-fn tokenizer_with_terminal_error(bytes : Bytes, error : Int) -> Tokenizer {
+fn tokenizer_with_terminal_error(bytes : Bytes, error : Int32) -> Tokenizer {
   let source = Utf8Cursor::new(bytes)
   source.read_error = error
   Tokenizer::new(source)

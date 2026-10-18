@@ -3,7 +3,7 @@
 ///
 /// Values through U+10FFFF are decoded WTF-8 code points, including UTF-16
 /// surrogates. Values above that range are reserved by this package.
-pub type UtfCodepoint = UInt
+pub type UtfCodepoint = UInt32
 
 ///|
 /// An absolute byte offset in the original WTF-8 input.
@@ -59,7 +59,7 @@ pub fn is_io_error(value : UtfCodepoint) -> Bool {
 
 ///|
 /// Extracts the positive platform error code from an I/O sentinel.
-pub fn io_error_code(value : UtfCodepoint) -> Int? {
+pub fn io_error_code(value : UtfCodepoint) -> Int32? {
   guard is_io_error(value) else { None }
   Some((value - IO_ERROR_BASE).reinterpret_as_int())
 }
@@ -72,13 +72,13 @@ pub fn io_error_code(value : UtfCodepoint) -> Int? {
 /// copying it and is useful for tests and already-buffered sources.
 pub struct Utf8Cursor {
   buffer : Bytes
-  fd : Int
+  fd : Int32
   refillable : Bool
-  mut position : Int
-  mut limit : Int
+  mut position : Int32
+  mut limit : Int32
   mut base_offset : ByteOffset
   mut eof : Bool
-  mut read_error : Int
+  mut read_error : Int32
   mut read_error_emitted : Bool
 }
 
@@ -103,7 +103,7 @@ pub fn Utf8Cursor::new(buffer : Bytes) -> Utf8Cursor {
 ///
 /// The default capacity is the host operating-system page size. The cursor
 /// borrows the descriptor and never closes it.
-pub fn Utf8Cursor::from_fd(fd : Int, buffer_size? : Int) -> Utf8Cursor {
+pub fn Utf8Cursor::from_fd(fd : Int32, buffer_size? : Int32) -> Utf8Cursor {
   let capacity = match buffer_size {
     Some(size) => size
     None => tokenizer_platform_page_size()
@@ -126,7 +126,7 @@ pub fn Utf8Cursor::from_fd(fd : Int, buffer_size? : Int) -> Utf8Cursor {
 
 ///|
 /// Returns the capacity of the retained or reusable byte buffer.
-pub fn Utf8Cursor::buffer_capacity(self : Utf8Cursor) -> Int {
+pub fn Utf8Cursor::buffer_capacity(self : Utf8Cursor) -> Int32 {
   self.buffer.length()
 }
 
@@ -138,7 +138,7 @@ pub fn Utf8Cursor::byte_offset(self : Utf8Cursor) -> ByteOffset {
 
 ///|
 /// Returns the terminal descriptor error, if one occurred.
-pub fn Utf8Cursor::read_error(self : Utf8Cursor) -> Int? {
+pub fn Utf8Cursor::read_error(self : Utf8Cursor) -> Int32? {
   if self.read_error == 0 {
     None
   } else {
@@ -156,12 +156,12 @@ pub fn Utf8Cursor::is_done(self : Utf8Cursor) -> Bool {
 
 ///|
 /// Reads one buffered byte after the caller has established it is in bounds.
-fn Utf8Cursor::byte_at(self : Utf8Cursor, index : Int) -> Int {
+fn Utf8Cursor::byte_at(self : Utf8Cursor, index : Int32) -> Int32 {
   self.buffer.unsafe_get(index).to_int()
 }
 
 ///|
-fn is_continuation(byte : Int) -> Bool {
+fn is_continuation(byte : Int32) -> Bool {
   (byte & 0xC0) == 0x80
 }
 
@@ -202,7 +202,7 @@ fn Utf8Cursor::refill_once(self : Utf8Cursor) -> Unit {
 
 ///|
 /// Ensures that `needed` bytes are buffered from the current position.
-fn Utf8Cursor::ensure(self : Utf8Cursor, needed : Int) -> Bool {
+fn Utf8Cursor::ensure(self : Utf8Cursor, needed : Int32) -> Bool {
   while self.limit - self.position < needed && !self.eof {
     let old_limit = self.limit
     let old_position = self.position
@@ -216,18 +216,18 @@ fn Utf8Cursor::ensure(self : Utf8Cursor, needed : Int) -> Bool {
 }
 
 ///|
-fn invalid_byte_sentinel(byte : Int) -> UtfCodepoint {
+fn invalid_byte_sentinel(byte : Int32) -> UtfCodepoint {
   INVALID_BYTE_BASE + byte.reinterpret_as_uint()
 }
 
 ///|
-fn io_error_sentinel(error : Int) -> UtfCodepoint {
+fn io_error_sentinel(error : Int32) -> UtfCodepoint {
   IO_ERROR_BASE + (error & 0xFFFF).reinterpret_as_uint()
 }
 
 ///|
 /// Preserves one malformed byte and advances by exactly one byte.
-fn Utf8Cursor::invalid_at(self : Utf8Cursor, start : Int) -> UtfCodepoint {
+fn Utf8Cursor::invalid_at(self : Utf8Cursor, start : Int32) -> UtfCodepoint {
   let byte = self.byte_at(start)
   self.position = start + 1
   invalid_byte_sentinel(byte)

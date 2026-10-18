@@ -310,17 +310,24 @@ test "program linker adapts exact references to erased generic fallbacks" {
       assert_eq(function_.erased_adapter_target, fallback_index)
       assert_eq(function_.kind, PlannedWasmErasedAdapterFunction)
       assert_true(link.erased_adapter_target_function(function_) is Some(_))
-      for missing in [-1, link.functions.length() + 500, function_.function_index] {
+      for
+        missing in [-1, link.functions.length() + 500, function_.function_index] {
         let invalid = { ..function_, erased_adapter_target: missing, }
         assert_eq(link.erased_adapter_target_function(invalid), None)
       }
-      let target_slot = link.functions.search_by(fn(candidate) {
-        candidate.function_index == function_.erased_adapter_target
-      }).unwrap()
+      let target_slot = link.functions
+        .search_by(fn(candidate) {
+          candidate.function_index == function_.erased_adapter_target
+        })
+        .unwrap()
       let target = link.functions[target_slot]
       link.functions[target_slot] = { ..target, elided: true, }
       assert_eq(link.erased_adapter_target_function(function_), None)
-      for kind in [PlannedWasmInlineBuiltinFunction(b"i32.add"), PlannedWasmSignatureOnlyFunction] {
+      for
+        kind in [
+          PlannedWasmInlineBuiltinFunction(b"i32.add"),
+          PlannedWasmSignatureOnlyFunction,
+        ] {
         link.functions[target_slot] = { ..target, kind, }
         assert_eq(link.erased_adapter_target_function(function_), None)
       }
@@ -1036,7 +1043,7 @@ test "explicit-return generic trait selectors devirtualize every closed call" {
 }
 
 ///|
-fn open_generic_selector_chain_test_source(depth : Int) -> Bytes {
+fn open_generic_selector_chain_test_source(depth : Int32) -> Bytes {
   let source = Buffer(size_hint=depth * 96 + 512)
   source.write_string_utf8(
     "trait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\n",
@@ -1393,7 +1400,7 @@ test "external generic fallback captures erased concrete runtime prerequisites" 
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
   let lowering = plan_program_lowering(program, analyzed)
-  let module_lookup : Map[ModuleId, Int] = Map::default()
+  let module_lookup : Map[ModuleId, Int32] = Map::default()
   module_lookup[lowering.modules[0].module_id] = 0
   let outer = program.modules[0].lookup_value("outer").unwrap()
   let helper = program.modules[0].lookup_value("helper").unwrap()

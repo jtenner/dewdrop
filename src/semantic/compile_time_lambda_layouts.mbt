@@ -1,8 +1,8 @@
 ///|
 pub struct CompileTimeLambdaLayout {
-  closure_types : Array[Int]
-  capture_fields : Array[Int]
-  capture_parameters : Array[Int]
+  closure_types : Array[Int32]
+  capture_fields : Array[Int32]
+  capture_parameters : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -10,7 +10,7 @@ pub struct CompileTimeLambdaLayout {
 // a group must move every signature reference together, before link freeze.
 fn rebase_fragment_signatures(
   fragments : PlannedModuleWasmGCFragments,
-  old_base : Int,
+  old_base : Int32,
 ) -> Unit {
   let delta = fragments.physical_types.length() - old_base
   guard delta >= 0 else { abort("LNK-502 physical type arena shrank") }
@@ -79,7 +79,7 @@ fn append_compile_time_physical_type(
   kind : PlannedWasmPhysicalTypeKind,
   fields : HirSpan,
   offset : UInt64,
-) -> Int {
+) -> Int32 {
   let type_index = fragments.physical_types.length()
   fragments.physical_types.push({
     kind,

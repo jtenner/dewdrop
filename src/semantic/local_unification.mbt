@@ -25,11 +25,11 @@ let zonk_finish_projection = 4
 ///|
 pub struct InferenceSnapshot {
   token : UInt64
-  undo_start : Int
-  variable_count : Int
-  type_count : Int
-  argument_count : Int
-  diagnostic_count : Int
+  undo_start : Int32
+  variable_count : Int32
+  type_count : Int32
+  argument_count : Int32
+  diagnostic_count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -39,35 +39,35 @@ pub struct LocalTypeSolver {
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   variable_parents : Array[TypeVariableId]
-  variable_sizes : Array[Int]
+  variable_sizes : Array[Int32]
   variable_bindings : Array[BodyTypeId]
   variable_types : Array[BodyTypeId]
   diagnostics : Array[LocalInferenceDiagnostic]
   snapshots : Array[InferenceSnapshot]
   mut next_snapshot_token : UInt64
-  undo_kinds : Array[Int]
-  undo_indices : Array[Int]
-  undo_values : Array[Int]
+  undo_kinds : Array[Int32]
+  undo_indices : Array[Int32]
+  undo_values : Array[Int32]
   unify_left : Array[BodyTypeId]
   unify_right : Array[BodyTypeId]
   occurs_stack : Array[BodyTypeId]
-  occurs_local_marks : Array[Int]
-  occurs_resolved_marks : Array[Int]
-  mut occurs_generation : Int
+  occurs_local_marks : Array[Int32]
+  occurs_resolved_marks : Array[Int32]
+  mut occurs_generation : Int32
   zonk_task_types : Array[BodyTypeId]
-  zonk_task_states : Array[Int]
-  zonk_result_starts : Array[Int]
+  zonk_task_states : Array[Int32]
+  zonk_result_starts : Array[Int32]
   zonk_results : Array[BodyTypeId]
   zonk_application_scratch : Array[BodyTypeId]
-  zonk_marks : Array[Int]
+  zonk_marks : Array[Int32]
   zonk_values : Array[BodyTypeId]
-  mut zonk_generation : Int
+  mut zonk_generation : Int32
 }
 
 ///|
 pub fn LocalTypeSolver::new(
   resolved : ResolvedModuleTypes,
-  member_types? : BodyMemberTypeContext? = None,
+  member_types~ : BodyMemberTypeContext? = None,
 ) -> LocalTypeSolver {
   {
     resolved,
@@ -269,9 +269,9 @@ pub fn LocalTypeSolver::representative_type(
 ///|
 fn LocalTypeSolver::record_undo(
   self : LocalTypeSolver,
-  kind : Int,
-  index : Int,
-  old_value : Int,
+  kind : Int32,
+  index : Int32,
+  old_value : Int32,
 ) -> Unit {
   self.assert_undo_arrays()
   if self.snapshots.length() > 0 {
@@ -295,7 +295,7 @@ fn LocalTypeSolver::set_variable_parent(
 fn LocalTypeSolver::set_variable_size(
   self : LocalTypeSolver,
   variable : TypeVariableId,
-  size : Int,
+  size : Int32,
 ) -> Unit {
   self.record_undo(undo_size, variable, self.variable_sizes[variable])
   self.variable_sizes[variable] = size
@@ -1056,7 +1056,7 @@ pub fn LocalTypeSolver::snapshot(self : LocalTypeSolver) -> InferenceSnapshot {
 }
 
 ///|
-fn LocalTypeSolver::restore_undo(self : LocalTypeSolver, start : Int) -> Unit {
+fn LocalTypeSolver::restore_undo(self : LocalTypeSolver, start : Int32) -> Unit {
   match self.check_undo_restore(start) {
     Ok(_) => ()
     Err(error) => abort("solver undo invariant: " + @debug.to_string(error))
@@ -1129,8 +1129,8 @@ fn LocalTypeSolver::next_zonk_generation(self : LocalTypeSolver) -> Unit {
 fn LocalTypeSolver::push_zonk_task(
   self : LocalTypeSolver,
   type_ : BodyTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.zonk_task_types.push(type_)
   self.zonk_task_states.push(state)
@@ -1146,7 +1146,7 @@ fn LocalTypeSolver::push_zonk_task(
 pub fn LocalTypeSolver::zonk_type(
   self : LocalTypeSolver,
   root : BodyTypeId,
-  origin? : TypeConstraintOrigin = synthetic_type_origin(-1, 0UL),
+  origin~ : TypeConstraintOrigin = synthetic_type_origin(-1, 0UL),
 ) -> BodyTypeId {
   self.assert_solver_boundary(true, 1)
   self.assert_type_graph(root)

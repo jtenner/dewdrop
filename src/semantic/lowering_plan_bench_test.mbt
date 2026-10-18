@@ -1,5 +1,5 @@
 ///|
-fn lowering_functions_source(count : Int) -> Bytes {
+fn lowering_functions_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 64)
   for index in 0..<count {
     output.write_string_utf8("fn function_")
@@ -12,7 +12,7 @@ fn lowering_functions_source(count : Int) -> Bytes {
 }
 
 ///|
-fn lowering_locals_source(count : Int) -> Bytes {
+fn lowering_locals_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 48 + 80)
   output.write_string_utf8("fn locals(value: I32) -> I32 {\n")
   for index in 0..<count {
@@ -34,7 +34,7 @@ fn lowering_locals_source(count : Int) -> Bytes {
 }
 
 ///|
-fn lowering_method_calls_source(count : Int) -> Bytes {
+fn lowering_method_calls_source(count : Int32) -> Bytes {
   let output = Buffer(size_hint=count * 40 + 160)
   output.write_string_utf8(
     "struct Item {}\nimpl Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\nfn use(value: Item) -> I32 {\n",

@@ -8,7 +8,7 @@ pub struct Tokenizer {
   mut has_second : Bool
   mut second : UtfCodepoint
   mut second_offset : ByteOffset
-  mut next_index : Int
+  mut next_index : Int32
   mut has_pending_newline : Bool
   mut pending_newline_offset : ByteOffset
   scratch : StringBuilder
@@ -37,7 +37,7 @@ pub fn Tokenizer::from_bytes(bytes : Bytes) -> Tokenizer {
 }
 
 ///|
-pub fn Tokenizer::from_fd(fd : Int, buffer_size? : Int) -> Tokenizer {
+pub fn Tokenizer::from_fd(fd : Int32, buffer_size? : Int32) -> Tokenizer {
   let source = match buffer_size {
     Some(size) => Utf8Cursor::from_fd(fd, buffer_size=size)
     None => Utf8Cursor::from_fd(fd)
@@ -169,7 +169,7 @@ fn is_unicode_whitespace(value : UtfCodepoint) -> Bool {
     | 0x202FU
     | 0x205FU
     | 0x3000U => true
-    0x2000U..=0x200AU => true
+    0x2000U..<=0x200AU => true
     _ => false
   }
 }
@@ -366,7 +366,7 @@ fn Tokenizer::scan_exponent(self : Tokenizer, builder : StringBuilder) -> Bool {
 fn Tokenizer::scan_numeric_width(
   self : Tokenizer,
   builder : StringBuilder,
-) -> Int {
+) -> Int32 {
   guard self.has_current() else { return -1 }
   let first = self.first
   self.advance()
@@ -515,11 +515,11 @@ fn Tokenizer::scan_number(
 }
 
 ///|
-fn hex_digit(value : UtfCodepoint) -> Int? {
+fn hex_digit(value : UtfCodepoint) -> Int32? {
   match value {
-    0x30U..=0x39U => Some((value - 0x30U).reinterpret_as_int())
-    0x41U..=0x46U => Some((value - 0x41U + 10U).reinterpret_as_int())
-    0x61U..=0x66U => Some((value - 0x61U + 10U).reinterpret_as_int())
+    0x30U..<=0x39U => Some((value - 0x30U).reinterpret_as_int())
+    0x41U..<=0x46U => Some((value - 0x41U + 10U).reinterpret_as_int())
+    0x61U..<=0x66U => Some((value - 0x61U + 10U).reinterpret_as_int())
     _ => None
   }
 }
@@ -557,7 +557,8 @@ fn Tokenizer::scan_string(
         let escaped = match self.take() {
           Some((escaped, _)) if is_io_error(escaped) =>
             return self.emit(
-              Error(SourceIo(io_error_code(escaped).unwrap())), offset,
+              Error(SourceIo(io_error_code(escaped).unwrap())),
+              offset,
             )
           Some((escaped, _)) => escaped
           None => return self.emit(Error(UnterminatedString), offset)
@@ -575,7 +576,8 @@ fn Tokenizer::scan_string(
             let first = match self.take() {
               Some((digit, _)) if is_io_error(digit) =>
                 return self.emit(
-                  Error(SourceIo(io_error_code(digit).unwrap())), offset,
+                  Error(SourceIo(io_error_code(digit).unwrap())),
+                  offset,
                 )
               Some((digit, _)) => hex_digit(digit)
               None => None
@@ -583,7 +585,8 @@ fn Tokenizer::scan_string(
             let second = match self.take() {
               Some((digit, _)) if is_io_error(digit) =>
                 return self.emit(
-                  Error(SourceIo(io_error_code(digit).unwrap())), offset,
+                  Error(SourceIo(io_error_code(digit).unwrap())),
+                  offset,
                 )
               Some((digit, _)) => hex_digit(digit)
               None => None

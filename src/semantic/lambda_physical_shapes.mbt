@@ -1,11 +1,11 @@
 ///|
 priv struct LambdaPhysicalShapeFailure {
-  code : Int
-  phase : Int
+  code : Int32
+  phase : Int32
   module_id : ModuleId
   declaration : DeclId
   body : BodyId
-  expression : UInt
+  expression : UInt32
   expected : UInt64
   actual : UInt64
   detail : UInt64

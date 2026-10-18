@@ -12,35 +12,60 @@ fn starshine_raw_struct_get_layout(
   recipe : @semantic.RawStructGetRecipe,
   caller : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-) -> Result[(Int, StarshineRawStructScalar), StarshineCodeEmissionError] {
+) -> Result[(Int32, StarshineRawStructScalar), StarshineCodeEmissionError] {
   if @semantic.raw_struct_get_field(recipe.opcode) != Some(recipe.field_index) ||
     recipe.field_index < 0 {
-    return Err(InvalidHeapIntrinsic(recipe.opcode, "invalid struct.get field immediate"))
+    return Err(
+      InvalidHeapIntrinsic(recipe.opcode, "invalid struct.get field immediate"),
+    )
   }
-  let heap = match starshine_raw_struct_heap(recipe.owner, caller, program, recipe.opcode) {
+  let heap = match
+    starshine_raw_struct_heap(recipe.owner, caller, program, recipe.opcode) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   match heap {
     PrimitiveStructHeap(index) => {
       if recipe.field_index >= 3 {
-        return Err(InvalidHeapIntrinsic(recipe.opcode, "field is outside the primitive struct"))
+        return Err(
+          InvalidHeapIntrinsic(
+            recipe.opcode,
+            "field is outside the primitive struct",
+          ),
+        )
       }
       if recipe.field_index == 0 {
-        return Err(InvalidHeapIntrinsic(recipe.opcode, "reference fields require a complete heap result contract"))
+        return Err(
+          InvalidHeapIntrinsic(
+            recipe.opcode,
+            "reference fields require a complete heap result contract",
+          ),
+        )
       }
       Ok((index, RawStructI32))
     }
     DeclaredStructHeap(index, owner, type_) => {
       let fields = type_.fields
-      if fields.start < 0 || fields.start > owner.fields.length() ||
-        fields.length < 0 || fields.length > owner.fields.length() - fields.start ||
+      if fields.start < 0 ||
+        fields.start > owner.fields.length() ||
+        fields.length < 0 ||
+        fields.length > owner.fields.length() - fields.start ||
         recipe.field_index >= fields.length {
-        return Err(InvalidHeapIntrinsic(recipe.opcode, "field is outside the declared struct"))
+        return Err(
+          InvalidHeapIntrinsic(
+            recipe.opcode,
+            "field is outside the declared struct",
+          ),
+        )
       }
       let field = owner.fields[fields.start + recipe.field_index]
       if field.physical_index != recipe.field_index {
-        return Err(InvalidHeapIntrinsic(recipe.opcode, "stored struct field identity is inconsistent"))
+        return Err(
+          InvalidHeapIntrinsic(
+            recipe.opcode,
+            "stored struct field identity is inconsistent",
+          ),
+        )
       }
       let scalar = match field.storage {
         @semantic.WasmI32Storage => RawStructI32
@@ -48,7 +73,13 @@ fn starshine_raw_struct_get_layout(
         @semantic.WasmF32Storage => RawStructF32
         @semantic.WasmF64Storage => RawStructF64
         @semantic.WasmV128Storage => RawStructV128
-        _ => return Err(InvalidHeapIntrinsic(recipe.opcode, "struct.get currently requires unpacked scalar field storage"))
+        _ =>
+          return Err(
+            InvalidHeapIntrinsic(
+              recipe.opcode,
+              "struct.get currently requires unpacked scalar field storage",
+            ),
+          )
       }
       Ok((index, scalar))
     }
@@ -138,7 +169,9 @@ fn starshine_outlined_heap_instruction(
   declaration : @semantic.DeclId,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   if recipe is @semantic.RawArrayGetInstruction(array) {
-    return starshine_outlined_array_get(array, caller, program, types, parameters, results, declaration)
+    return starshine_outlined_array_get(
+      array, caller, program, types, parameters, results, declaration,
+    )
   }
   let operation = match
     starshine_raw_heap_instructions(

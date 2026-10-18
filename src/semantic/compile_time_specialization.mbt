@@ -253,7 +253,8 @@ fn compile_time_specialization_key(
   let key = abi_key + ":logical[" + compile_time_types_key(logical_types) + "]"
   match context.instances.get(key) {
     Some(instance) => {
-      guard instance.declaration == declaration && instance.types == logical_types else {
+      guard instance.declaration == declaration &&
+        instance.types == logical_types else {
         abort("SPC-302 logical specialization key collision")
       }
       return Some(key)
@@ -366,7 +367,7 @@ fn compile_time_specialization_key(
 // type queries or chooses a different specialized branch.
 pub fn program_function_lowering(
   lowering : PlannedProgramLowering,
-  module_index : Int,
+  module_index : Int32,
   specialization_key : String,
 ) -> PlannedModuleLowering {
   match lowering.compile_time {

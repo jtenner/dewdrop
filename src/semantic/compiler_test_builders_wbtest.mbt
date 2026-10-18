@@ -100,8 +100,8 @@ fn compiler_test_lower(
 fn compiler_test_link(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
-  root_module_index? : Int = 0,
-  emit_tests? : Bool = false,
+  root_module_index~ : Int32 = 0,
+  emit_tests~ : Bool = false,
 ) -> PlannedProgramWasmGCLink {
   if emit_tests {
     plan_program_wasmgc_link_with_options(
@@ -119,8 +119,8 @@ fn compiler_test_link(
 fn compiler_test_stages(
   module_id_base : ModuleId,
   modules : Array[CompilerTestModule],
-  root_module_index? : Int = 0,
-  emit_tests? : Bool = false,
+  root_module_index~ : Int32 = 0,
+  emit_tests~ : Bool = false,
 ) -> SemanticCompilerTestStages {
   let program = collect_program_manifest(
     module_id_base,

@@ -12,10 +12,10 @@ let artifact_pack_maximum_entries = 0x00100000
 
 ///|
 pub struct ArtifactPackEntry {
-  kind : UInt
-  schema_version : UInt
-  flags : UInt
-  owner_kind : UInt
+  kind : UInt32
+  schema_version : UInt32
+  flags : UInt32
+  owner_kind : UInt32
   owner : String
   content_digest : FixedArray[Byte]
   context_digest : FixedArray[Byte]
@@ -24,11 +24,11 @@ pub struct ArtifactPackEntry {
 
 ///|
 struct ArtifactPackIndexedEntry {
-  kind : UInt
-  owner_lane : UInt
-  content_lane : UInt
-  offset : Int
-  size : Int
+  kind : UInt32
+  owner_lane : UInt32
+  content_lane : UInt32
+  offset : Int32
+  size : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -36,19 +36,19 @@ pub struct ArtifactPack {
   entries : Array[ArtifactPackEntry]
   // Entries are appended by lookup and replaced by upsert. A bucket preserves
   // the first-match rule when several stored versions have been loaded.
-  owner_entries : Map[(UInt, String), Array[Int]]
+  owner_entries : Map[(UInt32, String), Array[Int32]]
   indexed_entries : Array[ArtifactPackIndexedEntry]
   encoded : Bytes?
-  footer_covered_bytes : Int
+  footer_covered_bytes : Int32
   footer_digest : FixedArray[Byte]
 } derive(Eq, Debug)
 
 ///|
 pub fn ArtifactPackEntry::new(
-  kind : UInt,
-  schema_version : UInt,
-  flags : UInt,
-  owner_kind : UInt,
+  kind : UInt32,
+  schema_version : UInt32,
+  flags : UInt32,
+  owner_kind : UInt32,
   owner : String,
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],
@@ -107,7 +107,7 @@ fn artifact_pack_validate_digest(
 }
 
 ///|
-fn artifact_pack_hash32(digest : FixedArray[Byte]) -> UInt {
+fn artifact_pack_hash32(digest : FixedArray[Byte]) -> UInt32 {
   digest[0].to_uint() |
   (digest[1].to_uint() << 8) |
   (digest[2].to_uint() << 16) |
@@ -115,12 +115,12 @@ fn artifact_pack_hash32(digest : FixedArray[Byte]) -> UInt {
 }
 
 ///|
-fn artifact_pack_align16(value : Int) -> Int {
+fn artifact_pack_align16(value : Int32) -> Int32 {
   (value + 15) & -16
 }
 
 ///|
-fn artifact_pack_write_u16(writer : Writer, value : UInt) -> Unit {
+fn artifact_pack_write_u16(writer : Writer, value : UInt32) -> Unit {
   writer.write_byte((value & 0xffU).to_byte())
   writer.write_byte(((value >> 8) & 0xffU).to_byte())
 }
@@ -141,7 +141,11 @@ fn artifact_pack_zero_digest() -> FixedArray[Byte] {
 }
 
 ///|
-fn artifact_pack_copy_bytes(bytes : Bytes, start : Int, length : Int) -> Bytes {
+fn artifact_pack_copy_bytes(
+  bytes : Bytes,
+  start : Int32,
+  length : Int32,
+) -> Bytes {
   bytes[start:start + length].to_owned()
 }
 
@@ -158,7 +162,7 @@ fn artifact_pack_digest_from_bytes(bytes : Bytes) -> FixedArray[Byte] {
 fn artifact_pack_compare_digest(
   left : FixedArray[Byte],
   right : FixedArray[Byte],
-) -> Int {
+) -> Int32 {
   for index in 0..<32 {
     let compared = left[index].compare(right[index])
     if compared != 0 {
@@ -172,9 +176,9 @@ fn artifact_pack_compare_digest(
 fn artifact_pack_entry_compare(
   left : ArtifactPackEntry,
   right : ArtifactPackEntry,
-  left_owner_lane : UInt,
-  right_owner_lane : UInt,
-) -> Int {
+  left_owner_lane : UInt32,
+  right_owner_lane : UInt32,
+) -> Int32 {
   let kind = left.kind.compare(right.kind)
   if kind != 0 {
     return kind
@@ -206,8 +210,8 @@ fn artifact_pack_entry_compare(
 ///|
 pub fn ArtifactPack::lookup(
   self : ArtifactPack,
-  kind : UInt,
-  schema_version : UInt,
+  kind : UInt32,
+  schema_version : UInt32,
   owner : String,
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],
@@ -281,7 +285,7 @@ fn artifact_pack_encoded_entry(
 ///|
 fn artifact_pack_write_section(
   output : Writer,
-  kind : UInt,
+  kind : UInt32,
   entries : Array[ArtifactPackEntry],
 ) -> Result[Unit, String] {
   let encoded : Array[Bytes] = []
@@ -317,9 +321,9 @@ fn artifact_pack_write_section(
 
 ///|
 fn artifact_pack_footer_entry(
-  total_size : Int,
-  covered_bytes : Int,
-  section_count : Int,
+  total_size : Int32,
+  covered_bytes : Int32,
+  section_count : Int32,
   digest : FixedArray[Byte],
 ) -> ArtifactPackEntry {
   let payload = Writer::new(size_hint=64)
@@ -392,7 +396,7 @@ pub fn ArtifactPack::encode(self : ArtifactPack) -> Result[Bytes, String] {
 }
 
 ///|
-fn artifact_pack_read_u16(reader : Reader, field : String) -> UInt {
+fn artifact_pack_read_u16(reader : Reader, field : String) -> UInt32 {
   reader.read_byte(field).to_uint() | (reader.read_byte(field).to_uint() << 8)
 }
 
@@ -410,10 +414,10 @@ fn artifact_pack_read_digest(
 
 ///|
 fn artifact_pack_decode_entry(
-  kind : UInt,
+  kind : UInt32,
   encoded : Bytes,
-  expected_owner_lane : UInt,
-  expected_content_lane : UInt,
+  expected_owner_lane : UInt32,
+  expected_content_lane : UInt32,
 ) -> Result[ArtifactPackEntry, String] {
   if encoded.length() < artifact_pack_entry_prefix_bytes {
     return Err("artifact pack entry prefix is truncated")
@@ -518,9 +522,9 @@ pub fn decode_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
       previous_kind = kind
       has_previous_kind = true
     }
-    let owner_lanes : Array[UInt] = []
-    let content_lanes : Array[UInt] = []
-    let entry_sizes : Array[Int] = []
+    let owner_lanes : Array[UInt32] = []
+    let content_lanes : Array[UInt32] = []
+    let entry_sizes : Array[Int32] = []
     for _ in 0..<entry_count {
       owner_lanes.push(reader.read_u32_le("entry.owner_hash32"))
       content_lanes.push(reader.read_u32_le("entry.content_hash32"))
@@ -650,8 +654,10 @@ fn artifact_pack_sort_entries(entries : Array[ArtifactPackEntry]) -> Unit {
 }
 
 ///|
-fn artifact_pack_owner_entries(entries : Array[ArtifactPackEntry]) -> Map[(UInt, String), Array[Int]] {
-  let result : Map[(UInt, String), Array[Int]] = {}
+fn artifact_pack_owner_entries(
+  entries : Array[ArtifactPackEntry],
+) -> Map[(UInt32, String), Array[Int32]] {
+  let result : Map[(UInt32, String), Array[Int32]] = {}
   for index, entry in entries {
     let key = (entry.kind, entry.owner)
     match result.get(key) {
@@ -663,7 +669,10 @@ fn artifact_pack_owner_entries(entries : Array[ArtifactPackEntry]) -> Map[(UInt,
 }
 
 ///|
-fn ArtifactPack::append_loaded_entry(self : ArtifactPack, entry : ArtifactPackEntry) -> Unit {
+fn ArtifactPack::append_loaded_entry(
+  self : ArtifactPack,
+  entry : ArtifactPackEntry,
+) -> Unit {
   let index = self.entries.length()
   self.entries.push(entry)
   let key = (entry.kind, entry.owner)

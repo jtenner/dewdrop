@@ -50,7 +50,7 @@ fn report_compilation_diagnostics(
   analyzed : @semantic.AnalyzedProgramSemantics,
   lowering : @semantic.PlannedProgramLowering,
   link : @semantic.PlannedProgramWasmGCLink,
-) -> (Bool, Int) {
+) -> (Bool, Int32) {
   let mut has_errors = false
   let mut count = 0
   for
@@ -151,7 +151,7 @@ fn print_usage() -> Unit {
 ///|
 fn compile_request_root_index(
   request : @compile_request.CompilerRequest,
-) -> Int {
+) -> Int32 {
   for index, module_ in request.modules {
     if module_.name == request.root_module {
       return index

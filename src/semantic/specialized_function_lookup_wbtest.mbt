@@ -1,6 +1,6 @@
 ///|
 fn ambiguous_specialization_test_link(
-  two? : Bool = true,
+  two~ : Bool = true,
 ) -> (PlannedProgramWasmGCLink, DeclId) raise {
   let program = collect_program_manifest(
     24912UL,
@@ -72,7 +72,7 @@ test "same carrier cannot select the first logical query instance" {
 ///|
 fn specialization_lookup_assert_failure(
   result : Result[PlannedProgramWasmFunction?, ProgramFunctionLookupFailure],
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,

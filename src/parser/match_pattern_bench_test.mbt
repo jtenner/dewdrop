@@ -1,5 +1,5 @@
 ///|
-fn qualified_pattern_benchmark_source(part_count : Int) -> Bytes {
+fn qualified_pattern_benchmark_source(part_count : Int32) -> Bytes {
   let output = Buffer(size_hint=part_count * 12 + 4)
   output.write_string_utf8("Root")
   for index in 0..<part_count {
@@ -10,7 +10,7 @@ fn qualified_pattern_benchmark_source(part_count : Int) -> Bytes {
 }
 
 ///|
-fn unit_match_benchmark_source(arm_count : Int) -> Bytes {
+fn unit_match_benchmark_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 28 + 32)
   output.write_string_utf8("match value {\n")
   for index in 0..<arm_count {
@@ -25,7 +25,7 @@ fn unit_match_benchmark_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn tuple_match_benchmark_source(arm_count : Int) -> Bytes {
+fn tuple_match_benchmark_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 48 + 32)
   output.write_string_utf8("match value {\n")
   for index in 0..<arm_count {
@@ -40,7 +40,7 @@ fn tuple_match_benchmark_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn struct_match_benchmark_source(arm_count : Int) -> Bytes {
+fn struct_match_benchmark_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 72 + 32)
   output.write_string_utf8("match value {\n")
   for index in 0..<arm_count {
@@ -55,7 +55,7 @@ fn struct_match_benchmark_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn guarded_alternative_match_benchmark_source(arm_count : Int) -> Bytes {
+fn guarded_alternative_match_benchmark_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 96 + 32)
   output.write_string_utf8("match value {\n")
   for index in 0..<arm_count {
@@ -70,7 +70,7 @@ fn guarded_alternative_match_benchmark_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn rest_match_benchmark_source(arm_count : Int) -> Bytes {
+fn rest_match_benchmark_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 80 + 32)
   output.write_string_utf8("match value {\n")
   for index in 0..<arm_count {

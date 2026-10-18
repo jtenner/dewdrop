@@ -24,14 +24,14 @@ enum CompileTimeType {
 ///|
 enum CompileTimeConstant {
   CtBool(Bool)
-  CtU32(Int)
+  CtU32(Int32)
   CtStringArray(Array[Bytes])
 } derive(Eq, Debug)
 
 ///|
 enum CompileTimeTypeError {
   CtUnknownBuiltin(Bytes)
-  CtTypeArity(Bytes, Int, Int)
+  CtTypeArity(Bytes, Int32, Int32)
   CtInvalidType
   CtWrongTypeCategory(Bytes)
   CtTypeLimitExceeded
@@ -39,7 +39,7 @@ enum CompileTimeTypeError {
 } derive(Eq, Debug)
 
 ///|
-fn compile_time_type_query_arity(name : Bytes) -> Int? {
+fn compile_time_type_query_arity(name : Bytes) -> Int32? {
   match name {
     b"types.type_equal" | b"types.can_bitcast" | b"types.implements" => Some(2)
     b"types.is_unit"
@@ -66,7 +66,7 @@ fn compile_time_type_query_arity(name : Bytes) -> Int? {
 fn compile_time_types_are_concrete(
   arguments : Array[CompileTimeType],
 ) -> Result[Bool, CompileTimeTypeError] {
-  let work : Array[(CompileTimeType, Int)] = []
+  let work : Array[(CompileTimeType, Int32)] = []
   for argument in arguments {
     work.push((argument, 0))
   }
@@ -115,7 +115,7 @@ fn compile_time_integer_signedness(primitive : PrimitiveType) -> Bool? {
 }
 
 ///|
-fn compile_time_lanes(primitive : PrimitiveType) -> (Int, Int)? {
+fn compile_time_lanes(primitive : PrimitiveType) -> (Int32, Int32)? {
   match primitive {
     I8x4Type | U8x4Type => Some((4, 8))
     I16x2Type | U16x2Type => Some((2, 16))
@@ -131,7 +131,7 @@ fn compile_time_lanes(primitive : PrimitiveType) -> (Int, Int)? {
 }
 
 ///|
-fn compile_time_bit_width(primitive : PrimitiveType) -> Int? {
+fn compile_time_bit_width(primitive : PrimitiveType) -> Int32? {
   match primitive {
     I8Type | U8Type => Some(8)
     I16Type | U16Type => Some(16)
@@ -149,7 +149,7 @@ fn compile_time_bit_width(primitive : PrimitiveType) -> Int? {
 ///|
 // This is the existing zero-instruction unsafe.bitcast contract, not the
 // contract of the separate i32.reinterpret_f32 / f32.reinterpret_i32 opcodes.
-fn compile_time_bitcast_carrier(type_ : CompileTimeType) -> Int? {
+fn compile_time_bitcast_carrier(type_ : CompileTimeType) -> Int32? {
   match type_ {
     CtPrimitive(primitive) =>
       match primitive {

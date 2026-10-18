@@ -13,7 +13,10 @@ test "returned imported function values remain reachable without a direct call" 
   let analyzed = analyze_program_semantics(program)
   let lowering = plan_program_lowering(program, analyzed)
   let roots = program_reachable_callable_roots(
-    analyzed, lowering, false, compile_time_demand_instances(lowering),
+    analyzed,
+    lowering,
+    false,
+    compile_time_demand_instances(lowering),
   )
   let owner = program.module_index("dew.std.text_runtime").unwrap()
   let declaration = program.modules[owner]

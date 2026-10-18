@@ -1,5 +1,5 @@
 ///|
-fn short_inference_check(source : Bytes, library? : Bytes = b"") -> Unit raise {
+fn short_inference_check(source : Bytes, library~ : Bytes = b"") -> Unit raise {
   let (program, frozen, _, names, inferred) = imported_semantic_program(
     source, library,
   )

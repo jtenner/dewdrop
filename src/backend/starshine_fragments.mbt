@@ -217,12 +217,12 @@ fn starshine_plan_uses_text(
 ///|
 fn starshine_text_runtime_base(
   planned : @semantic.PlannedModuleWasmGCFragments,
-) -> Int {
+) -> Int32 {
   planned.physical_types.length() + planned.signature_type_count
 }
 
 ///|
-fn starshine_text_runtime_types(base : Int) -> Array[@lib.RecType] {
+fn starshine_text_runtime_types(base : Int32) -> Array[@lib.RecType] {
   let array_index = @lib.TypeIdx::new(base.reinterpret_as_uint())
   let chunks = @lib.RecType::new(
     @lib.SubType::comp_type(
@@ -313,7 +313,7 @@ fn starshine_fixed_array_runtime_types() -> Array[@lib.RecType] {
 ///|
 fn starshine_fixed_array_runtime_base(
   planned : @semantic.PlannedModuleWasmGCFragments,
-) -> Int {
+) -> Int32 {
   starshine_text_runtime_base(planned) +
   (if planned.uses_text_runtime { 6 } else { 0 })
 }

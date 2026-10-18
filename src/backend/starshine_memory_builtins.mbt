@@ -1,5 +1,5 @@
 ///|
-fn starshine_memory_argument(align : UInt) -> @lib.MemArg {
+fn starshine_memory_argument(align : UInt32) -> @lib.MemArg {
   @lib.MemArg::new(@lib.U32::new(align), None, @lib.U64::new(0UL))
 }
 

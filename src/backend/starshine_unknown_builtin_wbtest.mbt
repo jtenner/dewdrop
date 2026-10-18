@@ -1,10 +1,20 @@
 ///|
 test "unknown builtins fail instead of becoming host imports" {
-  for case in [
-    (b"builtin unknown(value: I32) -> I32 = \"custom.host\"\npub fn run(value: I32) -> I32 {\n  unknown(value)\n}\n", b"custom.host"),
-    (b"builtin unknown(value: I32) -> I32 = \"wasi_snapshot_preview1.args_get\"\npub fn run(value: I32) -> I32 {\n  unknown(value)\n}\n", b"wasi_snapshot_preview1.args_get"),
-    (b"builtin unknown(value: I32) -> I32 = \"custom.host\"\npub fn run() -> fn(I32) -> I32 {\n  unknown\n}\n", b"custom.host"),
-  ] {
+  for
+    case in [
+      (
+        b"builtin unknown(value: I32) -> I32 = \"custom.host\"\npub fn run(value: I32) -> I32 {\n  unknown(value)\n}\n",
+        b"custom.host",
+      ),
+      (
+        b"builtin unknown(value: I32) -> I32 = \"wasi_snapshot_preview1.args_get\"\npub fn run(value: I32) -> I32 {\n  unknown(value)\n}\n",
+        b"wasi_snapshot_preview1.args_get",
+      ),
+      (
+        b"builtin unknown(value: I32) -> I32 = \"custom.host\"\npub fn run() -> fn(I32) -> I32 {\n  unknown\n}\n",
+        b"custom.host",
+      ),
+    ] {
     let (source, name) = case
     let stages = backend_test_single_module_stages(28201UL, source)
     assert_eq(stages.diagnostic_count(), 0)

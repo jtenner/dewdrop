@@ -109,7 +109,7 @@ test "link remaps atomic aggregate and waitqueue type indices" {
 }
 
 ///|
-fn core_link_test_ref(index : Int) -> @lib.ValType {
+fn core_link_test_ref(index : Int32) -> @lib.ValType {
   @lib.ValType::ref_type(
     @lib.RefType::new(
       false,
@@ -119,7 +119,7 @@ fn core_link_test_ref(index : Int) -> @lib.ValType {
 }
 
 ///|
-fn core_link_test_nullable_ref(index : Int) -> @lib.ValType {
+fn core_link_test_nullable_ref(index : Int32) -> @lib.ValType {
   @lib.ValType::ref_type(
     @lib.RefType::new(
       true,

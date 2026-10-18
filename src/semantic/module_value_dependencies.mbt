@@ -8,7 +8,9 @@ pub struct ModuleValueDependencies {
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
-fn module_let_indices_by_declaration(collected : CollectedModule) -> Array[Int] {
+fn module_let_indices_by_declaration(
+  collected : CollectedModule,
+) -> Array[Int32] {
   let indices = Array::make(collected.declaration_locations.length(), -1)
   for index, value in collected.lets {
     indices[semantic_id_local(value.declaration)] = index
@@ -32,12 +34,12 @@ fn module_value_declaration(
 fn collect_module_let_dependencies(
   collected : CollectedModule,
   names : ResolvedModuleNames,
-  let_indices : Array[Int],
+  let_indices : Array[Int32],
 ) -> (Array[HirSpan], Array[DeclId]) {
   let spans : Array[HirSpan] = []
   let declarations : Array[DeclId] = []
   let marks = Array::make(collected.lets.length(), 0)
-  let scratch : Array[Int] = []
+  let scratch : Array[Int32] = []
   let mut generation = 0
   for value in collected.lets {
     generation += 1
@@ -84,8 +86,8 @@ fn collect_module_let_dependencies(
 ///|
 fn module_let_dependency_index(
   declaration : DeclId,
-  let_indices : Array[Int],
-) -> Int {
+  let_indices : Array[Int32],
+) -> Int32 {
   let local_index = semantic_id_local(declaration)
   if local_index < 0 || local_index >= let_indices.length() {
     -1
@@ -97,7 +99,7 @@ fn module_let_dependency_index(
 ///|
 fn module_value_scc_is_cyclic(
   dependencies : ModuleValueDependencies,
-  let_indices : Array[Int],
+  let_indices : Array[Int32],
   scc : HirSpan,
 ) -> Bool {
   if scc.length > 1 {
@@ -127,7 +129,7 @@ fn module_value_scc_is_cyclic(
 ///|
 fn find_module_value_sccs(
   collected : CollectedModule,
-  let_indices : Array[Int],
+  let_indices : Array[Int32],
   dependencies : Array[HirSpan],
   dependency_declarations : Array[DeclId],
 ) -> (Array[HirSpan], Array[DeclId]) {
@@ -136,8 +138,8 @@ fn find_module_value_sccs(
     return ([], [])
   }
   let visited = Array::make(value_count, false)
-  let work : Array[Int] = []
-  let finish_order : Array[Int] = []
+  let work : Array[Int32] = []
+  let finish_order : Array[Int32] = []
   for start in 0..<value_count {
     if visited[start] {
       continue
@@ -211,10 +213,10 @@ fn find_module_value_sccs(
     finish_ranks[value_index] = rank
   }
   let assigned = Array::make(value_count, false)
-  let component : Array[Int] = []
+  let component : Array[Int32] = []
   let raw_spans : Array[HirSpan] = []
-  let raw_members : Array[Int] = []
-  let component_ranks : Array[Int] = []
+  let raw_members : Array[Int32] = []
+  let component_ranks : Array[Int32] = []
   let mut order_index = finish_order.length()
   while order_index > 0 {
     order_index -= 1
@@ -254,7 +256,7 @@ fn find_module_value_sccs(
     component_ranks.push(component_rank)
   }
 
-  let component_order : Array[Int] = []
+  let component_order : Array[Int32] = []
   for index in 0..<raw_spans.length() {
     component_order.push(index)
   }

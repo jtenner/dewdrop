@@ -20,7 +20,7 @@ fn planned_child_list_fixture() -> PlannedModuleLowering raise {
 fn planned_child_constructor(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
-) -> (Int, HirSpan) raise {
+) -> (Int32, HirSpan) raise {
   for
     index in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {

@@ -46,7 +46,7 @@ fn LocalTypeSolver::check_type_graph(
   self : LocalTypeSolver,
   root : BodyTypeId,
 ) -> Result[Unit, SolverInvariantFailure] {
-  let states : Map[BodyTypeId, Int] = {}
+  let states : Map[BodyTypeId, Int32] = {}
   let work = [(root, false)]
   while !work.is_empty() {
     let (source, finish) = work.pop().unwrap()
@@ -96,7 +96,7 @@ fn LocalTypeSolver::check_type_graph(
         self.solver_failure(101, arena.length(), span.start, span.length),
       )
     }
-    fn child_id(child : Int) -> Result[Int, SolverInvariantFailure] {
+    fn child_id(child : Int32) -> Result[Int32, SolverInvariantFailure] {
       if resolved {
         self.check_resolved_type_encoding(child)
       } else {

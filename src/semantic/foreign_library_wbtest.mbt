@@ -1,6 +1,8 @@
 ///|
 test "foreign host imports cannot use the static-link namespace prefix" {
-  let collected = collect_bytes(9752UL, b"foreign import \"link:provider\" as Host {\n  fn call() -> Unit = \"call\"\n}\n")
+  let collected = collect_bytes(
+    9752UL, b"foreign import \"link:provider\" as Host {\n  fn call() -> Unit = \"call\"\n}\n",
+  )
   assert_eq(collected.diagnostics.length(), 1)
   assert_true(collected.diagnostics[0] is ReservedForeignHostNamespace(_, _))
 }

@@ -1,6 +1,6 @@
 ///|
 // Physical instruction tags. Contracts are derived after interface thawing.
-fn raw_array_opcode(name : Bytes) -> Int {
+fn raw_array_opcode(name : Bytes) -> Int32 {
   match name {
     b"array_new" | b"array.new" => 0
     b"array_len" | b"array.len" => 1
@@ -15,7 +15,7 @@ fn raw_array_opcode(name : Bytes) -> Int {
 ///|
 priv struct RawArrayContracts {
   declarations : Map[DeclId, Bool]
-  operations : Map[DeclId, Int]
+  operations : Map[DeclId, Int32]
   diagnostics : Map[ModuleId, Array[LoweringPlanDiagnostic]]
 }
 
@@ -47,7 +47,7 @@ fn raw_array_contract_owner(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
-  operation : Int,
+  operation : Int32,
 ) -> Result[DeclId, String] {
   let count = match operation {
     0 | 2 => 2
@@ -123,7 +123,7 @@ fn bind_program_raw_array_contracts(
     operations: {},
     diagnostics: {},
   }
-  let modules : Map[ModuleId, Int] = {}
+  let modules : Map[ModuleId, Int32] = {}
   for index, module_ in program.modules {
     modules[module_.module_id] = index
   }
@@ -198,7 +198,7 @@ fn plan_raw_array_call(
   inferred : InferredModuleBodies,
   expression : ExprId,
   arguments : HirSpan,
-  operation : Int,
+  operation : Int32,
 ) -> PlannedExpressionKind {
   let children = collected.expression_children
   let count = match operation {

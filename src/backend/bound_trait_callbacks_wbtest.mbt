@@ -1,7 +1,7 @@
 ///|
 fn bound_trait_callback_check(
   source : Bytes,
-  runtime_export? : Bool? = None,
+  runtime_export~ : Bool? = None,
 ) -> Unit raise {
   let program = @semantic.collect_program_manifest(
     28200UL,

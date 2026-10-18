@@ -1,8 +1,8 @@
 ///|
 fn PlannedBodyChildChecker::capture_source_local(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  index : Int,
+  parent : Int32,
+  index : Int32,
   source : LambdaCaptureSource,
 ) -> Unit {
   let (span, local, lambda) = match source {
@@ -58,8 +58,8 @@ fn PlannedBodyChildChecker::capture_source_local(
 ///|
 fn PlannedBodyChildChecker::capture_source_available(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  index : Int,
+  parent : Int32,
+  index : Int32,
   source : LambdaCaptureSource,
 ) -> Unit {
   if self.failure is Some(_) {

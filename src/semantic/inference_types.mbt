@@ -1,8 +1,8 @@
 ///|
-pub type BodyTypeId = Int
+pub type BodyTypeId = Int32
 
 ///|
-pub type TypeVariableId = Int
+pub type TypeVariableId = Int32
 
 ///|
 pub enum BodyTypeTerm {
@@ -29,7 +29,7 @@ pub enum TypeConstraintOriginKind {
 ///|
 pub struct TypeConstraintOrigin {
   kind : TypeConstraintOriginKind
-  source : Int
+  source : Int32
   offset : UInt64
 } derive(Eq, Debug, ToJson, FromJson)
 
@@ -53,40 +53,43 @@ pub fn LocalInferenceDiagnostic::offset(
 
 ///|
 fn expression_type_origin(
-  source : Int,
+  source : Int32,
   offset : UInt64,
 ) -> TypeConstraintOrigin {
   { kind: ExpressionTypeConstraint, source, offset, }
 }
 
 ///|
-fn pattern_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn pattern_type_origin(source : Int32, offset : UInt64) -> TypeConstraintOrigin {
   { kind: PatternTypeConstraint, source, offset, }
 }
 
 ///|
-fn local_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn local_type_origin(source : Int32, offset : UInt64) -> TypeConstraintOrigin {
   { kind: LocalTypeConstraint, source, offset, }
 }
 
 ///|
-fn return_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn return_type_origin(source : Int32, offset : UInt64) -> TypeConstraintOrigin {
   { kind: ReturnTypeConstraint, source, offset, }
 }
 
 ///|
-fn call_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn call_type_origin(source : Int32, offset : UInt64) -> TypeConstraintOrigin {
   { kind: CallTypeConstraint, source, offset, }
 }
 
 ///|
-fn operator_type_origin(source : Int, offset : UInt64) -> TypeConstraintOrigin {
+fn operator_type_origin(
+  source : Int32,
+  offset : UInt64,
+) -> TypeConstraintOrigin {
   { kind: OperatorTypeConstraint, source, offset, }
 }
 
 ///|
 pub fn synthetic_type_origin(
-  source : Int,
+  source : Int32,
   offset : UInt64,
 ) -> TypeConstraintOrigin {
   { kind: SyntheticTypeConstraint, source, offset, }

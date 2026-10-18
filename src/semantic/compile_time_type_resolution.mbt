@@ -2,9 +2,9 @@
 enum CompileTimeTypeReadTask {
   CtReadBody(BodyTypeId)
   CtReadResolved(ResolvedTypeId)
-  CtBuildProduct(Int)
-  CtBuildApplied(Int)
-  CtBuildFunction(Int)
+  CtBuildProduct(Int32)
+  CtBuildApplied(Int32)
+  CtBuildFunction(Int32)
   CtBuildMemberProjection(Bytes, String)
 }
 
@@ -13,7 +13,7 @@ fn compile_time_read_type(
   module_ : PlannedModuleLowering,
   type_ : BodyTypeId,
   bindings : Map[CompileTimeBindingKey, CompileTimeType],
-  self_binding? : (DeclId, CompileTimeType)? = None,
+  self_binding~ : (DeclId, CompileTimeType)? = None,
 ) -> Result[CompileTimeType, CompileTimeTypeError] {
   let work = [CtReadBody(type_)]
   let results : Array[CompileTimeType] = []

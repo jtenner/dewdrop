@@ -6,12 +6,12 @@ fn starshine_closure_argument_casts(
   lowering : @semantic.PlannedModuleLowering,
   caller : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  caller_index : Int,
+  caller_index : Int32,
   specialization : StarshineGenericSpecialization?,
   body : @semantic.BodyId,
   expression : @semantic.ExprId,
   arguments : @semantic.HirSpan,
-  signature : Int,
+  signature : Int32,
 ) -> Result[Array[Array[@lib.Instruction]], StarshineCodeEmissionError] {
   let mut owner = caller
   let mut owner_index = caller_index

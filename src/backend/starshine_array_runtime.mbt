@@ -1,15 +1,17 @@
 ///|
-fn starshine_array_local_get(index : Int) -> @lib.Instruction {
+fn starshine_array_local_get(index : Int32) -> @lib.Instruction {
   @lib.Instruction::local_get(@lib.LocalIdx::new(index.reinterpret_as_uint()))
 }
 
 ///|
-fn starshine_array_local_set(index : Int) -> @lib.Instruction {
+fn starshine_array_local_set(index : Int32) -> @lib.Instruction {
   @lib.Instruction::local_set(@lib.LocalIdx::new(index.reinterpret_as_uint()))
 }
 
 ///|
-fn starshine_array_storage_carrier(shape : @semantic.PlannedValueShape) -> Int {
+fn starshine_array_storage_carrier(
+  shape : @semantic.PlannedValueShape,
+) -> Int32 {
   // Literal backing is raw array storage, not an expression carrier. Keep
   // packed widths and reject missing evidence through the same contract as
   // ordinary array instructions. Unit occupies only a null storage marker.
@@ -59,7 +61,7 @@ fn starshine_product_leaf_shapes(
 }
 
 ///|
-fn starshine_product_box_slot(shape : @semantic.PlannedValueShape) -> Int {
+fn starshine_product_box_slot(shape : @semantic.PlannedValueShape) -> Int32 {
   match shape {
     @semantic.I8PlannedValueShape
     | @semantic.I16PlannedValueShape
@@ -84,9 +86,9 @@ fn starshine_append_product_unbox(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   body_id : @semantic.BodyId,
-  product_local : Int,
+  product_local : Int32,
   shape : @semantic.PlannedValueShape,
-  leaf_start? : Int = 0,
+  leaf_start~ : Int32 = 0,
 ) -> Result[Unit, StarshineCodeEmissionError] {
   let leaves : Array[@semantic.PlannedValueShape] = []
   starshine_product_leaf_shapes(shape, leaves)
@@ -129,8 +131,8 @@ fn starshine_finish_scalar_array_literal(
   body_id : @semantic.BodyId,
   shape : @semantic.PlannedValueShape,
   fragments : Array[Array[@lib.Instruction]],
-  backing_local : Int,
-  value_local : Int,
+  backing_local : Int32,
+  value_local : Int32,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let wrapper_type = match
     starshine_emitted_type_index(

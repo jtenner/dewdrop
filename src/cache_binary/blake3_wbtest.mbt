@@ -1,5 +1,5 @@
 ///|
-fn blake3_vector_input(length : Int) -> Bytes {
+fn blake3_vector_input(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length)
   for index in 0..<length {
     output.write_byte((index % 251).to_byte())

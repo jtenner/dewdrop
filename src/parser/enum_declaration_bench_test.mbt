@@ -1,5 +1,5 @@
 ///|
-fn unit_enum_benchmark_source(variant_count : Int) -> Bytes {
+fn unit_enum_benchmark_source(variant_count : Int32) -> Bytes {
   let output = Buffer(size_hint=variant_count * 20)
   output.write_string_utf8("pub enum Benchmark {\n")
   for index in 0..<variant_count {
@@ -12,7 +12,7 @@ fn unit_enum_benchmark_source(variant_count : Int) -> Bytes {
 }
 
 ///|
-fn tuple_enum_benchmark_source(variant_count : Int) -> Bytes {
+fn tuple_enum_benchmark_source(variant_count : Int32) -> Bytes {
   let output = Buffer(size_hint=variant_count * 48)
   output.write_string_utf8("pub enum Benchmark<t> {\n")
   for index in 0..<variant_count {
@@ -25,7 +25,7 @@ fn tuple_enum_benchmark_source(variant_count : Int) -> Bytes {
 }
 
 ///|
-fn struct_enum_benchmark_source(variant_count : Int) -> Bytes {
+fn struct_enum_benchmark_source(variant_count : Int32) -> Bytes {
   let output = Buffer(size_hint=variant_count * 80)
   output.write_string_utf8("pub enum Benchmark<t> {\n")
   for index in 0..<variant_count {

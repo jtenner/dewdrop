@@ -1,7 +1,11 @@
 ///|
 fn backend_packed_primitive_pipeline(
   source : Bytes,
-) -> (@semantic.PlannedProgramLowering, @semantic.PlannedProgramWasmGCLink, Int) {
+) -> (
+  @semantic.PlannedProgramLowering,
+  @semantic.PlannedProgramWasmGCLink,
+  Int32,
+) {
   let program = @semantic.collect_program_manifest(
     2520UL,
     @semantic.ProgramManifest::new([

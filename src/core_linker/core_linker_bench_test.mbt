@@ -1,5 +1,5 @@
 ///|
-fn core_link_bench_ref(index : Int) -> @lib.ValType {
+fn core_link_bench_ref(index : Int32) -> @lib.ValType {
   @lib.ValType::ref_type(
     @lib.RefType::new(
       false,

@@ -534,7 +534,7 @@ fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
 fn parse_read_type(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> TypeExpr {
   let field = if reader.detailed_paths { field } else { "syntax" }
   if depth > parse_event_maximum_depth {
@@ -628,7 +628,7 @@ fn parse_write_type_parameter(
 fn parse_read_type_parameter(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> TypeParameter {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let name = reader.read_string(parse_event_maximum_text, field + ".name")
@@ -658,7 +658,7 @@ fn parse_write_type_parameters(
 fn parse_read_type_parameters(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[TypeParameter] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -683,7 +683,7 @@ fn parse_write_fn_parameter(
 fn parse_read_fn_parameter(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> FnParameter {
   let field = if reader.detailed_paths { field } else { "syntax" }
   {
@@ -708,7 +708,7 @@ fn parse_write_fn_parameters(
 fn parse_read_fn_parameters(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[FnParameter] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -744,7 +744,7 @@ fn parse_write_receiver(
 fn parse_read_receiver(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> ReceiverParameter? {
   let field = if reader.detailed_paths { field } else { "syntax" }
   if !reader.read_option_tag(field + ".tag") {
@@ -867,7 +867,7 @@ fn parse_write_object_fields(
 fn parse_read_object_fields(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[ObjectField] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -898,7 +898,7 @@ fn parse_write_exprs(
 fn parse_read_exprs(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[Expr] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -922,7 +922,7 @@ fn parse_write_block(writer : @cache_binary.Writer, value : Block) -> Unit {
 fn parse_read_block(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Block {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(
@@ -956,7 +956,7 @@ fn parse_write_optional_expr(
 fn parse_read_optional_expr(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Expr? {
   let field = if reader.detailed_paths { field } else { "syntax" }
   if reader.read_option_tag(field + ".tag") {
@@ -1177,7 +1177,7 @@ fn parse_write_expr(writer : @cache_binary.Writer, value : Expr) -> Unit {
 fn parse_read_expr(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Expr {
   let field = if reader.detailed_paths { field } else { "syntax" }
   if depth > parse_event_maximum_depth {
@@ -1443,7 +1443,7 @@ fn parse_write_block_item(
 fn parse_read_block_item(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> BlockItem {
   let field = if reader.detailed_paths { field } else { "syntax" }
   match reader.read_byte(field + ".tag") {
@@ -1507,7 +1507,7 @@ fn parse_write_pattern_fields(
 fn parse_read_pattern_fields(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[PatternField] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -1538,7 +1538,7 @@ fn parse_write_patterns(
 fn parse_read_patterns(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[Pattern] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -1618,7 +1618,7 @@ fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern) -> Unit {
 fn parse_read_pattern(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Pattern {
   let field = if reader.detailed_paths { field } else { "syntax" }
   if depth > parse_event_maximum_depth {
@@ -1710,7 +1710,7 @@ fn parse_write_pattern_arms(
 fn parse_read_pattern_arms(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[PatternArm] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -1778,7 +1778,7 @@ fn parse_write_struct_fields(
 fn parse_read_struct_fields(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[StructField] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -1831,7 +1831,7 @@ fn parse_write_enum_variants(
 fn parse_read_enum_variants(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Array[EnumVariant] {
   let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
@@ -1899,7 +1899,7 @@ fn parse_write_function(
 fn parse_read_function(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> FunctionDeclaration {
   let field = if reader.detailed_paths { field } else { "syntax" }
   {
@@ -1942,7 +1942,7 @@ fn parse_write_foreign_library_member(
 fn parse_read_foreign_library_member(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> ForeignLibraryMember {
   let field = if reader.detailed_paths { field } else { "syntax" }
   {
@@ -2119,7 +2119,7 @@ fn parse_write_declaration(
 fn parse_read_declaration(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> Declaration {
   let field = if reader.detailed_paths { field } else { "syntax" }
   match reader.read_byte(field + ".tag") {
@@ -3139,7 +3139,7 @@ fn parse_write_declaration_error(
 fn parse_read_declaration_error(
   reader : @cache_binary.Reader,
   field : String,
-  depth : Int,
+  depth : Int32,
 ) -> DeclarationError {
   let field = if reader.detailed_paths { field } else { "syntax" }
   match reader.read_byte(field + ".tag") {

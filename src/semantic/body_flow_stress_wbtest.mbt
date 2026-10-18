@@ -1,5 +1,5 @@
 ///|
-fn flow_enum_source(variant_count : Int, repeated : Bool) -> Bytes {
+fn flow_enum_source(variant_count : Int32, repeated : Bool) -> Bytes {
   let output = Buffer(size_hint=variant_count * 48 + 160)
   output.write_string_utf8("enum State {\n")
   for index in 0..<variant_count {
@@ -23,7 +23,7 @@ fn flow_enum_source(variant_count : Int, repeated : Bool) -> Bytes {
 }
 
 ///|
-fn unreachable_items_source(item_count : Int) -> Bytes {
+fn unreachable_items_source(item_count : Int32) -> Bytes {
   let output = Buffer(size_hint=item_count * 12 + 64)
   output.write_string_utf8("fn stop() -> I32 {\n  return 0\n")
   for index in 0..<item_count {

@@ -3,8 +3,8 @@
 // written as source identifiers, so lexical bindings cannot capture either.
 fn CollectionBuilder::lower_array_literal_calls(
   self : CollectionBuilder,
-  element_start : Int,
-  element_count : Int,
+  element_start : Int32,
+  element_count : Int32,
   offset : UInt64,
 ) -> HirExpr {
   let alias = "$array_literal_library"

@@ -1,11 +1,11 @@
 ///|
 priv struct FragmentPayloadFailure {
-  code : Int
-  phase : Int
+  code : Int32
+  phase : Int32
   module_id : ModuleId
   declaration : DeclId
   body : BodyId
-  expression : UInt
+  expression : UInt32
   expected : UInt64
   actual : UInt64
   detail : UInt64
@@ -15,7 +15,7 @@ priv struct FragmentPayloadFailure {
 fn fragment_payload_failure(
   layouts : PlannedModuleTypeLayouts,
   owner : VariantId,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -38,8 +38,8 @@ fn check_fragment_payload_index(
   layouts : PlannedModuleTypeLayouts,
   owner : VariantId,
   payload : HirSpan,
-  index : Int,
-) -> Result[Int, FragmentPayloadFailure] {
+  index : Int32,
+) -> Result[Int32, FragmentPayloadFailure] {
   let length = layouts.payload_types.length()
   if layouts.payload_shapes.length() != length {
     return Err(
@@ -88,8 +88,8 @@ fn assert_fragment_payload_index(
   layouts : PlannedModuleTypeLayouts,
   owner : VariantId,
   payload : HirSpan,
-  index : Int,
-) -> Int {
+  index : Int32,
+) -> Int32 {
   match check_fragment_payload_index(layouts, owner, payload, index) {
     Ok(slot) => slot
     Err(failure) =>

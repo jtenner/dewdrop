@@ -1,5 +1,5 @@
 ///|
-fn function_lookup_test_link() -> (PlannedProgramWasmGCLink, DeclId, Int) raise {
+fn function_lookup_test_link() -> (PlannedProgramWasmGCLink, DeclId, Int32) raise {
   let (program, analyzed) = scalar_link_program()
   let link = plan_program_wasmgc_link(
     analyzed,
@@ -58,7 +58,7 @@ test "named function ownership and instance metadata remain exact" {
   let (link, declaration, index) = function_lookup_test_link()
   let original = link.functions[index]
   let module_ = link.modules[original.module_index]
-  let cases : Array[(PlannedProgramWasmFunction, Int, UInt64, UInt64, UInt64)] = [
+  let cases : Array[(PlannedProgramWasmFunction, Int32, UInt64, UInt64, UInt64)] = [
     (
       { ..original, module_index: -1, },
       101,

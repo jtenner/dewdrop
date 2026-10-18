@@ -1,5 +1,5 @@
 ///|
-fn large_function_declaration(item_count : Int) -> Bytes {
+fn large_function_declaration(item_count : Int32) -> Bytes {
   let output = Buffer(size_hint=item_count * 28)
   output.write_string_utf8("fn large(value: I32) -> I32 {\n")
   for index in 0..<item_count {

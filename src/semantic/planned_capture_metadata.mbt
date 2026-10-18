@@ -1,7 +1,7 @@
 ///|
 fn check_planned_capture_metadata(
   lowering : PlannedModuleLowering,
-  phase : Int,
+  phase : Int32,
 ) -> Result[Unit, BodyArenaFailure] {
   // Check complete source metadata, including generic and elided templates.
   // No physical carrier is required to prove an arena owner.
@@ -93,7 +93,7 @@ fn check_planned_capture_metadata(
 fn planned_capture_metadata_checker(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
-  phase : Int,
+  phase : Int32,
 ) -> PlannedBodyChildChecker {
   {
     lowering,
@@ -111,8 +111,8 @@ fn planned_capture_metadata_checker(
 fn planned_capture_metadata_failure(
   lowering : PlannedModuleLowering,
   body : BodyId,
-  phase : Int,
-  code : Int,
+  phase : Int32,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -134,9 +134,9 @@ fn planned_capture_metadata_failure(
 fn planned_capture_metadata_body(
   lowering : PlannedModuleLowering,
   owner : BodyId,
-  phase : Int,
-  tag : Int,
-  entity : Int,
+  phase : Int32,
+  tag : Int32,
+  entity : Int32,
 ) -> Result[PlannedBodyLowering, BodyArenaFailure] {
   let module_id = semantic_id_module(owner)
   let detail = (tag.to_uint64() << 32) | entity.to_uint64()
@@ -187,7 +187,7 @@ fn planned_capture_metadata_body(
 ///|
 pub fn assert_planned_capture_metadata(
   lowering : PlannedModuleLowering,
-  phase : Int,
+  phase : Int32,
 ) -> Unit {
   match check_planned_capture_metadata(lowering, phase) {
     Ok(_) => ()
@@ -199,7 +199,7 @@ pub fn assert_planned_capture_metadata(
 ///|
 pub fn assert_program_capture_metadata(
   lowering : PlannedProgramLowering,
-  phase : Int,
+  phase : Int32,
 ) -> Unit {
   for module_ in lowering.modules {
     assert_planned_capture_metadata(module_, phase)

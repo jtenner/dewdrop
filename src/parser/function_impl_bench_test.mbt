@@ -1,5 +1,5 @@
 ///|
-fn function_benchmark_source(item_count : Int) -> Bytes {
+fn function_benchmark_source(item_count : Int32) -> Bytes {
   let output = Buffer(size_hint=item_count * 32)
   output.write_string_utf8("fn compute(value: I32) -> I32 {\n")
   for index in 0..<item_count {
@@ -14,7 +14,7 @@ fn function_benchmark_source(item_count : Int) -> Bytes {
 }
 
 ///|
-fn impl_benchmark_source(method_count : Int) -> Bytes {
+fn impl_benchmark_source(method_count : Int32) -> Bytes {
   let output = Buffer(size_hint=method_count * 72)
   output.write_string_utf8("impl BenchmarkTrait<I32> for Benchmark {\n")
   for index in 0..<method_count {

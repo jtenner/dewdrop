@@ -9,7 +9,7 @@ fn unification_benchmark_types() -> (CollectedModule, ResolvedModuleTypes) {
 ///|
 fn benchmark_parameter_argument(
   resolved : ResolvedModuleTypes,
-  index : Int,
+  index : Int32,
 ) -> ResolvedTypeId {
   let parameter = resolved.parameter_types[0]
   match resolved.types[parameter] {

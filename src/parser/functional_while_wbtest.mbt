@@ -1,5 +1,5 @@
 ///|
-fn large_functional_while(arm_count : Int) -> Bytes {
+fn large_functional_while(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 38 + 48)
   output.write_string_utf8("while state {\n")
   for index in 0..<arm_count {

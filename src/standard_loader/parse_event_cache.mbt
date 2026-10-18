@@ -1,7 +1,7 @@
 ///|
 pub(all) enum ParseEventCacheStatus {
-  ParseEventCacheWasDisabled(Int)
-  ParseEventCacheWasUsed(Int, Int)
+  ParseEventCacheWasDisabled(Int32)
+  ParseEventCacheWasUsed(Int32, Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -142,7 +142,7 @@ fn parse_event_pack_context(
 fn lookup_parse_event_cache(
   owner_path : String,
   file : @semantic.ManifestFile,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Array[@parser.ParseEvent]?, String] {
   match pack {
     Some(session) if session.enabled => {
@@ -195,7 +195,7 @@ fn store_parse_event_cache(
   owner_path : String,
   file : @semantic.ManifestFile,
   events : Array[@parser.ParseEvent],
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let payload = match @parser.serialize_parse_events(events) {
     Ok(value) => value
@@ -252,7 +252,7 @@ fn prepare_manifest_file_parse_events(
   owner_path : String,
   file : @semantic.ManifestFile,
   enabled : Bool,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[(@semantic.ManifestFile, ParseEventFilePreparation), String] {
   match file.parse_events {
     Some(_) => return Ok((file, ParseEventAlreadyPrepared))
@@ -279,7 +279,7 @@ fn prepare_manifest_file_parse_events(
 ///|
 fn parse_event_cache_status_counts(
   status : ParseEventCacheStatus,
-) -> (Int, Int) {
+) -> (Int32, Int32) {
   match status {
     ParseEventCacheWasUsed(hits, misses) => (hits, misses)
     ParseEventCacheWasDisabled(parsed) => (0, parsed)
@@ -289,8 +289,8 @@ fn parse_event_cache_status_counts(
 ///|
 fn record_parse_event_preparation(
   preparation : ParseEventFilePreparation,
-  hits : Ref[Int],
-  misses : Ref[Int],
+  hits : Ref[Int32],
+  misses : Ref[Int32],
 ) -> Unit {
   match preparation {
     ParseEventAlreadyPrepared => ()
@@ -304,7 +304,7 @@ fn record_parse_event_preparation(
 /// scans and semantic collection consume the same event arrays.
 pub fn prepare_manifest_parse_event_cache(
   manifest : @semantic.ProgramManifest,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[PreparedParseEventManifest, String] {
   let enabled = parse_event_cache_enabled()
   let modules : Array[@semantic.ManifestModule] = []
@@ -340,8 +340,8 @@ pub fn prepare_program_parse_event_cache(
   manifest : @semantic.ProgramManifest,
   loaded : StandardLibraryLoad,
   default_preamble : Bool,
-  prior_status? : ParseEventCacheStatus = ParseEventCacheWasUsed(0, 0),
-  pack? : CompilationCachePack? = None,
+  prior_status~ : ParseEventCacheStatus = ParseEventCacheWasUsed(0, 0),
+  pack~ : CompilationCachePack? = None,
 ) -> Result[PreparedParseEventInputs, String] {
   let enabled = parse_event_cache_enabled()
   let (prior_hits, prior_misses) = parse_event_cache_status_counts(prior_status)

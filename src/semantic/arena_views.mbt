@@ -1,5 +1,5 @@
 ///|
-fn arena_span_is_valid(span : HirSpan, length : Int) -> Bool {
+fn arena_span_is_valid(span : HirSpan, length : Int32) -> Bool {
   span.start >= 0 &&
   span.length >= 0 &&
   span.start + span.length >= span.start &&
@@ -88,13 +88,13 @@ pub struct PlannedCallSpecializationView {
   parameters : ArrayView[PlannedWasmValueType]
   results : ArrayView[PlannedWasmValueType]
   shapes : ArrayView[PlannedValueShape]
-  evidence_roots : ArrayView[Int]
+  evidence_roots : ArrayView[Int32]
 }
 
 ///|
 pub fn PlannedModuleWasmGCFragments::function_view(
   self : PlannedModuleWasmGCFragments,
-  index : Int,
+  index : Int32,
 ) -> PlannedCallSpecializationView? {
   if index < 0 || index >= self.functions.length() {
     return None
@@ -131,13 +131,13 @@ pub fn PlannedModuleWasmGCFragments::function_view(
 ///|
 pub struct PlannedTraitEvidenceView {
   evidence : InferredTraitEvidence
-  prerequisites : ArrayView[Int]
+  prerequisites : ArrayView[Int32]
 }
 
 ///|
 pub fn PlannedModuleLowering::trait_evidence_view(
   self : PlannedModuleLowering,
-  index : Int,
+  index : Int32,
 ) -> PlannedTraitEvidenceView? {
   if index < 0 || index >= self.trait_evidence.length() {
     return None
@@ -161,13 +161,13 @@ pub struct PlannedProgramFunctionView {
   function : PlannedProgramWasmFunction
   fragments : PlannedModuleWasmGCFragments
   specialization_shapes : ArrayView[PlannedValueShape]
-  specialization_evidence : ArrayView[Int]
+  specialization_evidence : ArrayView[Int32]
 }
 
 ///|
 pub fn PlannedProgramWasmGCLink::function_view(
   self : PlannedProgramWasmGCLink,
-  index : Int,
+  index : Int32,
 ) -> PlannedProgramFunctionView? {
   if index < 0 || index >= self.functions.length() {
     return None
@@ -223,8 +223,8 @@ fn validate_planned_module_lowering_arenas(
 ///|
 fn validate_wasmgc_storage_type(
   storage : PlannedWasmStorageType,
-  physical_count : Int,
-  signature_limit : Int,
+  physical_count : Int32,
+  signature_limit : Int32,
 ) -> Bool {
   match storage {
     WasmFunctionRefStorage(index) => index >= 0 && index < signature_limit
@@ -242,8 +242,8 @@ fn validate_wasmgc_storage_type(
 ///|
 fn validate_wasmgc_value_type(
   value : PlannedWasmValueType,
-  physical_count : Int,
-  signature_limit : Int,
+  physical_count : Int32,
+  signature_limit : Int32,
 ) -> Bool {
   match value {
     WasmFunctionRefValue(index) => index >= 0 && index < signature_limit

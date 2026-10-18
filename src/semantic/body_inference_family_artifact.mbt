@@ -1,5 +1,5 @@
 ///|
-fn rebase_family_source_id(source : Int, delta : Int) -> Int {
+fn rebase_family_source_id(source : Int32, delta : Int32) -> Int32 {
   if source < 0 {
     source
   } else {
@@ -8,7 +8,7 @@ fn rebase_family_source_id(source : Int, delta : Int) -> Int {
 }
 
 ///|
-fn rebase_family_offset(value : UInt64, delta : Int) -> UInt64 {
+fn rebase_family_offset(value : UInt64, delta : Int32) -> UInt64 {
   let rebased = value.to_uint().reinterpret_as_int() + delta
   if rebased < 0 {
     0UL
@@ -20,9 +20,9 @@ fn rebase_family_offset(value : UInt64, delta : Int) -> UInt64 {
 ///|
 fn rebase_family_origin(
   origin : TypeConstraintOrigin,
-  expression_delta : Int,
-  pattern_delta : Int,
-  offset_delta : Int,
+  expression_delta : Int32,
+  pattern_delta : Int32,
+  offset_delta : Int32,
 ) -> TypeConstraintOrigin {
   let source = match origin.kind {
     ExpressionTypeConstraint | CallTypeConstraint | OperatorTypeConstraint =>
@@ -43,9 +43,9 @@ fn rebase_family_origin(
 ///|
 fn rebase_family_local_diagnostic(
   diagnostic : LocalInferenceDiagnostic,
-  expression_delta : Int,
-  pattern_delta : Int,
-  offset_delta : Int,
+  expression_delta : Int32,
+  pattern_delta : Int32,
+  offset_delta : Int32,
 ) -> LocalInferenceDiagnostic {
   match diagnostic {
     InvalidLocalMemberProjection(type_, message, origin) =>
@@ -78,9 +78,9 @@ fn rebase_family_local_diagnostic(
 ///|
 fn rebase_family_diagnostic(
   diagnostic : BodyInferenceDiagnostic,
-  expression_delta : Int,
-  pattern_delta : Int,
-  offset_delta : Int,
+  expression_delta : Int32,
+  pattern_delta : Int32,
+  offset_delta : Int32,
 ) -> BodyInferenceDiagnostic {
   let expression = fn(value : ExprId) {
     rebase_family_source_id(value, expression_delta)
@@ -299,7 +299,12 @@ fn rebase_family_diagnostic(
         source_offset(offset),
       )
     TraitObligationFailure(declaration, value, message, offset) =>
-      TraitObligationFailure(declaration, expression(value), message, source_offset(offset))
+      TraitObligationFailure(
+        declaration,
+        expression(value),
+        message,
+        source_offset(offset),
+      )
     UnresolvedExpressionTypeArgument(value, index, offset) =>
       UnresolvedExpressionTypeArgument(
         expression(value),
@@ -320,7 +325,7 @@ fn rebase_family_diagnostic(
 ///|
 fn rebase_family_call_target(
   target : InferredCallTarget,
-  expression_delta : Int,
+  expression_delta : Int32,
 ) -> InferredCallTarget {
   match target {
     SelectedFunctionValueCallTarget(expression) =>
@@ -334,9 +339,9 @@ fn rebase_family_call_target(
 ///|
 fn rebase_body_inference_job(
   job : BodyInferenceJobResult,
-  expression_delta : Int,
-  pattern_delta : Int,
-  offset_delta : Int,
+  expression_delta : Int32,
+  pattern_delta : Int32,
+  offset_delta : Int32,
 ) -> BodyInferenceJobResult {
   let call_expressions : Array[ExprId] = []
   for expression in job.call_expressions {
@@ -364,13 +369,13 @@ fn rebase_body_inference_job(
 ///|
 fn body_inference_job_has_compatible_shape(
   job : BodyInferenceJobResult,
-  expression_length : Int,
-  local_length : Int,
-  capture_length : Int,
-  block_length : Int,
-  pattern_length : Int,
-  control_length : Int,
-  object_field_length : Int,
+  expression_length : Int32,
+  local_length : Int32,
+  capture_length : Int32,
+  block_length : Int32,
+  pattern_length : Int32,
+  control_length : Int32,
+  object_field_length : Int32,
 ) -> Bool {
   job.expression_types.length() == expression_length &&
   job.local_types.length() == local_length &&
@@ -398,7 +403,7 @@ fn body_inference_job_has_compatible_shape(
 }
 
 ///|
-fn body_family_span_is_valid(span : HirSpan, length : Int) -> Bool {
+fn body_family_span_is_valid(span : HirSpan, length : Int32) -> Bool {
   span.start >= 0 &&
   span.length >= 0 &&
   span.start <= length &&
@@ -408,8 +413,8 @@ fn body_family_span_is_valid(span : HirSpan, length : Int) -> Bool {
 ///|
 fn body_family_type_is_valid(
   type_ : BodyTypeId,
-  length : Int,
-  resolved_length : Int,
+  length : Int32,
+  resolved_length : Int32,
 ) -> Bool {
   if type_ < -1 {
     let resolved = -(type_ + 2)
@@ -422,8 +427,8 @@ fn body_family_type_is_valid(
 ///|
 fn body_family_type_array_is_valid(
   types : Array[BodyTypeId],
-  length : Int,
-  resolved_length : Int,
+  length : Int32,
+  resolved_length : Int32,
 ) -> Bool {
   for type_ in types {
     if !body_family_type_is_valid(type_, length, resolved_length) {
@@ -436,7 +441,7 @@ fn body_family_type_array_is_valid(
 ///|
 fn body_inference_job_type_graph_is_valid(
   job : BodyInferenceJobResult,
-  resolved_length : Int,
+  resolved_length : Int32,
 ) -> Bool {
   if job.types.length() == 0 || !(job.types[0] is BodyErrorType) {
     return false
@@ -502,38 +507,56 @@ fn body_inference_job_type_graph_is_valid(
       BodyErrorType | BodyResolvedType(_) => return false
     }
   }
-  if !body_family_type_is_valid(
-      job.result_type, type_length, resolved_length,
+  if !body_family_type_is_valid(job.result_type, type_length, resolved_length) ||
+    !body_family_type_array_is_valid(
+      job.expression_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.expression_types, type_length, resolved_length,
+      job.local_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.local_types, type_length, resolved_length,
+      job.capture_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.capture_types, type_length, resolved_length,
+      job.block_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.block_types, type_length, resolved_length,
+      job.pattern_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.pattern_types, type_length, resolved_length,
+      job.pattern_type_arguments,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.pattern_type_arguments, type_length, resolved_length,
+      job.control_state_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.control_state_types, type_length, resolved_length,
+      job.control_result_types,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.control_result_types, type_length, resolved_length,
+      job.expression_type_arguments,
+      type_length,
+      resolved_length,
     ) ||
     !body_family_type_array_is_valid(
-      job.expression_type_arguments, type_length, resolved_length,
-    ) ||
-    !body_family_type_array_is_valid(
-      job.call_type_arguments, type_length, resolved_length,
+      job.call_type_arguments,
+      type_length,
+      resolved_length,
     ) {
     return false
   }
@@ -643,7 +666,7 @@ fn body_inference_job_type_graph_is_valid(
 ///|
 fn body_inference_job_local_ids_are_valid(
   job : BodyInferenceJobResult,
-  expression_length : Int,
+  expression_length : Int32,
 ) -> Bool {
   for expression in job.call_expressions {
     if expression < 0 || expression >= expression_length {
@@ -667,7 +690,7 @@ fn validate_body_inference_family_artifact(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   names : ResolvedModuleNames,
-  body_index : Int,
+  body_index : Int32,
   artifact : BodyInferenceFamilyArtifact,
 ) -> Result[Unit, String] {
   if body_index < 0 || body_index >= collected.bodies.length() {
@@ -694,7 +717,8 @@ fn validate_body_inference_family_artifact(
       body.object_fields.length,
     ) ||
     !body_inference_job_type_graph_is_valid(
-      artifact.root, resolved.types.length(),
+      artifact.root,
+      resolved.types.length(),
     ) ||
     !body_inference_job_local_ids_are_valid(
       artifact.root,
@@ -728,7 +752,8 @@ fn validate_body_inference_family_artifact(
         lambda.body.object_fields.length,
       ) ||
       !body_inference_job_type_graph_is_valid(
-        lambda_artifact.job, resolved.types.length(),
+        lambda_artifact.job,
+        resolved.types.length(),
       ) ||
       !body_inference_job_local_ids_are_valid(
         lambda_artifact.job,

@@ -1,7 +1,7 @@
 ///|
 fn call_bench_functions(
   prefix : String,
-  function_count : Int,
+  function_count : Int32,
   body : String,
   return_type : String,
 ) -> Bytes {
@@ -20,7 +20,7 @@ fn call_bench_functions(
 }
 
 ///|
-fn direct_call_bench_source(function_count : Int) -> Bytes {
+fn direct_call_bench_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 80 + 64)
   output.write_string_utf8("fn identity(value: I32) -> I32 {\n  value\n}\n")
   output.write_bytes(
@@ -30,7 +30,7 @@ fn direct_call_bench_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn generic_call_bench_source(function_count : Int) -> Bytes {
+fn generic_call_bench_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 80 + 64)
   output.write_string_utf8("fn identity<t>(value: t) -> t {\n  value\n}\n")
   output.write_bytes(
@@ -40,7 +40,7 @@ fn generic_call_bench_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn overload_call_bench_source(function_count : Int) -> Bytes {
+fn overload_call_bench_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 80 + 160)
   output.write_string_utf8(
     "builtin convert(value: I32) -> I64 = \"i32_to_i64\"\n",
@@ -56,8 +56,8 @@ fn overload_call_bench_source(function_count : Int) -> Bytes {
 
 ///|
 fn wide_overload_call_bench_source(
-  generic_candidate_count : Int,
-  function_count : Int,
+  generic_candidate_count : Int32,
+  function_count : Int32,
 ) -> Bytes {
   let output = Buffer(
     size_hint=function_count * 80 + generic_candidate_count * 160,
@@ -85,7 +85,7 @@ fn wide_overload_call_bench_source(
 }
 
 ///|
-fn nested_overload_call_bench_source(function_count : Int) -> Bytes {
+fn nested_overload_call_bench_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 96 + 256)
   output.write_string_utf8(
     "builtin convert(value: I32) -> I64 = \"i32_to_i64\"\n",

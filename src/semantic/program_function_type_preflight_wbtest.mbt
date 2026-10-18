@@ -20,11 +20,11 @@ fn function_type_preflight_fixture() -> PlannedModuleWasmGCFragments raise {
 
 ///|
 fn function_type_preflight_error(
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   role : UInt64,
-  slot : Int,
+  slot : Int32,
 ) -> ProgramPhysicalTypeFailure {
   {
     code,

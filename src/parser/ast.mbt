@@ -75,7 +75,7 @@ pub enum Expr {
   ExplicitTypeCallExpr(Expr, Array[TypeExpr], Array[Expr], UInt64)
   FieldExpr(Expr, String, UInt64)
   QualifiedExpr(Expr, String, UInt64)
-  ProductFieldExpr(Expr, Int, Int, UInt64)
+  ProductFieldExpr(Expr, Int32, Int32, UInt64)
   IndexExpr(Expr, Expr, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
 
@@ -189,7 +189,7 @@ pub enum ExpressionError {
   UnclosedWhile(UInt64)
   ChainedComparison(UInt64)
   UnclosedGroup(UInt64)
-  InvalidProductArity(Int, UInt64)
+  InvalidProductArity(Int32, UInt64)
   UnclosedArray(UInt64)
   UnclosedCall(UInt64)
   UnclosedIndex(UInt64)

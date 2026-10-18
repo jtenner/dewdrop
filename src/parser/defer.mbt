@@ -53,7 +53,7 @@ fn deferred_wrap_value(
 fn defer_transform_block_exits(
   block : Block,
   cleanups : Array[DeferredCleanup],
-  loop_depth : Int,
+  loop_depth : Int32,
 ) -> Block {
   if cleanups.length() == 0 {
     return block
@@ -69,7 +69,7 @@ fn defer_transform_block_exits(
 fn defer_transform_arm(
   arm : PatternArm,
   cleanups : Array[DeferredCleanup],
-  loop_depth : Int,
+  loop_depth : Int32,
 ) -> PatternArm {
   let guard_condition = match arm.guard_condition {
     Some(value) => Some(defer_transform_expression(value, cleanups, loop_depth))
@@ -87,7 +87,7 @@ fn defer_transform_arm(
 fn defer_transform_expression(
   expression : Expr,
   cleanups : Array[DeferredCleanup],
-  loop_depth : Int,
+  loop_depth : Int32,
 ) -> Expr {
   match expression {
     I8Expr(_, _)
@@ -306,7 +306,7 @@ fn defer_transform_block_item(
   output : Array[BlockItem],
   item : BlockItem,
   cleanups : Array[DeferredCleanup],
-  loop_depth : Int,
+  loop_depth : Int32,
 ) -> Unit {
   if cleanups.length() == 0 {
     output.push(item)

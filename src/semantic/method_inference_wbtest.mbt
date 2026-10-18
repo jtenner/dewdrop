@@ -482,8 +482,8 @@ test "generic trait coercion evidence is deterministic across body schedules" {
   )
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
-  let forward_order : Array[Int] = []
-  let reverse_order : Array[Int] = []
+  let forward_order : Array[Int32] = []
+  let reverse_order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     forward_order.push(index)
     reverse_order.push(collected.bodies.length() - index - 1)

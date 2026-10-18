@@ -1,25 +1,31 @@
 ///|
 #borrow(command)
-extern "C" fn bootstrap_system_ffi(command : Bytes) -> Int = "dewdrop_bootstrap_system"
+extern "C" fn bootstrap_system_ffi(command : Bytes) -> Int32 = "dewdrop_bootstrap_system"
 
 ///|
-extern "C" fn bootstrap_getpid_ffi() -> Int = "dewdrop_bootstrap_getpid"
+extern "C" fn bootstrap_getpid_ffi() -> Int32 = "dewdrop_bootstrap_getpid"
 
 ///|
 #borrow(path, content)
 extern "C" fn bootstrap_atomic_write_ffi(
   path : Bytes,
-  path_length : Int,
+  path_length : Int32,
   content : Bytes,
-) -> Int = "dewdrop_bootstrap_atomic_write"
+) -> Int32 = "dewdrop_bootstrap_atomic_write"
 
 ///|
 #borrow(source, destination)
-extern "C" fn bootstrap_rename_ffi(source : Bytes, destination : Bytes) -> Int = "dewdrop_bootstrap_rename"
+extern "C" fn bootstrap_rename_ffi(
+  source : Bytes,
+  destination : Bytes,
+) -> Int32 = "dewdrop_bootstrap_rename"
 
 ///|
 #borrow(path)
-extern "C" fn bootstrap_remove_tree_ffi(path : Bytes, path_length : Int) -> Int = "dewdrop_bootstrap_remove_tree"
+extern "C" fn bootstrap_remove_tree_ffi(
+  path : Bytes,
+  path_length : Int32,
+) -> Int32 = "dewdrop_bootstrap_remove_tree"
 
 ///|
 fn bootstrap_shell_quote(value : String) -> String {
@@ -40,7 +46,7 @@ fn bootstrap_shell_quote(value : String) -> String {
 }
 
 ///|
-fn bootstrap_run_process(arguments : Array[String]) -> Int {
+fn bootstrap_run_process(arguments : Array[String]) -> Int32 {
   let command = Buffer()
   for index, argument in arguments {
     if index > 0 {
@@ -53,7 +59,7 @@ fn bootstrap_run_process(arguments : Array[String]) -> Int {
 }
 
 ///|
-fn bootstrap_process_id() -> Int {
+fn bootstrap_process_id() -> Int32 {
   bootstrap_getpid_ffi()
 }
 

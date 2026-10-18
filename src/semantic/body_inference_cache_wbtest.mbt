@@ -9,9 +9,7 @@ fn body_inference_cache_test_program() -> CollectedProgram {
     23100UL,
     ProgramManifest::new([
       ManifestModule::new("cache.body", [
-        ManifestFile::new(
-          "main.dew", body_inference_cache_test_source(),
-        ),
+        ManifestFile::new("main.dew", body_inference_cache_test_source()),
       ]),
     ]),
   )
@@ -47,10 +45,10 @@ test "inferred module decoder rejects sentinel type ids and embedded spans" {
     body_inference_cache_test_source(),
   )
   invalid_span.pattern_constructors.push(
-    VariantInferredPatternConstructor(
-      collected.variants[0].id,
-      { start: 2147483647, length: 1, },
-    ),
+    VariantInferredPatternConstructor(collected.variants[0].id, {
+      start: 2147483647,
+      length: 1,
+    }),
   )
   assert_true(
     deserialize_inferred_module_bodies(
@@ -268,8 +266,7 @@ test "cached body families rebase nested lambda and diagnostic expression ids" {
 ///|
 test "cached return diagnostics rebase expression ids" {
   let original = collect_bytes(
-    23104UL,
-    b"fn changing() -> I32 {\n  1\n}\nfn invalid() -> I32 {\n  return true\n}\n",
+    23104UL, b"fn changing() -> I32 {\n  1\n}\nfn invalid() -> I32 {\n  return true\n}\n",
   )
   let cold = infer_module_bodies_with_family_cache(
     original,
@@ -278,17 +275,14 @@ test "cached return diagnostics rebase expression ids" {
     Array::make(original.bodies.length(), None),
   ).unwrap()
   let edited = collect_bytes(
-    23104UL,
-    b"fn changing() -> I32 {\n  if true {\n    10\n  } else {\n    1\n  }\n}\nfn invalid() -> I32 {\n  return true\n}\n",
+    23104UL, b"fn changing() -> I32 {\n  if true {\n    10\n  } else {\n    1\n  }\n}\nfn invalid() -> I32 {\n  return true\n}\n",
   )
   let resolved = resolve_module_types(edited)
   let names = resolve_module_names(edited)
-  let mixed = infer_module_bodies_with_family_cache(
-    edited,
-    resolved,
-    names,
-    [None, cold.families[1]],
-  ).unwrap()
+  let mixed = infer_module_bodies_with_family_cache(edited, resolved, names, [
+    None,
+    cold.families[1],
+  ]).unwrap()
   let fresh = infer_module_bodies(edited, resolved, names)
   assert_eq(mixed.family_hits, 1)
   assert_eq(mixed.inferred, fresh)
@@ -338,34 +332,24 @@ test "body-family artifacts include nested lambdas and reject incompatible owner
     is Err(_),
   )
 
-  let invalid_sentinel = {
-    ..owner,
-    root: { ..owner.root, result_type: -1, },
-  }
+  let invalid_sentinel = { ..owner, root: { ..owner.root, result_type: -1, }, }
   assert_true(
-    infer_module_bodies_with_family_cache(
-      collected,
-      resolved,
-      names,
-      [Some(invalid_sentinel), cold.families[1]],
-    )
+    infer_module_bodies_with_family_cache(collected, resolved, names, [
+      Some(invalid_sentinel),
+      cold.families[1],
+    ])
     is Err(_),
   )
 
   let invalid_resolved = {
     ..owner,
-    root: {
-      ..owner.root,
-      result_type: -resolved.types.length() - 2,
-    },
+    root: { ..owner.root, result_type: -resolved.types.length() - 2, },
   }
   assert_true(
-    infer_module_bodies_with_family_cache(
-      collected,
-      resolved,
-      names,
-      [Some(invalid_resolved), cold.families[1]],
-    )
+    infer_module_bodies_with_family_cache(collected, resolved, names, [
+      Some(invalid_resolved),
+      cold.families[1],
+    ])
     is Err(_),
   )
 }

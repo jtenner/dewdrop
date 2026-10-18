@@ -1,8 +1,8 @@
 ///|
-pub type LocalId = Int
+pub type LocalId = Int32
 
 ///|
-pub type ControlId = Int
+pub type ControlId = Int32
 
 ///|
 pub enum BodyLocalKind {
@@ -17,7 +17,7 @@ pub struct BodyLocal {
   name : NameId
   kind : BodyLocalKind
   mutable_ : Bool
-  source : Int
+  source : Int32
   offset : UInt64
 } derive(Eq, Debug)
 
@@ -26,11 +26,11 @@ pub enum BodyNameReference {
   NoNameReference
   ErrorNameReference
   LocalNameReference(LocalId)
-  LambdaCaptureNameReference(Int)
+  LambdaCaptureNameReference(Int32)
   ModuleValueNameReference(NameId)
-  ImportedValueNameReference(Int)
+  ImportedValueNameReference(Int32)
   ImportedModuleValueNameReference(DeclId)
-  ImportedModuleNameReference(Int)
+  ImportedModuleNameReference(Int32)
   ForeignLibraryNameReference(DeclId)
   PrimitiveTypeNameReference(PrimitiveType)
   ModuleTypeNameReference(DeclId)
@@ -44,7 +44,7 @@ pub enum BodyPatternReference {
   NoPatternReference
   ErrorPatternReference
   PatternBindingReference(LocalId)
-  PatternImportedModuleReference(Int)
+  PatternImportedModuleReference(Int32)
   PatternTypeReference(DeclId)
   PatternTraitReference(DeclId)
   PatternVariantReference(NameId)
@@ -116,7 +116,7 @@ pub enum LambdaCaptureSource {
 
 ///|
 pub struct LambdaCapture {
-  id : Int
+  id : Int32
   lambda : LambdaId
   name : NameId
   source : LambdaCaptureSource
@@ -215,7 +215,7 @@ pub fn ResolvedModuleNames::lambda_local_info(
 pub fn ResolvedModuleNames::lambda_capture(
   self : ResolvedModuleNames,
   lambda : LambdaId,
-  capture : Int,
+  capture : Int32,
 ) -> LambdaCapture? {
   match self.lambda(lambda) {
     Some(info) =>

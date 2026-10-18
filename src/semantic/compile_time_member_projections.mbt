@@ -3,7 +3,7 @@ fn reduce_compile_time_projections(
   context : CompileTimeProgramContext,
   adapter : PlannedModuleLowering,
   type_ : CompileTimeType,
-  depth : Int,
+  depth : Int32,
 ) -> Result[CompileTimeType, String] {
   if depth >= 256 {
     return Err("CT-034 member projection limit exceeded")

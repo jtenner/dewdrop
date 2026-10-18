@@ -59,7 +59,7 @@ fn LocalTypeSolver::check_solver_arrays(
 fn LocalTypeSolver::check_solver_boundary(
   self : LocalTypeSolver,
   closed : Bool,
-  detail : Int,
+  detail : Int32,
 ) -> Result[Unit, SolverInvariantFailure] {
   if closed && self.snapshots.length() != 0 {
     return Err(self.solver_failure(206, 0, self.snapshots.length(), detail))
@@ -91,7 +91,7 @@ fn LocalTypeSolver::check_solver_boundary(
 fn LocalTypeSolver::assert_solver_boundary(
   self : LocalTypeSolver,
   closed : Bool,
-  detail : Int,
+  detail : Int32,
 ) -> Unit {
   match self.check_solver_boundary(closed, detail) {
     Ok(_) => ()

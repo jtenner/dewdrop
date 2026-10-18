@@ -65,9 +65,9 @@ pub struct BodyInferenceJobResult {
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
   expression_evidence : Array[HirSpan]
-  trait_evidence_roots : Array[Int]
+  trait_evidence_roots : Array[Int32]
   trait_evidence : Array[InferredTraitEvidence]
-  trait_evidence_children : Array[Int]
+  trait_evidence_children : Array[Int32]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]
@@ -92,14 +92,14 @@ pub struct BodyInferenceFamilyArtifact {
 pub struct BodyInferenceFamilyAnalysis {
   inferred : InferredModuleBodies
   families : Array[BodyInferenceFamilyArtifact?]
-  family_hits : Int
-  family_misses : Int
+  family_hits : Int32
+  family_misses : Int32
 }
 
 ///|
 pub fn make_uncached_body_inference_family_analysis(
   inferred : InferredModuleBodies,
-  body_count : Int,
+  body_count : Int32,
 ) -> BodyInferenceFamilyAnalysis {
   {
     inferred,
@@ -113,8 +113,8 @@ pub fn make_uncached_body_inference_family_analysis(
 priv struct BodyJobTypeImporter {
   solver : LocalTypeSolver
   task_types : Array[BodyTypeId]
-  task_states : Array[Int]
-  result_starts : Array[Int]
+  task_states : Array[Int32]
+  result_starts : Array[Int32]
   results : Array[BodyTypeId]
   arguments : Array[BodyTypeId]
 }
@@ -135,8 +135,8 @@ fn BodyJobTypeImporter::new(solver : LocalTypeSolver) -> BodyJobTypeImporter {
 fn BodyJobTypeImporter::push(
   self : BodyJobTypeImporter,
   type_ : BodyTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.task_types.push(type_)
   self.task_states.push(state)
@@ -267,13 +267,13 @@ fn BodyJobTypeImporter::import_type(
 priv struct CallInferenceScratch {
   mut constructor_index : ConstructorIndex?
   mut final_constructors : Bool
-  mut constructor_progress : Int
-  pending_variant_calls : Array[Int]
+  mut constructor_progress : Int32
+  pending_variant_calls : Array[Int32]
   pending_patterns : Array[(PatternId, BodyTypeId)]
   pending_calls : Array[ExprId]
   deferred_calls : Array[ExprId]
-  pending_function_calls : Array[Int]
-  deferred_function_calls : Array[Int]
+  pending_function_calls : Array[Int32]
+  deferred_function_calls : Array[Int32]
   overload_candidates : Array[DeclId]
   overload_viable_candidates : Array[DeclId]
   overload_maximal_candidates : Array[DeclId]
@@ -283,7 +283,7 @@ priv struct CallInferenceScratch {
   string_pattern_expressions : Map[ExprId, Bool]
   deferred_operators : Array[ExprId]
   method_candidates : Array[DeclId]
-  method_candidate_impls : Array[Int]
+  method_candidate_impls : Array[Int32]
   member_expressions : Array[ExprId]
   deferred_members : Array[ExprId]
   candidate_type_arguments : Array[BodyTypeId]
@@ -291,22 +291,22 @@ priv struct CallInferenceScratch {
   mut nominal_declaration : DeclId
   pattern_tasks : Array[PatternId]
   pattern_task_types : Array[BodyTypeId]
-  pattern_field_indices : Array[Int]
+  pattern_field_indices : Array[Int32]
   pattern_field_matched : Array[Bool]
-  pattern_field_lookup : Map[NameId, Int]
+  pattern_field_lookup : Map[NameId, Int32]
   instantiation_task_types : Array[ResolvedTypeId]
-  instantiation_task_states : Array[Int]
-  instantiation_result_starts : Array[Int]
+  instantiation_task_states : Array[Int32]
+  instantiation_result_starts : Array[Int32]
   instantiation_results : Array[BodyTypeId]
   instantiation_arguments : Array[BodyTypeId]
-  instantiation_marks : Array[Int]
+  instantiation_marks : Array[Int32]
   instantiation_values : Array[BodyTypeId]
-  mut instantiation_generation : Int
+  mut instantiation_generation : Int32
   mut instantiation_generics : HirSpan
   mut instantiation_method_generics : HirSpan
   mut instantiation_self_owner : DeclId
   mut instantiation_self_type : BodyTypeId
-  mut trial_viable_count : Int
+  mut trial_viable_count : Int32
   mut trial_first_declaration : DeclId
   mut trial_second_declaration : DeclId
 }
@@ -402,13 +402,13 @@ priv struct ModuleValueImporter {
   values : InferredModuleValues
   solver : LocalTypeSolver
   task_types : Array[BodyTypeId]
-  task_states : Array[Int]
-  result_starts : Array[Int]
+  task_states : Array[Int32]
+  result_starts : Array[Int32]
   results : Array[BodyTypeId]
   arguments : Array[BodyTypeId]
-  marks : Array[Int]
+  marks : Array[Int32]
   cached : Array[BodyTypeId]
-  mut generation : Int
+  mut generation : Int32
 }
 
 ///|
@@ -451,8 +451,8 @@ fn ModuleValueImporter::ensure_cache(self : ModuleValueImporter) -> Unit {
 fn ModuleValueImporter::push_task(
   self : ModuleValueImporter,
   type_ : BodyTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.task_types.push(type_)
   self.task_states.push(state)
@@ -622,7 +622,7 @@ fn ModuleValueImporter::import_type(
 ///|
 priv struct ModuleValueInferenceContext {
   values : InferredModuleValues
-  let_indices : Array[Int]
+  let_indices : Array[Int32]
   slots : Array[BodyTypeId]
   importer : ModuleValueImporter
 }
@@ -630,7 +630,7 @@ priv struct ModuleValueInferenceContext {
 ///|
 fn ModuleValueInferenceContext::new(
   values : InferredModuleValues,
-  let_indices : Array[Int],
+  let_indices : Array[Int32],
   solver : LocalTypeSolver,
 ) -> ModuleValueInferenceContext {
   {
@@ -653,7 +653,7 @@ fn ModuleValueInferenceContext::begin_solver(
 fn ModuleValueInferenceContext::let_index(
   self : ModuleValueInferenceContext,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   let local_index = semantic_id_local(declaration)
   if local_index < 0 || local_index >= self.let_indices.length() {
     -1
@@ -689,8 +689,8 @@ priv struct BasicBodyInferencer {
   mut local_span : HirSpan
   mut control_span : HirSpan
   mut capture_types : Array[BodyTypeId]
-  callable_index : Int
-  callable_indices : Array[Int]
+  callable_index : Int32
+  callable_indices : Array[Int32]
   variant_spans : Array[HirSpan]
   field_spans : Array[HirSpan]
   solver : LocalTypeSolver
@@ -727,9 +727,9 @@ priv struct BasicBodyInferencer {
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
   mut expression_evidence : Array[HirSpan]
-  trait_evidence_roots : Array[Int]
+  trait_evidence_roots : Array[Int32]
   trait_evidence : Array[InferredTraitEvidence]
-  trait_evidence_children : Array[Int]
+  trait_evidence_children : Array[Int32]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   trait_search : BodyTraitSearch
   call_type_arguments : Array[BodyTypeId]
@@ -737,8 +737,8 @@ priv struct BasicBodyInferencer {
   module_values : ModuleValueInferenceContext?
   unsupported_expressions : Array[Bool]
   diagnostics : Array[BodyInferenceDiagnostic]
-  mut solver_diagnostic_start : Int
-  mut solver_diagnostic_end : Int
+  mut solver_diagnostic_start : Int32
+  mut solver_diagnostic_end : Int32
   mut declared_return_type : BodyTypeId
   mut result_type : BodyTypeId
   mut compact_marks : Array[Bool]
@@ -760,7 +760,7 @@ fn BasicBodyInferencer::declaration_visible(
 ///|
 fn BasicBodyInferencer::implementation_visible(
   self : BasicBodyInferencer,
-  implementation : Int,
+  implementation : Int32,
 ) -> Bool {
   self.declaration_visible(
     self.impl_index.implementations[implementation].declaration,
@@ -775,14 +775,14 @@ fn BasicBodyInferencer::new(
   impl_index : ModuleImplIndex,
   names : ResolvedModuleNames,
   body : HirBody,
-  callable_index : Int,
-  callable_indices : Array[Int],
+  callable_index : Int32,
+  callable_indices : Array[Int32],
   variant_spans : Array[HirSpan],
   field_spans : Array[HirSpan],
   solver : LocalTypeSolver,
   call_scratch : CallInferenceScratch,
   module_values : ModuleValueInferenceContext?,
-  reachability? : InferenceReachability? = None,
+  reachability~ : InferenceReachability? = None,
 ) -> BasicBodyInferencer {
   assert_body_owned_spans(collected, body, 2)
   let name_info = names.body(body.id).unwrap()
@@ -890,13 +890,13 @@ fn BasicBodyInferencer::new_lambda(
   names : ResolvedModuleNames,
   lambda : HirLambda,
   capture_types : Array[BodyTypeId],
-  callable_indices : Array[Int],
+  callable_indices : Array[Int32],
   variant_spans : Array[HirSpan],
   field_spans : Array[HirSpan],
   solver : LocalTypeSolver,
   call_scratch : CallInferenceScratch,
   module_values : ModuleValueInferenceContext?,
-  reachability? : InferenceReachability? = None,
+  reachability~ : InferenceReachability? = None,
 ) -> BasicBodyInferencer {
   let root_body = collected.bodies[semantic_id_local(lambda.root_body)]
   let body : HirBody = {
@@ -955,7 +955,7 @@ fn BasicBodyInferencer::new_lambda(
 fn BasicBodyInferencer::expression_index(
   self : BasicBodyInferencer,
   expression : ExprId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyExpressions, expression, 2)
 }
 
@@ -963,7 +963,7 @@ fn BasicBodyInferencer::expression_index(
 fn BasicBodyInferencer::block_index(
   self : BasicBodyInferencer,
   block : BlockId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyBlocks, block, 2)
 }
 
@@ -971,7 +971,7 @@ fn BasicBodyInferencer::block_index(
 fn BasicBodyInferencer::pattern_index(
   self : BasicBodyInferencer,
   pattern : PatternId,
-) -> Int {
+) -> Int32 {
   body_relative_index(self.collected, self.body, BodyPatterns, pattern, 2)
 }
 
@@ -1338,7 +1338,7 @@ fn BasicBodyInferencer::local_function_reference(
 ///|
 fn BasicBodyInferencer::imported_function_reference(
   self : BasicBodyInferencer,
-  head : Int,
+  head : Int32,
 ) -> (DeclId, ResolvedTypeId)? {
   let imports = match self.imports {
     Some(imports) => imports
@@ -1374,7 +1374,7 @@ fn BasicBodyInferencer::imported_function_reference(
 fn BasicBodyInferencer::local_function_reference_candidate_count(
   self : BasicBodyInferencer,
   name : NameId,
-) -> Int {
+) -> Int32 {
   let binding = match self.collected.value_bindings.get(name) {
     Some(binding) => binding
     None => return 0
@@ -1400,8 +1400,8 @@ fn BasicBodyInferencer::local_function_reference_candidate_count(
 ///|
 fn BasicBodyInferencer::imported_function_reference_candidate_count(
   self : BasicBodyInferencer,
-  head : Int,
-) -> Int {
+  head : Int32,
+) -> Int32 {
   let imports = match self.imports {
     Some(imports) => imports
     None => return 0
@@ -1557,7 +1557,7 @@ fn BasicBodyInferencer::select_imported_function_reference(
   self : BasicBodyInferencer,
   expression : ExprId,
   name : NameId,
-  head : Int,
+  head : Int32,
   offset : UInt64,
 ) -> Unit {
   let imports = match self.imports {
@@ -2121,8 +2121,8 @@ fn BasicBodyInferencer::begin_call_candidate(
 fn BasicBodyInferencer::push_instantiation_task(
   self : BasicBodyInferencer,
   type_ : ResolvedTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.call_scratch.instantiation_task_types.push(type_)
   self.call_scratch.instantiation_task_states.push(state)
@@ -2831,8 +2831,8 @@ fn BasicBodyInferencer::constrain_product_field_expression(
   self : BasicBodyInferencer,
   expression : ExprId,
   base : ExprId,
-  index : Int,
-  arity : Int,
+  index : Int32,
+  arity : Int32,
   offset : UInt64,
 ) -> Unit {
   if index < 0 || index >= arity || arity < 2 || arity > 32 {
@@ -3066,7 +3066,7 @@ fn BasicBodyInferencer::constrain_root(self : BasicBodyInferencer) -> Unit {
 }
 
 ///|
-fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
+fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int32 {
   match self {
     BodyConstraintDiagnostic(_) => 0
     ReturnOutsideCallable(_) => 1
@@ -3289,7 +3289,7 @@ fn BasicBodyInferencer::run(
 }
 
 ///|
-fn callable_indices_by_declaration(collected : CollectedModule) -> Array[Int] {
+fn callable_indices_by_declaration(collected : CollectedModule) -> Array[Int32] {
   let indices = Array::make(collected.declaration_locations.length(), -1)
   for index, callable in collected.callables {
     indices[semantic_id_local(callable.declaration)] = index
@@ -3344,7 +3344,7 @@ fn variant_spans_by_declaration(collected : CollectedModule) -> Array[HirSpan] {
 }
 
 ///|
-fn remap_job_type(type_ : BodyTypeId, type_start : Int) -> BodyTypeId {
+fn remap_job_type(type_ : BodyTypeId, type_start : Int32) -> BodyTypeId {
   if type_ <= 0 {
     type_
   } else {
@@ -3355,7 +3355,7 @@ fn remap_job_type(type_ : BodyTypeId, type_start : Int) -> BodyTypeId {
 ///|
 fn remap_job_call_target(
   target : InferredCallTarget,
-  call_argument_start : Int,
+  call_argument_start : Int32,
 ) -> InferredCallTarget {
   match target {
     SelectedInferredCallTarget(declaration, arguments) =>
@@ -3383,12 +3383,12 @@ fn remap_job_call_target(
 ///|
 fn merge_job_trait_evidence(
   job : BodyInferenceJobResult,
-  expression_start : Int,
-  expression_length : Int,
+  expression_start : Int32,
+  expression_length : Int32,
   expression_evidence : Array[HirSpan],
-  trait_evidence_roots : Array[Int],
+  trait_evidence_roots : Array[Int32],
   trait_evidence : Array[InferredTraitEvidence],
-  trait_evidence_children : Array[Int],
+  trait_evidence_children : Array[Int32],
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument],
 ) -> Unit {
   let evidence_start = trait_evidence.length()
@@ -3438,7 +3438,7 @@ fn merge_job_trait_evidence(
 ///|
 fn remap_job_diagnostic(
   diagnostic : BodyInferenceDiagnostic,
-  type_start : Int,
+  type_start : Int32,
 ) -> BodyInferenceDiagnostic {
   match diagnostic {
     BodyConstraintDiagnostic(
@@ -3476,7 +3476,7 @@ priv struct ModuleValueInferenceResult {
 ///|
 fn append_module_value_job(
   values : InferredModuleValues,
-  let_index : Int,
+  let_index : Int32,
   job : BodyInferenceJobResult,
 ) -> Unit {
   let type_start = values.types.length()
@@ -3552,7 +3552,7 @@ fn infer_module_values_internal(
   imports : ResolvedModuleImports?,
   impl_index : ModuleImplIndex,
   names : ResolvedModuleNames,
-  callable_indices : Array[Int],
+  callable_indices : Array[Int32],
   variant_spans : Array[HirSpan],
   field_spans : Array[HirSpan],
 ) -> ModuleValueInferenceResult {
@@ -3811,9 +3811,9 @@ fn merge_body_inference_jobs(
     NoInferredCallTarget,
   )
   let mut expression_evidence = empty_hir_span_array
-  let trait_evidence_roots : Array[Int] = []
+  let trait_evidence_roots : Array[Int32] = []
   let trait_evidence : Array[InferredTraitEvidence] = []
-  let trait_evidence_children : Array[Int] = []
+  let trait_evidence_children : Array[Int32] = []
   let trait_evidence_arguments : Array[InferredTraitEvidenceArgument] = []
   let call_type_arguments : Array[BodyTypeId] = []
   let diagnostics : Array[BodyInferenceDiagnostic] = []
@@ -4320,9 +4320,9 @@ fn infer_module_bodies_with_imports_in_order_and_family_cache(
   resolved : ResolvedModuleTypes,
   imports : ResolvedModuleImports?,
   names : ResolvedModuleNames,
-  order : Array[Int],
+  order : Array[Int32],
   cached_families : Array[BodyInferenceFamilyArtifact?],
-  reachability? : InferenceReachability? = None,
+  reachability~ : InferenceReachability? = None,
 ) -> Result[BodyInferenceFamilyAnalysis, String] {
   guard collected.module_id == resolved.module_id &&
     collected.module_id == names.module_id else {
@@ -4519,7 +4519,7 @@ fn infer_module_bodies_in_order(
   collected : CollectedModule,
   resolved : ResolvedModuleTypes,
   names : ResolvedModuleNames,
-  order : Array[Int],
+  order : Array[Int32],
 ) -> InferredModuleBodies {
   infer_module_bodies_with_imports_in_order_and_family_cache(
     collected,
@@ -4537,7 +4537,7 @@ pub fn infer_module_bodies_with_family_cache_in_order(
   resolved : ResolvedModuleTypes,
   names : ResolvedModuleNames,
   cached_families : Array[BodyInferenceFamilyArtifact?],
-  order : Array[Int],
+  order : Array[Int32],
 ) -> Result[BodyInferenceFamilyAnalysis, String] {
   infer_module_bodies_with_imports_in_order_and_family_cache(
     collected,
@@ -4556,7 +4556,7 @@ pub fn infer_module_bodies_with_family_cache(
   names : ResolvedModuleNames,
   cached_families : Array[BodyInferenceFamilyArtifact?],
 ) -> Result[BodyInferenceFamilyAnalysis, String] {
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }
@@ -4581,7 +4581,7 @@ pub fn infer_module_bodies_with_imports_and_family_cache(
   guard collected.module_id == imports.module_id else {
     abort("body import scope belongs to another module")
   }
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }
@@ -4622,7 +4622,7 @@ pub fn infer_module_bodies(
   resolved : ResolvedModuleTypes,
   names : ResolvedModuleNames,
 ) -> InferredModuleBodies {
-  let order : Array[Int] = []
+  let order : Array[Int32] = []
   for index in 0..<collected.bodies.length() {
     order.push(index)
   }

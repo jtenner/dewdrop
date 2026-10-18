@@ -12,7 +12,7 @@ fn program_output_test_session() -> CompilationCachePack {
 }
 
 ///|
-fn program_output_test_manifest(value : Int) -> @semantic.ProgramManifest {
+fn program_output_test_manifest(value : Int32) -> @semantic.ProgramManifest {
   @semantic.ProgramManifest::new([
     @semantic.ManifestModule::new("app.main", [
       @semantic.ManifestFile::new(

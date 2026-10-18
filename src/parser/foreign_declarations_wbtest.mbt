@@ -10,8 +10,14 @@ test "foreign host imports preserve their explicit mode through parse caching" {
     _ => fail("expected a host import declaration")
   }
   let events = parse_bytes(source).to_array()
-  assert_eq(deserialize_parse_events(serialize_parse_events(events).unwrap()).unwrap(), events)
-  match Parser::from_bytes(b"foreign impl \"custom.host\" as Linked {\n  fn send(value: I64) -> I32 = \"send\"\n}\n").parse_declaration() {
+  assert_eq(
+    deserialize_parse_events(serialize_parse_events(events).unwrap()).unwrap(),
+    events,
+  )
+  match
+    Parser::from_bytes(
+      b"foreign impl \"custom.host\" as Linked {\n  fn send(value: I64) -> I32 = \"send\"\n}\n",
+    ).parse_declaration() {
     Ok(ForeignLibrary(value)) => assert_false(value.host_import)
     _ => fail("expected a linked library declaration")
   }

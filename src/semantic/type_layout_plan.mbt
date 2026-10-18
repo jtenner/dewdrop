@@ -22,7 +22,7 @@ pub struct PlannedFieldLayout {
   variant : VariantId?
   mutable_ : Bool
   name : String
-  index : Int
+  index : Int32
   type_ : ResolvedTypeId
   shape : PlannedValueShape
   offset : UInt64
@@ -39,7 +39,7 @@ pub enum PlannedVariantPayloadLayout {
 pub struct PlannedVariantLayout {
   variant : VariantId
   declaration : DeclId
-  tag : Int
+  tag : Int32
   payload : PlannedVariantPayloadLayout
   offset : UInt64
 } derive(Eq, Debug)
@@ -48,7 +48,7 @@ pub struct PlannedVariantLayout {
 pub struct PlannedModuleTypeLayouts {
   module_id : ModuleId
   layouts : Array[PlannedNominalLayout]
-  layout_by_declaration : Array[Int]
+  layout_by_declaration : Array[Int32]
   fields : Array[PlannedFieldLayout]
   variants : Array[PlannedVariantLayout]
   payload_types : Array[ResolvedTypeId]

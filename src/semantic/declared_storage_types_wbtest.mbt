@@ -23,10 +23,10 @@ fn declared_storage_check(
 fn declared_storage_expected(
   module_ : PlannedModuleLowering,
   field : PlannedFieldLayout,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
-  bad : Int,
+  bad : Int32,
 ) -> ProgramPhysicalTypeFailure {
   {
     code,

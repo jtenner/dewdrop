@@ -1,5 +1,5 @@
 ///|
-fn struct_benchmark_source(field_count : Int, applied_types : Bool) -> Bytes {
+fn struct_benchmark_source(field_count : Int32, applied_types : Bool) -> Bytes {
   let output = Buffer(size_hint=field_count * 48)
   output.write_string_utf8("pub struct Benchmark<t> {\n")
   for index in 0..<field_count {

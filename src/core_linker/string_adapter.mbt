@@ -1,5 +1,5 @@
 ///|
-fn core_storage_ref_type_index(value : @lib.StorageType) -> Int? {
+fn core_storage_ref_type_index(value : @lib.StorageType) -> Int32? {
   match value {
     @lib.ValTypeStorageType(type_) =>
       match core_ref_defined_type(type_) {
@@ -11,7 +11,7 @@ fn core_storage_ref_type_index(value : @lib.StorageType) -> Int? {
 }
 
 ///|
-fn core_find_dew_string_types(arena : CoreTypeArena) -> (Int, Int)? {
+fn core_find_dew_string_types(arena : CoreTypeArena) -> (Int32, Int32)? {
   for chunks_index, subtype in arena.subtypes {
     let chunks = match subtype.get_comptype() {
       @lib.ArrayCompType(field) =>
@@ -43,17 +43,17 @@ fn core_find_dew_string_types(arena : CoreTypeArena) -> (Int, Int)? {
 }
 
 ///|
-fn core_i32(value : Int) -> @lib.Instruction {
+fn core_i32(value : Int32) -> @lib.Instruction {
   @lib.Instruction::i32_const(@lib.I32::new(value))
 }
 
 ///|
-fn core_local(index : Int) -> @lib.LocalIdx {
+fn core_local(index : Int32) -> @lib.LocalIdx {
   @lib.LocalIdx::new(index.reinterpret_as_uint())
 }
 
 ///|
-fn core_adapter_mem_arg(memory : Int, align : UInt) -> @lib.MemArg {
+fn core_adapter_mem_arg(memory : Int32, align : UInt32) -> @lib.MemArg {
   @lib.MemArg::new(
     @lib.U32::new(align),
     Some(@lib.MemIdx::new(memory.reinterpret_as_uint())),
@@ -65,13 +65,13 @@ fn core_adapter_mem_arg(memory : Int, align : UInt) -> @lib.MemArg {
 /// Loads one UTF-8 byte from Dew's packed v128 chunk representation.
 fn core_append_dew_string_byte_load(
   output : Array[@lib.Instruction],
-  chunks_type : Int,
-  memory : Int,
-  chunks_local : Int,
-  start_local : Int,
-  index_local : Int,
-  absolute_local : Int,
-  delta : Int,
+  chunks_type : Int32,
+  memory : Int32,
+  chunks_local : Int32,
+  start_local : Int32,
+  index_local : Int32,
+  absolute_local : Int32,
+  delta : Int32,
 ) -> Unit {
   output.push(core_i32(0))
   output.push(@lib.Instruction::local_get(core_local(chunks_local)))
@@ -102,10 +102,10 @@ fn core_append_dew_string_byte_load(
 ///|
 fn core_append_array_set_from_local(
   output : Array[@lib.Instruction],
-  string_type : Int,
-  array_local : Int,
-  index_local : Int,
-  value_local : Int,
+  string_type : Int32,
+  array_local : Int32,
+  index_local : Int32,
+  value_local : Int32,
 ) -> Unit {
   output.push(@lib.Instruction::local_get(core_local(array_local)))
   output.push(@lib.Instruction::local_get(core_local(index_local)))
@@ -124,11 +124,11 @@ fn core_append_array_set_from_local(
 ///|
 /// Builds the bounded Dew UTF-8 String to MoonBit UTF-16 String adapter.
 fn core_dew_to_moonbit_string_adapter(
-  dew_chunks_type : Int,
-  dew_text_type : Int,
-  moonbit_string_type : Int,
-  target_function : Int,
-  scratch_memory : Int,
+  dew_chunks_type : Int32,
+  dew_text_type : Int32,
+  moonbit_string_type : Int32,
+  target_function : Int32,
+  scratch_memory : Int32,
 ) -> @lib.Func {
   let text = 1
   let chunks = 2

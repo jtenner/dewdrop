@@ -1,10 +1,10 @@
 ///|
 fn planned_child_test_failure(
   body : PlannedBodyLowering,
-  expression : Int,
+  expression : Int32,
   span : HirSpan,
-  child : Int,
-  tag : Int,
+  child : Int32,
+  tag : Int32,
 ) -> BodyArenaFailure {
   {
     code: 104,

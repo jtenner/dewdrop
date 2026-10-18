@@ -2,7 +2,7 @@
 priv struct PlannedBodyChildChecker {
   lowering : PlannedModuleLowering
   body : PlannedBodyLowering
-  phase : Int
+  phase : Int32
   local_span : HirSpan
   owner_lambda : LambdaId
   mut capture_span : HirSpan
@@ -13,8 +13,8 @@ priv struct PlannedBodyChildChecker {
 ///|
 fn PlannedBodyChildChecker::fail(
   self : PlannedBodyChildChecker,
-  code : Int,
-  parent : Int,
+  code : Int32,
+  parent : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -38,10 +38,10 @@ fn PlannedBodyChildChecker::fail(
 ///|
 fn PlannedBodyChildChecker::span(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   span : HirSpan,
-  length : Int,
-  tag : Int,
+  length : Int32,
+  tag : Int32,
 ) -> Bool {
   if self.failure is Some(_) {
     return false
@@ -65,10 +65,10 @@ fn PlannedBodyChildChecker::span(
 ///|
 fn PlannedBodyChildChecker::owned(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   span : HirSpan,
-  child : Int,
-  tag : Int,
+  child : Int32,
+  tag : Int32,
 ) -> Bool {
   if self.failure is Some(_) {
     return false
@@ -91,8 +91,8 @@ fn PlannedBodyChildChecker::owned(
 ///|
 fn PlannedBodyChildChecker::expression(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  child : Int,
+  parent : Int32,
+  child : Int32,
 ) -> Unit {
   ignore(self.owned(parent, self.body.expressions, child, 1))
 }
@@ -100,8 +100,8 @@ fn PlannedBodyChildChecker::expression(
 ///|
 fn PlannedBodyChildChecker::optional_expression(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  child : Int,
+  parent : Int32,
+  child : Int32,
 ) -> Unit {
   if child != -1 {
     self.expression(parent, child)
@@ -111,8 +111,8 @@ fn PlannedBodyChildChecker::optional_expression(
 ///|
 fn PlannedBodyChildChecker::local(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  child : Int,
+  parent : Int32,
+  child : Int32,
 ) -> Unit {
   ignore(self.owned(parent, self.local_span, child, 2))
 }
@@ -120,7 +120,7 @@ fn PlannedBodyChildChecker::local(
 ///|
 fn PlannedBodyChildChecker::arguments(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   span : HirSpan,
 ) -> Unit {
   if self.span(parent, span, self.lowering.expression_children.length(), 10) {
@@ -139,7 +139,7 @@ fn PlannedBodyChildChecker::arguments(
 ///|
 fn PlannedBodyChildChecker::fields(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   span : HirSpan,
 ) -> Unit {
   if self.span(parent, span, self.lowering.object_fields.length(), 12) {
@@ -158,7 +158,7 @@ fn PlannedBodyChildChecker::fields(
 ///|
 fn PlannedBodyChildChecker::arms(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   span : HirSpan,
 ) -> Unit {
   if self.span(parent, span, self.lowering.arm_children.length(), 13) {
@@ -178,7 +178,7 @@ fn PlannedBodyChildChecker::arms(
 ///|
 fn PlannedBodyChildChecker::pattern(
   self : PlannedBodyChildChecker,
-  child : Int,
+  child : Int32,
 ) -> Unit {
   ignore(self.owned(-1, self.body.patterns, child, 4))
 }
@@ -201,7 +201,7 @@ fn PlannedBodyChildChecker::patterns(
 ///|
 fn PlannedBodyChildChecker::lambda(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   lambda : LambdaId,
 ) -> Bool {
   if !self.owned(
@@ -241,7 +241,7 @@ fn PlannedBodyChildChecker::lambda(
 // match; there is no default that silently treats a new expression as a leaf.
 fn PlannedBodyChildChecker::expression_edges(
   self : PlannedBodyChildChecker,
-  parent : Int,
+  parent : Int32,
   kind : PlannedExpressionKind,
 ) -> Unit {
   match kind {
@@ -352,7 +352,7 @@ fn PlannedBodyChildChecker::expression_edges(
 fn check_planned_body_children(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
-  phase : Int,
+  phase : Int32,
   lambda : LambdaId,
 ) -> Result[Unit, BodyArenaFailure] {
   let checker : PlannedBodyChildChecker = {
@@ -390,7 +390,7 @@ fn check_planned_body_children(
 ///|
 fn PlannedBodyChildChecker::block_edges(
   checker : PlannedBodyChildChecker,
-  block : Int,
+  block : Int32,
 ) -> Unit {
   let lowering = checker.lowering
   let items = lowering.blocks[block].items
@@ -417,7 +417,7 @@ fn PlannedBodyChildChecker::block_edges(
 ///|
 fn PlannedBodyChildChecker::pattern_edges(
   checker : PlannedBodyChildChecker,
-  pattern : Int,
+  pattern : Int32,
 ) -> Unit {
   let lowering = checker.lowering
   let source = lowering.patterns[pattern]
@@ -466,7 +466,7 @@ fn PlannedBodyChildChecker::pattern_edges(
 ///|
 fn PlannedBodyChildChecker::arm_edges(
   checker : PlannedBodyChildChecker,
-  arm : Int,
+  arm : Int32,
 ) -> Unit {
   let lowering = checker.lowering
   let source = lowering.pattern_arms[arm]

@@ -14,21 +14,35 @@ test "raw array heaps precede cross-module recursive struct fields" {
     29314UL,
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("app.a", [
-        @semantic.ManifestFile::new("a.dew", b"open app.b\nopen dew.std.wasm.intrinsics\npub struct A {\n  peer: B\n  chunks: WasmArray<V128>\n}\npub fn count(value: A) -> U32 {\n  wasm_array_len(value.chunks)\n}\n"),
+        @semantic.ManifestFile::new(
+          "a.dew", b"open app.b\nopen dew.std.wasm.intrinsics\npub struct A {\n  peer: B\n  chunks: WasmArray<V128>\n}\npub fn count(value: A) -> U32 {\n  wasm_array_len(value.chunks)\n}\n",
+        ),
       ]),
       @semantic.ManifestModule::new("app.b", [
-        @semantic.ManifestFile::new("b.dew", b"open app.a\npub struct B {\n  peer: A\n}\n"),
+        @semantic.ManifestFile::new(
+          "b.dew", b"open app.a\npub struct B {\n  peer: A\n}\n",
+        ),
       ]),
     ]),
   )
   let analyzed = @semantic.analyze_program_semantics(program)
   let lowering = @semantic.plan_program_lowering(program, analyzed)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(@semantic.collect_compiler_source_diagnostics(program, analyzed, lowering, link), [])
+  assert_eq(
+    @semantic.collect_compiler_source_diagnostics(
+      program, analyzed, lowering, link,
+    ),
+    [],
+  )
   assert_true(!link.program_type_groups.is_empty())
   assert_eq(link.fixed_array_type_base, 0)
   assert_true(link.program_type_groups[0].first_type_index >= 8)
-  assert_eq(@validate.validate_module(emit_starshine_program_module(lowering, link).unwrap()), Ok(()))
+  assert_eq(
+    @validate.validate_module(
+      emit_starshine_program_module(lowering, link).unwrap(),
+    ),
+    Ok(()),
+  )
 }
 
 ///|

@@ -7,7 +7,7 @@ pub enum DiagnosticSeverity {
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
-pub fn DiagnosticSeverity::rank(self : DiagnosticSeverity) -> Int {
+pub fn DiagnosticSeverity::rank(self : DiagnosticSeverity) -> Int32 {
   match self {
     Error => 0
     Warning => 1
@@ -17,7 +17,7 @@ pub fn DiagnosticSeverity::rank(self : DiagnosticSeverity) -> Int {
 }
 
 ///|
-pub fn DiagnosticSeverity::from_rank(rank : Int) -> DiagnosticSeverity {
+pub fn DiagnosticSeverity::from_rank(rank : Int32) -> DiagnosticSeverity {
   match rank {
     1 => Warning
     2 => Info

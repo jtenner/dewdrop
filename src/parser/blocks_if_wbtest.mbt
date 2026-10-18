@@ -1,5 +1,5 @@
 ///|
-fn nested_else_if_expression(depth : Int) -> Bytes {
+fn nested_else_if_expression(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 32 + 32)
   for index in 0..<depth {
     if index == 0 {

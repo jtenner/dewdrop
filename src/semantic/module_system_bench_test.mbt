@@ -1,7 +1,7 @@
 ///|
 fn module_system_benchmark_manifest(
-  module_count : Int,
-  functions_per_module : Int,
+  module_count : Int32,
+  functions_per_module : Int32,
 ) -> ProgramManifest {
   let modules : Array[ManifestModule] = []
   for module_index in 0..<module_count {
@@ -78,7 +78,7 @@ test "bench module interface fingerprint refresh modules=64 functions=32" (
 }
 
 ///|
-fn imported_call_benchmark_manifest(call_count : Int) -> ProgramManifest {
+fn imported_call_benchmark_manifest(call_count : Int32) -> ProgramManifest {
   let library = Buffer(size_hint=call_count * 64)
   let consumer = Buffer(size_hint=call_count * 48 + 64)
   consumer.write_string_utf8("open bench.library\npub fn run() -> I32 {\n")
@@ -145,8 +145,8 @@ test "bench imported call inference calls=128" (it : @bench.T) {
 
 ///|
 fn imported_enum_benchmark_manifest(
-  enum_count : Int,
-  variants_per_enum : Int,
+  enum_count : Int32,
+  variants_per_enum : Int32,
 ) -> ProgramManifest {
   let library = Buffer(size_hint=enum_count * variants_per_enum * 24)
   for enum_index in 0..<enum_count {
@@ -190,8 +190,8 @@ test "bench imported enum evidence enums=64 variants=8" (it : @bench.T) {
 
 ///|
 fn imported_struct_benchmark_manifest(
-  struct_count : Int,
-  fields_per_struct : Int,
+  struct_count : Int32,
+  fields_per_struct : Int32,
 ) -> ProgramManifest {
   let library = Buffer(size_hint=struct_count * fields_per_struct * 24)
   for struct_index in 0..<struct_count {

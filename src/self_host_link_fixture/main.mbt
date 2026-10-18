@@ -14,7 +14,8 @@ fn main {
     )
     @sys.exit(2)
   }
-  let validate_each_phase = args.length() == 6 || args[6] != "--single-validation"
+  let validate_each_phase = args.length() == 6 ||
+    args[6] != "--single-validation"
   let core = @fs.read_file_to_bytes(args[1]) catch {
     error => {
       println(

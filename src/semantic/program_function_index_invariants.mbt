@@ -1,16 +1,16 @@
 ///|
 struct ProgramFunctionIndexFailure {
-  function_slot : Int
-  expected : Int
-  actual : Int
-  detail : Int
+  function_slot : Int32
+  expected : Int32
+  actual : Int32
+  detail : Int32
 } derive(Eq, Debug)
 
 ///|
 fn record_program_function_index(
   seen : Array[Bool],
-  index : Int,
-  slot : Int,
+  index : Int32,
+  slot : Int32,
 ) -> Result[Unit, ProgramFunctionIndexFailure] {
   guard index >= 0 && index < seen.length() else {
     return Err({

@@ -1,12 +1,12 @@
 ///|
 pub struct ProgramIndex {
-  module_lookup : Map[ModuleId, Int]
+  module_lookup : Map[ModuleId, Int32]
   indexed_modules : Array[PlannedModuleLowering]
 }
 
 ///|
 fn build_program_index(modules : Array[PlannedModuleLowering]) -> ProgramIndex {
-  let module_lookup : Map[ModuleId, Int] = Map::default()
+  let module_lookup : Map[ModuleId, Int32] = Map::default()
   for module_index, module_ in modules {
     if module_lookup.contains(module_.module_id) {
       abort("duplicate module identity in program index")
@@ -20,7 +20,7 @@ fn build_program_index(modules : Array[PlannedModuleLowering]) -> ProgramIndex {
 pub fn ProgramIndex::module_index(
   self : ProgramIndex,
   module_id : ModuleId,
-) -> Int? {
+) -> Int32? {
   match check_program_module_index(self, module_id) {
     Ok(selected) => selected
     Err(failure) => abort(@debug.to_string(failure))
@@ -31,12 +31,12 @@ pub fn ProgramIndex::module_index(
 pub fn ProgramIndex::declaration_owner(
   self : ProgramIndex,
   declaration : DeclId,
-) -> Int? {
+) -> Int32? {
   self.module_index(semantic_id_module(declaration))
 }
 
 ///|
-pub fn ProgramIndex::body_owner(self : ProgramIndex, body : BodyId) -> Int? {
+pub fn ProgramIndex::body_owner(self : ProgramIndex, body : BodyId) -> Int32? {
   self.module_index(semantic_id_module(body))
 }
 
@@ -44,7 +44,7 @@ pub fn ProgramIndex::body_owner(self : ProgramIndex, body : BodyId) -> Int? {
 pub fn ProgramIndex::implementation_owner(
   self : ProgramIndex,
   implementation : DeclId,
-) -> Int? {
+) -> Int32? {
   self.declaration_owner(implementation)
 }
 
@@ -52,7 +52,7 @@ pub fn ProgramIndex::implementation_owner(
 pub fn ProgramIndex::type_owner(
   self : ProgramIndex,
   declaration : DeclId,
-) -> Int? {
+) -> Int32? {
   self.declaration_owner(declaration)
 }
 
@@ -60,7 +60,7 @@ pub fn ProgramIndex::type_owner(
 pub fn ProgramIndex::variant_owner(
   self : ProgramIndex,
   variant : VariantId,
-) -> Int? {
+) -> Int32? {
   self.module_index(semantic_id_module(variant))
 }
 
@@ -103,8 +103,8 @@ pub struct PlannedProgramSpecializedCall {
 pub struct PlannedProgramWasmFunction {
   declaration : DeclId
   lambda : LambdaId
-  module_index : Int
-  fragment_index : Int
+  module_index : Int32
+  fragment_index : Int32
   name : Bytes
   visibility : SemanticVisibility
   is_test : Bool
@@ -113,20 +113,20 @@ pub struct PlannedProgramWasmFunction {
   kind : PlannedWasmFunctionKind
   direct_builtin : Bytes
   elided : Bool
-  signature_type_index : Int
-  mut function_index : Int
+  signature_type_index : Int32
+  mut function_index : Int32
   parameters : HirSpan
   results : HirSpan
   specialization_shapes : HirSpan
   specialization_evidence : HirSpan
   specialization_abi_key : String
-  erased_adapter_target : Int
+  erased_adapter_target : Int32
   offset : UInt64
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramExternalTypeReference {
-  module_index : Int
+  module_index : Int32
   declaration : DeclId
 } derive(Eq, Debug)
 
@@ -146,80 +146,80 @@ pub struct PlannedProgramSpecializationPlan {
   modules : Array[PlannedModuleWasmGCFragments]
   external_type_references : Array[PlannedProgramExternalTypeReference]
   specialized_calls : Array[PlannedProgramSpecializedCall]
-  specialized_call_runtime_evidence_parameters : Array[Int]
+  specialized_call_runtime_evidence_parameters : Array[Int32]
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference]
-  evidence_function_reference_runtime_evidence_parameters : Array[Int]
+  evidence_function_reference_runtime_evidence_parameters : Array[Int32]
 }
 
 ///|
 pub struct PlannedProgramModuleInitializer {
   declaration : DeclId
-  module_index : Int
+  module_index : Int32
   body : BodyId
   shape : PlannedValueShape
   test_only : Bool
   constant : Bool
-  global_index : Int
-  function_index : Int
+  global_index : Int32
+  function_index : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramWasmPhysicalType {
-  module_index : Int
-  fragment_index : Int
+  module_index : Int32
+  fragment_index : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramWasmRecursiveGroup {
   types : HirSpan
-  first_type_index : Int
+  first_type_index : Int32
 } derive(Eq, Debug)
 
 ///|
 pub enum PlannedProgramWasmSignatureTypeKind {
-  PlannedProgramFunctionType(Int)
-  PlannedProgramFunctionSignature(Int)
+  PlannedProgramFunctionType(Int32)
+  PlannedProgramFunctionSignature(Int32)
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramWasmSignatureType {
-  module_index : Int
-  type_index : Int
+  module_index : Int32
+  type_index : Int32
   kind : PlannedProgramWasmSignatureTypeKind
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramTraitDictionaryGlobal {
-  module_index : Int
-  dictionary_index : Int
-  global_index : Int
+  module_index : Int32
+  dictionary_index : Int32
+  global_index : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramFunctionReferenceSingleton {
-  module_index : Int
+  module_index : Int32
   declaration : DeclId
-  function_index : Int
-  specialization_module_index : Int
+  function_index : Int32
+  specialization_module_index : Int32
   specialization_shapes : HirSpan
-  signature_type_index : Int
-  global_index : Int
+  signature_type_index : Int32
+  global_index : Int32
 } derive(Eq, Debug)
 
 ///|
 pub struct PlannedProgramWasmGCLink {
-  root_module_index : Int
+  root_module_index : Int32
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
-  module_type_bases : Array[Int]
-  module_signature_indices : Array[Array[Int]]
-  module_type_indices : Array[Array[Int]]
+  module_type_bases : Array[Int32]
+  module_signature_indices : Array[Array[Int32]]
+  module_type_indices : Array[Array[Int32]]
   program_type_groups : Array[PlannedProgramWasmRecursiveGroup]
   program_signature_types : Array[PlannedProgramWasmSignatureType]
   program_physical_types : Array[PlannedProgramWasmPhysicalType]
   functions : Array[PlannedProgramWasmFunction]
-  function_lookup : Map[DeclId, Int]
-  specialized_call_lookup : Map[ProgramSpecializedCallKey, Int]
+  function_lookup : Map[DeclId, Int32]
+  specialized_call_lookup : Map[ProgramSpecializedCallKey, Int32]
   specialized_call_targets : Map[
     ProgramSpecializedCallKey,
     PlannedProgramPhysicalCallTarget,
@@ -228,25 +228,25 @@ pub struct PlannedProgramWasmGCLink {
     ProgramSpecializedCallKey,
     HirSpan,
   ]
-  specialized_call_runtime_evidence_parameters : Array[Int]
+  specialized_call_runtime_evidence_parameters : Array[Int32]
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference]
-  evidence_function_reference_runtime_evidence_parameters : Array[Int]
+  evidence_function_reference_runtime_evidence_parameters : Array[Int32]
   initializers : Array[PlannedProgramModuleInitializer]
-  global_lookup : Map[DeclId, Int]
+  global_lookup : Map[DeclId, Int32]
   function_reference_singletons : Array[
     PlannedProgramFunctionReferenceSingleton,
   ]
   trait_dictionary_globals : Array[PlannedProgramTraitDictionaryGlobal]
-  initializer_type_index : Int
-  startup_function_index : Int
-  type_lookup : Map[DeclId, Int]
-  module_lookup : Map[ModuleId, Int]
-  erased_box_type_indices : Array[Int]
-  fixed_array_type_base : Int
-  type_count : Int
-  imported_function_count : Int
-  defined_function_count : Int
-  imported_function_indices : Map[Bytes, Int]
+  initializer_type_index : Int32
+  startup_function_index : Int32
+  type_lookup : Map[DeclId, Int32]
+  module_lookup : Map[ModuleId, Int32]
+  erased_box_type_indices : Array[Int32]
+  fixed_array_type_base : Int32
+  type_count : Int32
+  imported_function_count : Int32
+  defined_function_count : Int32
+  imported_function_indices : Map[Bytes, Int32]
   diagnostics : Array[ProgramWasmGCLinkDiagnostic]
 }
 
@@ -263,7 +263,7 @@ pub fn program_specialized_call_key(
 pub fn PlannedProgramWasmGCLink::imported_function_index(
   self : PlannedProgramWasmGCLink,
   name : Bytes,
-) -> Int {
+) -> Int32 {
   self.imported_function_indices.get(name).unwrap_or(-1)
 }
 
@@ -313,7 +313,8 @@ pub fn PlannedProgramWasmGCLink::erased_adapter_target_function(
   }
   let mut target = None
   for candidate in self.functions {
-    if candidate.function_index == adapter.erased_adapter_target && !candidate.elided {
+    if candidate.function_index == adapter.erased_adapter_target &&
+      !candidate.elided {
       if candidate.kind is PlannedWasmInlineBuiltinFunction(_) ||
         candidate.kind is PlannedWasmInlineHeapFunction(_) ||
         candidate.kind is PlannedWasmSignatureOnlyFunction {
@@ -331,7 +332,7 @@ pub fn PlannedProgramWasmGCLink::erased_adapter_target_function(
 ///|
 pub fn PlannedProgramWasmGCLink::materialized_specialization_count(
   self : PlannedProgramWasmGCLink,
-) -> Int {
+) -> Int32 {
   let mut count = 0
   for function_ in self.functions {
     if function_.specialization_shapes.length > 0 &&
@@ -347,9 +348,9 @@ pub fn PlannedProgramWasmGCLink::materialized_specialization_count(
 ///|
 pub fn PlannedProgramWasmGCLink::trait_dictionary_global(
   self : PlannedProgramWasmGCLink,
-  module_index : Int,
-  dictionary_index : Int,
-) -> Int {
+  module_index : Int32,
+  dictionary_index : Int32,
+) -> Int32 {
   for dictionary in self.trait_dictionary_globals {
     if dictionary.module_index == module_index &&
       dictionary.dictionary_index == dictionary_index {
@@ -362,9 +363,9 @@ pub fn PlannedProgramWasmGCLink::trait_dictionary_global(
 ///|
 pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(
   self : PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   declaration : DeclId,
-) -> Int {
+) -> Int32 {
   ignore(module_index)
   for singleton in self.function_reference_singletons {
     if singleton.declaration == declaration &&
@@ -381,8 +382,8 @@ pub fn PlannedProgramWasmGCLink::specialized_function_reference_singleton_global
   declaration : DeclId,
   shapes : Array[PlannedValueShape],
   span : HirSpan,
-  signature_type_index : Int,
-) -> Int {
+  signature_type_index : Int32,
+) -> Int32 {
   for singleton in self.function_reference_singletons {
     if singleton.declaration == declaration &&
       singleton.specialization_shapes.length > 0 &&
@@ -442,9 +443,9 @@ pub fn PlannedProgramWasmGCLink::specialized_function_of_exact_shapes(
 ///|
 pub fn PlannedProgramWasmGCLink::signature_type_index(
   self : PlannedProgramWasmGCLink,
-  module_index : Int,
-  local_type_index : Int,
-) -> Int {
+  module_index : Int32,
+  local_type_index : Int32,
+) -> Int32 {
   if module_index < 0 || module_index >= self.module_signature_indices.length() {
     return -1
   }
@@ -463,9 +464,9 @@ pub fn PlannedProgramWasmGCLink::signature_type_index(
 ///|
 pub fn PlannedProgramWasmGCLink::physical_type_index(
   self : PlannedProgramWasmGCLink,
-  module_index : Int,
-  local_type_index : Int,
-) -> Int {
+  module_index : Int32,
+  local_type_index : Int32,
+) -> Int32 {
   if module_index < 0 || module_index >= self.module_type_indices.length() {
     return -1
   }
@@ -689,7 +690,7 @@ fn program_link_validate_calls(
   lowering : PlannedProgramLowering,
   modules : Array[PlannedModuleWasmGCFragments],
   functions : Array[PlannedProgramWasmFunction],
-  lookup : Map[DeclId, Int],
+  lookup : Map[DeclId, Int32],
   specialized_calls : Array[PlannedProgramSpecializedCall],
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
@@ -893,7 +894,7 @@ fn program_link_validate_calls(
 fn program_link_validate_external_type(
   module_id : ModuleId,
   declaration : DeclId,
-  type_lookup : Map[DeclId, Int],
+  type_lookup : Map[DeclId, Int32],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
   if !type_lookup.contains(declaration) {
@@ -904,7 +905,7 @@ fn program_link_validate_external_type(
 ///|
 fn program_link_validate_types(
   fragments : PlannedProgramSpecializationPlan,
-  type_lookup : Map[DeclId, Int],
+  type_lookup : Map[DeclId, Int32],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
   for reference in fragments.external_type_references {

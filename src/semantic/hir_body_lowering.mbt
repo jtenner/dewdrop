@@ -25,10 +25,10 @@ let body_finish_arm = 7
 ///|
 fn CollectionBuilder::push_body_task(
   self : CollectionBuilder,
-  kind : Int,
-  source : Int,
-  first_start : Int,
-  second_start : Int,
+  kind : Int32,
+  source : Int32,
+  first_start : Int32,
+  second_start : Int32,
 ) -> Unit {
   self.body_task_kinds.push(kind)
   self.body_task_sources.push(source)
@@ -149,7 +149,7 @@ fn CollectionBuilder::emit_pattern(
 ///|
 fn CollectionBuilder::visit_expr_source(
   self : CollectionBuilder,
-  source_index : Int,
+  source_index : Int32,
 ) -> Unit {
   let source = self.body_expr_sources[source_index]
   match source {
@@ -300,7 +300,7 @@ fn CollectionBuilder::visit_expr_source(
 fn CollectionBuilder::append_object_fields(
   self : CollectionBuilder,
   source : Array[@parser.ObjectField],
-  result_start : Int,
+  result_start : Int32,
 ) -> HirSpan {
   let start = self.object_fields.length()
   for index, field in source {
@@ -317,9 +317,9 @@ fn CollectionBuilder::append_object_fields(
 ///|
 fn CollectionBuilder::finish_expr_source(
   self : CollectionBuilder,
-  source_index : Int,
-  first_start : Int,
-  second_start : Int,
+  source_index : Int32,
+  first_start : Int32,
+  second_start : Int32,
 ) -> Unit {
   let source = self.body_expr_sources[source_index]
   let expression = match source {
@@ -470,7 +470,7 @@ fn CollectionBuilder::finish_expr_source(
 ///|
 fn CollectionBuilder::visit_block_source(
   self : CollectionBuilder,
-  source_index : Int,
+  source_index : Int32,
 ) -> Unit {
   let source = self.body_block_sources[source_index]
   self.local_type_scopes.push(self.local_type_bindings)
@@ -504,8 +504,8 @@ fn CollectionBuilder::visit_block_source(
 ///|
 fn CollectionBuilder::finish_block_source(
   self : CollectionBuilder,
-  source_index : Int,
-  expr_start : Int,
+  source_index : Int32,
+  expr_start : Int32,
 ) -> Unit {
   let source = self.body_block_sources[source_index]
   let item_start = self.block_items.length()
@@ -576,7 +576,7 @@ fn CollectionBuilder::finish_block_source(
 ///|
 fn CollectionBuilder::visit_pattern_source(
   self : CollectionBuilder,
-  source_index : Int,
+  source_index : Int32,
 ) -> Unit {
   let source = self.body_pattern_sources[source_index]
   match source {
@@ -654,8 +654,8 @@ fn CollectionBuilder::visit_pattern_source(
 ///|
 fn CollectionBuilder::finish_pattern_source(
   self : CollectionBuilder,
-  source_index : Int,
-  first_start : Int,
+  source_index : Int32,
+  first_start : Int32,
 ) -> Unit {
   let source = self.body_pattern_sources[source_index]
   let pattern = match source {
@@ -736,7 +736,7 @@ fn CollectionBuilder::finish_pattern_source(
 ///|
 fn CollectionBuilder::visit_arm_source(
   self : CollectionBuilder,
-  source_index : Int,
+  source_index : Int32,
 ) -> Unit {
   let source = self.body_arm_sources[source_index]
   let pattern_start = self.body_pattern_results.length()
@@ -753,9 +753,9 @@ fn CollectionBuilder::visit_arm_source(
 ///|
 fn CollectionBuilder::finish_arm_source(
   self : CollectionBuilder,
-  source_index : Int,
-  pattern_start : Int,
-  expr_start : Int,
+  source_index : Int32,
+  pattern_start : Int32,
+  expr_start : Int32,
 ) -> Unit {
   let source = self.body_arm_sources[source_index]
   let guard_condition = if source.guard_condition is Some(_) {
@@ -837,16 +837,16 @@ fn CollectionBuilder::append_body(
   declaration : DeclId,
   kind : HirBodyKind,
   root : HirBodyRoot,
-  expression_start : Int,
-  expression_child_start : Int,
-  block_start : Int,
-  block_item_start : Int,
-  pattern_start : Int,
-  pattern_child_start : Int,
-  arm_start : Int,
-  arm_child_start : Int,
-  object_field_start : Int,
-  pattern_field_start : Int,
+  expression_start : Int32,
+  expression_child_start : Int32,
+  block_start : Int32,
+  block_item_start : Int32,
+  pattern_start : Int32,
+  pattern_child_start : Int32,
+  arm_start : Int32,
+  arm_child_start : Int32,
+  object_field_start : Int32,
+  pattern_field_start : Int32,
   offset : UInt64,
 ) -> Unit {
   let body_index = self.bodies.length()

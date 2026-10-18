@@ -1,17 +1,17 @@
 ///|
-pub type ExprId = Int
+pub type ExprId = Int32
 
 ///|
-pub type PatternId = Int
+pub type PatternId = Int32
 
 ///|
-pub type BlockId = Int
+pub type BlockId = Int32
 
 ///|
-pub type PatternArmId = Int
+pub type PatternArmId = Int32
 
 ///|
-pub type LambdaId = Int
+pub type LambdaId = Int32
 
 ///|
 pub enum HirBodyKind {
@@ -232,7 +232,7 @@ pub enum HirExpr {
   HirCallExpr(ExprId, HirSpan, UInt64)
   HirFieldExpr(ExprId, NameId, UInt64)
   HirQualifiedExpr(ExprId, NameId, UInt64)
-  HirProductFieldExpr(ExprId, Int, Int, UInt64)
+  HirProductFieldExpr(ExprId, Int32, Int32, UInt64)
   HirIndexExpr(ExprId, ExprId, UInt64)
   HirAssignmentExpr(ExprId, ExprId, UInt64)
   HirIndexSetExpr(ExprId, ExprId, ExprId, UInt64)

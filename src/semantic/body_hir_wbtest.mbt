@@ -402,7 +402,7 @@ test "if blocks and struct rest patterns lower without recursive AST retention" 
 }
 
 ///|
-fn large_object_body(field_count : Int) -> Bytes {
+fn large_object_body(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 28 + 24)
   output.write_string_utf8("let object = {\n")
   for index in 0..<field_count {
@@ -432,7 +432,7 @@ test "large object bodies lower iteratively by field count" {
 }
 
 ///|
-fn large_match_body(arm_count : Int) -> Bytes {
+fn large_match_body(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 24 + 48)
   output.write_string_utf8("let result = match state {\n")
   for index in 0..<arm_count {
@@ -463,7 +463,7 @@ test "large match bodies lower iteratively by arm count" {
 }
 
 ///|
-fn deeply_nested_if_body(depth : Int) -> Bytes {
+fn deeply_nested_if_body(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 36 + 32)
   output.write_string_utf8("let result = ")
   for index in 0..<depth {
@@ -497,7 +497,7 @@ test "deep else-if body lowering remains iterative" {
 }
 
 ///|
-fn deeply_prefixed_let(depth : Int) -> Bytes {
+fn deeply_prefixed_let(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth + 24)
   output.write_string_utf8("let deep = ")
   for _ in 0..<depth {

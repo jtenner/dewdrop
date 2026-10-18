@@ -1,7 +1,7 @@
 ///|
 fn starshine_module_value_test_module(
   source : Bytes,
-  test_mode? : Bool = false,
+  test_mode~ : Bool = false,
 ) -> @lib.Module {
   let program = @semantic.collect_program_manifest(
     24149UL,

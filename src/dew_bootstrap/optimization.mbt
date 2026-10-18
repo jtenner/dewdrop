@@ -222,7 +222,7 @@ fn bootstrap_optimize_wasm(
   plan : BootstrapOptimization,
   input : String,
   output : String,
-) -> Int {
+) -> Int32 {
   bootstrap_ensure_directory(bootstrap_dirname(output))
   let temporary = output + ".dew-opt-\{bootstrap_process_id()}"
   @fs.remove_file(temporary) catch {
@@ -252,7 +252,7 @@ fn bootstrap_optimize_wasm(
 fn bootstrap_optimize_command(
   repository : String,
   arguments : Array[String],
-) -> Int {
+) -> Int32 {
   let has_profile = arguments.contains("--optimize") ||
     arguments.contains("--starshine-pass")
   let plan = bootstrap_optimization_or_fail(

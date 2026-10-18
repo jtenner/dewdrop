@@ -67,7 +67,7 @@ test "module value dependencies group mutual and self cycles" {
 }
 
 ///|
-fn long_module_value_chain(length : Int) -> Bytes {
+fn long_module_value_chain(length : Int32) -> Bytes {
   let output = Buffer(size_hint=length * 32)
   for index in 0..<length {
     output.write_string_utf8("let value_")

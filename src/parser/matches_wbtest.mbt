@@ -1,5 +1,5 @@
 ///|
-fn large_match_expression(arm_count : Int) -> Bytes {
+fn large_match_expression(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 28 + 32)
   output.write_string_utf8("match value {\n")
   for index in 0..<arm_count {
@@ -14,7 +14,7 @@ fn large_match_expression(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn large_alternative_match_expression(pattern_count : Int) -> Bytes {
+fn large_alternative_match_expression(pattern_count : Int32) -> Bytes {
   let output = Buffer(size_hint=pattern_count * 18 + 48)
   output.write_string_utf8("match value {\n  ")
   for index in 0..<pattern_count {

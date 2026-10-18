@@ -11,7 +11,7 @@ pub enum PlannedCallableKind {
 pub struct PlannedParameter {
   parameter : ParameterId
   declaration : DeclId
-  index : Int
+  index : Int32
   receiver : Bool
   type_ : ResolvedTypeId
   shape : PlannedValueShape
@@ -43,7 +43,7 @@ pub struct PlannedCallable {
 pub struct PlannedModuleFunctions {
   module_id : ModuleId
   callables : Array[PlannedCallable]
-  callable_by_declaration : Array[Int]
+  callable_by_declaration : Array[Int32]
   parameters : Array[PlannedParameter]
 } derive(Eq, Debug)
 
@@ -76,14 +76,31 @@ fn check_planned_callable_lookup(
     return Ok(None)
   }
   guard callable >= 0 && callable < functions.callables.length() else {
-    return Err(physical_type_failure(functions.module_id, declaration, 105,
-      functions.callables.length().to_uint64(), callable.reinterpret_as_uint().to_uint64(),
-      0UL, declaration_index))
+    return Err(
+      physical_type_failure(
+        functions.module_id,
+        declaration,
+        105,
+        functions.callables.length().to_uint64(),
+        callable.reinterpret_as_uint().to_uint64(),
+        0UL,
+        declaration_index,
+      ),
+    )
   }
   let selected = functions.callables[callable]
   guard selected.declaration == declaration else {
-    return Err(physical_type_failure(functions.module_id, declaration, 106,
-      declaration, selected.declaration, 0UL, callable))
+    return Err(
+      physical_type_failure(
+        functions.module_id,
+        declaration,
+        106,
+        declaration,
+        selected.declaration,
+        0UL,
+        callable,
+      ),
+    )
   }
   Ok(Some(selected))
 }

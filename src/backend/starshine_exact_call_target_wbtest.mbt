@@ -1,6 +1,6 @@
 ///|
 fn exact_call_target_test_stages(
-  two? : Bool = false,
+  two~ : Bool = false,
 ) -> BackendCompilerTestStages raise {
   let program = @semantic.collect_program_manifest(
     28121UL,

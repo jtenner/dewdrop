@@ -1,7 +1,7 @@
 ///|
 priv struct PlannedBodySyntaxWalk {
-  ends : Array[Int]
-  states : Array[Int]
+  ends : Array[Int32]
+  states : Array[Int32]
   // One event word: node in the high bits, enter/leave in the low bit.
   events : Array[UInt64]
 }
@@ -9,9 +9,9 @@ priv struct PlannedBodySyntaxWalk {
 ///|
 fn PlannedBodyChildChecker::syntax_child(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  child : Int,
-  tag : Int,
+  parent : Int32,
+  child : Int32,
+  tag : Int32,
 ) -> Unit {
   let walk = match self.syntax_walk {
     Some(walk) => walk
@@ -52,7 +52,7 @@ fn PlannedBodyChildChecker::verify_syntax_graph(
   self : PlannedBodyChildChecker,
 ) -> Unit {
   let body = self.body
-  let ends : Array[Int] = []
+  let ends : Array[Int32] = []
   let mut total = 0
   for
     length in [

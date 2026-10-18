@@ -7,9 +7,9 @@ fn starshine_append_specialized_callback_types(
   specialization : StarshineGenericSpecialization,
   type_ : @semantic.ResolvedTypeId,
   original : Array[@lib.ValType],
-  position : Int,
+  position : Int32,
   output : Array[@lib.ValType],
-) -> Int {
+) -> Int32 {
   guard type_ >= 0 && type_ < lowering.resolved_types.length() else {
     abort("callback type is outside the resolved type arena: \{type_}")
   }
@@ -66,7 +66,7 @@ fn starshine_program_find_signature_by_types(
   planned : @semantic.PlannedProgramWasmGCLink,
   parameters : Array[@lib.ValType],
   results : Array[@lib.ValType],
-) -> Int {
+) -> Int32 {
   for candidate in planned.program_signature_types {
     let module_ = planned.modules[candidate.module_index]
     let (source_parameters, source_results) = match candidate.kind {
@@ -122,9 +122,9 @@ fn starshine_specialize_callback_signature(
   planned : @semantic.PlannedProgramWasmGCLink,
   module_ : @semantic.PlannedModuleWasmGCFragments,
   function_type : @semantic.ResolvedTypeId,
-  template : Int,
+  template : Int32,
   specialization : StarshineGenericSpecialization,
-) -> (Int, Int)? {
+) -> (Int32, Int32)? {
   if function_type < 0 || function_type >= lowering.resolved_types.length() {
     return None
   }

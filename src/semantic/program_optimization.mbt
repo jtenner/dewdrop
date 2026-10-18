@@ -8,7 +8,7 @@ fn program_effect_summary_block_is_discardable(
   module_ : PlannedModuleLowering,
   block : BlockId,
   summaries : Map[DeclId, ProgramCallableEffectSummary],
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if block < 0 ||
     block >= module_.blocks.length() ||
@@ -42,7 +42,7 @@ fn program_effect_summary_arguments_are_discardable(
   module_ : PlannedModuleLowering,
   arguments : HirSpan,
   summaries : Map[DeclId, ProgramCallableEffectSummary],
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if arguments.start < 0 ||
     arguments.start + arguments.length > module_.expression_children.length() {
@@ -111,7 +111,7 @@ fn program_effect_summary_expression_is_discardable(
   module_ : PlannedModuleLowering,
   expression : ExprId,
   summaries : Map[DeclId, ProgramCallableEffectSummary],
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -367,7 +367,7 @@ fn transparent_callback_root_expression(
 
 ///|
 priv struct TransparentCallbackCallSummary {
-  parameter_count : Int
+  parameter_count : Int32
 }
 
 ///|
@@ -375,8 +375,8 @@ fn transparent_callback_local_parameter(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   local_id : LocalId,
-  depth : Int,
-) -> Int {
+  depth : Int32,
+) -> Int32 {
   if local_id < 0 ||
     local_id >= body.locals.length ||
     depth > body.locals.length {
@@ -436,7 +436,7 @@ fn transparent_callback_expression_parameter(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   expression : ExprId,
-) -> Int {
+) -> Int32 {
   let mut candidate = expression
   let mut remaining = module_.expressions.length() + 1
   while remaining > 0 {
@@ -461,7 +461,7 @@ fn transparent_callback_arguments_match_parameters(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   arguments : HirSpan,
-  first_parameter : Int,
+  first_parameter : Int32,
 ) -> Bool {
   if arguments.start < 0 ||
     arguments.start + arguments.length > module_.expression_children.length() {
@@ -539,9 +539,9 @@ fn program_callable_generic_parameters(
 
 ///|
 priv struct GenericParameterSelector {
-  parameter : Int
+  parameter : Int32
   trait_declaration : DeclId
-  evidence_slot : Int
+  evidence_slot : Int32
 }
 
 ///|
@@ -636,9 +636,9 @@ fn generic_parameter_selector(
 
 ///|
 priv struct GenericParameterSelectorCallSite {
-  module_index : Int
+  module_index : Int32
   expression : ExprId
-  root_body : Int
+  root_body : Int32
 }
 
 ///|
@@ -705,7 +705,7 @@ fn directize_generic_parameter_selectors(
   let uses : Map[DeclId, Array[GenericParameterSelectorCallSite]] = Map::default()
   let pending : Array[DeclId] = []
   for module_index, module_ in modules {
-    let roots : Map[ExprId, Int] = Map::default()
+    let roots : Map[ExprId, Int32] = Map::default()
     for body_index, body in module_.bodies {
       let root = generic_parameter_selector_root_expression(module_, body)
       if root >= 0 && root < module_.expressions.length() {
@@ -860,10 +860,10 @@ fn directize_transparent_callback_calls(
 priv enum RuntimeTraitFlow {
   PendingRuntimeTraitFlow
   UnknownRuntimeTraitFlow
-  ParameterRuntimeTraitFlow(Int)
+  ParameterRuntimeTraitFlow(Int32)
   ExactRuntimeTraitFlow(
     DeclId,
-    Int,
+    Int32,
     String,
     BodyTypeId,
     PlannedValueShape,
@@ -873,7 +873,7 @@ priv enum RuntimeTraitFlow {
 
 ///|
 priv struct RuntimeTraitBodyAnalysis {
-  expression_start : Int
+  expression_start : Int32
   flows : Array[RuntimeTraitFlow]
   locals : Array[RuntimeTraitFlow]
   assignments : Array[Array[ExprId]]
@@ -882,7 +882,7 @@ priv struct RuntimeTraitBodyAnalysis {
 ///|
 priv struct TransparentTraitCallSummary {
   requirement : DeclId
-  parameter_count : Int
+  parameter_count : Int32
   root_expression : ExprId
 }
 
@@ -891,7 +891,7 @@ priv struct RuntimeTraitDirectCallCandidate {
   expression : ExprId
   receiver : ExprId
   method_arguments : HirSpan
-  evidence : Int
+  evidence : Int32
   implementation_method : DeclId
 }
 
@@ -1405,7 +1405,7 @@ fn transparent_trait_call_summaries(
 ///|
 fn runtime_trait_implementation_method(
   modules : Array[PlannedModuleLowering],
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   implementation : DeclId,
   requirement : DeclId,
 ) -> DeclId {
@@ -1439,7 +1439,7 @@ fn runtime_trait_implementation_method(
 fn runtime_trait_owner_type_arguments(
   module_ : PlannedModuleLowering,
   root : BodyTypeId,
-  expected : Int,
+  expected : Int32,
 ) -> Array[BodyTypeId]? {
   if expected == 0 {
     return Some([])
@@ -1482,7 +1482,7 @@ fn runtime_trait_owner_type_arguments(
 ///|
 fn runtime_trait_direct_call_candidate(
   modules : Array[PlannedModuleLowering],
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   module_ : PlannedModuleLowering,
   analysis : RuntimeTraitBodyAnalysis,
   summaries : Map[DeclId, TransparentTraitCallSummary],
@@ -1815,7 +1815,7 @@ fn runtime_trait_directize_candidate(
 ///|
 fn directize_exact_runtime_trait_body(
   modules : Array[PlannedModuleLowering],
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   analysis : RuntimeTraitBodyAnalysis,
@@ -1936,7 +1936,7 @@ fn trait_parameter_selector(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   effects : Map[DeclId, ProgramCallableEffectSummary],
-) -> Int {
+) -> Int32 {
   let root_expression = transparent_callback_root_expression(
     module_, body, effects,
   )
@@ -1975,7 +1975,7 @@ fn directize_trait_parameter_selectors(
   modules : Array[PlannedModuleLowering],
   effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Array[DeclId] {
-  let selectors : Map[DeclId, Int] = Map::default()
+  let selectors : Map[DeclId, Int32] = Map::default()
   for module_ in modules {
     for body in module_.bodies {
       let selected = trait_parameter_selector(module_, body, effects)
@@ -2334,7 +2334,7 @@ fn program_fold_binary(
 ///|
 fn fold_program_constants(
   modules : Array[PlannedModuleLowering],
-  fold_immutable_locals? : Bool = false,
+  fold_immutable_locals~ : Bool = false,
 ) -> Unit {
   for module_ in modules {
     let local_sources = if fold_immutable_locals {
@@ -2390,7 +2390,7 @@ fn fold_program_constants(
 
 ///|
 priv enum ProgramInlineSummary {
-  ProgramInlineParameter(Int, Int)
+  ProgramInlineParameter(Int32, Int32)
   ProgramInlineConstant(PlannedExpressionKind)
 }
 
@@ -2543,7 +2543,7 @@ fn inline_program_calls_from_summaries(
 fn program_private_unit_enum_tag(
   module_ : PlannedModuleLowering,
   variant : VariantId,
-) -> Int {
+) -> Int32 {
   let variant_index = semantic_id_local(variant)
   if semantic_id_module(variant) != module_.module_id ||
     variant_index < 0 ||
@@ -2590,7 +2590,7 @@ fn program_can_scalarize_private_unit_enum_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
   declaration : DeclId,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -2653,7 +2653,7 @@ fn scalarize_program_private_unit_enum_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
   declaration : DeclId,
-  depth : Int,
+  depth : Int32,
 ) -> Unit {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -2901,7 +2901,7 @@ fn specialize_program_private_unit_enum_locals(
 fn program_private_unit_enum_parameter_declaration(
   module_ : PlannedModuleLowering,
   callable : PlannedCallable,
-  parameter : Int,
+  parameter : Int32,
 ) -> DeclId? {
   if parameter < 0 || parameter >= callable.parameters.length {
     return None
@@ -2921,7 +2921,7 @@ fn program_private_unit_enum_parameter_declaration(
 fn program_private_unit_enum_parameter_local(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
-  parameter : Int,
+  parameter : Int32,
   declaration : DeclId,
 ) -> LocalId {
   for local_id in 0..<body.locals.length {
@@ -2950,11 +2950,11 @@ fn program_private_unit_enum_parameter_local(
 fn program_private_unit_enum_parameter_call_sites(
   modules : Array[PlannedModuleLowering],
   declaration : DeclId,
-  parameter : Int,
-  parameter_count : Int,
+  parameter : Int32,
+  parameter_count : Int32,
   enum_declaration : DeclId,
-) -> Array[(Int, ExprId)]? {
-  let sites : Array[(Int, ExprId)] = []
+) -> Array[(Int32, ExprId)]? {
+  let sites : Array[(Int32, ExprId)] = []
   for module_index, module_ in modules {
     for expression in 0..<module_.expressions.length() {
       match module_.expressions[expression].kind {
@@ -3081,8 +3081,8 @@ fn program_private_unit_enum_result_consumers(
   modules : Array[PlannedModuleLowering],
   declaration : DeclId,
   enum_declaration : DeclId,
-) -> Array[(Int, ExprId, ExprId)]? {
-  let consumers : Array[(Int, ExprId, ExprId)] = []
+) -> Array[(Int32, ExprId, ExprId)]? {
+  let consumers : Array[(Int32, ExprId, ExprId)] = []
   for module_index, module_ in modules {
     for expression in 0..<module_.expressions.length() {
       match module_.expressions[expression].kind {
@@ -3230,7 +3230,7 @@ fn specialize_program_private_unit_enum_results(
 fn program_private_scalar_payload_enum_tag(
   module_ : PlannedModuleLowering,
   variant : VariantId,
-) -> Int {
+) -> Int32 {
   let variant_index = semantic_id_local(variant)
   if semantic_id_module(variant) != module_.module_id ||
     variant_index < 0 ||
@@ -3290,7 +3290,7 @@ fn program_can_scalarize_private_scalar_payload_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
   declaration : DeclId,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -3356,7 +3356,7 @@ fn scalarize_program_private_scalar_payload_expression(
   module_ : PlannedModuleLowering,
   expression : ExprId,
   declaration : DeclId,
-  depth : Int,
+  depth : Int32,
 ) -> Unit {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -3585,11 +3585,11 @@ fn scalarize_program_private_scalar_payload_local_matches(
 fn program_private_scalar_payload_parameter_call_sites(
   modules : Array[PlannedModuleLowering],
   declaration : DeclId,
-  parameter : Int,
-  parameter_count : Int,
+  parameter : Int32,
+  parameter_count : Int32,
   enum_declaration : DeclId,
-) -> Array[(Int, ExprId)]? {
-  let sites : Array[(Int, ExprId)] = []
+) -> Array[(Int32, ExprId)]? {
+  let sites : Array[(Int32, ExprId)] = []
   for module_index, module_ in modules {
     for expression in 0..<module_.expressions.length() {
       match module_.expressions[expression].kind {
@@ -3703,8 +3703,8 @@ fn program_private_scalar_payload_result_consumers(
   modules : Array[PlannedModuleLowering],
   declaration : DeclId,
   enum_declaration : DeclId,
-) -> Array[(Int, ExprId, ExprId)]? {
-  let consumers : Array[(Int, ExprId, ExprId)] = []
+) -> Array[(Int32, ExprId, ExprId)]? {
+  let consumers : Array[(Int32, ExprId, ExprId)] = []
   for module_index, module_ in modules {
     for expression in 0..<module_.expressions.length() {
       match module_.expressions[expression].kind {
@@ -3891,7 +3891,7 @@ fn prepare_program_optimization_mutation(
 ///|
 fn directize_exact_runtime_trait_flows(
   modules : Array[PlannedModuleLowering],
-  module_lookup : Map[ModuleId, Int],
+  module_lookup : Map[ModuleId, Int32],
   effects : Map[DeclId, ProgramCallableEffectSummary],
 ) -> Array[DeclId] {
   let selectors = directize_trait_parameter_selectors(modules, effects)
@@ -4083,8 +4083,8 @@ fn program_cse_elide_local_alias(
 priv struct ProgramLocalLiveRange {
   first_read : ExprId
   last_read : ExprId
-  reads : Int
-  writes : Int
+  reads : Int32
+  writes : Int32
 }
 
 ///|
@@ -4413,7 +4413,7 @@ fn program_local_get_count(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   local_id : LocalId,
-) -> (Int, ExprId) {
+) -> (Int32, ExprId) {
   let mut count = 0
   let mut selected = -1
   for
@@ -4457,7 +4457,7 @@ fn program_can_scalarize_joined_struct_field(
   field : FieldId,
   type_ : BodyTypeId,
   shape : PlannedValueShape,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -4548,7 +4548,7 @@ fn scalarize_joined_struct_field(
   field : FieldId,
   type_ : BodyTypeId,
   shape : PlannedValueShape,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -4748,7 +4748,7 @@ fn scalar_replace_struct_component_aliases(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   items : HirSpan,
-  item_index : Int,
+  item_index : Int32,
   local_id : LocalId,
   initializer : ExprId,
 ) -> Bool {
@@ -5034,7 +5034,7 @@ fn scalar_replace_repeated_same_struct_field_local(
 ///|
 fn scalar_replace_synthesized_struct_components(
   module_ : PlannedModuleLowering,
-  body_index : Int,
+  body_index : Int32,
 ) -> Bool {
   if body_index < 0 || body_index >= module_.bodies.length() {
     return false
@@ -5081,11 +5081,11 @@ fn scalar_replace_synthesized_struct_components(
       }
       let field_gets : Array[ExprId] = []
       let base_gets : Array[ExprId] = []
-      let field_indices : Array[Int] = []
+      let field_indices : Array[Int32] = []
       let first_field_get : Array[ExprId] = Array::make(fields.length, -1)
       let component_nominals : Array[DeclId] = Array::make(fields.length, 0UL)
       let alias_locals : Array[LocalId] = Array::make(fields.length, -1)
-      let alias_items : Array[Int] = Array::make(fields.length, -1)
+      let alias_items : Array[Int32] = Array::make(fields.length, -1)
       let mut valid = true
       for
         expression in body.expressions.start..<(body.expressions.start +
@@ -5566,7 +5566,7 @@ fn program_pattern_contains_binding(
   module_ : PlannedModuleLowering,
   pattern : PatternId,
   binding : LocalId,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
     return false
@@ -5640,8 +5640,8 @@ fn program_pattern_variant_relation(
   module_ : PlannedModuleLowering,
   pattern : PatternId,
   variant : VariantId,
-  depth : Int,
-) -> Int {
+  depth : Int32,
+) -> Int32 {
   if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
     return -1
   }
@@ -5702,7 +5702,7 @@ fn program_pattern_for_variant(
   module_ : PlannedModuleLowering,
   pattern : PatternId,
   variant : VariantId,
-  depth : Int,
+  depth : Int32,
 ) -> PatternId {
   if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
     return -1
@@ -5756,7 +5756,7 @@ fn program_can_scalarize_nested_pattern_binding(
   binding : LocalId,
   target_type : BodyTypeId,
   target_shape : PlannedValueShape,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if depth >= 64 ||
     pattern < 0 ||
@@ -5871,7 +5871,7 @@ fn scalarize_nested_pattern_binding(
   binding : LocalId,
   target_type : BodyTypeId,
   target_shape : PlannedValueShape,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if depth >= 64 ||
     pattern < 0 ||
@@ -6115,7 +6115,7 @@ fn program_variant_direct_binding_selector(
   arm : PlannedPatternArm,
   variant_expression : ExprId,
   variant : VariantId,
-) -> Int {
+) -> Int32 {
   if arm.body < 0 ||
     arm.body >= module_.expressions.length() ||
     variant_expression < 0 ||
@@ -6266,7 +6266,7 @@ fn program_nonconstant_guard_is_discardable(
 fn program_guarded_variant_selector_is_stable(
   module_ : PlannedModuleLowering,
   arms : HirSpan,
-  guarded_index : Int,
+  guarded_index : Int32,
   variant_expression : ExprId,
   variant : VariantId,
 ) -> Bool {
@@ -6415,7 +6415,7 @@ fn program_scalar_transform_binding_expression(
   module_ : PlannedModuleLowering,
   body : PlannedBodyLowering,
   expression : ExprId,
-  depth : Int,
+  depth : Int32,
   visited_locals : Array[LocalId],
 ) -> ExprId {
   if expression < 0 || expression >= module_.expressions.length() || depth >= 64 {
@@ -6619,7 +6619,7 @@ fn scalar_replace_program_guarded_variant_match(
   expression : ExprId,
   variant_expression : ExprId,
   arms : HirSpan,
-  guarded_index : Int,
+  guarded_index : Int32,
   variant : VariantId,
 ) -> Bool {
   if !program_scalar_replaceable_field_shape(
@@ -6659,7 +6659,7 @@ fn scalar_replace_program_guarded_variant_match(
   if values.length() == 0 {
     return false
   }
-  let selected_arms : Array[Int] = []
+  let selected_arms : Array[Int32] = []
   let selected_bindings : Array[Array[LocalId]] = []
   let canonical_bindings : Array[LocalId] = Array::make(values.length(), -1)
   let mut saw_nonconstant_guard = false
@@ -7145,8 +7145,8 @@ fn scalar_replace_program_variant_payload_reads(
     let expression_limit = module_.expressions.length()
     let block_limit = module_.blocks.length()
     let arm_limit = module_.pattern_arms.length()
-    let expression_insertions : Map[Int, Array[Int]] = {}
-    let block_insertions : Map[Int, Array[Int]] = {}
+    let expression_insertions : Map[Int32, Array[Int32]] = {}
+    let block_insertions : Map[Int32, Array[Int32]] = {}
     for expression in 0..<expression_limit {
       let scrutinee = match module_.expressions[expression].kind {
         PlannedMatchExpression(scrutinee, _) => scrutinee
@@ -7267,7 +7267,7 @@ fn program_pattern_has_same_constructor(
 fn program_pattern_is_variant_tree(
   module_ : PlannedModuleLowering,
   pattern : PatternId,
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if depth >= 64 || pattern < 0 || pattern >= module_.patterns.length() {
     return false
@@ -7303,7 +7303,7 @@ fn program_map_nested_pattern_bindings(
   canonical_pattern : PatternId,
   candidate_pattern : PatternId,
   binding_targets : Array[LocalId],
-  depth : Int,
+  depth : Int32,
 ) -> Bool {
   if depth >= 64 ||
     canonical_pattern < 0 ||
@@ -7510,9 +7510,9 @@ fn factor_program_variant_payload_extractions(
     let expression_limit = module_.expressions.length()
     let block_limit = module_.blocks.length()
     let arm_limit = module_.pattern_arms.length()
-    let expression_insertions : Map[Int, Array[Int]] = {}
-    let block_insertions : Map[Int, Array[Int]] = {}
-    let arm_insertions : Map[Int, Array[Int]] = {}
+    let expression_insertions : Map[Int32, Array[Int32]] = {}
+    let block_insertions : Map[Int32, Array[Int32]] = {}
+    let arm_insertions : Map[Int32, Array[Int32]] = {}
     for expression in 0..<expression_limit {
       let arms = match module_.expressions[expression].kind {
         PlannedMatchExpression(_, arms) => arms
@@ -7787,7 +7787,7 @@ fn mark_tail_position_expression(
   declaration : DeclId,
   result_shape : PlannedValueShape,
   branch_tail : Bool,
-  depth : Int,
+  depth : Int32,
 ) -> Unit {
   if expression < 0 ||
     expression >= module_.expressions.length() ||
@@ -7866,7 +7866,7 @@ fn mark_tail_position_block(
   declaration : DeclId,
   result_shape : PlannedValueShape,
   branch_tail : Bool,
-  depth : Int,
+  depth : Int32,
 ) -> Unit {
   if block < 0 ||
     block >= module_.blocks.length() ||

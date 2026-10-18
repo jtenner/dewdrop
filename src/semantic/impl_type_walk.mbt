@@ -1,14 +1,16 @@
-///| Malformed compiler type graphs are not ordinary signature mismatches.
+///|
+/// Malformed compiler type graphs are not ordinary signature mismatches.
 priv struct ImplTypeWalkFailure {
-  code : Int
+  code : Int32
   module_id : ModuleId
   root : ResolvedTypeId
-  expected : Int
-  actual : Int
-  detail : Int
+  expected : Int32
+  actual : Int32
+  detail : Int32
 } derive(Eq, Debug)
 
-///| Validate every reachable edge, including context substitution edges.
+///|
+/// Validate every reachable edge, including context substitution edges.
 // The result maps each visited type to its final substituted root. Structural
 // children retain their IDs and are translated through the same map on use.
 fn check_impl_type_graph(
@@ -16,19 +18,49 @@ fn check_impl_type_graph(
   root : ResolvedTypeId,
   context : ImplTypeContext,
 ) -> Result[Map[ResolvedTypeId, ResolvedTypeId], ImplTypeWalkFailure] {
-  fn failure(code : Int, expected : Int, actual : Int, detail : Int) -> ImplTypeWalkFailure {
-    { code, module_id: resolved.module_id, root, expected, actual, detail }
+  fn failure(
+    code : Int32,
+    expected : Int32,
+    actual : Int32,
+    detail : Int32,
+  ) -> ImplTypeWalkFailure {
+    { code, module_id: resolved.module_id, root, expected, actual, detail, }
   }
-  for span in [context.generic_parameters, context.method_parameters, context.method_arguments] {
-    if !program_specialization_span_is_valid(span, resolved.generic_parameter_types.length()) {
-      return Err(failure(101, resolved.generic_parameter_types.length(), span.start, span.length))
+  for
+    span in [
+      context.generic_parameters,
+      context.method_parameters,
+      context.method_arguments,
+    ] {
+    if !program_specialization_span_is_valid(
+        span,
+        resolved.generic_parameter_types.length(),
+      ) {
+      return Err(
+        failure(
+          101,
+          resolved.generic_parameter_types.length(),
+          span.start,
+          span.length,
+        ),
+      )
     }
   }
   let arguments = context.generic_arguments
-  if !program_specialization_span_is_valid(arguments, resolved.type_arguments.length()) {
-    return Err(failure(101, resolved.type_arguments.length(), arguments.start, arguments.length))
+  if !program_specialization_span_is_valid(
+      arguments,
+      resolved.type_arguments.length(),
+    ) {
+    return Err(
+      failure(
+        101,
+        resolved.type_arguments.length(),
+        arguments.start,
+        arguments.length,
+      ),
+    )
   }
-  let states : Map[ResolvedTypeId, Int] = {}
+  let states : Map[ResolvedTypeId, Int32] = {}
   let translated : Map[ResolvedTypeId, ResolvedTypeId] = {}
   let work = [(root, false)]
   while work.length() > 0 {
@@ -57,10 +89,16 @@ fn check_impl_type_graph(
         let slot = semantic_id_local(parameter)
         let owner = context.generic_parameters
         let method_span = context.method_parameters
-        if slot >= owner.start && slot - owner.start < owner.length && slot - owner.start < arguments.length {
+        if slot >= owner.start &&
+          slot - owner.start < owner.length &&
+          slot - owner.start < arguments.length {
           resolved.type_arguments[arguments.start + slot - owner.start]
-        } else if slot >= method_span.start && slot - method_span.start < method_span.length && slot - method_span.start < context.method_arguments.length {
-          resolved.generic_parameter_types[context.method_arguments.start + slot - method_span.start]
+        } else if slot >= method_span.start &&
+          slot - method_span.start < method_span.length &&
+          slot - method_span.start < context.method_arguments.length {
+          resolved.generic_parameter_types[context.method_arguments.start +
+          slot -
+          method_span.start]
         } else {
           id
         }
@@ -75,13 +113,24 @@ fn check_impl_type_graph(
     }
     let fields = match node {
       ProductType(span) | AppliedType(_, span) | FunctionType(span, _) => span
-      _ => { start: 0, length: 0 }
+      _ => { start: 0, length: 0, }
     }
-    if !program_specialization_span_is_valid(fields, resolved.type_arguments.length()) {
-      return Err(failure(101, resolved.type_arguments.length(), fields.start, fields.length))
+    if !program_specialization_span_is_valid(
+        fields,
+        resolved.type_arguments.length(),
+      ) {
+      return Err(
+        failure(
+          101,
+          resolved.type_arguments.length(),
+          fields.start,
+          fields.length,
+        ),
+      )
     }
     match node {
-      AppliedType(base, _) | MemberTypeProjection(base, _, _) => work.push((base, false))
+      AppliedType(base, _) | MemberTypeProjection(base, _, _) =>
+        work.push((base, false))
       FunctionType(_, result) => work.push((result, false))
       _ => ()
     }
@@ -94,7 +143,8 @@ fn check_impl_type_graph(
   Ok(translated)
 }
 
-///| Check both complete graphs before using identity or Error recovery.
+///|
+/// Check both complete graphs before using identity or Error recovery.
 fn check_impl_signature_types_equal(
   resolved : ResolvedModuleTypes,
   left_root : ResolvedTypeId,
@@ -102,15 +152,17 @@ fn check_impl_signature_types_equal(
   right_root : ResolvedTypeId,
   right_context : ImplTypeContext,
 ) -> Result[Bool, ImplTypeWalkFailure] {
-  let left_types = match check_impl_type_graph(resolved, left_root, left_context) {
+  let left_types = match
+    check_impl_type_graph(resolved, left_root, left_context) {
     Ok(types) => types
     Err(error) => return Err(error)
   }
-  let right_types = match check_impl_type_graph(resolved, right_root, right_context) {
+  let right_types = match
+    check_impl_type_graph(resolved, right_root, right_context) {
     Ok(types) => types
     Err(error) => return Err(error)
   }
-  let seen : Map[(Int, Int), Bool] = {}
+  let seen : Map[(Int32, Int32), Bool] = {}
   let work = [(left_root, right_root)]
   while work.length() > 0 {
     let (left_id, right_id) = work.pop().unwrap()
@@ -120,7 +172,8 @@ fn check_impl_signature_types_equal(
       continue
     }
     seen[(left, right)] = true
-    let (left_fields, right_fields) = match (resolved.types[left], resolved.types[right]) {
+    let (left_fields, right_fields) = match
+      (resolved.types[left], resolved.types[right]) {
       (ErrorType, _) | (_, ErrorType) => continue
       (ProductType(a), ProductType(b)) => (a, b)
       (AppliedType(a, fields_a), AppliedType(b, fields_b)) => {
@@ -131,7 +184,10 @@ fn check_impl_signature_types_equal(
         work.push((a, b))
         (fields_a, fields_b)
       }
-      (MemberTypeProjection(a, query_a, member_a), MemberTypeProjection(b, query_b, member_b)) => {
+      (
+        MemberTypeProjection(a, query_a, member_a),
+        MemberTypeProjection(b, query_b, member_b),
+      ) => {
         if query_a != query_b || member_a != member_b {
           return Ok(false)
         }
@@ -146,7 +202,12 @@ fn check_impl_signature_types_equal(
     let mut offset = left_fields.length
     while offset > 0 {
       offset -= 1
-      work.push((resolved.type_arguments[left_fields.start + offset], resolved.type_arguments[right_fields.start + offset]))
+      work.push(
+        (
+          resolved.type_arguments[left_fields.start + offset],
+          resolved.type_arguments[right_fields.start + offset],
+        ),
+      )
     }
   }
   Ok(true)

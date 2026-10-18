@@ -1,5 +1,5 @@
 ///|
-fn deep_generic_pattern_source(depth : Int) -> Bytes {
+fn deep_generic_pattern_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth * 12 + 160)
   output.write_string_utf8("enum Box<t> {\n  Boxed(t)\n}\nfn unwrap(value: ")
   for _ in 0..<depth {
@@ -47,7 +47,7 @@ test "pattern inference remains iterative through 512 generic payload levels" {
 }
 
 ///|
-fn many_loop_arms_source(arm_count : Int) -> Bytes {
+fn many_loop_arms_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 56 + 128)
   output.write_string_utf8("enum State {\n")
   for index in 0..<arm_count {

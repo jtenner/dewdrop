@@ -1,11 +1,11 @@
 ///|
 pub struct ProgramFunctionLookupFailure {
-  code : Int
-  phase : Int
+  code : Int32
+  phase : Int32
   module_id : ModuleId
   declaration : DeclId
   body : BodyId
-  expression : UInt
+  expression : UInt32
   expected : UInt64
   actual : UInt64
   detail : UInt64
@@ -14,7 +14,7 @@ pub struct ProgramFunctionLookupFailure {
 ///|
 fn program_function_lookup_failure(
   declaration : DeclId,
-  code : Int,
+  code : Int32,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
@@ -48,7 +48,7 @@ fn check_program_named_function_lookup(
 fn check_program_source_function_lookup(
   link : PlannedProgramWasmGCLink,
   declaration : DeclId,
-  index : Int,
+  index : Int32,
   plain : Bool,
 ) -> Result[PlannedProgramWasmFunction?, ProgramFunctionLookupFailure] {
   guard index >= 0 && index < link.functions.length() else {

@@ -8,29 +8,36 @@ pub enum BodyInferenceDiagnostic {
   ImmutableAssignmentTarget(ExprId, UInt64)
   FunctionReferenceExpectedTypeRequired(NameId, ExprId, UInt64)
   NoMatchingFunctionReference(NameId, ExprId, UInt64)
-  AmbiguousFunctionReference(NameId, ExprId, DeclId, DeclId, Int, UInt64)
-  FunctionCallArgumentCountMismatch(ExprId, Int, Int, UInt64)
-  CallArgumentCountMismatch(ExprId, DeclId, Int, Int, UInt64)
-  CallTypeArgumentCountMismatch(ExprId, DeclId, Int, Int, UInt64)
+  AmbiguousFunctionReference(NameId, ExprId, DeclId, DeclId, Int32, UInt64)
+  FunctionCallArgumentCountMismatch(ExprId, Int32, Int32, UInt64)
+  CallArgumentCountMismatch(ExprId, DeclId, Int32, Int32, UInt64)
+  CallTypeArgumentCountMismatch(ExprId, DeclId, Int32, Int32, UInt64)
   NoMatchingCallOverload(NameId, ExprId, UInt64)
-  AmbiguousCallOverload(NameId, ExprId, DeclId, DeclId, Int, UInt64)
-  UnresolvedCallTypeArgument(ExprId, Int, UInt64)
+  AmbiguousCallOverload(NameId, ExprId, DeclId, DeclId, Int32, UInt64)
+  UnresolvedCallTypeArgument(ExprId, Int32, UInt64)
   UnresolvedModuleValue(DeclId, UInt64)
   InvalidPatternConstructor(PatternId, UInt64)
   UnknownVariantForType(NameId, DeclId, PatternId, UInt64)
-  AmbiguousPatternVariant(NameId, PatternId, VariantId, VariantId, Int, UInt64)
+  AmbiguousPatternVariant(
+    NameId,
+    PatternId,
+    VariantId,
+    VariantId,
+    Int32,
+    UInt64
+  )
   PatternPayloadKindMismatch(PatternId, UInt64, UInt64)
-  PatternPayloadArityMismatch(PatternId, Int, Int, UInt64)
+  PatternPayloadArityMismatch(PatternId, Int32, Int32, UInt64)
   UnknownPatternField(NameId, PatternId, UInt64)
   MissingPatternField(NameId, PatternId, UInt64)
   MissingImportedPatternField(String, PatternId, UInt64)
-  UnresolvedPatternTypeArgument(PatternId, Int, UInt64)
+  UnresolvedPatternTypeArgument(PatternId, Int32, UInt64)
   InvalidConstructionTarget(ExprId, UInt64)
   ObjectTypeRequired(ExprId, UInt64)
   ConstructionPayloadKindMismatch(ExprId, UInt64, UInt64)
-  ConstructionPayloadArityMismatch(ExprId, VariantId, Int, Int, UInt64)
+  ConstructionPayloadArityMismatch(ExprId, VariantId, Int32, Int32, UInt64)
   UnknownVariantValue(NameId, ExprId, UInt64)
-  AmbiguousVariantValue(NameId, ExprId, VariantId, VariantId, Int, UInt64)
+  AmbiguousVariantValue(NameId, ExprId, VariantId, VariantId, Int32, UInt64)
   DuplicateConstructionField(NameId, UInt64, UInt64)
   UnknownConstructionField(NameId, ExprId, UInt64)
   MissingConstructionField(NameId, ExprId, UInt64)
@@ -39,10 +46,10 @@ pub enum BodyInferenceDiagnostic {
   UnknownQualifiedMember(NameId, DeclId, ExprId, UInt64)
   UnknownImportedModuleMember(NameId, ExprId, UInt64)
   NoMatchingMethod(NameId, ExprId, UInt64)
-  AmbiguousMethod(NameId, ExprId, DeclId, DeclId, Int, UInt64)
+  AmbiguousMethod(NameId, ExprId, DeclId, DeclId, Int32, UInt64)
   UnsatisfiedTraitObligation(DeclId, GenericParameterId, DeclId, ExprId, UInt64)
   TraitObligationFailure(DeclId, ExprId, String, UInt64)
-  UnresolvedExpressionTypeArgument(ExprId, Int, UInt64)
+  UnresolvedExpressionTypeArgument(ExprId, Int32, UInt64)
   ReturnOutsideCallable(UInt64)
   UnresolvedExpressionType(ExprId, UInt64)
   UnresolvedLocalType(BodyId, LocalId, UInt64)
@@ -174,8 +181,8 @@ pub enum InferredCallTarget {
   NoInferredCallTarget
   ErrorInferredCallTarget
   SelectedInferredCallTarget(DeclId, HirSpan)
-  SelectedBoundInferredCallTarget(DeclId, Int, HirSpan)
-  SelectedDynamicTraitCallTarget(DeclId, DeclId, Int, HirSpan)
+  SelectedBoundInferredCallTarget(DeclId, Int32, HirSpan)
+  SelectedDynamicTraitCallTarget(DeclId, DeclId, Int32, HirSpan)
   SelectedFunctionValueCallTarget(ExprId)
 } derive(Eq, Debug, ToJson, FromJson)
 
@@ -183,13 +190,13 @@ pub enum InferredCallTarget {
 pub enum InferredTraitObjectCoercion {
   NoInferredTraitObjectCoercion
   ErrorInferredTraitObjectCoercion
-  SelectedInferredTraitObjectCoercion(DeclId, Int)
+  SelectedInferredTraitObjectCoercion(DeclId, Int32)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
 pub enum InferredTraitEvidenceKind {
   ConcreteInferredTraitEvidence(DeclId, HirSpan)
-  BoundInferredTraitEvidence(Int)
+  BoundInferredTraitEvidence(Int32)
   // Source type identities, not a dictionary slot. Resolve only in a live
   // selected body with exact logical arguments.
   GuardedInferredTraitEvidence(ResolvedTypeId, ResolvedTypeId)
@@ -198,7 +205,7 @@ pub enum InferredTraitEvidenceKind {
 ///|
 pub enum InferredTraitEvidenceArgument {
   ShapeInferredTraitEvidenceArgument(PlannedValueShape)
-  GenericInferredTraitEvidenceArgument(Int)
+  GenericInferredTraitEvidenceArgument(Int32)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -250,9 +257,9 @@ pub struct InferredModuleBodies {
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
   expression_evidence : Array[HirSpan]
-  trait_evidence_roots : Array[Int]
+  trait_evidence_roots : Array[Int32]
   trait_evidence : Array[InferredTraitEvidence]
-  trait_evidence_children : Array[Int]
+  trait_evidence_children : Array[Int32]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
   call_type_arguments : Array[BodyTypeId]
   diagnostics : Array[BodyInferenceDiagnostic]

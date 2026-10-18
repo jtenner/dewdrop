@@ -1,19 +1,19 @@
 ///|
 priv struct CorePlannedImport {
-  source : Int
+  source : Int32
   value : @lib.Import
 }
 
 ///|
 fn core_full_index_map(
-  type_indices : Array[Int],
-  function_indices : Array[Int],
-  table_indices : Array[Int],
-  memory_indices : Array[Int],
-  global_indices : Array[Int],
-  tag_indices : Array[Int],
-  element_indices : Array[Int],
-  data_indices : Array[Int],
+  type_indices : Array[Int32],
+  function_indices : Array[Int32],
+  table_indices : Array[Int32],
+  memory_indices : Array[Int32],
+  global_indices : Array[Int32],
+  tag_indices : Array[Int32],
+  element_indices : Array[Int32],
+  data_indices : Array[Int32],
 ) -> CoreWasmIndexMap {
   {
     type_indices,
@@ -30,17 +30,17 @@ fn core_full_index_map(
 ///|
 fn core_assign_import_index(
   type_ : @lib.ExternType,
-  old_function : Int,
-  old_table : Int,
-  old_memory : Int,
-  old_global : Int,
-  old_tag : Int,
-  function_indices : Array[Int],
-  table_indices : Array[Int],
-  memory_indices : Array[Int],
-  global_indices : Array[Int],
-  tag_indices : Array[Int],
-  next : Array[Int],
+  old_function : Int32,
+  old_table : Int32,
+  old_memory : Int32,
+  old_global : Int32,
+  old_tag : Int32,
+  function_indices : Array[Int32],
+  table_indices : Array[Int32],
+  memory_indices : Array[Int32],
+  global_indices : Array[Int32],
+  tag_indices : Array[Int32],
+  next : Array[Int32],
 ) -> Unit {
   match type_ {
     @lib.FuncExternType(_) => {
@@ -69,7 +69,7 @@ fn core_assign_import_index(
 ///|
 fn core_advance_import_ordinals(
   type_ : @lib.ExternType,
-  ordinals : Array[Int],
+  ordinals : Array[Int32],
 ) -> Unit {
   match type_ {
     @lib.FuncExternType(_) => ordinals[0] += 1
@@ -84,9 +84,9 @@ fn core_advance_import_ordinals(
 fn core_build_type_maps(
   dew_arena : CoreTypeArena,
   guest_arena : CoreTypeArena,
-  marker_guest_types : Array[Int],
-  concrete_guest_types : Array[Int],
-) -> Result[(Array[Int], Array[Int], Array[Bool], Int), CoreWasmLinkError] {
+  marker_guest_types : Array[Int32],
+  concrete_guest_types : Array[Int32],
+) -> Result[(Array[Int32], Array[Int32], Array[Bool], Int32), CoreWasmLinkError] {
   let guest_types = core_make_sequential_indices(
     guest_arena.subtypes.length(),
     0,
@@ -155,7 +155,7 @@ fn core_pair_link(
     -1,
   )
   let dew_function_import_names : Array[String] = []
-  let string_adapter_parameters_by_dew_import : Array[Array[Int]] = []
+  let string_adapter_parameters_by_dew_import : Array[Array[Int32]] = []
   let reference_adapter_by_dew_import = Array::make(dew_counts.functions, false)
   for _ in 0..<dew_counts.functions {
     string_adapter_parameters_by_dew_import.push([])
@@ -411,8 +411,8 @@ fn core_pair_link(
     core_tags(guest).length(),
     imported_tag_count + core_tags(dew).length(),
   )
-  let adapter_imports : Array[Int] = []
-  let adapter_kinds : Array[Int] = []
+  let adapter_imports : Array[Int32] = []
+  let adapter_kinds : Array[Int32] = []
   let mut has_string_adapters = false
   for index in 0..<linked_guest_function_by_dew_import.length() {
     let guest_function = linked_guest_function_by_dew_import[index]
@@ -669,7 +669,10 @@ fn core_pair_link(
     .with_code_sec(@lib.CodeSec::new(functions))
     .with_data_sec(@lib.DataSec::new(datas))
   // Function names are debug metadata, but their indices must follow linking.
-  let names : Array[@lib.Name?] = Array::make(imported_function_count + functions.length(), None)
+  let names : Array[@lib.Name?] = Array::make(
+    imported_function_count + functions.length(),
+    None,
+  )
   core_copy_function_names(dew, dew_map.function_indices, names)
   core_copy_function_names(guest, guest_map.function_indices, names)
   let named : Array[@lib.NameAssoc] = []
@@ -679,7 +682,9 @@ fn core_pair_link(
     }
   }
   if named.length() > 0 {
-    output = output.with_name_sec(@lib.NameSec::new(func_names=Some(@lib.NameMap::new(named))))
+    output = output.with_name_sec(
+      @lib.NameSec::new(func_names=Some(@lib.NameMap::new(named))),
+    )
   }
   match start {
     Some(value) => output = output.with_start_sec(value)
@@ -698,7 +703,7 @@ fn core_pair_link(
 pub fn link_core_wasm_gc_modules(
   dew_bytes : Bytes,
   libraries : Array[CoreWasmLibrary],
-  options? : CoreWasmLinkOptions = CoreWasmLinkOptions::default(),
+  options~ : CoreWasmLinkOptions = CoreWasmLinkOptions::default(),
 ) -> Result[Bytes, CoreWasmLinkError] {
   let mut module_ = match @binary.decode_module(dew_bytes) {
     Ok(value) => value
@@ -746,8 +751,13 @@ pub fn link_core_wasm_gc_modules(
 }
 
 ///|
-fn core_copy_function_names(module_ : @lib.Module, indices : Array[Int], output : Array[@lib.Name?]) -> Unit {
-  if module_.name_sec is Some(section) && section.func_names is Some(@lib.NameMap(names)) {
+fn core_copy_function_names(
+  module_ : @lib.Module,
+  indices : Array[Int32],
+  output : Array[@lib.Name?],
+) -> Unit {
+  if module_.name_sec is Some(section) &&
+    section.func_names is Some(@lib.NameMap(names)) {
     for entry in names {
       let @lib.NameAssoc(index, name) = entry
       // Out-of-range debug names do not make an otherwise valid module invalid.

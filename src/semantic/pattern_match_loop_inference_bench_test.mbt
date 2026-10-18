@@ -1,5 +1,5 @@
 ///|
-fn match_variant_arms_source(arm_count : Int) -> Bytes {
+fn match_variant_arms_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 56 + 128)
   output.write_string_utf8("enum State {\n")
   for index in 0..<arm_count {
@@ -20,7 +20,7 @@ fn match_variant_arms_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn match_literal_arms_source(arm_count : Int) -> Bytes {
+fn match_literal_arms_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 24 + 96)
   output.write_string_utf8("fn read(value: I32) -> I32 {\n  match value {\n")
   for index in 0..<arm_count {
@@ -35,7 +35,7 @@ fn match_literal_arms_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn struct_pattern_fields_source(field_count : Int) -> Bytes {
+fn struct_pattern_fields_source(field_count : Int32) -> Bytes {
   let output = Buffer(size_hint=field_count * 52 + 160)
   output.write_string_utf8("struct Record {\n")
   for index in 0..<field_count {
@@ -56,7 +56,7 @@ fn struct_pattern_fields_source(field_count : Int) -> Bytes {
 }
 
 ///|
-fn alternative_pattern_arms_source(arm_count : Int) -> Bytes {
+fn alternative_pattern_arms_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 52 + 128)
   output.write_string_utf8(
     "enum State {\n  A(I32)\n  B(I32)\n}\nfn read(state: State) -> I32 {\n  match state {\n",
@@ -69,7 +69,7 @@ fn alternative_pattern_arms_source(arm_count : Int) -> Bytes {
 }
 
 ///|
-fn loop_pattern_arms_bench_source(arm_count : Int) -> Bytes {
+fn loop_pattern_arms_bench_source(arm_count : Int32) -> Bytes {
   let output = Buffer(size_hint=arm_count * 56 + 128)
   output.write_string_utf8("enum State {\n")
   for index in 0..<arm_count {

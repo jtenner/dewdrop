@@ -2,7 +2,7 @@
 fn compile_time_binding_type(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,
-  module_index : Int,
+  module_index : Int32,
   expression : ExprId,
 ) -> ResolvedTypeId? {
   let collected = program.modules[module_index]
@@ -20,7 +20,7 @@ fn compile_time_binding_type(
 ///|
 fn validate_compile_time_binding(
   context : CompileTimeProgramContext,
-  module_index : Int,
+  module_index : Int32,
   module_ : PlannedModuleLowering,
   expression : ExprId,
   bindings : Map[CompileTimeBindingKey, CompileTimeType],

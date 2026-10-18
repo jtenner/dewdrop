@@ -9,7 +9,10 @@ fn pb_write_raw_struct_get(
 }
 
 ///|
-fn pb_write_raw_heap_owner(writer : @cache_binary.Writer, owner : RawHeapOwner) -> Unit {
+fn pb_write_raw_heap_owner(
+  writer : @cache_binary.Writer,
+  owner : RawHeapOwner,
+) -> Unit {
   match owner {
     DeclaredRawHeapOwner(declaration) => {
       writer.write_byte(0)
@@ -38,7 +41,10 @@ fn pb_read_raw_struct_get(
 }
 
 ///|
-fn pb_read_raw_heap_owner(reader : @cache_binary.Reader, field : String) -> RawHeapOwner {
+fn pb_read_raw_heap_owner(
+  reader : @cache_binary.Reader,
+  field : String,
+) -> RawHeapOwner {
   match reader.read_byte(field) {
     0 => DeclaredRawHeapOwner(ib_read_id(reader, field))
     1 => PrimitiveRawHeapOwner(ib_read_primitive(reader, field))

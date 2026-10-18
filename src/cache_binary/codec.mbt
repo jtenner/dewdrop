@@ -17,12 +17,12 @@ pub struct Writer {
 }
 
 ///|
-pub fn Writer::new(size_hint? : Int = 0) -> Writer {
+pub fn Writer::new(size_hint~ : Int32 = 0) -> Writer {
   { output: Buffer(size_hint=if size_hint < 0 { 0 } else { size_hint }), }
 }
 
 ///|
-pub fn Writer::length(self : Writer) -> Int {
+pub fn Writer::length(self : Writer) -> Int32 {
   self.output.length()
 }
 
@@ -52,14 +52,14 @@ pub fn Writer::write_var_u64(self : Writer, value : UInt64) -> Unit {
 }
 
 ///|
-pub fn Writer::write_zigzag_int(self : Writer, value : Int) -> Unit {
+pub fn Writer::write_zigzag_int(self : Writer, value : Int32) -> Unit {
   let bits = value.reinterpret_as_uint()
   let sign = 0U - (bits >> 31)
   self.write_var_u64(((bits << 1) ^ sign).to_uint64())
 }
 
 ///|
-pub fn Writer::write_u32_le(self : Writer, value : UInt) -> Unit {
+pub fn Writer::write_u32_le(self : Writer, value : UInt32) -> Unit {
   self.output.write_byte((value & 0xffU).to_byte())
   self.output.write_byte(((value >> 8) & 0xffU).to_byte())
   self.output.write_byte(((value >> 16) & 0xffU).to_byte())
@@ -114,9 +114,9 @@ pub fn Writer::write_section(self : Writer, value : Bytes) -> Unit {
 /// Sticky, non-panicking decoder over one bounded byte range.
 pub struct Reader {
   bytes : Bytes
-  start : Int
-  end : Int
-  mut offset : Int
+  start : Int32
+  end : Int32
+  mut offset : Int32
   context : String
   /// Tree decoders can omit long field paths on a speculative first pass.
   detailed_paths : Bool
@@ -126,8 +126,8 @@ pub struct Reader {
 ///|
 pub fn Reader::new(
   bytes : Bytes,
-  context? : String = "artifact",
-  detailed_paths? : Bool = true,
+  context~ : String = "artifact",
+  detailed_paths~ : Bool = true,
 ) -> Reader {
   {
     bytes,
@@ -143,8 +143,8 @@ pub fn Reader::new(
 ///|
 fn Reader::bounded(
   bytes : Bytes,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   context : String,
 ) -> Reader {
   {
@@ -159,12 +159,12 @@ fn Reader::bounded(
 }
 
 ///|
-pub fn Reader::position(self : Reader) -> Int {
+pub fn Reader::position(self : Reader) -> Int32 {
   self.offset - self.start
 }
 
 ///|
-pub fn Reader::remaining(self : Reader) -> Int {
+pub fn Reader::remaining(self : Reader) -> Int32 {
   if self.offset <= self.end {
     self.end - self.offset
   } else {
@@ -236,7 +236,7 @@ pub fn Reader::read_var_u64(self : Reader, field : String) -> UInt64 {
 }
 
 ///|
-pub fn Reader::read_zigzag_int(self : Reader, field : String) -> Int {
+pub fn Reader::read_zigzag_int(self : Reader, field : String) -> Int32 {
   let encoded = self.read_var_u64(field)
   if encoded > 0xffffffffUL {
     self.fail(field, "signed varint overflow")
@@ -247,7 +247,7 @@ pub fn Reader::read_zigzag_int(self : Reader, field : String) -> Int {
 }
 
 ///|
-pub fn Reader::read_u32_le(self : Reader, field : String) -> UInt {
+pub fn Reader::read_u32_le(self : Reader, field : String) -> UInt32 {
   let b0 = self.read_byte(field).to_uint()
   let b1 = self.read_byte(field).to_uint()
   let b2 = self.read_byte(field).to_uint()
@@ -299,7 +299,11 @@ pub fn Reader::read_option_tag(self : Reader, field : String) -> Bool {
 }
 
 ///|
-pub fn Reader::read_count(self : Reader, maximum : Int, field : String) -> Int {
+pub fn Reader::read_count(
+  self : Reader,
+  maximum : Int32,
+  field : String,
+) -> Int32 {
   let encoded = self.read_var_u64(field)
   let limit = if maximum < 0 || maximum > maximum_array_items {
     maximum_array_items
@@ -318,7 +322,7 @@ pub fn Reader::read_count(self : Reader, maximum : Int, field : String) -> Int {
 }
 
 ///|
-pub fn Reader::skip(self : Reader, length : Int, field : String) -> Unit {
+pub fn Reader::skip(self : Reader, length : Int32, field : String) -> Unit {
   if length < 0 || length > self.remaining() {
     self.fail(field, "invalid or truncated skipped range")
     return
@@ -329,8 +333,8 @@ pub fn Reader::skip(self : Reader, length : Int, field : String) -> Unit {
 ///|
 pub fn Reader::read_raw_bytes(
   self : Reader,
-  length : Int,
-  maximum : Int,
+  length : Int32,
+  maximum : Int32,
   field : String,
 ) -> Bytes {
   self.read_raw_view(length, maximum, field).to_owned()
@@ -339,8 +343,8 @@ pub fn Reader::read_raw_bytes(
 ///|
 fn Reader::read_raw_view(
   self : Reader,
-  length : Int,
-  maximum : Int,
+  length : Int32,
+  maximum : Int32,
   field : String,
 ) -> BytesView {
   if length < 0 || length > maximum || length > maximum_blob_bytes {
@@ -359,7 +363,7 @@ fn Reader::read_raw_view(
 ///|
 pub fn Reader::read_bytes(
   self : Reader,
-  maximum : Int,
+  maximum : Int32,
   field : String,
 ) -> Bytes {
   self.read_bytes_view(maximum, field).to_owned()
@@ -368,7 +372,7 @@ pub fn Reader::read_bytes(
 ///|
 fn Reader::read_bytes_view(
   self : Reader,
-  maximum : Int,
+  maximum : Int32,
   field : String,
 ) -> BytesView {
   let encoded = self.read_var_u64(field)
@@ -387,7 +391,7 @@ fn Reader::read_bytes_view(
 ///|
 pub fn Reader::read_string(
   self : Reader,
-  maximum : Int,
+  maximum : Int32,
   field : String,
 ) -> String {
   let bytes = self.read_bytes_view(maximum, field)
@@ -405,7 +409,7 @@ pub fn Reader::read_string(
 ///|
 pub fn Reader::read_section(
   self : Reader,
-  maximum : Int,
+  maximum : Int32,
   field : String,
 ) -> Reader {
   let encoded = self.read_var_u64(field)
@@ -457,8 +461,8 @@ fn digest_equal(left : FixedArray[Byte], right : FixedArray[Byte]) -> Bool {
 ///|
 /// Common checksummed persistent-artifact container.
 pub fn wrap_artifact(
-  kind : Int,
-  version : UInt,
+  kind : Int32,
+  version : UInt32,
   provenance : Array[FixedArray[Byte]],
   payload : Bytes,
 ) -> Result[Bytes, String] {
@@ -500,8 +504,8 @@ pub fn wrap_artifact(
 ///|
 pub fn unwrap_artifact(
   bytes : Bytes,
-  expected_kind : Int,
-  expected_version : UInt,
+  expected_kind : Int32,
+  expected_version : UInt32,
   expected_provenance : Array[FixedArray[Byte]],
 ) -> Result[Bytes, String] {
   let reader = Reader::new(bytes, context="artifact")

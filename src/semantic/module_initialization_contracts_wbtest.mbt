@@ -17,12 +17,12 @@ fn initialization_contract_fixture() -> (CollectedModule, InferredModuleValues) 
 fn initialization_contract_expect(
   collected : CollectedModule,
   values : InferredModuleValues,
-  code : Int,
+  code : Int32,
   declaration : UInt64,
   expected : UInt64,
   actual : UInt64,
   detail : UInt64,
-  body? : UInt64 = 0UL,
+  body~ : UInt64 = 0UL,
 ) -> Unit raise {
   match check_module_initialization_inputs(collected, values) {
     Ok(_) => fail("invalid startup inputs were accepted")

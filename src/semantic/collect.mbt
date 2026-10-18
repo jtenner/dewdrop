@@ -3,7 +3,7 @@ priv struct CollectionBuilder {
   module_id : ModuleId
   mut current_file : FileId
   mut current_file_test_only : Bool
-  mut preamble_declaration_count : Int
+  mut preamble_declaration_count : Int32
   files : Array[FileId]
   file_paths : Array[String]
   file_sources : Array[Bytes]
@@ -13,7 +13,7 @@ priv struct CollectionBuilder {
   names : Array[String]
   declarations : Array[CollectedDeclaration]
   methods : Array[CollectedMethod]
-  declaration_locations : Array[Int]
+  declaration_locations : Array[Int32]
   fields : Array[CollectedField]
   variants : Array[CollectedVariant]
   generic_parameters : Array[CollectedGenericParameter]
@@ -35,8 +35,8 @@ priv struct CollectionBuilder {
   type_syntax_files : Array[FileId]
   type_arguments : Array[HirTypeId]
   type_source_scratch : Array[@parser.TypeExpr]
-  type_state_scratch : Array[Int]
-  type_result_start_scratch : Array[Int]
+  type_state_scratch : Array[Int32]
+  type_result_start_scratch : Array[Int32]
   type_result_scratch : Array[HirTypeId]
   type_list_scratch : Array[HirTypeId]
   lambda_parameters : Array[HirLambdaParameter]
@@ -55,7 +55,7 @@ priv struct CollectionBuilder {
   mut current_lambda : LambdaId
   mut current_root_body : BodyId
   bodies : Array[HirBody]
-  body_by_declaration : Array[Int]
+  body_by_declaration : Array[Int32]
   expressions : Array[HirExpr]
   expression_files : Array[FileId]
   expression_children : Array[ExprId]
@@ -75,10 +75,10 @@ priv struct CollectionBuilder {
   pattern_arms : Array[HirPatternArm]
   pattern_arm_files : Array[FileId]
   arm_children : Array[PatternArmId]
-  body_task_kinds : Array[Int]
-  body_task_sources : Array[Int]
-  body_task_first_starts : Array[Int]
-  body_task_second_starts : Array[Int]
+  body_task_kinds : Array[Int32]
+  body_task_sources : Array[Int32]
+  body_task_first_starts : Array[Int32]
+  body_task_second_starts : Array[Int32]
   body_expr_sources : Array[@parser.Expr]
   body_block_sources : Array[@parser.Block]
   body_pattern_sources : Array[@parser.Pattern]
@@ -94,7 +94,7 @@ priv struct CollectionBuilder {
   value_bindings : Map[NameId, ValueBinding]
   value_binding_candidates : Array[ValueBindingCandidate]
   foreign_library_by_alias : Map[NameId, DeclId]
-  mut next_declaration_local : Int
+  mut next_declaration_local : Int32
 }
 
 ///|
@@ -598,7 +598,7 @@ fn CollectionBuilder::collect_named_fields(
 ///|
 fn CollectionBuilder::first_method_name(
   self : CollectionBuilder,
-  start : Int,
+  start : Int32,
   name : NameId,
 ) -> (UInt64, UInt64)? {
   let mut index = start
@@ -615,7 +615,7 @@ fn CollectionBuilder::first_method_name(
 ///|
 fn CollectionBuilder::first_variant_name(
   self : CollectionBuilder,
-  start : Int,
+  start : Int32,
   name : NameId,
 ) -> (UInt64, UInt64)? {
   let mut index = start

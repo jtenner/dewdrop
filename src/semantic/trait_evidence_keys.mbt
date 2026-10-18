@@ -8,9 +8,9 @@ priv enum TraitEvidenceKeySource {
 ///|
 priv enum TraitEvidenceKeyKind {
   ConcreteKey(DeclId)
-  BoundKey(Int)
-  GuardedKey(Int, Int)
-  RuntimeKey(DeclId, Int)
+  BoundKey(Int32)
+  GuardedKey(Int32, Int32)
+  RuntimeKey(DeclId, Int32)
 }
 
 ///|
@@ -22,16 +22,16 @@ priv struct TraitEvidenceKeyNode {
 
 ///|
 priv struct TraitEvidenceKeyFailure {
-  code : Int
+  code : Int32
   module_id : ModuleId
-  root : Int
-  expected : Int
-  actual : Int
-  detail : Int
+  root : Int32
+  expected : Int32
+  actual : Int32
+  detail : Int32
 } derive(Eq, Debug)
 
 ///|
-fn TraitEvidenceKeySource::count(self : TraitEvidenceKeySource) -> Int {
+fn TraitEvidenceKeySource::count(self : TraitEvidenceKeySource) -> Int32 {
   match self {
     LoweringEvidenceKey(value) => value.trait_evidence.length()
     RequestEvidenceKey(value) => value.evidence.length()
@@ -42,7 +42,7 @@ fn TraitEvidenceKeySource::count(self : TraitEvidenceKeySource) -> Int {
 /// Caller checks the node index before this projection.
 fn TraitEvidenceKeySource::node(
   self : TraitEvidenceKeySource,
-  index : Int,
+  index : Int32,
 ) -> TraitEvidenceKeyNode {
   let empty = { start: 0, length: 0, }
   match self {
@@ -73,7 +73,7 @@ fn TraitEvidenceKeySource::node(
 ///|
 fn TraitEvidenceKeySource::children(
   self : TraitEvidenceKeySource,
-) -> Array[Int] {
+) -> Array[Int32] {
   match self {
     LoweringEvidenceKey(value) => value.trait_evidence_children
     RequestEvidenceKey(value) => value.children
@@ -81,7 +81,9 @@ fn TraitEvidenceKeySource::children(
 }
 
 ///|
-fn TraitEvidenceKeySource::argument_count(self : TraitEvidenceKeySource) -> Int {
+fn TraitEvidenceKeySource::argument_count(
+  self : TraitEvidenceKeySource,
+) -> Int32 {
   match self {
     LoweringEvidenceKey(value) => value.trait_evidence_arguments.length()
     RequestEvidenceKey(value) => value.arguments.length()
@@ -91,7 +93,7 @@ fn TraitEvidenceKeySource::argument_count(self : TraitEvidenceKeySource) -> Int 
 ///|
 fn TraitEvidenceKeySource::argument(
   self : TraitEvidenceKeySource,
-  index : Int,
+  index : Int32,
 ) -> InferredTraitEvidenceArgument {
   match self {
     LoweringEvidenceKey(value) => value.trait_evidence_arguments[index]
@@ -103,11 +105,11 @@ fn TraitEvidenceKeySource::argument(
 ///|
 fn TraitEvidenceKeySource::failure(
   self : TraitEvidenceKeySource,
-  root : Int,
-  code : Int,
-  expected : Int,
-  actual : Int,
-  detail : Int,
+  root : Int32,
+  code : Int32,
+  expected : Int32,
+  actual : Int32,
+  detail : Int32,
 ) -> TraitEvidenceKeyFailure {
   let module_id = match self {
     LoweringEvidenceKey(value) => value.module_id
@@ -129,9 +131,9 @@ fn TraitEvidenceKeySource::failure(
 /// Validate the whole graph before producing any usable key.
 fn check_trait_evidence_key_graph(
   source : TraitEvidenceKeySource,
-  root : Int,
+  root : Int32,
 ) -> Result[Unit, TraitEvidenceKeyFailure] {
-  let states : Map[Int, Int] = {}
+  let states : Map[Int32, Int32] = {}
   let work = [(root, false)]
   let children = source.children()
   while work.length() > 0 {
@@ -219,8 +221,8 @@ fn check_trait_evidence_key_graph(
 
 ///|
 priv enum TraitEvidenceKeyWrite {
-  WriteEvidenceKeyNode(Int)
-  WriteEvidenceKeyArgument(Int)
+  WriteEvidenceKeyNode(Int32)
+  WriteEvidenceKeyArgument(Int32)
   WriteEvidenceKeyShape(PlannedValueShape)
   WriteEvidenceKeyText(String)
 }
@@ -229,10 +231,10 @@ priv enum TraitEvidenceKeyWrite {
 /// Check growth before pushing a wide field list onto the work stack.
 fn check_evidence_key_work_room(
   source : TraitEvidenceKeySource,
-  root : Int,
-  current : Int,
-  items : Int,
-  overhead : Int,
+  root : Int32,
+  current : Int32,
+  items : Int32,
+  overhead : Int32,
 ) -> Result[Unit, TraitEvidenceKeyFailure] {
   let remaining = 65536 - current
   if overhead > remaining || items > (remaining - overhead) / 2 {
@@ -247,7 +249,7 @@ fn check_evidence_key_work_room(
 // expand to exponential tree text, and malformed shape objects can be cyclic.
 fn check_trait_evidence_key(
   source : TraitEvidenceKeySource,
-  root : Int,
+  root : Int32,
 ) -> Result[String, TraitEvidenceKeyFailure] {
   match check_trait_evidence_key_graph(source, root) {
     Err(error) => return Err(error)
@@ -365,7 +367,7 @@ fn check_trait_evidence_key(
 }
 
 ///|
-fn trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> String {
+fn trait_evidence_key(source : TraitEvidenceKeySource, root : Int32) -> String {
   match check_trait_evidence_key(source, root) {
     Ok(key) => key
     Err(error) =>

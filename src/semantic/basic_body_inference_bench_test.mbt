@@ -1,5 +1,5 @@
 ///|
-fn basic_inference_function_source(function_count : Int) -> Bytes {
+fn basic_inference_function_source(function_count : Int32) -> Bytes {
   let output = Buffer(size_hint=function_count * 176)
   for index in 0..<function_count {
     output.write_string_utf8("fn infer_")
@@ -12,7 +12,7 @@ fn basic_inference_function_source(function_count : Int) -> Bytes {
 }
 
 ///|
-fn basic_inference_local_source(local_count : Int) -> Bytes {
+fn basic_inference_local_source(local_count : Int32) -> Bytes {
   let output = Buffer(size_hint=local_count * 44 + 96)
   output.write_string_utf8("fn infer(initial: I32) -> I32 {\n")
   for index in 0..<local_count {
@@ -35,7 +35,7 @@ fn basic_inference_local_source(local_count : Int) -> Bytes {
 }
 
 ///|
-fn basic_inference_if_source(branch_count : Int) -> Bytes {
+fn basic_inference_if_source(branch_count : Int32) -> Bytes {
   let output = Buffer(size_hint=branch_count * 32 + 64)
   output.write_string_utf8("fn choose() -> I32 {\n  ")
   for index in 0..<branch_count {
@@ -52,7 +52,7 @@ fn basic_inference_if_source(branch_count : Int) -> Bytes {
 }
 
 ///|
-fn basic_inference_prefix_source(depth : Int) -> Bytes {
+fn basic_inference_prefix_source(depth : Int32) -> Bytes {
   let output = Buffer(size_hint=depth + 64)
   output.write_string_utf8("fn deep() -> Bool {\n  ")
   for _ in 0..<depth {

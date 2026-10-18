@@ -29,7 +29,7 @@ pub fn CompilerCompilationError::message(
 ///|
 pub struct CompilerPipelineOptions {
   module_id_base : @semantic.ModuleId
-  root_module_index : Int
+  root_module_index : Int32
   default_preamble : Bool
   planning_mode : CompilerPlanningMode
 } derive(Eq, Debug)
@@ -37,7 +37,7 @@ pub struct CompilerPipelineOptions {
 ///|
 pub fn CompilerPipelineOptions::production(
   module_id_base : @semantic.ModuleId,
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
 ) -> CompilerPipelineOptions {
   {
@@ -51,7 +51,7 @@ pub fn CompilerPipelineOptions::production(
 ///|
 pub fn CompilerPipelineOptions::test_mode(
   module_id_base : @semantic.ModuleId,
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
 ) -> CompilerPipelineOptions {
   {
@@ -149,10 +149,10 @@ pub fn compile_manifest(
   manifest : @semantic.ProgramManifest,
   loaded : @standard_loader.StandardLibraryLoad,
   options : CompilerPipelineOptions,
-  prior_parse_event_cache_status? : @standard_loader.ParseEventCacheStatus = @standard_loader.ParseEventCacheWasUsed(
+  prior_parse_event_cache_status~ : @standard_loader.ParseEventCacheStatus = @standard_loader.ParseEventCacheWasUsed(
     0, 0,
   ),
-  pack? : @standard_loader.CompilationCachePack? = None,
+  pack~ : @standard_loader.CompilationCachePack? = None,
 ) -> Result[CompilerCompilation, CompilerCompilationError] {
   let prepared = match
     @standard_loader.prepare_program_parse_event_cache(

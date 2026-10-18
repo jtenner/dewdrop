@@ -55,8 +55,8 @@ pub struct ResolvedModuleImports {
   variant_spans : Map[DeclId, HirSpan]
   type_declaration_types : Map[DeclId, ResolvedTypeId]
   module_value_types : Map[DeclId, ResolvedTypeId]
-  callable_by_declaration : Map[DeclId, Int]
-  implementation_by_declaration : Map[DeclId, Int]
+  callable_by_declaration : Map[DeclId, Int32]
+  implementation_by_declaration : Map[DeclId, Int32]
 }
 
 ///|
@@ -212,10 +212,10 @@ priv enum ImportedTypeKey {
   Nominal(UInt64)
   Trait(UInt64)
   Self(UInt64)
-  Projection(Int, Bytes, String)
-  Product(Array[Int])
-  Applied(Int, Array[Int])
-  Function(Array[Int], Int)
+  Projection(Int32, Bytes, String)
+  Product(Array[Int32])
+  Applied(Int32, Array[Int32])
+  Function(Array[Int32], Int32)
 } derive(Eq, Hash)
 
 ///|
@@ -223,7 +223,7 @@ fn imported_type_key(
   resolved : ResolvedModuleTypes,
   type_ : ResolvedType,
 ) -> ImportedTypeKey? {
-  fn arguments(span : HirSpan) -> Array[Int] {
+  fn arguments(span : HirSpan) -> Array[Int32] {
     guard arena_span_is_valid(span, resolved.type_arguments.length()) else {
       abort("ARN-101 imported type key arguments")
     }
@@ -249,10 +249,10 @@ priv struct InterfaceTypeImporter {
   interned : Map[ImportedTypeKey, ResolvedTypeId]
   interfaces : Array[FrozenModuleInterface?]
   memos : Array[Array[ResolvedTypeId]]
-  task_interfaces : Array[Int]
+  task_interfaces : Array[Int32]
   task_types : Array[ResolvedTypeId]
-  task_states : Array[Int]
-  task_result_starts : Array[Int]
+  task_states : Array[Int32]
+  task_result_starts : Array[Int32]
   results : Array[ResolvedTypeId]
   application_scratch : Array[ResolvedTypeId]
 }
@@ -290,7 +290,7 @@ fn InterfaceTypeImporter::new(
 ///|
 fn InterfaceTypeImporter::intern_simple(
   self : InterfaceTypeImporter,
-  interface_index : Int,
+  interface_index : Int32,
   type_ : ResolvedType,
 ) -> ResolvedTypeId {
   let type_ = match type_ {
@@ -391,10 +391,10 @@ fn InterfaceTypeImporter::intern_function(
 ///|
 fn InterfaceTypeImporter::push(
   self : InterfaceTypeImporter,
-  interface_index : Int,
+  interface_index : Int32,
   type_ : ResolvedTypeId,
-  state : Int,
-  result_start : Int,
+  state : Int32,
+  result_start : Int32,
 ) -> Unit {
   self.task_interfaces.push(interface_index)
   self.task_types.push(type_)
@@ -411,7 +411,7 @@ fn InterfaceTypeImporter::push(
 ///|
 fn InterfaceTypeImporter::import_type(
   self : InterfaceTypeImporter,
-  interface_index : Int,
+  interface_index : Int32,
   root : ResolvedTypeId,
 ) -> ResolvedTypeId {
   if self.memos[interface_index].length() == 0 {
@@ -580,8 +580,8 @@ pub fn resolve_module_imports(
   let variant_spans : Map[DeclId, HirSpan] = Map::default()
   let type_declaration_types : Map[DeclId, ResolvedTypeId] = Map::default()
   let module_value_types : Map[DeclId, ResolvedTypeId] = Map::default()
-  let callable_by_declaration : Map[DeclId, Int] = Map::default()
-  let implementation_by_declaration : Map[DeclId, Int] = Map::default()
+  let callable_by_declaration : Map[DeclId, Int32] = Map::default()
+  let implementation_by_declaration : Map[DeclId, Int32] = Map::default()
   for reference in scope.callable_references {
     let interface_ = scope.interfaces[reference.interface_index].unwrap()
     let callable = interface_.callables[reference.callable_index]

@@ -42,7 +42,7 @@ pub enum StarshineCodeEmissionError {
     Array[@semantic.PlannedWasmValueType],
     Array[@semantic.PlannedWasmValueType]
   )
-  ProgramLinkDiagnostics(Int)
+  ProgramLinkDiagnostics(Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -56,58 +56,58 @@ priv struct StarshineGenericSpecialization {
 
 ///|
 priv struct StarshineFieldLocation {
-  type_index : Int
-  field_index : Int
+  type_index : Int32
+  field_index : Int32
   storage : @semantic.PlannedWasmStorageType
 }
 
 ///|
 priv struct StarshineProgramAdapterHelper {
-  adapter_function : Int
-  module_index : Int
+  adapter_function : Int32
+  module_index : Int32
   declaration : @semantic.DeclId
   actual_arguments : Array[@semantic.ResolvedTypeId]
   to_erased : Bool
-  signature_type_index : Int
-  function_index : Int
+  signature_type_index : Int32
+  function_index : Int32
 }
 
 ///|
 priv struct StarshineProgramCallbackWrapper {
-  adapter_function : Int
-  module_index : Int
+  adapter_function : Int32
+  module_index : Int32
   function_type : @semantic.ResolvedTypeId
   owner_arguments : Array[@semantic.ResolvedTypeId]
   to_erased : Bool
   parameter_types : Array[@semantic.ResolvedTypeId]
   result_type : @semantic.ResolvedTypeId
-  source_parameter_codes : Array[Int]
-  source_result_code : Int
-  target_parameter_codes : Array[Int]
-  target_result_code : Int
-  source_entry_type : Int
-  source_direct_type : Int
-  target_entry_type : Int
-  target_direct_type : Int
-  wrapper_type_index : Int
-  function_index : Int
+  source_parameter_codes : Array[Int32]
+  source_result_code : Int32
+  target_parameter_codes : Array[Int32]
+  target_result_code : Int32
+  source_entry_type : Int32
+  source_direct_type : Int32
+  target_entry_type : Int32
+  target_direct_type : Int32
+  wrapper_type_index : Int32
+  function_index : Int32
 }
 
 ///|
 priv struct StarshineProgramEvidenceClosure {
-  reference_index : Int
-  module_index : Int
-  entry_type_index : Int
-  closure_type_index : Int
-  function_index : Int
-  target_function_index : Int
+  reference_index : Int32
+  module_index : Int32
+  entry_type_index : Int32
+  closure_type_index : Int32
+  function_index : Int32
+  target_function_index : Int32
 }
 
 ///|
 priv struct StarshineProgramCapturedTraitDictionary {
-  module_index : Int
-  dictionary_index : Int
-  capture_type_index : Int
+  module_index : Int32
+  dictionary_index : Int32
+  capture_type_index : Int32
 }
 
 ///|
@@ -125,7 +125,7 @@ priv struct StarshineProgramAdapterHelperPlan {
 /// loops keep direct branches and indexed access.
 priv struct StarshineExpressionEmissionContext {
   program : @semantic.PlannedProgramWasmGCLink?
-  module_index : Int
+  module_index : Int32
   helper_plan : StarshineProgramAdapterHelperPlan?
   result_function : @semantic.PlannedProgramWasmFunction?
   parameters : StarshineCallFrameParameters
@@ -157,8 +157,8 @@ fn starshine_program_evidence_closure(
 ///|
 fn starshine_program_captured_trait_dictionary(
   helper_plan : StarshineProgramAdapterHelperPlan,
-  module_index : Int,
-  dictionary_index : Int,
+  module_index : Int32,
+  dictionary_index : Int32,
 ) -> StarshineProgramCapturedTraitDictionary? {
   for captured in helper_plan.captured_trait_dictionaries {
     if captured.module_index == module_index &&
@@ -173,7 +173,7 @@ fn starshine_program_captured_trait_dictionary(
 fn starshine_program_captured_trait_dictionary_for_adapter(
   planned : @semantic.PlannedProgramWasmGCLink,
   helper_plan : StarshineProgramAdapterHelperPlan,
-  module_index : Int,
+  module_index : Int32,
   adapter : @semantic.DeclId,
 ) -> StarshineProgramCapturedTraitDictionary? {
   for captured in helper_plan.captured_trait_dictionaries {
@@ -256,64 +256,70 @@ priv enum StarshineEmitTask {
   EmitStarshineEmpty
   FinishStarshineDiscard(@semantic.PlannedValueShape)
   FinishStarshineBlock(@semantic.BlockId)
-  FinishStarshineLocalSet(Int, Int, @semantic.ExprId)
-  FinishStarshineCaptureSet(Int, Int, @semantic.ExprId, Int)
+  FinishStarshineLocalSet(Int32, Int32, @semantic.ExprId)
+  FinishStarshineCaptureSet(Int32, Int32, @semantic.ExprId, Int32)
   FinishStarshineCall(
     @semantic.DeclId,
     @semantic.ExprId,
-    Int,
+    Int32,
     @semantic.HirSpan
   )
   FinishStarshineTailCall(
     @semantic.DeclId,
     @semantic.ExprId,
-    Int,
+    Int32,
     @semantic.HirSpan
   )
-  FinishStarshineParameterSelect(@semantic.HirSpan, Int)
-  FinishStarshineProduct(Int)
-  FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
-  FinishStarshineFunctionValueCall(Int, Int)
-  FinishStarshineClosureCall(StarshineClosureCallPlan, Int)
-  FinishStarshineRefIntrinsic(Int)
-  FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
-  FinishStarshineProductBox(@semantic.PlannedValueShape, Int)
-  FinishStarshineProductUnbox(@semantic.PlannedValueShape, Int)
+  FinishStarshineParameterSelect(@semantic.HirSpan, Int32)
+  FinishStarshineProduct(Int32)
+  FinishStarshineDirectLambdaCall(Int32, @semantic.HirSpan, Int32)
+  FinishStarshineFunctionValueCall(Int32, Int32)
+  FinishStarshineClosureCall(StarshineClosureCallPlan, Int32)
+  FinishStarshineRefIntrinsic(Int32)
+  FinishStarshineFixedArray(
+    Int32,
+    @semantic.PlannedValueShape,
+    Int32,
+    Int32,
+    Int32
+  )
+  FinishStarshineProductBox(@semantic.PlannedValueShape, Int32)
+  FinishStarshineProductUnbox(@semantic.PlannedValueShape, Int32)
   FinishStarshineConstructor(
     @semantic.PlannedProgramWasmGCLink?,
-    Int,
+    Int32,
     @semantic.PlannedModuleWasmGCFragments,
     @semantic.PlannedWasmPhysicalType,
-    Int,
+    Int32,
     Array[@semantic.ExprId],
-    Array[Int]
+    Array[Int32]
   )
   FinishStarshineEnumSubtype(
     @semantic.PlannedProgramWasmGCLink?,
-    Int,
+    Int32,
     @semantic.PlannedModuleWasmGCFragments,
     @semantic.PlannedWasmPhysicalType,
-    Int,
-    Int
+    Int32,
+    Int32
   )
-  FinishStarshinePackedEnumPayload(Int)
+  FinishStarshinePackedEnumPayload(Int32)
   FinishStarshineNominalResult(@semantic.DeclId)
-  FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType)
+  FinishStarshineFieldGet(Int32, Int32, @semantic.PlannedWasmStorageType)
   FinishStarshinePolymorphicFieldGet(
     Array[StarshineFieldLocation],
-    Int,
+    Int32,
     @semantic.PlannedValueShape
   )
-  FinishStarshineFieldSet(Int, Int, Array[@lib.Instruction])
+  FinishStarshineFieldSet(Int32, Int32, Array[@lib.Instruction])
   FinishStarshineUnitFieldGet
   FinishStarshineUnitFieldSet
-  FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
+  FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int32)
   FinishStarshineWhile(
     @semantic.ExprId,
     @semantic.ControlId,
     @semantic.HirSpan,
-    Int,
-    Int
+    Int32,
+    Int32
   )
   FinishStarshineControlTransfer(
     @semantic.ControlId,
@@ -321,23 +327,23 @@ priv enum StarshineEmitTask {
     @semantic.PlannedValueShape
   )
   FinishStarshineReturn
-  FinishStarshineIf(@semantic.PlannedValueShape, Int)
+  FinishStarshineIf(@semantic.PlannedValueShape, Int32)
   FinishStarshinePrefix(
     @semantic.HirPrefixOperator,
     @semantic.PlannedValueShape
   )
   FinishStarshineLogical(@semantic.HirBinaryOperator)
-  FinishStarshineTraitObjectCoercion(@semantic.DeclId, Int)
-  FinishStarshineRuntimeBoundCall(@semantic.DeclId, Int, Int, Int, Int)
-  FinishStarshineDynamicTraitCall(@semantic.DeclId, Int, Int, Int, Int)
+  FinishStarshineTraitObjectCoercion(@semantic.DeclId, Int32)
+  FinishStarshineRuntimeBoundCall(@semantic.DeclId, Int32, Int32, Int32, Int32)
+  FinishStarshineDynamicTraitCall(@semantic.DeclId, Int32, Int32, Int32, Int32)
 }
 
 ///|
 priv enum StarshinePatternEmitTask {
-  EmitStarshinePattern(@semantic.PatternId, Array[@lib.Instruction], Int)
-  FinishStarshinePatternAll(Int)
-  FinishStarshinePatternAny(Int)
-  FinishStarshineVariantPattern(Array[@lib.Instruction], Int, Int, Int)
+  EmitStarshinePattern(@semantic.PatternId, Array[@lib.Instruction], Int32)
+  FinishStarshinePatternAll(Int32)
+  FinishStarshinePatternAny(Int32)
+  FinishStarshineVariantPattern(Array[@lib.Instruction], Int32, Int32, Int32)
 }
 
 ///|
@@ -462,7 +468,7 @@ fn starshine_default_storage_instructions(
 fn starshine_text_runtime_base_for_body(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-) -> Int {
+) -> Int32 {
   match program {
     Some(link) => link.type_count
     None => starshine_text_runtime_base(planned)
@@ -525,7 +531,7 @@ fn starshine_text_constant_instructions(
 }
 
 ///|
-fn starshine_shape_leaf_count(shape : @semantic.PlannedValueShape) -> Int {
+fn starshine_shape_leaf_count(shape : @semantic.PlannedValueShape) -> Int32 {
   match shape {
     @semantic.ProductPlannedValueShape(fields) => {
       let mut count = 0
@@ -560,7 +566,7 @@ fn starshine_append_shape_value_types(
 ///|
 fn starshine_append_product_local_gets(
   output : Array[@lib.Instruction],
-  first : Int,
+  first : Int32,
   shape : @semantic.PlannedValueShape,
 ) -> Unit {
   let count = starshine_shape_leaf_count(shape)
@@ -576,7 +582,7 @@ fn starshine_append_product_local_gets(
 ///|
 fn starshine_append_product_local_sets(
   output : Array[@lib.Instruction],
-  first : Int,
+  first : Int32,
   shape : @semantic.PlannedValueShape,
 ) -> Unit {
   let mut count = starshine_shape_leaf_count(shape)
@@ -656,7 +662,7 @@ fn starshine_block_emitted_root_shape(
 fn starshine_product_projection_root(
   lowering : @semantic.PlannedModuleLowering,
   expression : @semantic.ExprId,
-) -> (Int, Int)? {
+) -> (Int32, Int32)? {
   let mut current = expression
   let mut offset = 0
   while current >= 0 && current < lowering.expressions.length() {
@@ -742,7 +748,7 @@ fn starshine_resolve_control_transfers(
   let break_label = starshine_control_transfer_label(control, true)
   let continue_label = starshine_control_transfer_label(control, false)
   let pending : Array[Array[@lib.Instruction]] = [instructions]
-  let depths : Array[Int] = [0]
+  let depths : Array[Int32] = [0]
   while pending.length() > 0 {
     let current = pending.pop().unwrap()
     let depth = depths.pop().unwrap()
@@ -783,7 +789,7 @@ fn starshine_resolve_control_transfers(
 ///|
 fn pop_starshine_fragments(
   results : Array[Array[@lib.Instruction]],
-  count : Int,
+  count : Int32,
 ) -> Array[Array[@lib.Instruction]] {
   let fragments = Array::make(count, [])
   let mut index = count
@@ -795,7 +801,7 @@ fn pop_starshine_fragments(
 }
 
 ///|
-fn starshine_signed_i8_constant(value : UInt64) -> Int {
+fn starshine_signed_i8_constant(value : UInt64) -> Int32 {
   let raw = (value & 0xFFUL).to_int()
   if raw >= 0x80 {
     raw - 0x100
@@ -805,7 +811,7 @@ fn starshine_signed_i8_constant(value : UInt64) -> Int {
 }
 
 ///|
-fn starshine_signed_i16_constant(value : UInt64) -> Int {
+fn starshine_signed_i16_constant(value : UInt64) -> Int32 {
   let raw = (value & 0xFFFFUL).to_int()
   if raw >= 0x8000 {
     raw - 0x10000
@@ -862,7 +868,7 @@ fn starshine_function_reference_index(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   declaration : @semantic.DeclId,
-) -> Result[Int, StarshineCodeEmissionError] {
+) -> Result[Int32, StarshineCodeEmissionError] {
   let function_index = match program {
     Some(link) =>
       match link.function_of(declaration) {
@@ -984,7 +990,7 @@ fn starshine_diverging_call_evaluations(
 fn starshine_program_call_argument(
   lowering : @semantic.PlannedModuleLowering,
   expression : @semantic.ExprId,
-  parameter_index : Int,
+  parameter_index : Int32,
 ) -> @semantic.ExprId {
   if expression < 0 ||
     expression >= lowering.expressions.length() ||
@@ -1049,7 +1055,7 @@ fn starshine_program_call_argument(
 fn starshine_program_argument_needs_nominal_cast(
   lowering : @semantic.PlannedModuleLowering?,
   expression : @semantic.ExprId,
-  parameter_index : Int,
+  parameter_index : Int32,
 ) -> Bool {
   let lowering = match lowering {
     Some(value) => value
@@ -1085,7 +1091,7 @@ fn starshine_program_argument_needs_nominal_cast(
 fn starshine_program_local_external_argument_needs_nominal_cast(
   lowering : @semantic.PlannedModuleLowering?,
   expression : @semantic.ExprId,
-  parameter_index : Int,
+  parameter_index : Int32,
 ) -> Bool {
   let lowering = match lowering {
     Some(value) => value
@@ -1113,7 +1119,7 @@ fn starshine_program_local_external_argument_needs_nominal_cast(
 fn starshine_program_parameter_is_external_nominal(
   planned : @semantic.PlannedProgramWasmGCLink,
   function_ : @semantic.PlannedProgramWasmFunction,
-  parameter_index : Int,
+  parameter_index : Int32,
 ) -> Bool {
   if parameter_index < 0 || parameter_index >= function_.parameters.length {
     return false
@@ -1334,7 +1340,7 @@ fn starshine_emitted_type_index(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   declaration : @semantic.DeclId,
-) -> Int? {
+) -> Int32? {
   match program {
     Some(link) => link.type_lookup.get(declaration)
     None => planned.type_index_of(declaration)
@@ -1346,7 +1352,7 @@ fn starshine_emitted_struct_type_index(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   declaration : @semantic.DeclId,
-) -> Int? {
+) -> Int32? {
   match starshine_emitted_type_index(planned, program, declaration) {
     Some(value) => return Some(value)
     None => ()
@@ -1513,7 +1519,11 @@ fn starshine_field_location(
   planned : @semantic.PlannedModuleWasmGCFragments,
   field : @semantic.FieldId,
   shape : @semantic.PlannedValueShape,
-) -> (@semantic.PlannedWasmPhysicalType, Int, @semantic.PlannedWasmStorageType)? {
+) -> (
+  @semantic.PlannedWasmPhysicalType,
+  Int32,
+  @semantic.PlannedWasmStorageType,
+)? {
   for type_ in planned.physical_types {
     for index in 0..<type_.fields.length {
       let planned_field = planned.fields[type_.fields.start + index]
@@ -1535,7 +1545,7 @@ fn starshine_field_location(
 fn starshine_field_locations(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  owner_module : Int,
+  owner_module : Int32,
   field : @semantic.FieldId,
   shape : @semantic.PlannedValueShape,
 ) -> Array[StarshineFieldLocation] {
@@ -1567,8 +1577,8 @@ fn starshine_field_locations(
 
 ///|
 fn starshine_struct_get_instruction(
-  type_index : Int,
-  field_index : Int,
+  type_index : Int32,
+  field_index : Int32,
   storage : @semantic.PlannedWasmStorageType,
 ) -> @lib.Instruction {
   let type_ = @lib.TypeIdx::new(type_index.reinterpret_as_uint())
@@ -1583,7 +1593,7 @@ fn starshine_struct_get_instruction(
 }
 
 ///|
-fn starshine_match_cast(type_index : Int) -> @lib.Instruction {
+fn starshine_match_cast(type_index : Int32) -> @lib.Instruction {
   @lib.Instruction::ref_cast(
     false,
     @lib.HeapType::new(@lib.TypeIdx::new(type_index.reinterpret_as_uint())),
@@ -1591,7 +1601,7 @@ fn starshine_match_cast(type_index : Int) -> @lib.Instruction {
 }
 
 ///|
-fn starshine_nullable_match_cast(type_index : Int) -> @lib.Instruction {
+fn starshine_nullable_match_cast(type_index : Int32) -> @lib.Instruction {
   @lib.Instruction::ref_cast(
     true,
     @lib.HeapType::new(@lib.TypeIdx::new(type_index.reinterpret_as_uint())),
@@ -1602,7 +1612,7 @@ fn starshine_nullable_match_cast(type_index : Int) -> @lib.Instruction {
 fn starshine_append_storage_cast(
   output : Array[@lib.Instruction],
   program : @semantic.PlannedProgramWasmGCLink?,
-  owner_module : Int,
+  owner_module : Int32,
   module_plan : @semantic.PlannedModuleWasmGCFragments,
   physical : @semantic.PlannedWasmPhysicalType,
   storage : @semantic.PlannedWasmStorageType,
@@ -1672,7 +1682,7 @@ fn starshine_precise_nominal_local_type_index(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   planned_local : @semantic.PlannedLocal,
-) -> Int? {
+) -> Int32? {
   if planned_local.nominal == 0UL ||
     lowering.raw_array_declarations.contains(planned_local.nominal) ||
     planned_local.nominal == @semantic.standard_array_type_declaration() ||
@@ -1718,7 +1728,7 @@ fn starshine_append_precise_nominal_local_cast(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   body : @semantic.PlannedBodyLowering,
-  local_id : Int,
+  local_id : Int32,
   source_expression : @semantic.ExprId,
   output : Array[@lib.Instruction],
 ) -> Unit {
@@ -1742,7 +1752,7 @@ fn starshine_append_precise_nominal_local_cast(
 }
 
 ///|
-fn starshine_match_local_get(local_index : Int) -> @lib.Instruction {
+fn starshine_match_local_get(local_index : Int32) -> @lib.Instruction {
   @lib.Instruction::local_get(
     @lib.LocalIdx::new(local_index.reinterpret_as_uint()),
   )
@@ -2081,12 +2091,12 @@ fn starshine_general_match_pattern_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   body : @semantic.PlannedBodyLowering,
   root : @semantic.PatternId,
-  scratch_local : Int,
-  product_ref_scratch : Int,
-  local_indices : Array[Int],
+  scratch_local : Int32,
+  product_ref_scratch : Int32,
+  local_indices : Array[Int32],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
   (Array[@lib.Instruction], Array[@lib.Instruction]),
@@ -2129,7 +2139,7 @@ fn starshine_general_match_pattern_instructions(
               @semantic.UnitPlannedValueShape if arguments.length == 0 => []
               _ => return Err(UnsupportedExpression(body.body, pattern))
             }
-            let starts : Array[Int] = []
+            let starts : Array[Int32] = []
             let mut next_leaf = leaf_start
             for field in fields {
               starts.push(next_leaf)
@@ -2603,11 +2613,11 @@ fn starshine_simple_match_pattern_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   body : @semantic.PlannedBodyLowering,
   pattern : @semantic.PatternId,
-  scratch_local : Int,
-  local_indices : Array[Int],
+  scratch_local : Int32,
+  local_indices : Array[Int32],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
   (Array[@lib.Instruction], Array[@lib.Instruction]),
@@ -2931,12 +2941,12 @@ fn starshine_match_pattern_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   body : @semantic.PlannedBodyLowering,
   pattern : @semantic.PatternId,
-  scratch_local : Int,
-  product_ref_scratch : Int,
-  local_indices : Array[Int],
+  scratch_local : Int32,
+  product_ref_scratch : Int32,
+  local_indices : Array[Int32],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[
   (Array[@lib.Instruction], Array[@lib.Instruction]),
@@ -2961,9 +2971,9 @@ fn starshine_match_pattern_instructions(
 fn starshine_function_result_cast_type(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
-  local_signature : Int,
-) -> Int {
+  program_module_index : Int32,
+  local_signature : Int32,
+) -> Int32 {
   let mut result_type = None
   for candidate in planned.function_types {
     if candidate.signature_type_index == local_signature &&
@@ -2998,9 +3008,9 @@ fn starshine_program_expression_function_type_index(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink,
-  program_module_index : Int,
+  program_module_index : Int32,
   expression : @semantic.ExprId,
-) -> Int {
+) -> Int32 {
   let type_ = lowering.expressions[expression].type_
   let resolved_type = if type_ < -1 {
     -type_ - 2
@@ -3026,8 +3036,8 @@ fn starshine_program_expression_function_type_index(
 ///|
 fn starshine_fixed_array_carrier_for_resolved(
   lowering : @semantic.PlannedModuleLowering,
-  resolved_type : Int,
-) -> Int {
+  resolved_type : Int32,
+) -> Int32 {
   if resolved_type < 0 || resolved_type >= lowering.resolved_types.length() {
     return -1
   }
@@ -3156,8 +3166,8 @@ fn starshine_body_value_type(
 fn starshine_local_capture_cell_slot(
   lowering : @semantic.PlannedModuleLowering,
   body : @semantic.PlannedBodyLowering,
-  local_id : Int,
-) -> Int {
+  local_id : Int32,
+) -> Int32 {
   if local_id < 0 || local_id >= body.locals.length {
     return -1
   }
@@ -3188,9 +3198,9 @@ fn starshine_local_capture_cell_slot(
 fn starshine_capture_cell_type_index(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  module_index : Int,
-  slot : Int,
-) -> Int {
+  module_index : Int32,
+  slot : Int32,
+) -> Int32 {
   if slot < 0 || slot >= planned.capture_cell_type_indices.length() {
     return -1
   }
@@ -3209,18 +3219,18 @@ priv enum StarshineLocalSlotCarrier {
   StarshineF64LocalSlot
   StarshineV128LocalSlot
   StarshineEqRefLocalSlot
-  StarshineNominalRefLocalSlot(Int)
+  StarshineNominalRefLocalSlot(Int32)
   StarshineGenericLocalSlot(@semantic.BodyTypeId)
-  StarshineCaptureCellLocalSlot(Int)
-  StarshineUniqueLocalSlot(Int)
+  StarshineCaptureCellLocalSlot(Int32)
+  StarshineUniqueLocalSlot(Int32)
 } derive(Eq)
 
 ///|
 priv struct StarshineLocalLiveRange {
   initializer : @semantic.ExprId
   last_read : @semantic.ExprId
-  writes : Int
-  declarations : Int
+  writes : Int32
+  declarations : Int32
   captured : Bool
 }
 
@@ -3371,8 +3381,8 @@ fn starshine_local_slot_carrier(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   body : @semantic.PlannedBodyLowering,
-  local_id : Int,
-  cell_slot : Int,
+  local_id : Int32,
+  cell_slot : Int32,
 ) -> StarshineLocalSlotCarrier? {
   if local_id < 0 || local_id >= body.locals.length {
     return None
@@ -3416,7 +3426,7 @@ fn starshine_local_slot_carrier(
 fn starshine_local_slot_types_are_compatible(
   carrier : StarshineLocalSlotCarrier,
   slot_carriers : Array[StarshineLocalSlotCarrier],
-  slot : Int,
+  slot : Int32,
 ) -> Bool {
   slot >= 0 && slot < slot_carriers.length() && slot_carriers[slot] == carrier
 }
@@ -3449,7 +3459,7 @@ fn starshine_constructor_evaluations(
 fn starshine_diverging_evaluation_count(
   lowering : @semantic.PlannedModuleLowering,
   evaluations : Array[@semantic.ExprId],
-) -> Int {
+) -> Int32 {
   for index, value in evaluations {
     if !lowering.expressions[value].flow.may_fall_through() {
       return index + 1
@@ -3465,21 +3475,21 @@ fn starshine_body_locals(
   program : @semantic.PlannedProgramWasmGCLink?,
   generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.PlannedBodyLowering,
-  leading_parameter_count : Int,
-  minimum_parameter_count? : Int = -1,
-  lambda? : @semantic.LambdaId = -1,
+  leading_parameter_count : Int32,
+  minimum_parameter_count~ : Int32 = -1,
+  lambda~ : @semantic.LambdaId = -1,
 ) -> (
-  Array[Int],
+  Array[Int32],
   Array[@lib.ValType],
-  Array[Int],
-  Array[Int],
-  Int,
-  Int,
-  Array[Int],
-  Array[Int],
-  Array[Int],
-  Array[Int],
-  Array[Int],
+  Array[Int32],
+  Array[Int32],
+  Int32,
+  Int32,
+  Array[Int32],
+  Array[Int32],
+  Array[Int32],
+  Array[Int32],
+  Array[Int32],
 ) {
   @semantic.assert_planned_body_arenas(lowering, body, 7, lambda~)
   let local_indices = Array::make(body.locals.length, -1)
@@ -3500,7 +3510,7 @@ fn starshine_body_locals(
   )
   let local_live_ranges = starshine_body_local_live_ranges(lowering, body)
   let slot_carriers : Array[StarshineLocalSlotCarrier] = []
-  let slot_last_uses : Array[Int] = []
+  let slot_last_uses : Array[Int32] = []
   let slot_reusable : Array[Bool] = []
   let mut parameter_count = leading_parameter_count
   for local_id in 0..<body.locals.length {
@@ -3544,8 +3554,7 @@ fn starshine_body_locals(
         if planned_local.elided || elided_locals[local_id] {
           continue
         }
-        let local_parameter_count = if minimum_parameter_count >
-          parameter_count {
+        let local_parameter_count = if minimum_parameter_count > parameter_count {
           minimum_parameter_count
         } else {
           parameter_count
@@ -4109,7 +4118,7 @@ fn starshine_body_locals(
 }
 
 ///|
-fn starshine_value_carrier(shape : @semantic.PlannedValueShape) -> Int {
+fn starshine_value_carrier(shape : @semantic.PlannedValueShape) -> Int32 {
   match shape {
     @semantic.I8PlannedValueShape
     | @semantic.I16PlannedValueShape
@@ -4136,7 +4145,7 @@ fn starshine_value_carrier(shape : @semantic.PlannedValueShape) -> Int {
 ///|
 fn starshine_fixed_array_get_instruction(
   shape : @semantic.PlannedValueShape,
-  array_type : Int,
+  array_type : Int32,
 ) -> @lib.Instruction {
   let type_index = @lib.TypeIdx::new(array_type.reinterpret_as_uint())
   match shape {
@@ -4164,7 +4173,7 @@ fn starshine_program_uses_text_runtime(
 fn starshine_fixed_array_base_for_body(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-) -> Int {
+) -> Int32 {
   match program {
     Some(link) => link.fixed_array_type_base
     None => starshine_fixed_array_runtime_base(planned)
@@ -4192,7 +4201,7 @@ fn starshine_fixed_array_backing_prefix(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   shape : @semantic.PlannedValueShape,
-) -> (Array[@lib.Instruction], Int)? {
+) -> (Array[@lib.Instruction], Int32)? {
   let carrier = @semantic.wasmgc_raw_array_storage_carrier(shape)
   guard carrier >= 0 else { return None }
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
@@ -4203,9 +4212,9 @@ fn starshine_fixed_array_backing_prefix(
 ///|
 fn starshine_local_physical_type_index(
   program : @semantic.PlannedProgramWasmGCLink?,
-  module_index : Int,
-  local_type_index : Int,
-) -> Int {
+  module_index : Int32,
+  local_type_index : Int32,
+) -> Int32 {
   match program {
     Some(link) => link.physical_type_index(module_index, local_type_index)
     None => local_type_index
@@ -4217,9 +4226,9 @@ fn starshine_capture_get_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  module_index : Int,
+  module_index : Int32,
   lambda : @semantic.LambdaId,
-  capture : Int,
+  capture : Int32,
 ) -> Array[@lib.Instruction] {
   let lambda_info = lowering.lambdas[lambda]
   let global_capture = lambda_info.captures.start + capture
@@ -4306,9 +4315,9 @@ fn starshine_capture_cell_reference_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  module_index : Int,
+  module_index : Int32,
   lambda : @semantic.LambdaId,
-  capture : Int,
+  capture : Int32,
 ) -> Array[@lib.Instruction] {
   let global_capture = lowering.lambdas[lambda].captures.start + capture
   if lowering.lambdas[lambda].directized {
@@ -4344,7 +4353,7 @@ fn starshine_product_box_from_locals(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   body_id : @semantic.BodyId,
-  first_local : Int,
+  first_local : Int32,
   shape : @semantic.PlannedValueShape,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let leaves : Array[@semantic.PlannedValueShape] = []
@@ -4388,10 +4397,10 @@ fn starshine_capture_source_instructions(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  module_index : Int,
+  module_index : Int32,
   current_lambda : @semantic.LambdaId,
   source : @semantic.LambdaCaptureSource,
-  local_indices : Array[Int],
+  local_indices : Array[Int32],
   generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.PlannedBodyLowering,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
@@ -4464,7 +4473,7 @@ fn starshine_lambda_function_index(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   lambda : @semantic.LambdaId,
-) -> Int {
+) -> Int32 {
   let fragment_index = planned.lambda_function_indices[lambda]
   let fragment = planned.functions[fragment_index]
   match program {
@@ -4486,11 +4495,11 @@ fn starshine_lambda_function_index(
 fn starshine_function_reference_cache_indices(
   lowering : @semantic.PlannedModuleLowering,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   body : @semantic.PlannedBodyLowering,
-  first_local : Int,
-) -> (Array[Int], Int) {
-  let counts : Map[@semantic.DeclId, Int] = Map::default()
+  first_local : Int32,
+) -> (Array[Int32], Int32) {
+  let counts : Map[@semantic.DeclId, Int32] = Map::default()
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
@@ -4515,7 +4524,7 @@ fn starshine_function_reference_cache_indices(
       _ => ()
     }
   }
-  let local_by_declaration : Map[@semantic.DeclId, Int] = Map::default()
+  let local_by_declaration : Map[@semantic.DeclId, Int32] = Map::default()
   let indices = Array::make(body.expressions.length, -1)
   let mut next_local = first_local
   for
@@ -4546,11 +4555,11 @@ fn starshine_function_reference_cache_prefix(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   body : @semantic.PlannedBodyLowering,
-  cache_indices : Array[Int],
+  cache_indices : Array[Int32],
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
-  let initialized : Map[Int, Bool] = Map::default()
+  let initialized : Map[Int32, Bool] = Map::default()
   let output : Array[@lib.Instruction] = []
   for
     expression in body.expressions.start..<(body.expressions.start +
@@ -4596,7 +4605,7 @@ fn starshine_function_reference_cache_prefix(
 ///|
 fn starshine_program_adapter_value_code(
   value : @semantic.PlannedWasmValueType,
-) -> Int {
+) -> Int32 {
   match value {
     @semantic.WasmI32Value => 0
     @semantic.WasmI64Value => 1
@@ -4617,7 +4626,7 @@ fn starshine_program_adapter_value_code(
 ///|
 fn starshine_program_adapter_shape_code(
   shape : @semantic.PlannedValueShape,
-) -> Int {
+) -> Int32 {
   match shape {
     @semantic.I8PlannedValueShape
     | @semantic.U8PlannedValueShape
@@ -4643,7 +4652,7 @@ fn starshine_program_adapter_shape_code(
 ///|
 fn starshine_program_append_shape_codes(
   shape : @semantic.PlannedValueShape,
-  output : Array[Int],
+  output : Array[Int32],
 ) -> Unit {
   match shape {
     @semantic.ProductPlannedValueShape(fields) =>
@@ -4660,8 +4669,8 @@ fn starshine_program_specialized_type_code(
   lowering : @semantic.PlannedModuleLowering,
   specialization : StarshineGenericSpecialization,
   type_ : @semantic.ResolvedTypeId,
-  fallback : Int,
-) -> Int {
+  fallback : Int32,
+) -> Int32 {
   if type_ >= 0 && type_ < lowering.resolved_types.length() {
     match lowering.resolved_types[type_] {
       @semantic.GenericParameterType(parameter) => {
@@ -4685,7 +4694,7 @@ fn starshine_program_specialized_type_code(
 ///|
 fn starshine_program_value_matches_code(
   value : @semantic.PlannedWasmValueType,
-  code : Int,
+  code : Int32,
 ) -> Bool {
   match (value, code) {
     (@semantic.WasmI32Value, 0)
@@ -4703,8 +4712,8 @@ fn starshine_program_value_matches_code(
 fn starshine_program_signature_matches_codes(
   planned : @semantic.PlannedProgramWasmGCLink,
   candidate : @semantic.PlannedProgramWasmSignatureType,
-  parameter_codes : Array[Int],
-  result_codes : Array[Int],
+  parameter_codes : Array[Int32],
+  result_codes : Array[Int32],
 ) -> Bool {
   let module_ = planned.modules[candidate.module_index]
   let (parameters, results) = match candidate.kind {
@@ -4743,9 +4752,9 @@ fn starshine_program_signature_matches_codes(
 ///|
 fn starshine_program_find_signature_by_codes(
   planned : @semantic.PlannedProgramWasmGCLink,
-  parameter_codes : Array[Int],
-  result_codes : Array[Int],
-) -> Int {
+  parameter_codes : Array[Int32],
+  result_codes : Array[Int32],
+) -> Int32 {
   for candidate in planned.program_signature_types {
     if starshine_program_signature_matches_codes(
         planned, candidate, parameter_codes, result_codes,
@@ -4763,7 +4772,7 @@ fn starshine_program_specialized_closure_signatures(
   module_ : @semantic.PlannedModuleWasmGCFragments,
   function_type : @semantic.ResolvedTypeId,
   specialization : StarshineGenericSpecialization,
-) -> (Int, Int, Int, Int)? {
+) -> (Int32, Int32, Int32, Int32)? {
   let (entry, direct) = match
     starshine_specialize_callback_signature(
       lowering,
@@ -4792,8 +4801,8 @@ fn starshine_runtime_bound_call_info(
   planned : @semantic.PlannedModuleWasmGCFragments,
   generic_specialization : StarshineGenericSpecialization?,
   requirement : @semantic.DeclId,
-  evidence_slot : Int,
-) -> (@semantic.DeclId, Int, Int, Int)? {
+  evidence_slot : Int32,
+) -> (@semantic.DeclId, Int32, Int32, Int32)? {
   let specialization = match generic_specialization {
     Some(value) => value
     None => return None
@@ -4837,11 +4846,11 @@ fn starshine_finish_trait_object_coercion(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.BodyId,
   trait_ : @semantic.DeclId,
-  evidence : Int,
+  evidence : Int32,
   output : Array[@lib.Instruction],
   helper_plan : StarshineProgramAdapterHelperPlan?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
@@ -5063,17 +5072,17 @@ fn starshine_emit_body_instructions(
   context : StarshineExpressionEmissionContext,
   body : @semantic.PlannedBodyLowering,
   current_lambda : @semantic.LambdaId,
-  local_indices : Array[Int],
-  match_local_indices : Array[Int],
-  match_result_local_indices : Array[Int],
-  function_reference_cache_indices : Array[Int],
-  fixed_array_ref_scratch_index : Int,
-  fixed_array_i32_scratch_index : Int,
-  map_key_local_indices : Array[Int],
-  map_value_local_indices : Array[Int],
-  control_state_local_indices : Array[Int],
-  control_result_local_indices : Array[Int],
-  constructor_local_indices : Array[Int],
+  local_indices : Array[Int32],
+  match_local_indices : Array[Int32],
+  match_result_local_indices : Array[Int32],
+  function_reference_cache_indices : Array[Int32],
+  fixed_array_ref_scratch_index : Int32,
+  fixed_array_i32_scratch_index : Int32,
+  map_key_local_indices : Array[Int32],
+  map_value_local_indices : Array[Int32],
+  control_state_local_indices : Array[Int32],
+  control_result_local_indices : Array[Int32],
+  constructor_local_indices : Array[Int32],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let program = context.program
@@ -6283,7 +6292,7 @@ fn starshine_emit_body_instructions(
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
-            let sources : Array[Int] = []
+            let sources : Array[Int32] = []
             let first_field = if tag < 0 { 0 } else { 1 }
             for field_index in first_field..<physical.fields.length {
               let field = physical_plan.fields[physical.fields.start +
@@ -8319,7 +8328,7 @@ fn starshine_append_module_result_cast(
 fn starshine_append_program_argument_cast(
   planned : @semantic.PlannedProgramWasmGCLink,
   function_ : @semantic.PlannedProgramWasmFunction,
-  parameter_index : Int,
+  parameter_index : Int32,
   instructions : Array[@lib.Instruction],
 ) -> Unit {
   if parameter_index < 0 || parameter_index >= function_.parameters.length {
@@ -8407,7 +8416,7 @@ fn starshine_lambda_leading_parameter_count(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   lambda : @semantic.LambdaId,
-) -> Int {
+) -> Int32 {
   if !lowering.lambdas[lambda].directized {
     return 1
   }
@@ -8426,7 +8435,7 @@ fn emit_starshine_lambda_body(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
-  program_module_index : Int,
+  program_module_index : Int32,
   lambda : @semantic.LambdaId,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let body = starshine_lambda_body(lowering, lambda)
@@ -8697,7 +8706,7 @@ fn emit_starshine_trait_adapter_body(
 ///|
 fn starshine_program_storage_type(
   planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   storage : @semantic.PlannedWasmStorageType,
 ) -> @lib.StorageType {
   match storage {
@@ -8791,7 +8800,7 @@ fn starshine_program_storage_type(
 ///|
 fn starshine_program_value_type(
   planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   value : @semantic.PlannedWasmValueType,
 ) -> @lib.ValType {
   match value {
@@ -8845,9 +8854,9 @@ fn starshine_program_value_type(
 
 ///|
 fn starshine_program_group_type_index(
-  final_type_index : Int,
-  _group_first_type_index : Int,
-  _group_length : Int,
+  final_type_index : Int32,
+  _group_first_type_index : Int32,
+  _group_length : Int32,
 ) -> @lib.TypeIdx {
   // The binary format encodes recursive-group references through their final
   // type-section indices. Starshine's relative recursive index is useful to
@@ -8862,7 +8871,7 @@ fn starshine_program_group_storage_type(
   group : @semantic.PlannedProgramWasmRecursiveGroup,
   storage : @semantic.PlannedWasmStorageType,
 ) -> @lib.StorageType {
-  let nominal = fn(final_type_index : Int) {
+  let nominal = fn(final_type_index : Int32) {
     @lib.StorageType::val_type(
       starshine_nominal_ref(
         starshine_program_group_type_index(
@@ -9020,7 +9029,7 @@ fn starshine_program_group_physical_subtype(
 ///|
 fn starshine_program_physical_subtype(
   planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   type_ : @semantic.PlannedWasmPhysicalType,
 ) -> (@lib.SubType, Bool) {
   let module_ = planned.modules[module_index]
@@ -9092,7 +9101,7 @@ fn starshine_program_physical_subtype(
 ///|
 fn starshine_program_function_type_subtype(
   planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   function_type : @semantic.PlannedWasmFunctionTypeFragment,
 ) -> @lib.SubType {
   let module_ = planned.modules[module_index]
@@ -9122,7 +9131,7 @@ fn starshine_program_function_type_subtype(
 ///|
 fn starshine_program_function_subtype(
   planned : @semantic.PlannedProgramWasmGCLink,
-  module_index : Int,
+  module_index : Int32,
   function_ : @semantic.PlannedWasmFunctionFragment,
 ) -> @lib.SubType {
   let module_ = planned.modules[module_index]
@@ -9173,7 +9182,7 @@ fn starshine_program_signature_rec_type(
 }
 
 ///|
-fn starshine_program_erased_box_rec_type(slot : Int) -> @lib.RecType {
+fn starshine_program_erased_box_rec_type(slot : Int32) -> @lib.RecType {
   let value_type = match slot {
     0 => @lib.ValType::i32()
     1 => @lib.ValType::i64()

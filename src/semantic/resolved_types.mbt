@@ -1,5 +1,5 @@
 ///|
-pub type ResolvedTypeId = Int
+pub type ResolvedTypeId = Int32
 
 ///|
 pub enum PrimitiveType {
@@ -48,7 +48,7 @@ pub enum PrimitiveType {
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
-fn PrimitiveType::rank(self : PrimitiveType) -> Int {
+fn PrimitiveType::rank(self : PrimitiveType) -> Int32 {
   match self {
     UnitType => 0
     BoolType => 1
@@ -166,12 +166,12 @@ pub enum TypeDiagnostic {
   AmbiguousImportedType(NameId, DeclId, UInt64)
   AmbiguousImportedTrait(NameId, DeclId, UInt64)
   ExpectedTraitType(NameId, DeclId, UInt64)
-  TypeArityMismatch(ResolvedTypeId, Int, Int, DeclId, UInt64)
+  TypeArityMismatch(ResolvedTypeId, Int32, Int32, DeclId, UInt64)
   TypeNotApplicable(ResolvedTypeId, DeclId, UInt64)
   NullableRefRequiresForeignType(ResolvedTypeId, DeclId, UInt64)
   SelfOutsideContext(DeclId, UInt64)
   AliasCycle(HirSpan, UInt64)
-  AliasExpansionLimit(DeclId, Int, UInt64)
+  AliasExpansionLimit(DeclId, Int32, UInt64)
   ComputedTypeFailure(DeclId, String, UInt64)
 } derive(Eq, Debug)
 
@@ -200,7 +200,7 @@ pub struct ResolvedModuleTypes {
   // Declared raw storage contracts, bound before physical lowering. These are
   // semantic IDs, not names or standard-library declaration positions.
   raw_array_declarations : Map[DeclId, Bool]
-  raw_array_operations : Map[DeclId, Int]
+  raw_array_operations : Map[DeclId, Int32]
   raw_reference_operations : Map[DeclId, RawReferenceOperation]
   types : Array[ResolvedType]
   type_arguments : Array[ResolvedTypeId]
@@ -226,8 +226,8 @@ pub struct ResolvedModuleTypes {
   alias_is_cyclic : Array[Bool]
   alias_cycles : Array[HirSpan]
   alias_cycle_declarations : Array[DeclId]
-  alias_expansion_work : Int
-  alias_expansion_limit : Int
+  alias_expansion_work : Int32
+  alias_expansion_limit : Int32
   diagnostics : Array[TypeDiagnostic]
   error_type : ResolvedTypeId
   primitive_types : Array[ResolvedTypeId]
@@ -281,20 +281,20 @@ pub fn ResolvedModuleTypes::arguments(
 priv struct ResolvedTypeInterner {
   types : Array[ResolvedType]
   arguments : Array[ResolvedTypeId]
-  buckets : Map[Int, Int]
-  next : Array[Int]
-  hashes : Array[Int]
+  buckets : Map[Int32, Int32]
+  next : Array[Int32]
+  hashes : Array[Int32]
   primitive_types : Array[ResolvedTypeId]
   mut error_type : ResolvedTypeId
 }
 
 ///|
-fn type_hash_mix(hash : Int, value : Int) -> Int {
+fn type_hash_mix(hash : Int32, value : Int32) -> Int32 {
   (hash ^ value) * 16777619
 }
 
 ///|
-fn PrimitiveType::hash_value(self : PrimitiveType) -> Int {
+fn PrimitiveType::hash_value(self : PrimitiveType) -> Int32 {
   type_hash_mix(0x210001, self.rank())
 }
 
@@ -366,7 +366,7 @@ fn ResolvedTypeInterner::new() -> ResolvedTypeInterner {
 fn ResolvedTypeInterner::insert(
   self : ResolvedTypeInterner,
   type_ : ResolvedType,
-  hash : Int,
+  hash : Int32,
 ) -> ResolvedTypeId {
   let id = self.types.length()
   let previous = self.buckets.get(hash).unwrap_or(-1)
@@ -381,7 +381,7 @@ fn ResolvedTypeInterner::insert(
 fn ResolvedTypeInterner::intern_simple(
   self : ResolvedTypeInterner,
   type_ : ResolvedType,
-  hash : Int,
+  hash : Int32,
 ) -> ResolvedTypeId {
   let mut candidate = self.buckets.get(hash).unwrap_or(-1)
   while candidate >= 0 {

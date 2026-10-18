@@ -57,7 +57,7 @@ fn compile_request_test_request() -> CompilerRequest {
 ///|
 fn compile_request_test_mutate(
   bytes : Bytes,
-  offset : Int,
+  offset : Int32,
   value : Byte,
 ) -> Bytes {
   let output = Buffer(size_hint=bytes.length())

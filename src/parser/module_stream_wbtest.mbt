@@ -1,5 +1,5 @@
 ///|
-fn nested_recovery_module(declaration_count : Int) -> Bytes {
+fn nested_recovery_module(declaration_count : Int32) -> Bytes {
   let output = Buffer(size_hint=declaration_count * 140)
   for index in 0..<declaration_count {
     output.write_string_utf8("fn Broken_")
@@ -14,7 +14,7 @@ fn nested_recovery_module(declaration_count : Int) -> Bytes {
 }
 
 ///|
-fn deeply_grouped_recovery_module(group_count : Int) -> Bytes {
+fn deeply_grouped_recovery_module(group_count : Int32) -> Bytes {
   let output = Buffer(size_hint=group_count * 2 + 96)
   output.write_string_utf8("fn Broken() -> Unit {\n  let value = ")
   for _ in 0..<group_count {

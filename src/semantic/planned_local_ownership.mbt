@@ -1,9 +1,9 @@
 ///|
 fn PlannedBodyChildChecker::local_identity(
   self : PlannedBodyChildChecker,
-  parent : Int,
-  index : Int,
-  relative : Int,
+  parent : Int32,
+  index : Int32,
+  relative : Int32,
   lambda : LambdaId,
 ) -> Unit {
   if !self.owned(

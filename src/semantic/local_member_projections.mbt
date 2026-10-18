@@ -86,7 +86,7 @@ fn LocalTypeSolver::has_pending_member_projection(
 fn LocalTypeSolver::projection_parameter_order(
   self : LocalTypeSolver,
   parameters : Array[BodyTypeId],
-) -> Array[Int]? {
+) -> Array[Int32]? {
   if self.member_types is None {
     return None
   }
@@ -165,7 +165,7 @@ fn LocalTypeSolver::substitute_member_type(
   self : LocalTypeSolver,
   type_ : ResolvedTypeId,
   bindings : Map[GenericParameterId, BodyTypeId],
-  depth : Int,
+  depth : Int32,
 ) -> Result[BodyTypeId, String] {
   if depth >= 256 {
     return Err("CT-034 member projection limit exceeded")
@@ -223,7 +223,7 @@ fn LocalTypeSolver::substitute_member_type(
 fn LocalTypeSolver::reduce_member_type(
   self : LocalTypeSolver,
   type_ : BodyTypeId,
-  depth : Int,
+  depth : Int32,
 ) -> Result[BodyTypeId, String] {
   if depth >= 256 {
     return Err("CT-034 member projection limit exceeded")
