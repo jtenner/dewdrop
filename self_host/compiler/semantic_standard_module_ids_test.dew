@@ -18,10 +18,18 @@ fn self_host_package_identity_fixture(reverse: Bool) -> SelfHostFrozenSignatureP
       test_only: false
     }]
   }
+  let consumer = {
+    path: "app.consumer"
+    files: [{
+      path: "consumer.dew"
+      source: b"open dew.std.preamble\nopen dew.std.bytes\npub fn same(left: Bytes, right: Bytes) -> Bool {\n  left == right\n}\n"
+      test_only: false
+    }]
+  }
   let modules = if reverse {
-    [values, traits]
+    [values, traits, consumer]
   } else {
-    [traits, values]
+    [traits, values, consumer]
   }
   let collected = self_host_collect_program_manifest(6100u64, {
     modules: modules
