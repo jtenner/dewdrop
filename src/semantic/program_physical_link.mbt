@@ -1123,6 +1123,16 @@ pub fn link_program_wasmgc_fragments(
     }
     for expression in module_lowering.expressions {
       match expression.kind {
+        PlannedMatchExpression(value, _)
+        | PlannedWhileExpression(_, value, _) =>
+          match module_lowering.expressions[value].shape {
+            ProductPlannedValueShape(_) =>
+              program_mark_product_erased_boxes(
+                module_lowering.expressions[value].shape,
+                erased_box_used,
+              )
+            _ => ()
+          }
         PlannedArrayLiteral(_, _, shape) =>
           match shape {
             ProductPlannedValueShape(_) =>
