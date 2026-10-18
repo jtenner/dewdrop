@@ -1,0 +1,142 @@
+open dew.std.option
+open dew.std.string
+
+fn self_host_lambda_result_test_link(source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
+  let collected = self_host_collect_program_manifest(5100u64, {
+    modules: [{
+      path: "app.main"
+      files: [{
+        path: "main.dew"
+        source: source
+        test_only: false
+      }]
+    }]
+  })
+  assert(collected.diagnostics.length() == 0u32, "lambda fixture manifest parses")
+  assert(collected.modules.at(0u32).diagnostic_count() == 0u32, "lambda fixture declarations parse")
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(lowering, false)), false)
+}
+
+fn self_host_lambda_result_test_assert_valid(link: SelfHostPlannedProgramWasmGCLink) -> Unit {
+  match self_host_validate_program_representation(link) {
+    Some(message) => assert(false, message)
+    None => {}
+  }
+  let bodies = self_host_plan_program_wasm_bodies(link)
+  assert(bodies.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, bodies))
+}
+
+fn self_host_lambda_result_test_distinct() -> SelfHostPlannedProgramWasmGCLink {
+  self_host_lambda_result_test_link(b"pub fn run() -> Bool {\n  let callback = fn() -> String {\n    \"value\"\n  }\n  callback()\n  true\n}\n")
+}
+
+fn self_host_lambda_result_test_generic() -> SelfHostPlannedProgramWasmGCLink {
+  self_host_lambda_result_test_link(b"fn invoke<t>(value: t) -> t {\n  let callback = fn() -> t {\n    value\n  }\n  callback()\n}\npub fn scalar() -> I64 {\n  invoke(42i64)\n}\npub fn reference() -> String {\n  invoke(\"value\")\n}\npub fn unit() -> Unit {\n  invoke(())\n}\n")
+}
+
+test "lambda result ownership accepts different parent and lambda carriers" {
+  self_host_lambda_result_test_assert_valid(self_host_lambda_result_test_distinct())
+  self_host_lambda_result_test_assert_valid(self_host_lambda_result_test_link(
+    b"pub fn run() -> String {\n  let callback = fn() -> I64 {\n    42i64\n  }\n  callback()\n  \"parent\"\n}\n"))
+  self_host_lambda_result_test_assert_valid(self_host_lambda_result_test_link(
+    b"pub fn run() -> I64 {\n  let callback = fn() -> Unit {}\n  callback()\n  42i64\n}\n"))
+}
+
+test "lambda result ownership accepts specialized scalar reference and Unit" {
+  let link = self_host_lambda_result_test_generic()
+  self_host_lambda_result_test_assert_valid(link)
+  let module_ = link.fragments.modules[0u32]
+  let mut scalar = 0u32
+  let mut reference = 0u32
+  let mut unit = 0u32
+  for function_ in module_.functions {
+    if function_.kind is PlannedWasmDefinedLambdaFunction(_) {
+      assert(function_.specialization != 4294967295u32, "generic lambda has a specialization")
+      if function_.results.length == 0u32 {
+        unit = unit + 1u32
+      } else {
+        match module_.function_value_types[function_.results.start] {
+          WasmI64Value => {
+            scalar = scalar + 1u32
+          }
+          WasmNullableEqRefValue => {
+            reference = reference + 1u32
+          }
+          _ => assert(false, "unexpected specialized lambda result")
+        }
+      }
+    }
+  }
+  assert(scalar == 1u32 && reference == 1u32 && unit == 1u32, "all three specialized lambda carriers checked")
+}
+
+test "lambda result ownership rejects a corrupted reference lambda ABI" {
+  let link = self_host_lambda_result_test_distinct()
+  let module_ = link.fragments.modules[0u32]
+  let lambda = module_.functions[module_.lambda_function_indices[0u32]]
+  assert(lambda.kind is PlannedWasmDefinedLambdaFunction(_), "selected lambda fragment")
+  assert(lambda.results.length == 1u32, "reference lambda has one result")
+  module_.function_value_types[lambda.results.start] = WasmI64Value
+  match self_host_validate_program_representation(link) {
+    Some(message) => assert(message.starts_with("program representation lambda result carrier mismatch"), message)
+    None => assert(false, "corrupted lambda ABI must fail")
+  }
+}
+
+test "lambda result ownership keeps named function ABI checks" {
+  let link = self_host_lambda_result_test_distinct()
+  let module_ = link.fragments.modules[0u32]
+  let named = module_.functions[0u32]
+  assert(named.kind is PlannedWasmDefinedFunction(_), "selected named function")
+  assert(named.results.length == 1u32, "Bool function has one result")
+  module_.function_value_types[named.results.start] = WasmNullableEqRefValue
+  match self_host_validate_program_representation(link) {
+    Some(message) => assert(message.starts_with("program representation function result carrier mismatch"), message)
+    None => assert(false, "corrupted named ABI must fail")
+  }
+}
+
+test "lambda result ownership rejects corrupted specialized scalar and Unit ABI" {
+  for corrupt_unit in [false, true] {
+    let link = self_host_lambda_result_test_generic()
+    let module_ = link.fragments.modules[0u32]
+    let mut changed = false
+    while 0u32 {
+      index if index < module_.functions.length() => {
+        let function_ = module_.functions[index]
+        if function_.kind is PlannedWasmDefinedLambdaFunction(_) && function_.specialization != 4294967295u32 {
+          if corrupt_unit && function_.results.length == 0u32 {
+            module_.functions[index] = {
+              declaration: function_.declaration
+              kind: function_.kind
+              direct_builtin: function_.direct_builtin
+              parameters: function_.parameters
+              results: {
+                start: function_.parameters.start
+                length: 1u32
+              }
+              specialization: function_.specialization
+              elided: function_.elided
+              offset: function_.offset
+            }
+            changed = true
+            break self_host_semantic_unit()
+          } else if !corrupt_unit && function_.results.length == 1u32 && module_.function_value_types[function_.results.start] is WasmI64Value {
+            module_.function_value_types[function_.results.start] = WasmNullableEqRefValue
+            changed = true
+            break self_host_semantic_unit()
+          } else {}
+        }
+        continue index + 1u32
+      }
+      _ => break self_host_semantic_unit()
+    }
+    assert(changed, "selected specialized result to corrupt")
+    match self_host_validate_program_representation(link) {
+      Some(message) => assert(message.starts_with("program representation lambda result carrier mismatch"), message)
+      None => assert(false, "corrupted specialized lambda ABI must fail")
+    }
+  }
+}

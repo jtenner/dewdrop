@@ -762,6 +762,57 @@ fn self_host_program_representation_fragment_result_shape(
   }
 }
 
+fn self_host_validate_lambda_result_representation(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_index: U32,
+  fragments: SelfHostPlannedModuleWasmGCFragments,
+  function_: SelfHostPlannedWasmFunctionFragment,
+  lambda_id: U32,
+) -> Option<String> {
+  if function_.elided {
+    return None
+  }
+  let specialization = link.fragments.specialization
+  let module_ = self_host_program_function_lowering(
+    specialization.lowering, module_index, function_.specialization,
+  )
+  self_host_assert_array_index(lambda_id, module_.lambdas.length(), "ARN-104 lambda result owner")
+  let lambda = module_.lambdas[lambda_id]
+  self_host_assert_compiler_invariant(lambda.lambda == lambda_id, "ARN-104 lambda result identity")
+  let request = if function_.specialization == 4294967295u32 {
+    None
+  } else {
+    self_host_assert_array_index(function_.specialization, specialization.requests.length(), "SPC-301 lambda result request")
+    Some(specialization.requests[function_.specialization])
+  }
+  let expected = self_host_lambda_request_shape(
+    module_, request, specialization.shapes, lambda.root_type, lambda.result_shape,
+  )
+  self_host_assert_compiler_invariant(
+    self_host_specialization_shape_error(expected) == 0u32,
+    "SPC-301 lambda result requires concrete specialization evidence",
+  )
+  let actual = self_host_program_representation_fragment_result_shape(fragments, function_)
+  if self_host_program_representation_shape_carrier_code(expected) ==
+    self_host_program_representation_shape_carrier_code(actual) {
+    return None
+  }
+  let message = StringBuilder::new()
+  message.append("program representation lambda result carrier mismatch module=")
+  message.append_u64(module_.module_id)
+  message.append(" declaration=")
+  message.append_u64(function_.declaration)
+  message.append(" lambda=")
+  message.append_u32(lambda_id)
+  message.append(" specialization=")
+  message.append_u32(function_.specialization)
+  message.append(" expected=")
+  message.append(self_host_program_representation_shape_name(expected))
+  message.append(" actual=")
+  message.append(self_host_program_representation_shape_name(actual))
+  Some(message.finish())
+}
+
 fn self_host_validate_program_representation(
   link: SelfHostPlannedProgramWasmGCLink,
 ) -> Option<String> {
@@ -781,6 +832,20 @@ fn self_host_validate_program_representation(
             fragment_module,
             current_function,
           )
+          match function_.kind {
+            PlannedWasmDefinedLambdaFunction(lambda) => {
+              // A lambda retains its owner's declaration identity, but its
+              // result ABI belongs to the lambda's own specialized signature.
+              match self_host_validate_lambda_result_representation(
+                link, current_module, fragment_module, function_, lambda,
+              ) {
+                Some(error) => return Some(error)
+                None => {}
+              }
+              continue current_function + 1u32
+            }
+            _ => {}
+          }
           match self_host_program_specialization_callable(
             lowering_module,
             function_.declaration,
