@@ -1,0 +1,60 @@
+fn identity<t>(value: t) -> t {
+  while value {
+    current => break current
+  }
+}
+fn nested<t>(value: t) -> t {
+  while 0u32 {
+    _ => {
+      let result = while value {
+        current => break current
+      }
+      break result
+    }
+  }
+}
+fn choose<t>(value: t, flag: Bool) -> t {
+  if flag {
+    while value {
+      current => break current
+    }
+  } else {
+    value
+  }
+}
+fn discard<t>(value: t) -> Unit {
+  while 0u32 {
+    _ => break value
+  }
+  ()
+}
+struct Ref {
+  value: I32
+}
+pub fn main() -> I32 {
+  identity(())
+  nested(())
+  choose((), true)
+  discard(42i32)
+  discard(Ref::{
+    value: 17i32
+  })
+  if identity(42i32) == 42i32 &&
+    identity(42i64) == 42i64 &&
+    identity(1.5f32) == 1.5f32 &&
+    identity(1.5f64) == 1.5f64 &&
+    identity(Ref::{
+      value: 42i32
+    }).value == 42i32 &&
+    nested(42i32) == 42i32 &&
+    nested(42i64) == 42i64 &&
+    nested(Ref::{
+      value: 42i32
+    }).value == 42i32 &&
+    choose(42i64, true) == 42i64 &&
+    choose(42i64, false) == 42i64 {
+    42i32
+  } else {
+    0i32
+  }
+}

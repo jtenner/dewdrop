@@ -10119,10 +10119,13 @@ fn self_host_emit_linked_i32_expression(
                   UnitPlannedValueShape
                 } else if !planned.flow.falls_through {
                   UnitPlannedValueShape
-                } else if planned.shape is ErrorPlannedValueShape {
-                  expected_result_shape
                 } else {
-                  planned.shape
+                  // The frozen expression carrier includes this loop's
+                  // specialization and its enclosing value constraints.
+                  self_host_linked_planned_expression_shape(
+                    canonical_body_plan, link, module_, body,
+                    caller_specialization, expression,
+                  )
                 },
               ))
               let inferred_loop_payload_hint = match self_host_linked_iterator_next_element_shape(
@@ -13600,7 +13603,8 @@ fn self_host_emit_linked_i32_expression(
                       )
                     }
                     None => {
-                      return Some("linked I32 pattern binding has no physical slot")
+                      // The checked slot lookup permits no storage only for
+                      // elided locals and Unit/Never carriers.
                     }
                   }
                   _ => {

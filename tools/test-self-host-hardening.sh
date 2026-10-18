@@ -187,6 +187,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_array_literal_calls_test.dew \
   self_host/compiler/semantic_physical_specialization_test.dew \
   self_host/compiler/semantic_nested_literal_carriers_test.dew \
+  self_host/compiler/semantic_generic_loop_carriers_test.dew \
   self_host/compiler/semantic_pattern_adapter_identity_test.dew \
   self_host/compiler/semantic_pattern_payload_spelling_test.dew \
   self_host/compiler/semantic_payload_span_test.dew \

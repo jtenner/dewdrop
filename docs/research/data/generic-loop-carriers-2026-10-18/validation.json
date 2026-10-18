@@ -1,0 +1,357 @@
+{
+  "source_sha256": {
+    "self_host/compiler/starshine_module.dew": "6693d7c84bee57feb9ae9416be25858233c8b7c89ba3da74999dddce02646664",
+    "self_host/compiler/semantic_generic_loop_carriers_test.dew": "22f394af58a65ba49271f33e0440e26f3bc4a8ac61f964b43baa1bc0186fd6f7",
+    "tools/test-self-host-hardening.sh": "cc37c17a5180d53595a540c5edf6efa7b957c950f969a3822f96045103231f29",
+    "tools/check-self-host-emission.mjs": "f2618659c333f49143c26f53186eae45837cdd880b8a9b65db1d914a870b91ff"
+  },
+  "reduced_source_bytes_red": [
+    {
+      "label": "loop-i32",
+      "source": "open dew.std.string\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  identity(42i32)\n}\n",
+      "seconds": 1.1678376769996248,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I32; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=7233 declaration=31065498451968 specialization=0\n",
+      "output_exists": false
+    },
+    {
+      "label": "loop-i64",
+      "source": "open dew.std.string\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(42i64) == 42i64 {\n    42i32\n  } else {\n    0i32\n  }\n}\n",
+      "seconds": 1.1654274840111611,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I64; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=7233 declaration=31065498451968 specialization=0\n",
+      "output_exists": false
+    },
+    {
+      "label": "loop-f32",
+      "source": "open dew.std.string\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(1.5f32) == 1.5f32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n",
+      "seconds": 1.156442595005501,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=F32; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=7233 declaration=31065498451968 specialization=0\n",
+      "output_exists": false
+    },
+    {
+      "label": "loop-f64",
+      "source": "open dew.std.string\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(1.5f64) == 1.5f64 {\n    42i32\n  } else {\n    0i32\n  }\n}\n",
+      "seconds": 1.1667328490002546,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=F64; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=7233 declaration=31065498451968 specialization=0\n",
+      "output_exists": false
+    },
+    {
+      "label": "loop-reference",
+      "source": "open dew.std.string\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(\"hello\") == \"hello\" {\n    42i32\n  } else {\n    0i32\n  }\n}\n",
+      "seconds": 1.2679408140102169,
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "output_exists": true
+    },
+    {
+      "label": "loop-unit",
+      "source": "open dew.std.string\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  identity(())\n  42i32\n}\n",
+      "seconds": 1.123652221998782,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: linked I32 pattern binding has no physical slot\n",
+      "output_exists": false
+    },
+    {
+      "label": "loop-nested",
+      "source": "fn nested<t>(value: t) -> t {\n  while 0u32 {\n    _ => {\n      let result = while value {\n        current => break current\n      }\n      break result\n    }\n  }\n}\npub fn main() -> I32 {\n  nested(42i32)\n}\n",
+      "seconds": 1.1659462579991668,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 0))(local.set (Local 3))(block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end))(local.set (Local 2))(local.get (Local 2))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 0))(local.set (Local 3))(block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end))(local.set (Local 2))(local.get (Local 2))(br (Label 1))(end)): instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I32; stack=[]; stack=[]; stack=[]; stack=[]; stack=[] linked_function=1 name=nested module=7233 declaration=31065498451968 specialization=0\n",
+      "output_exists": false
+    }
+  ],
+  "regression_red": [
+    {
+      "label": "generate",
+      "seconds": 4.5177998159924755,
+      "status": 0,
+      "stdout": "semantic_specialized_body_shapes.dew:56:11: warning: UnreachableBlockItem(10649, 1, 1972)\n  |\n56 |           unreachable()\n  |           ^\nstarshine_module.dew:12677:28: warning: RedundantPatternArm(11686, 452291)\n  |\n12677 |             PlannedLocalSet(_, _) => {\n  |                            ^\nstarshine_module.dew:12724:13: warning: RedundantPatternArm(11701, 454630)\n  |\n12724 |             _ => {\n  |             ^\nwrote self-describing Dew test module\n",
+      "stderr": ""
+    },
+    {
+      "label": "time-provider",
+      "seconds": 0.011746242991648614,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "link",
+      "seconds": 1.0864607300027274,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "test",
+      "seconds": 0.2438158260047203,
+      "status": 1,
+      "stdout": "",
+      "stderr": "FAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission loop-i32: unexpected trap unreachable: assertion failed: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I32; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=5100 declaration=21904333209600 specialization=0\nFAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission loop-i64: unexpected trap unreachable: assertion failed: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I64; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=5100 declaration=21904333209600 specialization=0\nFAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission loop-f32: unexpected trap unreachable: assertion failed: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=F32; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=5100 declaration=21904333209600 specialization=0\nFAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission loop-f64: unexpected trap unreachable: assertion failed: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 2))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=F64; stack=[]; stack=[]; stack=[] linked_function=1 name=identity module=5100 declaration=21904333209600 specialization=0\nFAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission loop-unit: unexpected trap unreachable: assertion failed: linked I32 pattern binding has no physical slot\nFAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission loop-nested: unexpected trap unreachable: assertion failed: Starshine rejected the linked self-host output module function=1: instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 0))(local.set (Local 3))(block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end))(local.set (Local 2))(local.get (Local 2))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 0))(local.set (Local 3))(block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end))(local.set (Local 2))(local.get (Local 2))(br (Label 1))(end)): instruction[2] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 3))(local.set (Local 1))(local.get (Local 1))(br (Label 1))(end)): instruction[3] (br (Label 1)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I32; stack=[]; stack=[]; stack=[]; stack=[]; stack=[] linked_function=1 name=nested module=5100 declaration=21904333209600 specialization=0\nFAIL self_host.compiler::semantic_generic_loop_carriers_test.dew::generic loop carrier emission nested conditional and discarded contexts: unexpected trap unreachable: assertion failed: linked I32 pattern binding has no physical slot\nDew tests: 1 passed, 7 failed\n"
+    }
+  ],
+  "regression_green": [
+    {
+      "label": "generate",
+      "seconds": 4.449037988000782,
+      "status": 0,
+      "stdout": "semantic_specialized_body_shapes.dew:56:11: warning: UnreachableBlockItem(10649, 1, 1972)\n  |\n56 |           unreachable()\n  |           ^\nstarshine_module.dew:12680:28: warning: RedundantPatternArm(11684, 452494)\n  |\n12680 |             PlannedLocalSet(_, _) => {\n  |                            ^\nstarshine_module.dew:12727:13: warning: RedundantPatternArm(11699, 454833)\n  |\n12727 |             _ => {\n  |             ^\nwrote self-describing Dew test module\n",
+      "stderr": ""
+    },
+    {
+      "label": "time-provider",
+      "seconds": 0.012405212997691706,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "link",
+      "seconds": 1.088568735998706,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "test",
+      "seconds": 0.25611131300684065,
+      "status": 0,
+      "stdout": "Dew tests passed: 8 selected from 8\n",
+      "stderr": ""
+    }
+  ],
+  "selfhost_emitter_runtime": {
+    "command": [
+      "node",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/run-loop-output.mjs",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/loop-regression/tests.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/generic-loop-selfhost.wasm"
+    ],
+    "seconds": 0.23512705499888398,
+    "status": 0,
+    "stdout": "{\"result\":42,\"generated_ms\":104.64889699999999,\"total_ms\":104.937079,\"wasm_bytes\":1885}\n",
+    "stderr": ""
+  },
+  "native_reductions": [
+    {
+      "name": "loop-i32",
+      "seconds": 0.19075821500155143,
+      "status": 0,
+      "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/loop-i32-native.wasm (727 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "name": "loop-i64",
+      "seconds": 0.17256826200173236,
+      "status": 0,
+      "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/loop-i64-native.wasm (738 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "name": "loop-f32",
+      "seconds": 0.18133810500148684,
+      "status": 0,
+      "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/loop-f32-native.wasm (836 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "name": "loop-f64",
+      "seconds": 0.18392972099536564,
+      "status": 0,
+      "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/loop-f64-native.wasm (852 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "name": "loop-reference",
+      "seconds": 0.18561189599859063,
+      "status": 0,
+      "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/loop-reference-native.wasm (3088 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "name": "loop-unit",
+      "seconds": 0.20542466999904718,
+      "status": 1,
+      "stdout": "StarshineProgramCodeError(InvalidLocal(17179869184000, 1))\n",
+      "stderr": ""
+    },
+    {
+      "name": "loop-nested",
+      "seconds": 0.16960945799655747,
+      "status": 0,
+      "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/loop-nested-native.wasm (674 bytes)\n",
+      "stderr": ""
+    }
+  ],
+  "patched_compiler_build": {
+    "command": [
+      "node",
+      "--stack-size=65500",
+      "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/fixed-compiler-request.bin"
+    ],
+    "seconds": 15.381765727011953,
+    "status": 0,
+    "changed": [
+      {
+        "module": "self_host.compiler",
+        "path": "self_host/compiler/semantic_nested_pattern_emit.dew",
+        "before_sha256": "72d216fe1dc1100d096c5f6cf94a2a76a20dabd5565926dc78e7edc9b099197d",
+        "after_sha256": "c47049ff56febe0304bbcd25bacfe3ee91e95c43cf708738a7008857832399bf"
+      },
+      {
+        "module": "self_host.compiler",
+        "path": "self_host/compiler/semantic_program_link_plan.dew",
+        "before_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+        "after_sha256": "12f3c9ba3345fb350897ab3e9f4b65d4fd036eee197325bc86e563ef700f8d50"
+      },
+      {
+        "module": "self_host.compiler",
+        "path": "self_host/compiler/starshine_module.dew",
+        "before_sha256": "c73680910e8d2115f283239cc52130777ff81295636ca99c4fb1d87a72212779",
+        "after_sha256": "6693d7c84bee57feb9ae9416be25858233c8b7c89ba3da74999dddce02646664"
+      }
+    ],
+    "request_sha256": "686428829c47a2bdaa190cf3fe1c76e725f4131d2b3428a35bb50535727132be",
+    "parent_compiler_sha256": "0d5a8679c43c461ba923bb730660afedc51be7f2a9f9873f8a22a9442e8b87e3",
+    "stdout": "",
+    "stderr": "",
+    "output_exists": true,
+    "output_sha256": "ed583b006af3921e5442521251e7e1ddee679aa219883abe396a3237c59d6462"
+  },
+  "patched_compiler_link": {
+    "command": [
+      "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/self_host_link_fixture/self_host_link_fixture.exe",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-fixed.wasm",
+      "/home/dev/Projects/dewdrop/starshine-mb/dist/ffi/starshine-ffi.wasm",
+      "/home/dev/Projects/dewdrop/fixtures/facet/facet-adapter.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/regression/time.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-fixed-linked.wasm",
+      "--single-validation"
+    ],
+    "seconds": 0.9470349750044988,
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "unchanged_full_probe": {
+    "compiler_sha256": "02c1e0f64bd29f1f9cd89a290ed53dafeea2846670a075c8b966dce9acd9679b",
+    "host_compiler_sha256": "b087c9eafddcb4e030c8504cf656fd85646884922fdadf857fbd4f8ae5f0832e",
+    "template_sha256": "36d40b9b17e3070f0363c58d91071fd2013f4085098b4d6f6acc4712d7e620a5",
+    "results": [
+      {
+        "label": "export-memory",
+        "command": [
+          "mise",
+          "exec",
+          "wasm-tools@1.262.0",
+          "--",
+          "python3",
+          "/home/dev/Projects/dewdrop/tools/export-wasm-memory.py",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c.wasm",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm"
+        ],
+        "cwd": "/home/dev/Projects/dewdrop",
+        "elapsed_seconds": 0.9528749690070981,
+        "exit_status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "label": "rewrite-request",
+        "command": [
+          "python3",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/rewrite-request.py",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/fresh-template.bin",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe"
+        ],
+        "cwd": "/home/dev/Projects/dewdrop",
+        "elapsed_seconds": 0.07396716100629419,
+        "exit_status": 0,
+        "stdout": "positive 8836233 bytes 34 modules\nnegative 8831160 bytes 34 modules\n",
+        "stderr": ""
+      },
+      {
+        "label": "positive-c-compile",
+        "command": [
+          "node",
+          "--stack-size=65500",
+          "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/positive-request.bin"
+        ],
+        "cwd": "/tmp/dewdrop-review-2026-10-18/feature-probe",
+        "elapsed_seconds": 1.376144458001363,
+        "exit_status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "label": "positive-c-runtime",
+        "command": [
+          "node",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/run-output.mjs",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/positive-c.wasm"
+        ],
+        "cwd": "/tmp/dewdrop-review-2026-10-18/feature-probe",
+        "elapsed_seconds": 0.03092790101072751,
+        "exit_status": 0,
+        "stdout": "{\"result\":42,\"elapsed_ms\":0.8118369999999988}\n",
+        "stderr": ""
+      },
+      {
+        "label": "negative-c-compile",
+        "command": [
+          "node",
+          "--stack-size=65500",
+          "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/negative-request.bin"
+        ],
+        "cwd": "/tmp/dewdrop-review-2026-10-18/feature-probe",
+        "elapsed_seconds": 1.2636336739960825,
+        "exit_status": 1,
+        "stdout": "",
+        "stderr": "self-host smoke: INV-002: semantic diagnostics must be resolved before specialization; count=3\nmodule=7233 names=0 signatures=0 inference=3\n  count inference error=1\n  count missing imported construction field=1\n  count no matching method=1\n  inference error offset=69\n  missing imported construction field offset=61\n  no matching method offset=115 file=invalid.dew expression=6 kind=unresolved.call receiver=4 receiver-type=0 receiver-kind=local.get\n"
+      }
+    ],
+    "status": 0
+  },
+  "emitted_inspection": {
+    "unit_state_has_no_local_access": true,
+    "scalar_loop_blocks": [
+      "i32",
+      "i64",
+      "f32",
+      "f64"
+    ],
+    "reference_loop_block": "eqref",
+    "identity_has_no_struct_or_array_allocation": true,
+    "wasm_sha256": "66da40f66bfdcf9d673c9319931e5268b724e0bb055d7ecc0ec4c4288b6eb404",
+    "wat_print": {
+      "command": [
+        "mise",
+        "exec",
+        "wasm-tools@1.262.0",
+        "--",
+        "wasm-tools",
+        "print",
+        "/tmp/dewdrop-review-2026-10-18/feature-probe/generic-loop-selfhost.wasm"
+      ],
+      "seconds": 0.012517694005509838,
+      "status": 0,
+      "stderr": ""
+    }
+  }
+}

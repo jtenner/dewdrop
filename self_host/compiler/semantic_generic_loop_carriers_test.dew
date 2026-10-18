@@ -1,0 +1,78 @@
+open dew.std.bytes
+open dew.std.option
+open dew.std.result
+
+fn self_host_generic_loop_test_emit(source: Bytes) -> Bytes {
+  let collected = self_host_collect_program_manifest(5100u64, {
+    modules: [{
+      path: "app.main"
+      files: [{
+        path: "main.dew"
+        source: source
+        test_only: false
+      }]
+    }]
+  })
+  assert(collected.diagnostics.length() == 0u32, "generic loop fixture manifest parses")
+  assert(collected.modules.at(0u32).diagnostic_count() == 0u32, "generic loop fixture declarations parse")
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => assert(false, error)
+    None => {}
+  }
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(lowering, false)), false)
+  let bodies = self_host_plan_program_wasm_bodies(link)
+  assert(bodies.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, bodies))
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Ok(bytes) => bytes
+    Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+test "generic loop carrier emission loop-i32" {
+  let bytes = self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  identity(42i32)\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission loop-i64" {
+  let bytes = self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(42i64) == 42i64 {\n    42i32\n  } else {\n    0i32\n  }\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission loop-f32" {
+  let bytes = self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(1.5f32) == 1.5f32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission loop-f64" {
+  let bytes = self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(1.5f64) == 1.5f64 {\n    42i32\n  } else {\n    0i32\n  }\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission loop-reference" {
+  let bytes = self_host_generic_loop_test_emit(b"struct Ref {\n  value: I32\n}\nfn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  if identity(Ref::{\n    value: 42i32\n  }).value == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission loop-unit" {
+  let bytes = self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\npub fn main() -> I32 {\n  identity(())\n  42i32\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission loop-nested" {
+  let bytes = self_host_generic_loop_test_emit(b"fn nested<t>(value: t) -> t {\n  while 0u32 {\n    _ => {\n      let result = while value {\n        current => break current\n      }\n      break result\n    }\n  }\n}\npub fn main() -> I32 {\n  nested(42i32)\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+test "generic loop carrier emission nested conditional and discarded contexts" {
+  let bytes = self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\nfn nested<t>(value: t) -> t {\n  while 0u32 {\n    _ => {\n      let result = while value {\n        current => break current\n      }\n      break result\n    }\n  }\n}\nfn choose<t>(value: t, flag: Bool) -> t {\n  if flag {\n    while value {\n      current => break current\n    }\n  } else {\n    value\n  }\n}\nfn discard<t>(value: t) -> Unit {\n  while 0u32 {\n    _ => break value\n  }\n  ()\n}\nstruct Ref {\n  value: I32\n}\npub fn main() -> I32 {\n  identity(())\n  nested(())\n  choose((), true)\n  discard(42i32)\n  discard(Ref::{\n    value: 17i32\n  })\n  if identity(42i32) == 42i32 &&\n    identity(42i64) == 42i64 &&\n    identity(1.5f32) == 1.5f32 &&\n    identity(1.5f64) == 1.5f64 &&\n    identity(Ref::{\n      value: 42i32\n    }).value == 42i32 &&\n    nested(42i32) == 42i32 &&\n    nested(42i64) == 42i64 &&\n    nested(Ref::{\n      value: 42i32\n    }).value == 42i32 &&\n    choose(42i64, true) == 42i64 &&\n    choose(42i64, false) == 42i64 {\n    42i32\n  } else {\n    0i32\n  }\n}\n")
+  assert(bytes.byte_length() >= 8u32, "generic loop emission returns Wasm")
+}
+
+pub fn self_host_emit_generic_loop_carrier_probe() -> Bytes {
+  self_host_generic_loop_test_emit(b"fn identity<t>(value: t) -> t {\n  while value {\n    current => break current\n  }\n}\nfn nested<t>(value: t) -> t {\n  while 0u32 {\n    _ => {\n      let result = while value {\n        current => break current\n      }\n      break result\n    }\n  }\n}\nfn choose<t>(value: t, flag: Bool) -> t {\n  if flag {\n    while value {\n      current => break current\n    }\n  } else {\n    value\n  }\n}\nfn discard<t>(value: t) -> Unit {\n  while 0u32 {\n    _ => break value\n  }\n  ()\n}\nstruct Ref {\n  value: I32\n}\npub fn main() -> I32 {\n  identity(())\n  nested(())\n  choose((), true)\n  discard(42i32)\n  discard(Ref::{\n    value: 17i32\n  })\n  if identity(42i32) == 42i32 &&\n    identity(42i64) == 42i64 &&\n    identity(1.5f32) == 1.5f32 &&\n    identity(1.5f64) == 1.5f64 &&\n    identity(Ref::{\n      value: 42i32\n    }).value == 42i32 &&\n    nested(42i32) == 42i32 &&\n    nested(42i64) == 42i64 &&\n    nested(Ref::{\n      value: 42i32\n    }).value == 42i32 &&\n    choose(42i64, true) == 42i64 &&\n    choose(42i64, false) == 42i64 {\n    42i32\n  } else {\n    0i32\n  }\n}\n")
+}
