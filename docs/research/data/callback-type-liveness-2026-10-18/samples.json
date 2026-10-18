@@ -1,0 +1,261 @@
+{
+  "head": "fc00559474e3397b4573fb1ae23d849f0be22252",
+  "status_before_samples": " M docs/research/callback-type-liveness-2026-10-18.md\n M docs/research/f32-long-range-rounding-2026-10-18.md\n M docs/research/language-improvement-review-2026-10-18.md\n M tests/module-snapshots/collections/arena-invalid-negative-trap.wat\n M tests/module-snapshots/collections/arena-runtime.wat\n M tests/module-snapshots/collections/array-callback-mutation-runtime.wat\n M tests/module-snapshots/collections/array-callbacks-runtime.wat\n M tests/module-snapshots/collections/array-carriers-runtime.wat\n M tests/module-snapshots/collections/array-comparator-runtime.wat\n M tests/module-snapshots/collections/array-copy-within-invalid-range-trap.wat\n M tests/module-snapshots/collections/array-entries-runtime.wat\n M tests/module-snapshots/collections/array-entry-iter-exhausted.wat\n M tests/module-snapshots/collections/array-fill-invalid-range-trap.wat\n M tests/module-snapshots/collections/array-filter-runtime.wat\n M tests/module-snapshots/collections/array-flat-map-runtime.wat\n M tests/module-snapshots/collections/array-generic-transform-runtime.wat\n M tests/module-snapshots/collections/array-get-oob-trap.wat\n M tests/module-snapshots/collections/array-iter-exhausted.wat\n M tests/module-snapshots/collections/array-iterators-runtime.wat\n M tests/module-snapshots/collections/array-key-iter-exhausted.wat\n M tests/module-snapshots/collections/array-methods-runtime.wat\n M tests/module-snapshots/collections/array-pop-empty-runtime.wat\n M tests/module-snapshots/collections/array-predicates-runtime.wat\n M tests/module-snapshots/collections/array-reducers-runtime.wat\n M tests/module-snapshots/collections/array-runtime.wat\n M tests/module-snapshots/collections/array-set-oob-trap.wat\n M tests/module-snapshots/collections/array-slice-invalid-range-trap.wat\n M tests/module-snapshots/collections/array-swap-oob-trap.wat\n M tests/module-snapshots/collections/array-transforms-runtime.wat\n M tests/module-snapshots/collections/array-truncate-grow-trap.wat\n M tests/module-snapshots/collections/binary-heap-runtime.wat\n M tests/module-snapshots/collections/bloom-filter-core-runtime.wat\n M tests/module-snapshots/collections/bloom-filter-runtime.wat\n M tests/module-snapshots/collections/circular-buffer-runtime.wat\n M tests/module-snapshots/collections/deque-runtime.wat\n M tests/module-snapshots/collections/fixed-array-get-oob-trap.wat\n M tests/module-snapshots/collections/fixed-array-narrow-carriers-runtime.wat\n M tests/module-snapshots/collections/fixed-array-runtime.wat\n M tests/module-snapshots/collections/fixed-array-set-oob-trap.wat\n M tests/module-snapshots/collections/hash-evaluation-once-runtime.wat\n M tests/module-snapshots/collections/iter-combinators-runtime.wat\n M tests/module-snapshots/collections/map-growth-runtime.wat\n M tests/module-snapshots/collections/map-insert-unit-runtime.wat\n M tests/module-snapshots/collections/map-iterator-exhausted.wat\n M tests/module-snapshots/collections/map-iterators-runtime.wat\n M tests/module-snapshots/collections/map-missing-key-trap.wat\n M tests/module-snapshots/collections/map-runtime.wat\n M tests/module-snapshots/collections/mixed-array-fields-runtime.wat\n M tests/module-snapshots/collections/nested-array-set-runtime.wat\n M tests/module-snapshots/collections/nominal-container-provenance-runtime.wat\n M tests/module-snapshots/collections/ordered-map-runtime.wat\n M tests/module-snapshots/collections/ordered-set-runtime.wat\n M tests/module-snapshots/collections/ordering-runtime.wat\n M tests/module-snapshots/collections/priority-queue-runtime.wat\n M tests/module-snapshots/collections/queue-runtime.wat\n M tests/module-snapshots/collections/red-black-tree-runtime.wat\n M tests/module-snapshots/collections/set-growth-runtime.wat\n M tests/module-snapshots/collections/set-iterator-exhausted.wat\n M tests/module-snapshots/collections/set-iterator-runtime.wat\n M tests/module-snapshots/collections/set-runtime.wat\n M tests/module-snapshots/collections/stack-runtime.wat\n M tests/module-snapshots/control-flow/all-numeric-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/bool-match.wat\n M tests/module-snapshots/control-flow/defer-imported-runtime.wat\n M tests/module-snapshots/control-flow/defer-runtime.wat\n M tests/module-snapshots/control-flow/defer-trap-exclusion.wat\n M tests/module-snapshots/control-flow/evaluation-order-runtime.wat\n M tests/module-snapshots/control-flow/float-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/for-array-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-deep-wide-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-enum-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-nested-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-scalar-runtime.wat\n M tests/module-snapshots/control-flow/guard-fallthrough-runtime.wat\n M tests/module-snapshots/control-flow/i32-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/i64-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/narrow-payload-match-runtime.wat\n M tests/module-snapshots/control-flow/nested-if-runtime.wat\n M tests/module-snapshots/control-flow/nested-pattern-runtime.wat\n M tests/module-snapshots/control-flow/pattern-matrix-runtime.wat\n M tests/module-snapshots/control-flow/recursive-fibonacci-runtime.wat\n M tests/module-snapshots/control-flow/short-circuit-runtime.wat\n M tests/module-snapshots/control-flow/using-imported-runtime.wat\n M tests/module-snapshots/control-flow/using-runtime.wat\n M tests/module-snapshots/crypto/blake3-runtime.wat\n M tests/module-snapshots/enums/dense-dispatch-runtime.wat\n M tests/module-snapshots/enums/guarded-runtime.wat\n M tests/module-snapshots/enums/same-shape-runtime.wat\n M tests/module-snapshots/enums/struct-payload-runtime.wat\n M tests/module-snapshots/enums/tuple-payload-runtime.wat\n M tests/module-snapshots/enums/unit-runtime.wat\n M tests/module-snapshots/functions/closure-runtime.wat\n M tests/module-snapshots/functions/let-bound-nominal-args-runtime.wat\n M tests/module-snapshots/generics/generic-evidence-runtime.wat\n M tests/module-snapshots/generics/option-result-runtime.wat\n M tests/module-snapshots/generics/runtime-trait-erased-captured-prerequisite.wat\n M tests/module-snapshots/generics/runtime-trait-flow-devirtualized.wat\n M tests/module-snapshots/generics/runtime-trait-generic-dictionary.wat\n M tests/module-snapshots/generics/runtime-trait-open-generic-closed.wat\n M tests/module-snapshots/generics/runtime-trait-open-generic-dynamic.wat\n M tests/module-snapshots/generics/runtime-trait-open-generic-prerequisite.wat\n M tests/module-snapshots/io/portable-runtime.wat\n M tests/module-snapshots/json/bloom-duplicate-runtime.wat\n M tests/module-snapshots/json/core-runtime.wat\n M tests/module-snapshots/json/reader-runtime.wat\n M tests/module-snapshots/json/runtime.wat\n M tests/module-snapshots/lanes/f32x4-arithmetic-runtime.wat\n M tests/module-snapshots/lanes/f32x4-rounding-runtime.wat\n M tests/module-snapshots/lanes/i32x4-arithmetic-runtime.wat\n M tests/module-snapshots/lanes/i32x4-lanes-runtime.wat\n M tests/module-snapshots/lanes/i32x4-mask-runtime.wat\n M tests/module-snapshots/lanes/i8x8-arithmetic-runtime.wat\n M tests/module-snapshots/lanes/i8x8-popcnt-runtime.wat\n M tests/module-snapshots/lanes/i8x8-saturation-runtime.wat\n M tests/module-snapshots/memory/float-runtime.wat\n M tests/module-snapshots/memory/i32x4-runtime.wat\n M tests/module-snapshots/memory/i64-u64-runtime.wat\n M tests/module-snapshots/memory/i8x8-runtime.wat\n M tests/module-snapshots/memory/integer-widths-runtime.wat\n M tests/module-snapshots/modules/cross-module-initialization-runtime.wat\n M tests/module-snapshots/modules/cross-module-recursive-types-runtime.wat\n M tests/module-snapshots/modules/cross-package-impl-runtime.wat\n M tests/module-snapshots/modules/imported-derived-runtime.wat\n M tests/module-snapshots/modules/imported-enum-exhaustive-runtime.wat\n M tests/module-snapshots/modules/imported-generic-impl-bound-runtime.wat\n M tests/module-snapshots/modules/imported-impl-runtime.wat\n M tests/module-snapshots/modules/imported-module-values-runtime.wat\n M tests/module-snapshots/modules/imported-runtime-trait-generic.wat\n M tests/module-snapshots/modules/imported-runtime-trait.wat\n M tests/module-snapshots/modules/module-values-runtime.wat\n M tests/module-snapshots/modules/multi-file-runtime.wat\n M tests/module-snapshots/modules/multi-module-runtime.wat\n M tests/module-snapshots/modules/qualified-module-value-runtime.wat\n M tests/module-snapshots/modules/std-wildcard-runtime.wat\n M tests/module-snapshots/numeric/f32-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/f64-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/float-conversion-runtime.wat\n M tests/module-snapshots/numeric/float-specials-runtime.wat\n M tests/module-snapshots/numeric/i16-wrap-runtime.wat\n M tests/module-snapshots/numeric/i32-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/i64-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/i8-wrap-runtime.wat\n M tests/module-snapshots/numeric/integer-conversion-runtime.wat\n M tests/module-snapshots/numeric/math-runtime.wat\n M tests/module-snapshots/numeric/remainder-runtime.wat\n M tests/module-snapshots/numeric/shift-width-runtime.wat\n M tests/module-snapshots/numeric/signed-comparison-runtime.wat\n M tests/module-snapshots/numeric/signed-minimum-narrow-runtime.wat\n M tests/module-snapshots/numeric/signed-minimum-runtime.wat\n M tests/module-snapshots/numeric/u16-wrap-runtime.wat\n M tests/module-snapshots/numeric/u32-bitwise-runtime.wat\n M tests/module-snapshots/numeric/u64-shift-runtime.wat\n M tests/module-snapshots/numeric/u8-wrap-runtime.wat\n M tests/module-snapshots/numeric/unary-operators-runtime.wat\n M tests/module-snapshots/numeric/unsigned-comparison-runtime.wat\n M tests/module-snapshots/optimization/inlining-runtime.wat\n M tests/module-snapshots/structs/aggregate-if-runtime.wat\n M tests/module-snapshots/structs/field-runtime.wat\n M tests/module-snapshots/structs/mutable-field-runtime.wat\n M tests/module-snapshots/structs/nested-runtime.wat\n M tests/module-snapshots/structs/reordered-fields-runtime.wat\n M tests/module-snapshots/structs/string-field-runtime.wat\n M tests/module-snapshots/tests/failing-test-trap.wat\n M tests/module-snapshots/tests/test-mode-runtime.wat\n M tests/module-snapshots/tests/testing-runtime.wat\n M tests/module-snapshots/text/bytes-builder-runtime.wat\n M tests/module-snapshots/text/bytes-concat-runtime.wat\n M tests/module-snapshots/text/bytes-conversion-runtime.wat\n M tests/module-snapshots/text/code-points-exhausted.wat\n M tests/module-snapshots/text/code-points-invalid-view-trap.wat\n M tests/module-snapshots/text/code-points-runtime.wat\n M tests/module-snapshots/text/compiler-diagnostic-runtime.wat\n M tests/module-snapshots/text/concat-runtime.wat\n M tests/module-snapshots/text/concat-view-runtime.wat\n M tests/module-snapshots/text/concat.wat\n M tests/module-snapshots/text/hash-runtime.wat\n M tests/module-snapshots/text/nested-view-runtime.wat\n M tests/module-snapshots/text/ordering-runtime.wat\n M tests/module-snapshots/text/prefix-suffix-runtime.wat\n M tests/module-snapshots/text/search-long-runtime.wat\n M tests/module-snapshots/text/search-short-runtime.wat\n M tests/module-snapshots/text/show-byte-limit-trap.wat\n M tests/module-snapshots/text/show-collections-runtime.wat\n M tests/module-snapshots/text/show-depth-limit-trap.wat\n M tests/module-snapshots/text/show-derived-imported-runtime.wat\n M tests/module-snapshots/text/show-derived-runtime.wat\n M tests/module-snapshots/text/show-runtime.wat\n M tests/module-snapshots/text/string-builder-runtime.wat\n M tests/module-snapshots/text/string-builder-scalar-runtime.wat\n M tests/module-snapshots/text/string-compact-runtime.wat\n M tests/module-snapshots/text/string-slice-runtime.wat\n M tests/module-snapshots/text/string-view-runtime.wat\n M tests/module-snapshots/text/unicode-metrics-runtime.wat\n M tests/module-snapshots/text/utf8-invalid-classes-runtime.wat\n M tests/module-snapshots/types/derive-debug-runtime.wat\n M tests/module-snapshots/types/derive-eq-generic-runtime.wat\n M tests/module-snapshots/types/derive-eq-runtime.wat\n M tests/module-snapshots/types/derive-field-prerequisites-runtime.wat\n M tests/module-snapshots/types/derive-hash-runtime.wat\n M tests/module-snapshots/types/runtime-trait-devirtualized.wat\n M tests/module-snapshots/types/runtime-trait-scalar-static.wat\n M tests/module-snapshots/types/runtime-trait-scalars.wat\n M tests/module-snapshots/types/runtime-trait-static.wat\n M tests/module-snapshots/types/runtime-trait-value.wat\n M tests/module-snapshots/wasi/boundary-65521-runtime.wat\n M tests/module-snapshots/wasi/empty-write-runtime.wat\n M tests/module-snapshots/wasi/eof-runtime.wat\n M tests/module-snapshots/wasi/fd-read.wat\n M tests/module-snapshots/wasi/fd-write.wat\n M tests/module-snapshots/wasi/multiwindow-100000-runtime.wat\n M tests/module-snapshots/wasi/nonstdout-runtime.wat\n M tests/module-snapshots/wasi/partial-write-runtime.wat\n M tests/module-snapshots/wasi/read-chunk-runtime.wat\n M tests/module-snapshots/wasi/read-errno-trap.wat\n M tests/module-snapshots/wasi/read-overreport-trap.wat\n M tests/module-snapshots/wasi/stdin-runtime.wat\n M tests/module-snapshots/wasi/stdout-lines.wat\n M tests/module-snapshots/wasi/write-errno-trap.wat\n M tests/module-snapshots/wasi/write-overreport-trap.wat\n M tests/module-snapshots/wasi/zero-progress-trap.wat\n M tests/module-snapshots/wasm/intrinsics-runtime.wat\n M tests/module-snapshots/wasm/wasi-preview1-runtime.wat\n?? docs/research/data/callback-type-liveness-2026-10-18/measure.py\n?? docs/research/language-improvement-implementation-2026-10-18.md\n",
+  "binary_paths": {
+    "before": "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/before-cli.exe",
+    "after": "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe"
+  },
+  "binary_sha256": {
+    "before": "23c4367535dabe1f2c628b418dc824ffd0de3d4fb46a0d0208aa1499fb24a7a3",
+    "after": "d426709075299d333ca8700003b252cccd5c958dd2917859d603c2ccbd7bb768"
+  },
+  "input_sha256": "687f093c54e5a2e9525537a3d3bb0f00458f537332e26a48e2f85376cb4d2170",
+  "harness_sha256": "2734542a9515ed4666e04a859157c35085b067052e8784a5d6890c7a832938bf",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "architecture": "x86_64",
+  "limits": "Five alternating process samples on a shared host; RSS is not an allocation count. No isolated compiler speedup claim.",
+  "summary": {
+    "before": {
+      "median_wall_seconds": 0.17136079000192694,
+      "peak_rss_kib": 27288,
+      "wasm_bytes": 4227
+    },
+    "after": {
+      "median_wall_seconds": 0.17001132298901211,
+      "peak_rss_kib": 27400,
+      "wasm_bytes": 4046
+    }
+  },
+  "samples": [
+    {
+      "variant": "before",
+      "sample": 0,
+      "command": [
+        "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/before-cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/before.wasm"
+      ],
+      "wall_seconds": 0.16882035300659481,
+      "peak_rss_kib": 27088,
+      "wasm_bytes": 4227,
+      "wasm_sha256": "55a9f3f2f0ad1476339164c46ce33666a58d6a8117176f04b1f054ac82ecfaa7",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/before.wasm (4227 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "after",
+      "sample": 0,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/after.wasm"
+      ],
+      "wall_seconds": 0.17001132298901211,
+      "peak_rss_kib": 27400,
+      "wasm_bytes": 4046,
+      "wasm_sha256": "04ae548a12d0e370c53c9f6c7ffd597cc74a21ffe2d7c221304d674b8d98cf54",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/after.wasm (4046 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "before",
+      "sample": 1,
+      "command": [
+        "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/before-cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/before.wasm"
+      ],
+      "wall_seconds": 0.17136079000192694,
+      "peak_rss_kib": 27068,
+      "wasm_bytes": 4227,
+      "wasm_sha256": "55a9f3f2f0ad1476339164c46ce33666a58d6a8117176f04b1f054ac82ecfaa7",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/before.wasm (4227 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "after",
+      "sample": 1,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/after.wasm"
+      ],
+      "wall_seconds": 0.1757919759984361,
+      "peak_rss_kib": 27240,
+      "wasm_bytes": 4046,
+      "wasm_sha256": "04ae548a12d0e370c53c9f6c7ffd597cc74a21ffe2d7c221304d674b8d98cf54",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/after.wasm (4046 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "before",
+      "sample": 2,
+      "command": [
+        "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/before-cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/before.wasm"
+      ],
+      "wall_seconds": 0.17178523899929132,
+      "peak_rss_kib": 27288,
+      "wasm_bytes": 4227,
+      "wasm_sha256": "55a9f3f2f0ad1476339164c46ce33666a58d6a8117176f04b1f054ac82ecfaa7",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/before.wasm (4227 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "after",
+      "sample": 2,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/after.wasm"
+      ],
+      "wall_seconds": 0.16901409901038278,
+      "peak_rss_kib": 27400,
+      "wasm_bytes": 4046,
+      "wasm_sha256": "04ae548a12d0e370c53c9f6c7ffd597cc74a21ffe2d7c221304d674b8d98cf54",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/after.wasm (4046 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "before",
+      "sample": 3,
+      "command": [
+        "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/before-cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/before.wasm"
+      ],
+      "wall_seconds": 0.16900369799986947,
+      "peak_rss_kib": 27236,
+      "wasm_bytes": 4227,
+      "wasm_sha256": "55a9f3f2f0ad1476339164c46ce33666a58d6a8117176f04b1f054ac82ecfaa7",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/before.wasm (4227 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "after",
+      "sample": 3,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/after.wasm"
+      ],
+      "wall_seconds": 0.1681053799984511,
+      "peak_rss_kib": 27368,
+      "wasm_bytes": 4046,
+      "wasm_sha256": "04ae548a12d0e370c53c9f6c7ffd597cc74a21ffe2d7c221304d674b8d98cf54",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/after.wasm (4046 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "before",
+      "sample": 4,
+      "command": [
+        "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/before-cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/before.wasm"
+      ],
+      "wall_seconds": 0.17160413900273852,
+      "peak_rss_kib": 27092,
+      "wasm_bytes": 4227,
+      "wasm_sha256": "55a9f3f2f0ad1476339164c46ce33666a58d6a8117176f04b1f054ac82ecfaa7",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/before.wasm (4227 bytes)\n",
+      "stderr": ""
+    },
+    {
+      "variant": "after",
+      "sample": 4,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/functions/generic-aggregate-callback-adapter-runtime.dew",
+        "-o",
+        "/tmp/dewdrop-callback-cost-iiqk04d2/after.wasm"
+      ],
+      "wall_seconds": 0.17939168801240157,
+      "peak_rss_kib": 27240,
+      "wasm_bytes": 4046,
+      "wasm_sha256": "04ae548a12d0e370c53c9f6c7ffd597cc74a21ffe2d7c221304d674b8d98cf54",
+      "stdout": "wrote /tmp/dewdrop-callback-cost-iiqk04d2/after.wasm (4046 bytes)\n",
+      "stderr": ""
+    }
+  ]
+}

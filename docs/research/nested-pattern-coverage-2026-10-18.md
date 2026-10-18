@@ -100,19 +100,19 @@ commands, output, and samples. It also captures the worktree status, tracked
 diff hash, native source hashes, and input hashes before the run. The harness
 stops if the binary or any native source file changes during sampling.
 
-The refreshed native source is committed at `1e96ef9fbd1ffa6edada89b593a3f7ac8777ab2b`.
-The CLI SHA-256 is `23c4367535dabe1f2c628b418dc824ffd0de3d4fb46a0d0208aa1499fb24a7a3`.
-The parent verified fresh release builds in 26.934 s for the CLI and 23.952 s
-for the test generator. The recorded worktree still had pending Dew backend,
-test-tool, and documentation changes. They are listed explicitly; this is a
+The refreshed native source is committed at `fc00559474e3397b4573fb1ae23d849f0be22252`.
+The CLI SHA-256 is `d426709075299d333ca8700003b252cccd5c958dd2917859d603c2ccbd7bb768`.
+The parent verified fresh release builds in 26.578 s for the CLI and 22.988 s
+for the test generator. The recorded worktree still had pending snapshot
+goldens and documentation changes. They are listed explicitly; this is a
 native check benchmark, not a timing of those Dew changes. The output record
 itself is written after the captured status.
 
 | Input | Median check time | Largest child peak RSS |
 | --- | ---: | ---: |
-| Simple scalar function | 0.171 s | 26,676 KiB |
-| Nested enum and Boolean products | 0.165 s | 26,884 KiB |
-| Explicit depth-limit error | 0.169 s | 26,904 KiB |
+| Simple scalar function | 0.218 s | 29,096 KiB |
+| Nested enum and Boolean products | 0.248 s | 29,096 KiB |
+| Explicit depth-limit error | 0.325 s | 29,096 KiB |
 
 These figures include the compiler, standard modules, and runtime. They do not
 isolate matrix allocations. Three samples under normal host load provide a

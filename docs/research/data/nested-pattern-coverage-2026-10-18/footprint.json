@@ -1,11 +1,11 @@
 {
   "binary": "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
-  "binary_sha256": "23c4367535dabe1f2c628b418dc824ffd0de3d4fb46a0d0208aa1499fb24a7a3",
-  "head": "1e96ef9fbd1ffa6edada89b593a3f7ac8777ab2b",
-  "worktree_status_porcelain": " M docs/research/data/nested-pattern-coverage-2026-10-18/measure.py\n M docs/research/f32-long-range-rounding-2026-10-18.md\n M docs/research/language-improvement-review-2026-10-18.md\n M self_host/compiler/semantic_nested_pattern_emit.dew\n M self_host/compiler/semantic_program_link_plan.dew\n M tools/module-snapshots/README.md\n M tools/module-snapshots/run.py\n M tools/utf-parity/README.md\n M tools/utf-parity/run.sh\n M tools/wasi-parity/README.md\n M tools/wasi-parity/run.sh\n?? docs/research/data/lambda-result-ownership-2026-10-18/validation.json\n?? docs/research/lambda-result-ownership-2026-10-18.md\n?? docs/research/language-improvement-implementation-2026-10-18.md\n?? self_host/compiler/semantic_lambda_result_owner_test.dew\n",
-  "tracked_diff_sha256": "14b40081da3830620145ee34b253b42e54b923d4ff3dbda0d1bcfca052b10a40",
-  "tracked_diff_bytes": 20909,
-  "native_source_tree_sha256": "50e186e55acceefa8cb4d57dd9151164edfd8b9da7aeac7d667429ae10ebd15e",
+  "binary_sha256": "d426709075299d333ca8700003b252cccd5c958dd2917859d603c2ccbd7bb768",
+  "head": "fc00559474e3397b4573fb1ae23d849f0be22252",
+  "worktree_status_porcelain": " M docs/research/callback-type-liveness-2026-10-18.md\n M docs/research/f32-long-range-rounding-2026-10-18.md\n M docs/research/language-improvement-review-2026-10-18.md\n M tests/module-snapshots/collections/arena-invalid-negative-trap.wat\n M tests/module-snapshots/collections/arena-runtime.wat\n M tests/module-snapshots/collections/array-callback-mutation-runtime.wat\n M tests/module-snapshots/collections/array-callbacks-runtime.wat\n M tests/module-snapshots/collections/array-carriers-runtime.wat\n M tests/module-snapshots/collections/array-comparator-runtime.wat\n M tests/module-snapshots/collections/array-copy-within-invalid-range-trap.wat\n M tests/module-snapshots/collections/array-entries-runtime.wat\n M tests/module-snapshots/collections/array-entry-iter-exhausted.wat\n M tests/module-snapshots/collections/array-fill-invalid-range-trap.wat\n M tests/module-snapshots/collections/array-filter-runtime.wat\n M tests/module-snapshots/collections/array-flat-map-runtime.wat\n M tests/module-snapshots/collections/array-generic-transform-runtime.wat\n M tests/module-snapshots/collections/array-get-oob-trap.wat\n M tests/module-snapshots/collections/array-iter-exhausted.wat\n M tests/module-snapshots/collections/array-iterators-runtime.wat\n M tests/module-snapshots/collections/array-key-iter-exhausted.wat\n M tests/module-snapshots/collections/array-methods-runtime.wat\n M tests/module-snapshots/collections/array-pop-empty-runtime.wat\n M tests/module-snapshots/collections/array-predicates-runtime.wat\n M tests/module-snapshots/collections/array-reducers-runtime.wat\n M tests/module-snapshots/collections/array-runtime.wat\n M tests/module-snapshots/collections/array-set-oob-trap.wat\n M tests/module-snapshots/collections/array-slice-invalid-range-trap.wat\n M tests/module-snapshots/collections/array-swap-oob-trap.wat\n M tests/module-snapshots/collections/array-transforms-runtime.wat\n M tests/module-snapshots/collections/array-truncate-grow-trap.wat\n M tests/module-snapshots/collections/binary-heap-runtime.wat\n M tests/module-snapshots/collections/bloom-filter-core-runtime.wat\n M tests/module-snapshots/collections/bloom-filter-runtime.wat\n M tests/module-snapshots/collections/circular-buffer-runtime.wat\n M tests/module-snapshots/collections/deque-runtime.wat\n M tests/module-snapshots/collections/fixed-array-get-oob-trap.wat\n M tests/module-snapshots/collections/fixed-array-narrow-carriers-runtime.wat\n M tests/module-snapshots/collections/fixed-array-runtime.wat\n M tests/module-snapshots/collections/fixed-array-set-oob-trap.wat\n M tests/module-snapshots/collections/hash-evaluation-once-runtime.wat\n M tests/module-snapshots/collections/iter-combinators-runtime.wat\n M tests/module-snapshots/collections/map-growth-runtime.wat\n M tests/module-snapshots/collections/map-insert-unit-runtime.wat\n M tests/module-snapshots/collections/map-iterator-exhausted.wat\n M tests/module-snapshots/collections/map-iterators-runtime.wat\n M tests/module-snapshots/collections/map-missing-key-trap.wat\n M tests/module-snapshots/collections/map-runtime.wat\n M tests/module-snapshots/collections/mixed-array-fields-runtime.wat\n M tests/module-snapshots/collections/nested-array-set-runtime.wat\n M tests/module-snapshots/collections/nominal-container-provenance-runtime.wat\n M tests/module-snapshots/collections/ordered-map-runtime.wat\n M tests/module-snapshots/collections/ordered-set-runtime.wat\n M tests/module-snapshots/collections/ordering-runtime.wat\n M tests/module-snapshots/collections/priority-queue-runtime.wat\n M tests/module-snapshots/collections/queue-runtime.wat\n M tests/module-snapshots/collections/red-black-tree-runtime.wat\n M tests/module-snapshots/collections/set-growth-runtime.wat\n M tests/module-snapshots/collections/set-iterator-exhausted.wat\n M tests/module-snapshots/collections/set-iterator-runtime.wat\n M tests/module-snapshots/collections/set-runtime.wat\n M tests/module-snapshots/collections/stack-runtime.wat\n M tests/module-snapshots/control-flow/all-numeric-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/bool-match.wat\n M tests/module-snapshots/control-flow/defer-imported-runtime.wat\n M tests/module-snapshots/control-flow/defer-runtime.wat\n M tests/module-snapshots/control-flow/defer-trap-exclusion.wat\n M tests/module-snapshots/control-flow/evaluation-order-runtime.wat\n M tests/module-snapshots/control-flow/float-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/for-array-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-deep-wide-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-enum-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-nested-runtime.wat\n M tests/module-snapshots/control-flow/functional-while-scalar-runtime.wat\n M tests/module-snapshots/control-flow/guard-fallthrough-runtime.wat\n M tests/module-snapshots/control-flow/i32-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/i64-literal-match-runtime.wat\n M tests/module-snapshots/control-flow/narrow-payload-match-runtime.wat\n M tests/module-snapshots/control-flow/nested-if-runtime.wat\n M tests/module-snapshots/control-flow/nested-pattern-runtime.wat\n M tests/module-snapshots/control-flow/pattern-matrix-runtime.wat\n M tests/module-snapshots/control-flow/recursive-fibonacci-runtime.wat\n M tests/module-snapshots/control-flow/short-circuit-runtime.wat\n M tests/module-snapshots/control-flow/using-imported-runtime.wat\n M tests/module-snapshots/control-flow/using-runtime.wat\n M tests/module-snapshots/crypto/blake3-runtime.wat\n M tests/module-snapshots/enums/dense-dispatch-runtime.wat\n M tests/module-snapshots/enums/guarded-runtime.wat\n M tests/module-snapshots/enums/same-shape-runtime.wat\n M tests/module-snapshots/enums/struct-payload-runtime.wat\n M tests/module-snapshots/enums/tuple-payload-runtime.wat\n M tests/module-snapshots/enums/unit-runtime.wat\n M tests/module-snapshots/functions/closure-runtime.wat\n M tests/module-snapshots/functions/let-bound-nominal-args-runtime.wat\n M tests/module-snapshots/generics/generic-evidence-runtime.wat\n M tests/module-snapshots/generics/option-result-runtime.wat\n M tests/module-snapshots/generics/runtime-trait-erased-captured-prerequisite.wat\n M tests/module-snapshots/generics/runtime-trait-flow-devirtualized.wat\n M tests/module-snapshots/generics/runtime-trait-generic-dictionary.wat\n M tests/module-snapshots/generics/runtime-trait-open-generic-closed.wat\n M tests/module-snapshots/generics/runtime-trait-open-generic-dynamic.wat\n M tests/module-snapshots/generics/runtime-trait-open-generic-prerequisite.wat\n M tests/module-snapshots/io/portable-runtime.wat\n M tests/module-snapshots/json/bloom-duplicate-runtime.wat\n M tests/module-snapshots/json/core-runtime.wat\n M tests/module-snapshots/json/reader-runtime.wat\n M tests/module-snapshots/json/runtime.wat\n M tests/module-snapshots/lanes/f32x4-arithmetic-runtime.wat\n M tests/module-snapshots/lanes/f32x4-rounding-runtime.wat\n M tests/module-snapshots/lanes/i32x4-arithmetic-runtime.wat\n M tests/module-snapshots/lanes/i32x4-lanes-runtime.wat\n M tests/module-snapshots/lanes/i32x4-mask-runtime.wat\n M tests/module-snapshots/lanes/i8x8-arithmetic-runtime.wat\n M tests/module-snapshots/lanes/i8x8-popcnt-runtime.wat\n M tests/module-snapshots/lanes/i8x8-saturation-runtime.wat\n M tests/module-snapshots/memory/float-runtime.wat\n M tests/module-snapshots/memory/i32x4-runtime.wat\n M tests/module-snapshots/memory/i64-u64-runtime.wat\n M tests/module-snapshots/memory/i8x8-runtime.wat\n M tests/module-snapshots/memory/integer-widths-runtime.wat\n M tests/module-snapshots/modules/cross-module-initialization-runtime.wat\n M tests/module-snapshots/modules/cross-module-recursive-types-runtime.wat\n M tests/module-snapshots/modules/cross-package-impl-runtime.wat\n M tests/module-snapshots/modules/imported-derived-runtime.wat\n M tests/module-snapshots/modules/imported-enum-exhaustive-runtime.wat\n M tests/module-snapshots/modules/imported-generic-impl-bound-runtime.wat\n M tests/module-snapshots/modules/imported-impl-runtime.wat\n M tests/module-snapshots/modules/imported-module-values-runtime.wat\n M tests/module-snapshots/modules/imported-runtime-trait-generic.wat\n M tests/module-snapshots/modules/imported-runtime-trait.wat\n M tests/module-snapshots/modules/module-values-runtime.wat\n M tests/module-snapshots/modules/multi-file-runtime.wat\n M tests/module-snapshots/modules/multi-module-runtime.wat\n M tests/module-snapshots/modules/qualified-module-value-runtime.wat\n M tests/module-snapshots/modules/std-wildcard-runtime.wat\n M tests/module-snapshots/numeric/f32-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/f64-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/float-conversion-runtime.wat\n M tests/module-snapshots/numeric/float-specials-runtime.wat\n M tests/module-snapshots/numeric/i16-wrap-runtime.wat\n M tests/module-snapshots/numeric/i32-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/i64-arithmetic-runtime.wat\n M tests/module-snapshots/numeric/i8-wrap-runtime.wat\n M tests/module-snapshots/numeric/integer-conversion-runtime.wat\n M tests/module-snapshots/numeric/math-runtime.wat\n M tests/module-snapshots/numeric/remainder-runtime.wat\n M tests/module-snapshots/numeric/shift-width-runtime.wat\n M tests/module-snapshots/numeric/signed-comparison-runtime.wat\n M tests/module-snapshots/numeric/signed-minimum-narrow-runtime.wat\n M tests/module-snapshots/numeric/signed-minimum-runtime.wat\n M tests/module-snapshots/numeric/u16-wrap-runtime.wat\n M tests/module-snapshots/numeric/u32-bitwise-runtime.wat\n M tests/module-snapshots/numeric/u64-shift-runtime.wat\n M tests/module-snapshots/numeric/u8-wrap-runtime.wat\n M tests/module-snapshots/numeric/unary-operators-runtime.wat\n M tests/module-snapshots/numeric/unsigned-comparison-runtime.wat\n M tests/module-snapshots/optimization/inlining-runtime.wat\n M tests/module-snapshots/structs/aggregate-if-runtime.wat\n M tests/module-snapshots/structs/field-runtime.wat\n M tests/module-snapshots/structs/mutable-field-runtime.wat\n M tests/module-snapshots/structs/nested-runtime.wat\n M tests/module-snapshots/structs/reordered-fields-runtime.wat\n M tests/module-snapshots/structs/string-field-runtime.wat\n M tests/module-snapshots/tests/failing-test-trap.wat\n M tests/module-snapshots/tests/test-mode-runtime.wat\n M tests/module-snapshots/tests/testing-runtime.wat\n M tests/module-snapshots/text/bytes-builder-runtime.wat\n M tests/module-snapshots/text/bytes-concat-runtime.wat\n M tests/module-snapshots/text/bytes-conversion-runtime.wat\n M tests/module-snapshots/text/code-points-exhausted.wat\n M tests/module-snapshots/text/code-points-invalid-view-trap.wat\n M tests/module-snapshots/text/code-points-runtime.wat\n M tests/module-snapshots/text/compiler-diagnostic-runtime.wat\n M tests/module-snapshots/text/concat-runtime.wat\n M tests/module-snapshots/text/concat-view-runtime.wat\n M tests/module-snapshots/text/concat.wat\n M tests/module-snapshots/text/hash-runtime.wat\n M tests/module-snapshots/text/nested-view-runtime.wat\n M tests/module-snapshots/text/ordering-runtime.wat\n M tests/module-snapshots/text/prefix-suffix-runtime.wat\n M tests/module-snapshots/text/search-long-runtime.wat\n M tests/module-snapshots/text/search-short-runtime.wat\n M tests/module-snapshots/text/show-byte-limit-trap.wat\n M tests/module-snapshots/text/show-collections-runtime.wat\n M tests/module-snapshots/text/show-depth-limit-trap.wat\n M tests/module-snapshots/text/show-derived-imported-runtime.wat\n M tests/module-snapshots/text/show-derived-runtime.wat\n M tests/module-snapshots/text/show-runtime.wat\n M tests/module-snapshots/text/string-builder-runtime.wat\n M tests/module-snapshots/text/string-builder-scalar-runtime.wat\n M tests/module-snapshots/text/string-compact-runtime.wat\n M tests/module-snapshots/text/string-slice-runtime.wat\n M tests/module-snapshots/text/string-view-runtime.wat\n M tests/module-snapshots/text/unicode-metrics-runtime.wat\n M tests/module-snapshots/text/utf8-invalid-classes-runtime.wat\n M tests/module-snapshots/types/derive-debug-runtime.wat\n M tests/module-snapshots/types/derive-eq-generic-runtime.wat\n M tests/module-snapshots/types/derive-eq-runtime.wat\n M tests/module-snapshots/types/derive-field-prerequisites-runtime.wat\n M tests/module-snapshots/types/derive-hash-runtime.wat\n M tests/module-snapshots/types/runtime-trait-devirtualized.wat\n M tests/module-snapshots/types/runtime-trait-scalar-static.wat\n M tests/module-snapshots/types/runtime-trait-scalars.wat\n M tests/module-snapshots/types/runtime-trait-static.wat\n M tests/module-snapshots/types/runtime-trait-value.wat\n M tests/module-snapshots/wasi/boundary-65521-runtime.wat\n M tests/module-snapshots/wasi/empty-write-runtime.wat\n M tests/module-snapshots/wasi/eof-runtime.wat\n M tests/module-snapshots/wasi/fd-read.wat\n M tests/module-snapshots/wasi/fd-write.wat\n M tests/module-snapshots/wasi/multiwindow-100000-runtime.wat\n M tests/module-snapshots/wasi/nonstdout-runtime.wat\n M tests/module-snapshots/wasi/partial-write-runtime.wat\n M tests/module-snapshots/wasi/read-chunk-runtime.wat\n M tests/module-snapshots/wasi/read-errno-trap.wat\n M tests/module-snapshots/wasi/read-overreport-trap.wat\n M tests/module-snapshots/wasi/stdin-runtime.wat\n M tests/module-snapshots/wasi/stdout-lines.wat\n M tests/module-snapshots/wasi/write-errno-trap.wat\n M tests/module-snapshots/wasi/write-overreport-trap.wat\n M tests/module-snapshots/wasi/zero-progress-trap.wat\n M tests/module-snapshots/wasm/intrinsics-runtime.wat\n M tests/module-snapshots/wasm/wasi-preview1-runtime.wat\n?? docs/research/data/callback-type-liveness-2026-10-18/measure.py\n?? docs/research/data/callback-type-liveness-2026-10-18/samples.json\n?? docs/research/language-improvement-implementation-2026-10-18.md\n",
+  "tracked_diff_sha256": "2606014cee509138e2907d594e4c7e5e9d16a5631a9c7b410356ef8700a188ca",
+  "tracked_diff_bytes": 7703510,
+  "native_source_tree_sha256": "edc815ed6d11aee1db3fbcc7c40fe4382bdf2c7ef34f6e6595dd5d49f30a6772",
   "native_source_file_sha256": {
     "src/backend/bound_trait_callbacks_wbtest.mbt": "22634a5ebb929fc35721533bd665afc1eabbdbab7ba7431ae2ff91e6478e701f",
     "src/backend/bytes_staging_boundary_wbtest.mbt": "2e762a00e1f1b4d0c5f78cb3427c13c63f335ebf458eab79269c032f6a034d46",
@@ -33,12 +33,13 @@
     "src/backend/starshine_closure_argument_casts.mbt": "94d4ae9a478e9bcfc44c4712c76b7b1fad817a6068d6190a9618d7488def5916",
     "src/backend/starshine_closure_calls.mbt": "cd8c50386e873ec1e6bca3f86b739c8e36fb0e535d0c08b6b7d6a1b1f054b62c",
     "src/backend/starshine_closure_calls_wbtest.mbt": "820131577d2ff0bff618665de37ea8ae84ecee842bb8a36bb8d758240de810ce",
-    "src/backend/starshine_code.mbt": "04a71446f3b15b673a8a3c34bda4f152c66b56d120e4178f2cf5e2552c7180a3",
+    "src/backend/starshine_code.mbt": "c92e2e58c7cab248187904deaf347123182e3948ca300c7f18ffb5c6b00fa4ed",
     "src/backend/starshine_compiler_facts.mbt": "9f64c6f8bca7439bed5e78f88059567196edca57a2a5241107431570fdb2e13f",
     "src/backend/starshine_compiler_facts_wbtest.mbt": "263596cd8a92b99037d37c6c6a88776ac552238621d2ad60b8b1d51b6c1a6d71",
     "src/backend/starshine_conversion_builtins.mbt": "88a03f2014364aeb8d02975d600914371be6f3df50bc0cd5e7a071e203cbbc55",
     "src/backend/starshine_debug_emission_wbtest.mbt": "3b22225c56eba738cab820e0e74d1696e745e0fe597bbc4d9b95d9572c473cd9",
     "src/backend/starshine_erased_adapter_kind_wbtest.mbt": "daa981a25cdd8a569a0edd2c5513ef7936592006b8ed7fa203ca4dfcff688e3b",
+    "src/backend/starshine_erased_pattern_bindings_wbtest.mbt": "a300302dccbc2ace97393647b375304bab4c811806d55950c2562884e8f41028",
     "src/backend/starshine_exact_call_target_wbtest.mbt": "ed99a4e9a76985318c6e7c21c624c84a233929e6aa879b3399fc389ff3753588",
     "src/backend/starshine_fib_wbtest.mbt": "ac94e5c5b17682d1a3be7b71250a0cc14f03394c9caeedb5d3827c77ec054d0c",
     "src/backend/starshine_fixed_array_wbtest.mbt": "d28509b3a8d771fe5fd1e06d68ad7164f21293e7ac1265a9d6002956983af6ce",
@@ -468,7 +469,7 @@
     "src/semantic/program_function_signature_invariants.mbt": "56d30f07427f17cbdf6dcf4a051f19b6c51a4076f953419c0157e6c8c6bfc91d",
     "src/semantic/program_function_signature_invariants_wbtest.mbt": "1599bb795b62b4d4712fb8add867bd729a397d7dc721da6075c5fb9749564426",
     "src/semantic/program_function_type_preflight.mbt": "a683765737a60b2dc44c602b5b80c6aaa18d10dd5f67a30d68d780b0fa9c99c8",
-    "src/semantic/program_function_type_preflight_wbtest.mbt": "090d745dd0a46667514582fd2fda82184d91a4da58377aa03facb494b193c2df",
+    "src/semantic/program_function_type_preflight_wbtest.mbt": "1c67f6b8502ede27d9613cbdeabf89cccf071b9b6714bb2f247911f4eceaedf6",
     "src/semantic/program_index_wbtest.mbt": "e4d25a0e8baf22914ba84f8e261eb9d6fefddbf7a0a14d244e5f2e1af2e96232",
     "src/semantic/program_initializer_dependency_contracts.mbt": "a4c56d19d8a63ddbab91458cec036e13f2148dffbadb3f65cdd0e181b29d57a0",
     "src/semantic/program_initializer_dependency_contracts_wbtest.mbt": "ce2e193c6cac8c389921d0288d3d14fd491a5d4932549439ca317c85efe34e89",
@@ -571,7 +572,7 @@
     "src/semantic/type_resolution_wbtest.mbt": "fc739fccbb3bd2a4c2c631fa0a6528851cb25e97a0eef8aa33a1235ff24c4c85",
     "src/semantic/using_wbtest.mbt": "ab13fa56185d111a745eef3f6d15b6940b2e1e7b68ebaca098f1bd0aaa13106e",
     "src/semantic/utf8_validation.mbt": "95b1e06fdcab305e19b6c8f4c181fdaac1d0b672a74bc1d70779c7622a8edc94",
-    "src/semantic/wasmgc_fragment_plan.mbt": "59d05f2962fe5d798891908f1b5dd8ea6702f39736ea2fc76689a0daade7b3ea",
+    "src/semantic/wasmgc_fragment_plan.mbt": "0ebf45937b92fe32a9471a3711081ee7ecfffab8b3aac8a26ea108b083782760",
     "src/semantic/wasmgc_fragment_plan_bench_test.mbt": "5899d0dcc82ac8fb96b9556c448615736cb5dfad04465144754722feee8b2d0d",
     "src/semantic/wasmgc_fragment_plan_wbtest.mbt": "2fc970df51e951d518dcec3fb51009459a10a75097af5846bdf3bc9ef145b34c",
     "src/standard_loader/body_inference_cache.mbt": "c645193526e53af5bd9f73ff4c995ed73905919f045a040ebdf71c9d3ba13f50",
@@ -591,9 +592,9 @@
     "src/standard_loader/parse_event_cache_platform_native.mbt": "cfd70002616c668996ac2faf1274b0dbf199d8155540053ccca0fed5c87a7a42",
     "src/standard_loader/parse_event_cache_platform_stub.mbt": "cbb7a7a8d2d806e5c3d3d5f8860c042832ca39490ad3aba24dbde0a6567dc820",
     "src/standard_loader/parse_event_cache_wbtest.mbt": "142327b57f1eae420e461bea87c7dedbf47446375db4b2f9d38a55796dc9ef7a",
-    "src/standard_loader/planning_cache.mbt": "73b635f864d0d034a69cb52543fa7ce0608ac1b8db374a75fa49beb8db3699ac",
+    "src/standard_loader/planning_cache.mbt": "63ec097ba6938c9a8c171b3481d892243856c6af9a424896f96998e10ebb43f2",
     "src/standard_loader/planning_cache_envelope.mbt": "7d0a6cc6424c550de51cb8781032f8e2923daa3c5cfce28e70e5bc4c4c2106fe",
-    "src/standard_loader/planning_cache_wbtest.mbt": "77e21ba200f46403e04ef9b90805e97a54a08ceadf624fb53ef71db8a922b36b",
+    "src/standard_loader/planning_cache_wbtest.mbt": "d684e8c89142803ce1b18c0d342a816f6b587173b8dd77aa9c1f9e8a8d08ac26",
     "src/standard_loader/program_output_cache.mbt": "a6e26c7951ae200a461e54b5642e1ea7683d08d0acde9c23fba86a31c561fd36",
     "src/standard_loader/program_output_cache_wbtest.mbt": "cde9ea03da663e4b7b95abeb8dc51997306e24b6bb287cc08d8f2cfe9063de42",
     "src/standard_sources/moon.pkg": "477aa613534d6431345cc5005a29bc644b16b1a49b801c181252f87180f9138c",
@@ -694,8 +695,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/simple.dew"
       ],
       "exit": 0,
-      "wall_seconds": 0.17356670800654683,
-      "peak_rss_kib": 26620,
+      "wall_seconds": 0.2178933310060529,
+      "peak_rss_kib": 28968,
       "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
       "stderr": ""
     },
@@ -714,8 +715,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/simple.dew"
       ],
       "exit": 0,
-      "wall_seconds": 0.17098679501214065,
-      "peak_rss_kib": 26676,
+      "wall_seconds": 0.2138495759863872,
+      "peak_rss_kib": 29096,
       "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
       "stderr": ""
     },
@@ -734,8 +735,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/simple.dew"
       ],
       "exit": 0,
-      "wall_seconds": 0.16586358100175858,
-      "peak_rss_kib": 26668,
+      "wall_seconds": 0.22953264400712214,
+      "peak_rss_kib": 29096,
       "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
       "stderr": ""
     },
@@ -754,8 +755,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-runtime.dew"
       ],
       "exit": 0,
-      "wall_seconds": 0.1650942909909645,
-      "peak_rss_kib": 26592,
+      "wall_seconds": 0.21850919700227678,
+      "peak_rss_kib": 29096,
       "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
       "stderr": ""
     },
@@ -774,8 +775,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-runtime.dew"
       ],
       "exit": 0,
-      "wall_seconds": 0.16459154900803696,
-      "peak_rss_kib": 26884,
+      "wall_seconds": 0.24818050500471145,
+      "peak_rss_kib": 29096,
       "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
       "stderr": ""
     },
@@ -794,8 +795,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-runtime.dew"
       ],
       "exit": 0,
-      "wall_seconds": 0.17009627200604882,
-      "peak_rss_kib": 26844,
+      "wall_seconds": 0.32446093700127676,
+      "peak_rss_kib": 29096,
       "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
       "stderr": ""
     },
@@ -814,8 +815,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew"
       ],
       "exit": 1,
-      "wall_seconds": 0.1746951389941387,
-      "peak_rss_kib": 26904,
+      "wall_seconds": 0.3287707620038418,
+      "peak_rss_kib": 29096,
       "stdout": "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew:2:3: error: PatternCoverageBudgetExceeded(5, 65536, 64, 552)\n  |\n2 |   match value {\n  |   ^\n",
       "stderr": ""
     },
@@ -834,8 +835,8 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew"
       ],
       "exit": 1,
-      "wall_seconds": 0.1654939470026875,
-      "peak_rss_kib": 26216,
+      "wall_seconds": 0.32037057299748994,
+      "peak_rss_kib": 29096,
       "stdout": "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew:2:3: error: PatternCoverageBudgetExceeded(5, 65536, 64, 552)\n  |\n2 |   match value {\n  |   ^\n",
       "stderr": ""
     },
@@ -854,32 +855,32 @@
         "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew"
       ],
       "exit": 1,
-      "wall_seconds": 0.16873363600461744,
-      "peak_rss_kib": 26416,
+      "wall_seconds": 0.32482306798920035,
+      "peak_rss_kib": 29096,
       "stdout": "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew:2:3: error: PatternCoverageBudgetExceeded(5, 65536, 64, 552)\n  |\n2 |   match value {\n  |   ^\n",
       "stderr": ""
     }
   ],
   "summary": {
     "simple": {
-      "median_wall_seconds": 0.17098679501214065,
-      "peak_rss_kib": 26676
+      "median_wall_seconds": 0.2178933310060529,
+      "peak_rss_kib": 29096
     },
     "nested-runtime": {
-      "median_wall_seconds": 0.1650942909909645,
-      "peak_rss_kib": 26884
+      "median_wall_seconds": 0.24818050500471145,
+      "peak_rss_kib": 29096
     },
     "nested-budget": {
-      "median_wall_seconds": 0.16873363600461744,
-      "peak_rss_kib": 26904
+      "median_wall_seconds": 0.32482306798920035,
+      "peak_rss_kib": 29096
     }
   },
   "build_verification": {
     "reported_by": "parent agent after both release builds completed",
-    "native_source_commit": "1e96ef9fbd1ffa6edada89b593a3f7ac8777ab2b",
-    "cli_release_build_wall_seconds": 26.934,
-    "testgen_release_build_wall_seconds": 23.952,
+    "native_source_commit": "fc00559474e3397b4573fb1ae23d849f0be22252",
+    "cli_release_build_wall_seconds": 26.578,
+    "testgen_release_build_wall_seconds": 22.988,
     "build_exit_status": 0,
-    "cli_sha256_checked_before_samples": "23c4367535dabe1f2c628b418dc824ffd0de3d4fb46a0d0208aa1499fb24a7a3"
+    "cli_sha256_checked_before_samples": "d426709075299d333ca8700003b252cccd5c958dd2917859d603c2ccbd7bb768"
   }
 }

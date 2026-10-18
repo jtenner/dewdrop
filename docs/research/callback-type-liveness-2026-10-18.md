@@ -65,5 +65,36 @@ The old cache seeded by the before CLI had three warm fragment hits. The first
 partial-filter CLI produced byte-identical fresh/warm artifacts at 4,223 bytes.
 The affected generic modules bypass that fragment cache, so this probe does
 not prove a stale aggregate result. The explicit policy guard covers the
-changed planner contract. Final post-build binary size, runtime, cache, and
-compiler-time results follow below.
+changed planner contract. The final policy migration has no old fragment hits on its first run. The
+second run has three hits. Fresh and warm runs produce byte-identical Wasm.
+
+Final source validation passed all 23 callback preflight tests in 14.379 s
+and all four planning-cache tests in 5.371 s. The direct-lambda carrier control
+first failed in 14.227 s, then passed with the live lambda signature rule.
+The final CLI is built from `fc00559474e3397b4573fb1ae23d849f0be22252`.
+Its SHA-256 is `d426709075299d333ca8700003b252cccd5c958dd2917859d603c2ccbd7bb768`.
+The parent reports release build times of 26.578 s for the CLI and 22.988 s
+for the test generator; both succeeded.
+
+The unchanged aggregate budget passes: 4,046 Wasm bytes, 17,835 canonical WAT
+bytes, 38 types, and 15 functions. This removes 181 bytes (4.28%) from the
+regressed artifact and restores the old standard-library control size. Code
+section size remains 1,069 bytes. There are still 24 allocation sites and 14
+indirect calls. The external callback consumer returns 42; main also passes.
+The direct-lambda callback carrier probe builds and passes Wasm validation.
+
+Five alternating before/after process samples have median compile times of
+0.1714/0.1700 s and largest child peak RSS of 27,288/27,400 KiB. These shared-host
+samples do not show a speed or memory gain. Peak RSS is not an allocation count.
+The final compiler also contains the separate Unit pattern fix, so these are
+whole-binary cost samples. The source adds no retained index or expression mask.
+
+The first final run against the old cache keeps six type-layout hits and has
+zero fragment hits with three misses. Its next run has three fragment hits.
+Those two outputs and a fresh-cache output have the same SHA-256. The version 1
+policy marker therefore changes only the affected fragment key contract.
+
+The [repeatable harness](data/callback-type-liveness-2026-10-18/measure.py),
+[raw process samples](data/callback-type-liveness-2026-10-18/samples.json), and
+[validation records](data/callback-type-liveness-2026-10-18/validation.json)
+retain commands, hashes, timings, cache counts, sections, and runtime checks.
