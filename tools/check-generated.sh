@@ -103,7 +103,7 @@ python3 tools/test_dew_registry_cli.py
 python3 tools/module-snapshots/test_run.py
 python3 tools/test_check_architecture_cases.py
 python3 tools/test_cli_fixtures.py
-node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs
+node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs tools/test-dew-run.mjs
 node --check tools/dew-abi-metadata.mjs
 node --check tools/dew-abi.mjs
 node --check tools/dew-wasm-consumer.mjs

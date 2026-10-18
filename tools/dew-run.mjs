@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { readFileSync, writeSync } from "node:fs";
+import { readSync, writeSync } from "node:fs";
 
 const [binaryPath] = process.argv.slice(2);
 if (!binaryPath) {
@@ -8,17 +8,10 @@ if (!binaryPath) {
   process.exit(2);
 }
 
-const stdin = new Uint8Array(readFileSync(0));
-let stdinOffset = 0;
 let instance;
 
-function iovecCapacity(memory, iovs, count) {
-  let total = 0;
-  for (let index = 0; index < count; index++) {
-    total += memory.getUint32(iovs + index * 8 + 4, true);
-  }
-  return total;
-}
+const readErrno = { EACCES: 2, EAGAIN: 6, EBADF: 8, EFAULT: 21,
+  EINTR: 27, EINVAL: 28, EIO: 29, EISDIR: 31, EOVERFLOW: 61, EPERM: 63 };
 
 const imports = {
   wasi_snapshot_preview1: {
@@ -37,20 +30,37 @@ const imports = {
       memory.setUint32(written, total, true);
       return 0;
     },
-    fd_read(_fd, iovs, count, read) {
+    fd_read(fd, iovs, count, read) {
+      if (fd !== 0) return 8;
+      iovs >>>= 0;
+      count >>>= 0;
+      read >>>= 0;
       const memory = new DataView(instance.exports.memory.buffer);
-      const available = stdin.length - stdinOffset;
-      let remaining = Math.min(iovecCapacity(memory, iovs, count), available);
-      const total = remaining;
-      for (let index = 0; index < count && remaining > 0; index++) {
+      if (read + 4 > memory.byteLength || iovs + count * 8 > memory.byteLength) return 21;
+      // Validate all guest ranges before consuming any input.
+      for (let index = 0; index < count; index++) {
+        const iovec = iovs + index * 8;
+        if (memory.getUint32(iovec, true) + memory.getUint32(iovec + 4, true) > memory.byteLength) return 21;
+      }
+      let total = 0;
+      for (let index = 0; index < count; index++) {
         const iovec = iovs + index * 8;
         const pointer = memory.getUint32(iovec, true);
-        const length = Math.min(memory.getUint32(iovec + 4, true), remaining);
-        new Uint8Array(instance.exports.memory.buffer, pointer, length).set(
-          stdin.subarray(stdinOffset, stdinOffset + length),
-        );
-        stdinOffset += length;
-        remaining -= length;
+        const length = memory.getUint32(iovec + 4, true);
+        if (length === 0) continue;
+        let received;
+        for (;;) {
+          try {
+            received = readSync(0, new Uint8Array(memory.buffer, pointer, length));
+            break;
+          } catch (error) {
+            if (error.code === "EINTR") continue;
+            memory.setUint32(read, total, true);
+            return total > 0 ? 0 : (readErrno[error.code] ?? 29);
+          }
+        }
+        total += received;
+        if (received < length) break;
       }
       memory.setUint32(read, total, true);
       return 0;
