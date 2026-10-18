@@ -359,3 +359,40 @@ test "nested single-variant payloads cover their outer variant" {
   assert_eq(inferred.diagnostics, [])
   assert_eq(flows.diagnostics, [])
 }
+
+///|
+test "opaque type coverage requires an unconditional catch-all" {
+  let sources = [
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
+    b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  while value {\n    _ if false => break 42\n  }\n}\n",
+  ]
+  for source in sources {
+    let (_, _, inferred, flows) = flow_test_module(247UL, source)
+    assert_eq(inferred.diagnostics, [])
+    assert_eq(flows.diagnostics.length(), 1)
+    match flows.diagnostics[0] {
+      NonExhaustiveMatch(_, missing, _)
+      | NonExhaustiveFunctionalLoop(_, missing, _) => {
+        assert_eq(missing.length, 1)
+        assert_eq(flows.missing_cases[missing.start], MissingCatchAllCase)
+      }
+      _ => fail("expected missing opaque catch-all")
+    }
+  }
+}
+
+///|
+test "opaque type coverage accepts unconditional catch-all patterns" {
+  let sources = [
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
+    b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  while value {\n    _ => break 42\n  }\n}\n",
+  ]
+  for source in sources {
+    let (_, _, inferred, flows) = flow_test_module(248UL, source)
+    assert_eq(inferred.diagnostics, [])
+    assert_eq(flows.diagnostics, [])
+  }
+}

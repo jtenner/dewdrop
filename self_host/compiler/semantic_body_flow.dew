@@ -442,6 +442,8 @@ impl SelfHostBodyFlowAnalyzer {
           break EnumFlowCoverageDomain(declaration)
         }
         AppliedType(base, _) => continue base
+        GenericParameterType(_), TraitType(_), SelfType(_),
+        MemberTypeProjection(_, _, _) => break OpenFlowCoverageDomain
         _ => break OpenFlowCoverageDomain
       }
     }

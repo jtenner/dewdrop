@@ -548,19 +548,20 @@ fn BodyFlowAnalyzer::coverage_domain(
   let mut current = type_
   while true {
     match self.inferred.type_term(current) {
-      BodyErrorType | BodyVariableType(_) | BodyMemberTypeProjection(_, _, _) =>
-        return ErrorCoverageDomain
-      BodyProductType(_) | BodyFunctionType(_, _) => return OpenCoverageDomain
+      BodyErrorType | BodyVariableType(_) => return ErrorCoverageDomain
+      BodyProductType(_)
+      | BodyFunctionType(_, _)
+      | BodyMemberTypeProjection(_, _, _) => return OpenCoverageDomain
       BodyAppliedType(base, _) => current = base
       BodyResolvedType(resolved_type) => {
         let mut resolved_current = resolved_type
         while true {
           match self.resolved.types[resolved_current] {
-            ErrorType
-            | GenericParameterType(_)
+            ErrorType => return ErrorCoverageDomain
+            GenericParameterType(_)
             | TraitType(_)
             | SelfType(_)
-            | MemberTypeProjection(_, _, _) => return ErrorCoverageDomain
+            | MemberTypeProjection(_, _, _) => return OpenCoverageDomain
             ProductType(_) => return OpenCoverageDomain
             PrimitiveType(BoolType) => return BoolCoverageDomain
             PrimitiveType(_) => return OpenCoverageDomain

@@ -317,3 +317,34 @@ test "body flow recognizes imported enum exhaustiveness" {
     "complete imported enum match",
   )
 }
+
+test "body flow opaque type coverage requires an unconditional catch-all" {
+  let sources = [
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
+    b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  while value {\n    _ if false => break 42\n  }\n}\n",
+  ]
+  for source in sources {
+    let (_, flows) = self_host_flow_source(989u64, source)
+    let flow = flows.bodies[0u32]
+    assert(flow.diagnostics.length() == 1u32, "one missing coverage diagnostic")
+    assert(flow.missing_cases.length() == 1u32, "one missing catch-all")
+    match flow.missing_cases[0u32] {
+      MissingCatchAllCase => {}
+      _ => assert(false, "opaque type needs a catch-all")
+    }
+  }
+}
+
+test "body flow opaque type coverage accepts unconditional catch-all patterns" {
+  let sources = [
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
+    b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  while value {\n    _ => break 42\n  }\n}\n",
+  ]
+  for source in sources {
+    let (_, flows) = self_host_flow_source(990u64, source)
+    assert(flows.bodies[0u32].diagnostics.length() == 0u32, "complete opaque coverage")
+  }
+}
