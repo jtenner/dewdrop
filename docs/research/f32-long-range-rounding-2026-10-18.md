@@ -22,7 +22,7 @@ approximation locates the adjacent F32 values; the original digits decide the
 side. An exact tie explicitly selects the even F32 bit pattern. Sources with
 at most 256 mantissa bytes and exponent magnitude at most 256 keep the old fast
 path. Within that small-source region, cases outside the F64 exact limits are
-already below the F32 range, so they cannot cross an F32 rounding boundary.
+already outside the F32 range, so they cannot cross an F32 rounding boundary.
 
 The exponent scanner now saturates at the U32 storage limit rather than 10,000.
 Decimal order and scale subtraction use I64. Very large remaining scale shifts
