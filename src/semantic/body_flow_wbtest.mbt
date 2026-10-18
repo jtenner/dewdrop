@@ -363,8 +363,7 @@ test "nested single-variant payloads cover their outer variant" {
 ///|
 test "opaque type coverage requires an unconditional catch-all" {
   let sources = [
-    b"fn run<t>(value: t) -> I32 {\n  match value {\n  }\n}\n",
-    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n  }\n}\n", b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
     b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ if false => 42\n  }\n}\n",
     b"fn run<t>(value: t) -> I32 {\n  while value {\n    _ if false => break 42\n  }\n}\n",
   ]
@@ -386,13 +385,124 @@ test "opaque type coverage requires an unconditional catch-all" {
 ///|
 test "opaque type coverage accepts unconditional catch-all patterns" {
   let sources = [
-    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
-    b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
+    b"fn run<t>(value: t) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n", b"trait Mark {\n}\nfn run(value: Mark) -> I32 {\n  match value {\n    _ => 42\n  }\n}\n",
     b"fn run<t>(value: t) -> I32 {\n  while value {\n    _ => break 42\n  }\n}\n",
   ]
   for source in sources {
     let (_, _, inferred, flows) = flow_test_module(248UL, source)
     assert_eq(inferred.diagnostics, [])
     assert_eq(flows.diagnostics, [])
+  }
+}
+
+///|
+test "nested pattern matrix nested-complete" {
+  let (_, _, inferred, flows) = flow_test_module(
+    260UL, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n    Wrap(One) => 1\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix nested-incomplete" {
+  let (_, _, inferred, flows) = flow_test_module(
+    261UL, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "nested pattern matrix nested-guarded" {
+  let (_, _, inferred, flows) = flow_test_module(
+    262UL, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n    Wrap(One) if true => 1\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "nested pattern matrix tuple-bool-complete" {
+  let (_, _, inferred, flows) = flow_test_module(
+    263UL, b"fn read(value: (Bool, Bool)) -> I32 {\n  match value {\n    (true, _) => 0\n    (false, true) => 1\n    (false, false) => 2\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix tuple-bool-incomplete" {
+  let (_, _, inferred, flows) = flow_test_module(
+    264UL, b"fn read(value: (Bool, Bool)) -> I32 {\n  match value {\n    (true, _) => 0\n    (false, true) => 1\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "nested pattern matrix sum-of-products-complete" {
+  let (_, _, inferred, flows) = flow_test_module(
+    265UL, b"enum Value {\n  Empty\n  Pair(Bool, Bool)\n}\nfn read(value: Value) -> I32 {\n  match value {\n    Empty => 0\n    Pair(true, _) => 1\n    Pair(false, true) => 2\n    Pair(false, false) => 3\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix struct-bool-complete" {
+  let (_, _, inferred, flows) = flow_test_module(
+    266UL, b"struct Pair {\n  a: Bool\n  b: Bool\n}\nfn read(value: Pair) -> I32 {\n  match value {\n    Pair {\n      a: true\n      b: _\n    } => 0\n    Pair {\n      b: true\n      a: false\n    } => 1\n    Pair {\n      a: false\n      b: false\n    } => 2\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix generic-enum" {
+  let (_, _, inferred, flows) = flow_test_module(
+    270UL, b"enum Bit {\n  Zero\n  One\n}\nenum Box<t> {\n  Wrap(t)\n}\nfn read(value: Box<Bit>) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n    Wrap(One) => 1\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix alternatives" {
+  let (_, _, inferred, flows) = flow_test_module(
+    271UL, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero), Wrap(One) => 42\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix functional-loop" {
+  let (_, _, inferred, flows) = flow_test_module(
+    272UL, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  while value {\n    Wrap(Zero) => break 0\n    Wrap(One) => break 1\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "nested pattern matrix reports its depth budget" {
+  let (collected, resolved, inferred, flows) = flow_test_module(
+    273UL, b"fn read(value: (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, Bool)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) -> I32 {\n  match value {\n    (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, true))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) => 1\n    (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, false))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) => 2\n  }\n}\n",
+  )
+  assert_eq(collected.diagnostics, [])
+  assert_eq(resolved.diagnostics, [])
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_eq(flows.missing_cases, [])
+  match flows.diagnostics[0] {
+    PatternCoverageBudgetExceeded(_, cells, depth, _) => {
+      assert_eq(cells, 65536)
+      assert_eq(depth, 64)
+    }
+    _ => fail("expected a visible coverage budget error")
   }
 }

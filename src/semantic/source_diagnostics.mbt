@@ -926,7 +926,8 @@ fn collect_compiler_phase_diagnostics(
     for diagnostic in planned.flow_diagnostics {
       let (severity, primary) = match diagnostic {
         NonExhaustiveMatch(expression, _, offset)
-        | NonExhaustiveFunctionalLoop(expression, _, offset) =>
+        | NonExhaustiveFunctionalLoop(expression, _, offset)
+        | PatternCoverageBudgetExceeded(expression, _, _, offset) =>
           (
             CompilerError,
             location_at(collected.expression_location(expression), offset),

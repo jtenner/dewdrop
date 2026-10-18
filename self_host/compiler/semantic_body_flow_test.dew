@@ -348,3 +348,113 @@ test "body flow opaque type coverage accepts unconditional catch-all patterns" {
     assert(flows.bodies[0u32].diagnostics.length() == 0u32, "complete opaque coverage")
   }
 }
+
+test "body flow nested pattern matrix nested-complete" {
+  let (_, flows) = self_host_flow_source(
+    1001u64, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n    Wrap(One) => 1\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "nested pattern coverage",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "no false redundant arms")
+}
+
+test "body flow nested pattern matrix nested-incomplete" {
+  let (_, flows) = self_host_flow_source(
+    1002u64, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 1u32,
+    "nested pattern coverage",
+  )
+}
+
+test "body flow nested pattern matrix nested-guarded" {
+  let (_, flows) = self_host_flow_source(
+    1003u64, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n    Wrap(One) if true => 1\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 1u32,
+    "nested pattern coverage",
+  )
+}
+
+test "body flow nested pattern matrix tuple-bool-complete" {
+  let (_, flows) = self_host_flow_source(
+    1004u64, b"fn read(value: (Bool, Bool)) -> I32 {\n  match value {\n    (true, _) => 0\n    (false, true) => 1\n    (false, false) => 2\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "nested pattern coverage",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "no false redundant arms")
+}
+
+test "body flow nested pattern matrix tuple-bool-incomplete" {
+  let (_, flows) = self_host_flow_source(
+    1005u64, b"fn read(value: (Bool, Bool)) -> I32 {\n  match value {\n    (true, _) => 0\n    (false, true) => 1\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 1u32,
+    "nested pattern coverage",
+  )
+}
+
+test "body flow nested pattern matrix sum-of-products-complete" {
+  let (_, flows) = self_host_flow_source(
+    1006u64, b"enum Value {\n  Empty\n  Pair(Bool, Bool)\n}\nfn read(value: Value) -> I32 {\n  match value {\n    Empty => 0\n    Pair(true, _) => 1\n    Pair(false, true) => 2\n    Pair(false, false) => 3\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "nested pattern coverage",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "no false redundant arms")
+}
+
+test "body flow nested pattern matrix struct-bool-complete" {
+  let (_, flows) = self_host_flow_source(
+    1007u64, b"struct Pair {\n  a: Bool\n  b: Bool\n}\nfn read(value: Pair) -> I32 {\n  match value {\n    Pair {\n      a: true\n      b: _\n    } => 0\n    Pair {\n      b: true\n      a: false\n    } => 1\n    Pair {\n      a: false\n      b: false\n    } => 2\n  }\n}\n",
+  )
+  assert(
+    self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 0u32,
+    "nested pattern coverage",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "no false redundant arms")
+}
+
+test "body flow nested pattern matrix generic-enum" {
+  let (_, flows) = self_host_flow_source(
+    1010u64, b"enum Bit {\n  Zero\n  One\n}\nenum Box<t> {\n  Wrap(t)\n}\nfn read(value: Box<Bit>) -> I32 {\n  match value {\n    Wrap(Zero) => 0\n    Wrap(One) => 1\n  }\n}\n",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "complete nested coverage")
+}
+
+test "body flow nested pattern matrix alternatives" {
+  let (_, flows) = self_host_flow_source(
+    1011u64, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  match value {\n    Wrap(Zero), Wrap(One) => 42\n  }\n}\n",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "complete nested coverage")
+}
+
+test "body flow nested pattern matrix functional-loop" {
+  let (_, flows) = self_host_flow_source(
+    1012u64, b"enum Bit {\n  Zero\n  One\n}\nenum Box {\n  Wrap(Bit)\n}\nfn read(value: Box) -> I32 {\n  while value {\n    Wrap(Zero) => break 0\n    Wrap(One) => break 1\n  }\n}\n",
+  )
+  assert(flows.bodies[0u32].diagnostics.length() == 0u32, "complete nested coverage")
+}
+
+test "body flow nested pattern matrix reports its depth budget" {
+  let (_, flows) = self_host_flow_source(
+    1013u64, b"fn read(value: (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, (Bool, Bool)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) -> I32 {\n  match value {\n    (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, true))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) => 1\n    (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, (_, false))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) => 2\n  }\n}\n",
+  )
+  let flow = flows.bodies[0u32]
+  assert(flow.diagnostics.length() == 1u32, "one budget diagnostic")
+  assert(flow.missing_cases.length() == 0u32, "budget is not a missing pattern")
+  match flow.diagnostics[0u32] {
+    PatternCoverageBudgetExceeded(_, cells, depth, _) => {
+      assert(cells == 65536u32 && depth == 64u32, "reported work limits")
+    }
+    _ => assert(false, "expected a visible coverage budget error")
+  }
+}

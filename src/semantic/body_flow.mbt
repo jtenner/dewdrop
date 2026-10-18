@@ -63,6 +63,7 @@ pub enum MissingPatternCase {
 pub enum BodyFlowDiagnostic {
   NonExhaustiveMatch(ExprId, HirSpan, UInt64)
   NonExhaustiveFunctionalLoop(ExprId, HirSpan, UInt64)
+  PatternCoverageBudgetExceeded(ExprId, Int32, Int32, UInt64)
   RedundantPatternArm(PatternArmId, UInt64)
   FunctionalLoopArmFallsThrough(PatternArmId, UInt64)
   UnreachableBlockItem(BlockId, Int32, UInt64)
@@ -73,6 +74,7 @@ pub fn BodyFlowDiagnostic::offset(self : BodyFlowDiagnostic) -> UInt64 {
   match self {
     NonExhaustiveMatch(_, _, offset)
     | NonExhaustiveFunctionalLoop(_, _, offset)
+    | PatternCoverageBudgetExceeded(_, _, _, offset)
     | RedundantPatternArm(_, offset)
     | FunctionalLoopArmFallsThrough(_, offset)
     | UnreachableBlockItem(_, _, offset) => offset
@@ -731,6 +733,309 @@ fn BodyFlowAnalyzer::enum_variants(
 }
 
 ///|
+priv struct PatternCoverageWork {
+  mut remaining : Int32
+  mut exhausted : Bool
+}
+
+///|
+fn PatternCoverageWork::spend(
+  self : PatternCoverageWork,
+  cells : Int32,
+) -> Bool {
+  if cells > self.remaining {
+    self.exhausted = true
+    false
+  } else {
+    self.remaining -= cells
+    true
+  }
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_wildcard(
+  self : BodyFlowAnalyzer,
+  pattern : PatternId,
+) -> Bool {
+  pattern < 0 || self.pattern_is_irrefutable(pattern)
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_copy_row(
+  self : BodyFlowAnalyzer,
+  row : Array[PatternId],
+  head : Array[PatternId],
+  work : PatternCoverageWork,
+) -> Array[PatternId]? {
+  let length = head.length() + row.length() - 1
+  if !work.spend(length + 1) {
+    return None
+  }
+  let result = Array::make(length, -1)
+  for index, pattern in head {
+    result[index] = pattern
+  }
+  for index in 1..<row.length() {
+    result[head.length() + index - 1] = row[index]
+  }
+  Some(result)
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_children(
+  self : BodyFlowAnalyzer,
+  pattern : PatternId,
+  model : PatternId,
+  work : PatternCoverageWork,
+) -> Array[PatternId]? {
+  match self.collected.patterns[model] {
+    HirTuplePattern(_, children, _) | HirProductPattern(children, _) => {
+      // A rest is safe on the fast irrefutable path. Refutable rests stay
+      // conservative until the matrix has a canonical full payload layout.
+      if !work.spend(children.length + 1) {
+        return None
+      }
+      for index in 0..<children.length {
+        if self.collected.patterns[self.collected.pattern_children[children.start +
+          index]]
+          is HirRestPattern(_) {
+          return None
+        }
+      }
+      if self.matrix_wildcard(pattern) {
+        return Some(Array::make(children.length, -1))
+      }
+      let actual = match self.collected.patterns[pattern] {
+        HirTuplePattern(_, actual, _) | HirProductPattern(actual, _) => actual
+        _ => return None
+      }
+      if actual.length != children.length {
+        return None
+      }
+      let result = Array::make(children.length, -1)
+      for index in 0..<actual.length {
+        let child = self.collected.pattern_children[actual.start + index]
+        if self.collected.patterns[child] is HirRestPattern(_) {
+          return None
+        }
+        result[index] = child
+      }
+      Some(result)
+    }
+    HirStructPattern(_, fields, rest, _, _) => {
+      if rest || !work.spend(fields.length + 1) {
+        return None
+      }
+      if self.matrix_wildcard(pattern) {
+        return Some(Array::make(fields.length, -1))
+      }
+      let actual = match self.collected.patterns[pattern] {
+        HirStructPattern(_, actual, _, _, _) => actual
+        _ => return None
+      }
+      let result = Array::make(fields.length, -1)
+      for index in 0..<fields.length {
+        let name = self.collected.pattern_fields[fields.start + index].name
+        for candidate in 0..<actual.length {
+          if !work.spend(1) {
+            return None
+          }
+          let field = self.collected.pattern_fields[actual.start + candidate]
+          if field.name == name {
+            result[index] = field.pattern
+            break
+          }
+        }
+      }
+      Some(result)
+    }
+    // A selected bare/qualified unit constructor has no payload.
+    HirBindingPattern(_, _) | HirQualifiedPattern(_, _, _) => Some([])
+    _ => None
+  }
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_complete(
+  self : BodyFlowAnalyzer,
+  input : Array[Array[PatternId]],
+  work : PatternCoverageWork,
+  depth : Int32,
+) -> Bool {
+  if input.is_empty() {
+    return false
+  }
+  if input[0].is_empty() {
+    return true
+  }
+  if depth >= 64 || !work.spend(input.length() + 1) {
+    work.exhausted = true
+    return false
+  }
+  // Flatten alternatives in the selected column before specializing it.
+  let rows : Array[Array[PatternId]] = []
+  let pending = input.copy()
+  while !pending.is_empty() {
+    let row = pending.pop().unwrap()
+    if !work.spend(1) {
+      return false
+    }
+    let pattern = row[0]
+    if pattern >= 0 && !self.matrix_wildcard(pattern) {
+      match self.collected.patterns[pattern] {
+        HirAlternativePattern(first, alternatives, _) => {
+          match self.matrix_copy_row(row, [first], work) {
+            Some(next) => pending.push(next)
+            None => return false
+          }
+          for index in 0..<alternatives.length {
+            let alternative = self.collected.pattern_children[alternatives.start +
+              index]
+            match self.matrix_copy_row(row, [alternative], work) {
+              Some(next) => pending.push(next)
+              None => return false
+            }
+          }
+          continue
+        }
+        _ => ()
+      }
+    }
+    rows.push(row)
+  }
+  let defaults : Array[Array[PatternId]] = []
+  let mut sample = -1
+  for row in rows {
+    if !work.spend(1) {
+      return false
+    }
+    guard row.length() == input[0].length() else {
+      abort("PAT-101 coverage matrix row width")
+    }
+    if self.matrix_wildcard(row[0]) {
+      match self.matrix_copy_row(row, [], work) {
+        Some(next) => defaults.push(next)
+        None => return false
+      }
+    } else {
+      sample = row[0]
+    }
+  }
+  if !defaults.is_empty() && self.matrix_complete(defaults, work, depth + 1) {
+    return true
+  }
+  if work.exhausted || sample < 0 {
+    return false
+  }
+  let domain = self.coverage_domain(self.inferred.pattern_types[sample])
+  match domain {
+    BoolCoverageDomain => {
+      for value in [false, true] {
+        let specialized : Array[Array[PatternId]] = []
+        for row in rows {
+          if !work.spend(1) {
+            return false
+          }
+          let matches_ = self.matrix_wildcard(row[0]) ||
+            (match self.coverage_atom(row[0]) {
+              BoolCoverageAtom(candidate) => candidate == value
+              _ => false
+            })
+          if matches_ {
+            match self.matrix_copy_row(row, [], work) {
+              Some(next) => specialized.push(next)
+              None => return false
+            }
+          }
+        }
+        if !self.matrix_complete(specialized, work, depth + 1) {
+          return false
+        }
+      }
+      true
+    }
+    EnumCoverageDomain(declaration) => {
+      let variants = self.enum_variants(declaration)
+      if !work.spend(variants.length()) {
+        return false
+      }
+      for variant in variants {
+        let mut model = -1
+        for row in rows {
+          if !work.spend(1) {
+            return false
+          }
+          if row[0] >= 0 {
+            match self.inferred.pattern_constructors[row[0]] {
+              VariantInferredPatternConstructor(candidate, _) if candidate ==
+                variant => model = row[0]
+              _ => ()
+            }
+          }
+        }
+        if model < 0 {
+          return false
+        }
+        let specialized : Array[Array[PatternId]] = []
+        for row in rows {
+          if !work.spend(1) {
+            return false
+          }
+          let matches_ = self.matrix_wildcard(row[0]) ||
+            (match self.inferred.pattern_constructors[row[0]] {
+              VariantInferredPatternConstructor(candidate, _) =>
+                candidate == variant
+              _ => false
+            })
+          if matches_ {
+            let children = match self.matrix_children(row[0], model, work) {
+              Some(children) => children
+              None => return false
+            }
+            match self.matrix_copy_row(row, children, work) {
+              Some(next) => specialized.push(next)
+              None => return false
+            }
+          }
+        }
+        if !self.matrix_complete(specialized, work, depth + 1) {
+          return false
+        }
+      }
+      true
+    }
+    OpenCoverageDomain => {
+      let product = match self.collected.patterns[sample] {
+        HirProductPattern(_, _) => true
+        HirStructPattern(_, _, _, _, _) =>
+          self.inferred.pattern_constructors[sample]
+          is StructInferredPatternConstructor(_, _)
+        _ => false
+      }
+      if !product {
+        return false
+      }
+      let specialized : Array[Array[PatternId]] = []
+      for row in rows {
+        if !work.spend(1) {
+          return false
+        }
+        let children = match self.matrix_children(row[0], sample, work) {
+          Some(children) => children
+          None => return false
+        }
+        match self.matrix_copy_row(row, children, work) {
+          Some(next) => specialized.push(next)
+          None => return false
+        }
+      }
+      self.matrix_complete(specialized, work, depth + 1)
+    }
+    ErrorCoverageDomain => false
+  }
+}
+
+///|
 fn BodyFlowAnalyzer::analyze_coverage(
   self : BodyFlowAnalyzer,
   expression : ExprId,
@@ -753,6 +1058,7 @@ fn BodyFlowAnalyzer::analyze_coverage(
   let mut covered_variant_count = 0
   let mut catch_all = false
   let mut coverage_error = false
+  let mut has_refutable = false
   for arm_index in 0..<arms.length {
     let arm_id = self.collected.arm_children[arms.start + arm_index]
     let arm = self.collected.pattern_arms[arm_id]
@@ -777,7 +1083,10 @@ fn BodyFlowAnalyzer::analyze_coverage(
               useful = true
               coverage_error = true
             }
-            UnknownCoverageAtom => useful = true
+            UnknownCoverageAtom => {
+              useful = true
+              has_refutable = true
+            }
             CatchAllCoverageAtom => {
               useful = true
               if arm.guard_condition < 0 {
@@ -830,6 +1139,38 @@ fn BodyFlowAnalyzer::analyze_coverage(
   }
   if coverage_error {
     return true
+  }
+  let already_complete = catch_all ||
+    (match domain {
+      BoolCoverageDomain => covered_false && covered_true
+      EnumCoverageDomain(_) => covered_variant_count == domain_variants.length()
+      _ => false
+    })
+  if !already_complete && has_refutable {
+    let work : PatternCoverageWork = { remaining: 65536, exhausted: false, }
+    let rows : Array[Array[PatternId]] = []
+    for index in 0..<arms.length {
+      if !work.spend(1) {
+        break
+      }
+      let arm = self.collected.pattern_arms[self.collected.arm_children[arms.start +
+        index]]
+      if arm.guard_condition < 0 {
+        if !work.spend(2) {
+          break
+        }
+        rows.push([arm.pattern])
+      }
+    }
+    if !work.exhausted && self.matrix_complete(rows, work, 0) {
+      catch_all = true
+    }
+    if work.exhausted {
+      self.diagnostics.push(
+        PatternCoverageBudgetExceeded(expression, 65536, 64, offset),
+      )
+      return false
+    }
   }
   let missing_start = self.missing_cases.length()
   if !catch_all {
@@ -1150,6 +1491,7 @@ fn body_flow_diagnostic_rank(diagnostic : BodyFlowDiagnostic) -> Int32 {
     RedundantPatternArm(_, _) => 0
     NonExhaustiveMatch(_, _, _) => 1
     NonExhaustiveFunctionalLoop(_, _, _) => 2
+    PatternCoverageBudgetExceeded(_, _, _, _) => 5
     FunctionalLoopArmFallsThrough(_, _) => 3
     UnreachableBlockItem(_, _, _) => 4
   }
@@ -1310,6 +1652,8 @@ fn analyze_module_flows_internal(
               { start: missing_start + missing.start, length: missing.length, },
               offset,
             )
+          PatternCoverageBudgetExceeded(expression, cells, depth, offset) =>
+            PatternCoverageBudgetExceeded(expression, cells, depth, offset)
           RedundantPatternArm(arm, offset) => RedundantPatternArm(arm, offset)
           FunctionalLoopArmFallsThrough(arm, offset) =>
             FunctionalLoopArmFallsThrough(arm, offset)
@@ -1358,6 +1702,8 @@ fn analyze_module_flows_internal(
               { start: missing_start + missing.start, length: missing.length, },
               offset,
             )
+          PatternCoverageBudgetExceeded(expression, cells, depth, offset) =>
+            PatternCoverageBudgetExceeded(expression, cells, depth, offset)
           RedundantPatternArm(arm, offset) => RedundantPatternArm(arm, offset)
           FunctionalLoopArmFallsThrough(arm, offset) =>
             FunctionalLoopArmFallsThrough(arm, offset)

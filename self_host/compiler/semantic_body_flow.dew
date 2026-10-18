@@ -48,6 +48,7 @@ fn self_host_flow_u32_stack(value: U32) -> Array<U32> {
 pub enum SelfHostBodyFlowDiagnostic {
   NonExhaustiveMatch(U32, SelfHostHirSpan, U32)
   NonExhaustiveFunctionalLoop(U32, SelfHostHirSpan, U32)
+  PatternCoverageBudgetExceeded(U32, U32, U32, U32)
   RedundantPatternArm(U32, U32)
   FunctionalLoopArmFallsThrough(U32, U32)
   UnreachableBlockItem(U32, U32, U32)
@@ -59,6 +60,7 @@ fn self_host_body_flow_diagnostic_offset(
   match diagnostic {
     NonExhaustiveMatch(_, _, offset) => offset
     NonExhaustiveFunctionalLoop(_, _, offset) => offset
+    PatternCoverageBudgetExceeded(_, _, _, offset) => offset
     RedundantPatternArm(_, offset) => offset
     FunctionalLoopArmFallsThrough(_, offset) => offset
     UnreachableBlockItem(_, _, offset) => offset
@@ -72,6 +74,7 @@ fn self_host_body_flow_diagnostic_rank(
     RedundantPatternArm(_, _) => 0u32
     NonExhaustiveMatch(_, _, _) => 1u32
     NonExhaustiveFunctionalLoop(_, _, _) => 2u32
+    PatternCoverageBudgetExceeded(_, _, _, _) => 5u32
     FunctionalLoopArmFallsThrough(_, _) => 3u32
     UnreachableBlockItem(_, _, _) => 4u32
   }
@@ -299,6 +302,8 @@ struct SelfHostBodyFlowAnalyzer {
   block_flows: Array<U32>
   block_done: Array<Bool>
   arm_flows: Array<U32>
+  pattern_irrefutable: Array<Bool>
+  pattern_payload_irrefutable: Array<Bool>
   missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
@@ -322,6 +327,8 @@ impl SelfHostBodyFlowAnalyzer {
       block_flows: self_host_flow_slots(body.blocks.length)
       block_done: self_host_module_value_bool_slots(body.blocks.length)
       arm_flows: self_host_flow_slots(body.pattern_arms.length)
+      pattern_irrefutable: self_host_module_value_bool_slots(body.patterns.length)
+      pattern_payload_irrefutable: self_host_module_value_bool_slots(body.patterns.length)
       missing_cases: []
       diagnostics: []
     }
@@ -439,7 +446,14 @@ impl SelfHostBodyFlowAnalyzer {
           }
         }
         NominalType(declaration) => {
-          break EnumFlowCoverageDomain(declaration)
+          let enum_ = match self.collected.declaration_reference(declaration) {
+            Some(TopLevel(info)) => info.kind is EnumDecl
+            _ => !self.enum_variants(declaration).is_empty()
+          }
+          if enum_ {
+             break EnumFlowCoverageDomain(declaration)
+           }
+          break OpenFlowCoverageDomain
         }
         AppliedType(base, _) => continue base
         GenericParameterType(_), TraitType(_), SelfType(_),
@@ -449,24 +463,18 @@ impl SelfHostBodyFlowAnalyzer {
     }
   }
 
-  fn coverage_domain(self, expression: U32) -> SelfHostFlowCoverageDomain {
-    let tasks = [self.inferred.expression_types[self.expression_index(expression)]]
-    while tasks.length() {
-      length => if self_host_u32_greater(length, 0u32) {
-        let type_ = self_host_flow_i32_at(tasks, length - 1u32)
-        tasks.truncate(length - 1u32)
-        match self.inferred.type_term(type_) {
-          BodyAppliedType(base, _) => tasks.push(base)
-          BodyResolvedType(resolved_type) => {
-            break self.resolved_coverage_domain(resolved_type)
-          }
-          _ => break OpenFlowCoverageDomain
-        }
-        continue tasks.length()
-      } else {
-        break OpenFlowCoverageDomain
+  fn body_coverage_domain(self, type_: I32) -> SelfHostFlowCoverageDomain {
+    while type_ {
+      current => match self.inferred.type_term(current) {
+        BodyAppliedType(base, _) => continue base
+        BodyResolvedType(resolved_type) => break self.resolved_coverage_domain(resolved_type)
+        _ => break OpenFlowCoverageDomain
       }
     }
+  }
+
+  fn coverage_domain(self, expression: U32) -> SelfHostFlowCoverageDomain {
+    self.body_coverage_domain(self.inferred.expression_types[self.expression_index(expression)])
   }
 
   fn enum_variants(self, declaration: U64) -> Array<U64> {
@@ -521,48 +529,7 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn pattern_catches_all(self, pattern: U32) -> Bool {
-    if pattern >= self.collected.patterns.length() {
-      return false
-    }
-    match self.collected.patterns[pattern] {
-      WildcardPattern(_) => true
-      BindingPattern(_, _) => self.pattern_variant(pattern) is None
-      ProductPattern(children, _) => {
-        self_host_assert_array_span(children.start, children.length, self.collected.pattern_children.length(), "ARN-101 product coverage children")
-        let _ = while 0u32 {
-          index => if index < children.length {
-            let child = self.collected.pattern_children[children.start + index]
-            if !(self.collected.patterns[child] is RestPattern(_)) && !self.pattern_catches_all(child) {
-              return false
-            }
-            continue index + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        true
-      }
-      AlternativePattern(first, alternatives, _) => {
-        if self.pattern_catches_all(first) {
-          return true
-        }
-        let mut index = 0u32
-        let _ = while index {
-          current => if current < alternatives.length {
-            let child = self_host_u32_add(alternatives.start, current)
-            if child < self.collected.pattern_children.length() &&
-              self.pattern_catches_all(self.collected.pattern_children[child]) {
-              return true
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        false
-      }
-      _ => false
-    }
+    pattern >= self.body.patterns.start && pattern < self.body.patterns.start + self.body.patterns.length && self.pattern_irrefutable[self.pattern_index(pattern)]
   }
 
   fn pattern_has_error(self, pattern: U32) -> Bool {
@@ -735,7 +702,41 @@ impl SelfHostBodyFlowAnalyzer {
         false
       }
       _ => match self.pattern_variant(pattern) {
-        Some(candidate) => self_host_u64_equal(candidate, variant)
+        Some(candidate) => candidate == variant && self.pattern_payload_irrefutable[self.pattern_index(pattern)]
+        None => self.qualified_pattern_matches_variant(pattern, variant) && self.pattern_payload_irrefutable[self.pattern_index(pattern)]
+      }
+    }
+  }
+
+  fn pattern_mentions_variant(self, pattern: U32, variant: U64) -> Bool {
+    if pattern >= self.collected.patterns.length() {
+      return false
+    }
+    match self.collected.patterns[pattern] {
+      AlternativePattern(first, alternatives, _) => {
+        if self.pattern_mentions_variant(first, variant) {
+          return true
+        }
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < alternatives.length {
+            let child = self_host_u32_add(alternatives.start, current)
+            if child < self.collected.pattern_children.length() &&
+              self.pattern_mentions_variant(
+                self.collected.pattern_children[child],
+                variant,
+              ) {
+              return true
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        false
+      }
+      _ => match self.pattern_variant(pattern) {
+        Some(candidate) => candidate == variant
         None => self.qualified_pattern_matches_variant(pattern, variant)
       }
     }
@@ -790,7 +791,7 @@ impl SelfHostBodyFlowAnalyzer {
             let mut variant_index = 0u32
             let _ = while variant_index {
               candidate => if candidate < enum_variants.length() {
-                if self.pattern_covers_variant(
+                if self.pattern_mentions_variant(
                   info.pattern,
                   self_host_flow_u64_at(enum_variants, candidate),
                 ) && !covered_variants[candidate] {
@@ -858,7 +859,7 @@ impl SelfHostBodyFlowAnalyzer {
         break self_host_semantic_unit()
       }
     }
-    let exhaustive = coverage_error || catch_all || match domain {
+    let mut exhaustive = coverage_error || catch_all || match domain {
       BoolFlowCoverageDomain => {
         covered_false && covered_true
       }
@@ -869,6 +870,37 @@ impl SelfHostBodyFlowAnalyzer {
         )
       }
       OpenFlowCoverageDomain => false
+    }
+    if !exhaustive {
+      let rows = array_new::<Array<U32>>()
+      let work = SelfHostPatternCoverageWork::{
+        remaining: 65536u32
+        exhausted: false
+      }
+      let _ = while 0u32 {
+        index => if index < arms.length {
+          if !work.spend(1u32) {
+            break self_host_semantic_unit()
+          }
+          let arm = self.collected.pattern_arms[self.collected.arm_children[arms.start + index]]
+          if arm.guard_condition == 4294967295u32 {
+            if !work.spend(2u32) {
+               break self_host_semantic_unit()
+             }
+            rows.push([arm.pattern])
+          }
+          continue index + 1u32
+        } else {
+           break self_host_semantic_unit()
+         }
+      }
+      if !work.exhausted && self.matrix_complete(rows, work, 0u32) {
+         exhaustive = true
+       }
+      if work.exhausted {
+        self.diagnostics.push(PatternCoverageBudgetExceeded(expression, 65536u32, 64u32, offset))
+        return self_host_flow_union(branches, self_host_flow_diverges())
+      }
     }
     if !exhaustive {
       let missing_start = self.missing_cases.length()
@@ -1188,6 +1220,7 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn finish(self) -> SelfHostAnalyzedBodyFlow {
+    self.initialize_pattern_irrefutability()
     self.analyze_expressions()
     self.sort_diagnostics()
     let root = match self.body.root {
@@ -1313,4 +1346,428 @@ fn self_host_analyze_basic_module_flows_with_imports(
     inferred,
     imported_variants,
   )
+}
+
+struct SelfHostPatternCoverageWork {
+  mut remaining: U32
+  mut exhausted: Bool
+}
+
+impl SelfHostPatternCoverageWork {
+  fn spend(self, cells: U32) -> Bool {
+    if cells > self.remaining {
+      self.exhausted = true
+      false
+    } else {
+      self.remaining = self.remaining - cells
+      true
+    }
+  }
+}
+
+impl SelfHostBodyFlowAnalyzer {
+  fn variant_is_only_constructor(self, variant: U64) -> Bool {
+    if self_host_semantic_id_module(variant) == self.collected.module_id {
+      let index = self_host_semantic_id_local(variant)
+      if index >= self.collected.variants.length() {
+        return false
+      }
+      let owner = self.collected.variants[index].declaration
+      if index > 0u32 && self.collected.variants[index - 1u32].declaration == owner {
+        return false
+      }
+      index + 1u32 >= self.collected.variants.length() || self.collected.variants[index + 1u32].declaration != owner
+    } else {
+      let mut owner = None
+      for candidate in self.imported_variants {
+        if candidate.variant == variant {
+          owner = Some(candidate.declaration)
+        }
+      }
+      match owner {
+        Some(declaration) => self.enum_variants(declaration).length() == 1u32
+        None => false
+      }
+    }
+  }
+
+  fn initialize_pattern_irrefutability(self) -> Unit {
+    let _ = while self.body.patterns.start {
+      pattern => if pattern < self.body.patterns.start + self.body.patterns.length {
+        let payload = match self.collected.patterns[pattern] {
+          WildcardPattern(_), BindingPattern(_, _), RestPattern(_), QualifiedPattern(_, _, _) => true
+          TuplePattern(_, children, _), ProductPattern(children, _) => {
+            let mut complete = true
+            let _ = while 0u32 {
+              index => if index < children.length {
+                let child = self.collected.pattern_children[children.start + index]
+                if !self.pattern_catches_all(child) {
+                  complete = false
+                }
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            complete
+          }
+          StructPattern(_, fields, _, _, _) => {
+            let mut complete = true
+            let _ = while 0u32 {
+              index => if index < fields.length {
+                let child = self.collected.pattern_fields[fields.start + index].pattern
+                if !self.pattern_catches_all(child) {
+                  complete = false
+                }
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            complete
+          }
+          AlternativePattern(first, alternatives, _) => {
+            let mut complete = self.pattern_catches_all(first)
+            let _ = while 0u32 {
+              index => if index < alternatives.length {
+                let child = self.collected.pattern_children[alternatives.start + index]
+                if self.pattern_catches_all(child) {
+                  complete = true
+                }
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            complete
+          }
+          _ => false
+        }
+        let valid = payload && !self.pattern_has_error(pattern)
+        let index = self.pattern_index(pattern)
+        self.pattern_payload_irrefutable[index] = valid
+        let complete = match self.inferred.pattern_constructors[index] {
+          ErrorBasicPatternConstructor => false
+          SelectedBasicPatternConstructor(constructor, variant_payload, _) => {
+            if self.collected.patterns[pattern] is StructPattern(_, _, _, _, _) && !variant_payload {
+              valid
+            } else {
+              valid && self.variant_is_only_constructor(constructor)
+            }
+          }
+          NoBasicPatternConstructor => match self.collected.patterns[pattern] {
+            WildcardPattern(_), BindingPattern(_, _), RestPattern(_) => true
+            ProductPattern(_, _), AlternativePattern(_, _, _) => valid
+            _ => false
+          }
+        }
+        self.pattern_irrefutable[index] = complete
+        continue pattern + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn matrix_wildcard(self, pattern: U32) -> Bool {
+    pattern == 4294967295u32 || self.pattern_catches_all(pattern)
+  }
+
+  fn matrix_copy_row(
+    self,
+    row: Array<U32>,
+    head: Array<U32>,
+    work: SelfHostPatternCoverageWork,
+  ) -> Option<Array<U32>> {
+    let length = head.length() + row.length() - 1u32
+    if !work.spend(length + 1u32) {
+      return None
+    }
+    let result = array_make_raw(length, 4294967295u32)
+    let _ = while 0u32 {
+      index => if index < head.length() {
+        result[index] = head[index]
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let _ = while 1u32 {
+      index => if index < row.length() {
+        result[head.length() + index - 1u32] = row[index]
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    Some(result)
+  }
+
+  fn matrix_children(
+    self,
+    pattern: U32,
+    model: U32,
+    work: SelfHostPatternCoverageWork,
+  ) -> Option<Array<U32>> {
+    match self.collected.patterns[model] {
+      TuplePattern(_, children, _), ProductPattern(children, _) => {
+        if !work.spend(children.length + 1u32) {
+          return None
+        }
+        let _ = while 0u32 {
+          index => if index < children.length {
+            let child = self.collected.pattern_children[children.start + index]
+            if self.collected.patterns[child] is RestPattern(_) {
+              return None
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        if self.matrix_wildcard(pattern) {
+          return Some(array_make_raw(children.length, 4294967295u32))
+        }
+        let actual = match self.collected.patterns[pattern] {
+          TuplePattern(_, actual, _), ProductPattern(actual, _) => actual
+          _ => return None
+        }
+        if actual.length != children.length {
+          return None
+        }
+        let result = array_make_raw(children.length, 4294967295u32)
+        let _ = while 0u32 {
+          index => if index < actual.length {
+            let child = self.collected.pattern_children[actual.start + index]
+            if self.collected.patterns[child] is RestPattern(_) {
+              return None
+            }
+            result[index] = child
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        Some(result)
+      }
+      StructPattern(_, fields, rest, _, _) => {
+        if rest || !work.spend(fields.length + 1u32) {
+          return None
+        }
+        if self.matrix_wildcard(pattern) {
+          return Some(array_make_raw(fields.length, 4294967295u32))
+        }
+        let actual = match self.collected.patterns[pattern] {
+          StructPattern(_, actual, _, _, _) => actual
+          _ => return None
+        }
+        let result = array_make_raw(fields.length, 4294967295u32)
+        let _ = while 0u32 {
+          index => if index < fields.length {
+            let name = self.collected.pattern_fields[fields.start + index].name
+            let _ = while 0u32 {
+              candidate => if candidate < actual.length {
+                if !work.spend(1u32) {
+                  return None
+                }
+                let field = self.collected.pattern_fields[actual.start + candidate]
+                if field.name == name {
+                  result[index] = field.pattern
+                  break self_host_semantic_unit()
+                }
+                continue candidate + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        Some(result)
+      }
+      BindingPattern(_, _), QualifiedPattern(_, _, _) => Some([])
+      _ => None
+    }
+  }
+
+  fn matrix_complete(
+    self,
+    input: Array<Array<U32>>,
+    work: SelfHostPatternCoverageWork,
+    depth: U32,
+  ) -> Bool {
+    if input.is_empty() {
+      return false
+    }
+    if input[0u32].is_empty() {
+      return true
+    }
+    if depth >= 64u32 || !work.spend(input.length() + 1u32) {
+      work.exhausted = true
+      return false
+    }
+    let rows = array_new::<Array<U32>>()
+    let pending = input.copy()
+    let _ = while pending.length() {
+      length => if length > 0u32 {
+        let row = pending[length - 1u32]
+        pending.truncate(length - 1u32)
+        if !work.spend(1u32) {
+          return false
+        }
+        let pattern = row[0u32]
+        let mut expanded = false
+        if pattern != 4294967295u32 && !self.matrix_wildcard(pattern) {
+          match self.collected.patterns[pattern] {
+            AlternativePattern(first, alternatives, _) => {
+              match self.matrix_copy_row(row, [first], work) {
+                Some(next) => pending.push(next)
+                None => return false
+              }
+              let _ = while 0u32 {
+                index => if index < alternatives.length {
+                  let alternative = self.collected.pattern_children[alternatives.start + index]
+                  match self.matrix_copy_row(row, [alternative], work) {
+                    Some(next) => pending.push(next)
+                    None => return false
+                  }
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              expanded = true
+            }
+            _ => {}
+          }
+        }
+        if !expanded {
+          rows.push(row)
+        }
+        continue pending.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let defaults = array_new::<Array<U32>>()
+    let mut sample = 4294967295u32
+    for row in rows {
+      if !work.spend(1u32) {
+        return false
+      }
+      self_host_assert_compiler_invariant(row.length() == input[0u32].length(), "PAT-101 coverage matrix row width")
+      if self.matrix_wildcard(row[0u32]) {
+        match self.matrix_copy_row(row, [], work) {
+          Some(next) => defaults.push(next)
+          None => return false
+        }
+      } else {
+        sample = row[0u32]
+      }
+    }
+    if !defaults.is_empty() && self.matrix_complete(defaults, work, depth + 1u32) {
+      return true
+    }
+    if work.exhausted || sample == 4294967295u32 {
+      return false
+    }
+    let domain = self.body_coverage_domain(self.inferred.pattern_types[self.pattern_index(sample)])
+    match domain {
+      BoolFlowCoverageDomain => {
+        for value in [false, true] {
+          let specialized = array_new::<Array<U32>>()
+          for row in rows {
+            if !work.spend(1u32) {
+              return false
+            }
+            if self.matrix_wildcard(row[0u32]) || self.pattern_covers_bool(row[0u32], value) {
+              match self.matrix_copy_row(row, [], work) {
+                Some(next) => specialized.push(next)
+                None => return false
+              }
+            }
+          }
+          if !self.matrix_complete(specialized, work, depth + 1u32) {
+            return false
+          }
+        }
+        true
+      }
+      EnumFlowCoverageDomain(declaration) => {
+        let variants = self.enum_variants(declaration)
+        if !work.spend(variants.length()) {
+          return false
+        }
+        for variant in variants {
+          let mut model = 4294967295u32
+          for row in rows {
+            if !work.spend(1u32) {
+              return false
+            }
+            if row[0u32] != 4294967295u32 {
+              match self.pattern_variant(row[0u32]) {
+                Some(candidate) => if candidate == variant {
+                  model = row[0u32]
+                }
+                None => {}
+              }
+            }
+          }
+          if model == 4294967295u32 {
+            return false
+          }
+          let specialized = array_new::<Array<U32>>()
+          for row in rows {
+            if !work.spend(1u32) {
+              return false
+            }
+            let matches_ = self.matrix_wildcard(row[0u32]) || match self.pattern_variant(row[0u32]) {
+              Some(candidate) => candidate == variant
+              None => false
+            }
+            if matches_ {
+              let children = match self.matrix_children(row[0u32], model, work) {
+                Some(children) => children
+                None => return false
+              }
+              match self.matrix_copy_row(row, children, work) {
+                Some(next) => specialized.push(next)
+                None => return false
+              }
+            }
+          }
+          if !self.matrix_complete(specialized, work, depth + 1u32) {
+            return false
+          }
+        }
+        true
+      }
+      OpenFlowCoverageDomain => {
+        let product = match self.collected.patterns[sample] {
+          ProductPattern(_, _), StructPattern(_, _, _, _, _) => true
+          _ => false
+        }
+        if !product {
+          return false
+        }
+        let specialized = array_new::<Array<U32>>()
+        for row in rows {
+          if !work.spend(1u32) {
+            return false
+          }
+          let children = match self.matrix_children(row[0u32], sample, work) {
+            Some(children) => children
+            None => return false
+          }
+          match self.matrix_copy_row(row, children, work) {
+            Some(next) => specialized.push(next)
+            None => return false
+          }
+        }
+        self.matrix_complete(specialized, work, depth + 1u32)
+      }
+    }
+  }
 }

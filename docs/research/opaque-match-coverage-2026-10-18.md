@@ -35,7 +35,8 @@ invalid-pattern suppression case:
 DEW_NATIVE_TEST_PACKAGES=semantic/body_flow_wbtest.mbt tools/test-native.sh
 ```
 
-The Dew parity cases are added to `semantic_body_flow_test.dew`; their execution
-is pending the source-compiler test lane. No Dew behavior change was needed.
+The two Dew parity tests pass in 0.061 seconds. Their test module was generated
+in 4.545 seconds and linked in 1.068 seconds with the prebuilt native tools.
+No Dew behavior change was needed.
 The original failing program and measured command output are stored in the
 language improvement review evidence for 2026-10-18.

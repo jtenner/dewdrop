@@ -1,0 +1,204 @@
+{
+  "binary": "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+  "binary_sha256": "b75a2ff51292421bd2c59728551c8913b70068d7784f06e2b126053bb3375d12",
+  "head": "6af8898bbf50214b550588afea6c120ef7fc2c5b",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "architecture": "x86_64",
+  "cache_policy": "All CLI cache layers disabled; prebuilt native binary; no rebuild.",
+  "samples": [
+    {
+      "case": "simple",
+      "sample": 0,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/simple.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.17095643000357086,
+      "peak_rss_kib": 26804,
+      "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "case": "simple",
+      "sample": 1,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/simple.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.17345872599980794,
+      "peak_rss_kib": 26644,
+      "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "case": "simple",
+      "sample": 2,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/simple.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.16891413099801866,
+      "peak_rss_kib": 26764,
+      "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "case": "nested-runtime",
+      "sample": 0,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-runtime.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.16848408000078052,
+      "peak_rss_kib": 26716,
+      "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "case": "nested-runtime",
+      "sample": 1,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-runtime.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.16922536999481963,
+      "peak_rss_kib": 26884,
+      "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "case": "nested-runtime",
+      "sample": 2,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-runtime.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.16852022700186353,
+      "peak_rss_kib": 26688,
+      "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+      "stderr": ""
+    },
+    {
+      "case": "nested-budget",
+      "sample": 0,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew"
+      ],
+      "exit": 1,
+      "wall_seconds": 0.17048714400152676,
+      "peak_rss_kib": 26768,
+      "stdout": "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew:2:3: error: PatternCoverageBudgetExceeded(5, 65536, 64, 552)\n  |\n2 |   match value {\n  |   ^\n",
+      "stderr": ""
+    },
+    {
+      "case": "nested-budget",
+      "sample": 1,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew"
+      ],
+      "exit": 1,
+      "wall_seconds": 0.17089620600017952,
+      "peak_rss_kib": 26008,
+      "stdout": "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew:2:3: error: PatternCoverageBudgetExceeded(5, 65536, 64, 552)\n  |\n2 |   match value {\n  |   ^\n",
+      "stderr": ""
+    },
+    {
+      "case": "nested-budget",
+      "sample": 2,
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "check",
+        "--no-cache-pack",
+        "--no-program-cache",
+        "--no-parse-event-cache",
+        "--no-interface-cache",
+        "--no-body-cache",
+        "--no-plan-cache",
+        "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew"
+      ],
+      "exit": 1,
+      "wall_seconds": 0.17022371500206646,
+      "peak_rss_kib": 26160,
+      "stdout": "/home/dev/Projects/dewdrop/docs/research/data/nested-pattern-coverage-2026-10-18/nested-budget.dew:2:3: error: PatternCoverageBudgetExceeded(5, 65536, 64, 552)\n  |\n2 |   match value {\n  |   ^\n",
+      "stderr": ""
+    }
+  ],
+  "summary": {
+    "simple": {
+      "median_wall_seconds": 0.17095643000357086,
+      "peak_rss_kib": 26804
+    },
+    "nested-runtime": {
+      "median_wall_seconds": 0.16852022700186353,
+      "peak_rss_kib": 26884
+    },
+    "nested-budget": {
+      "median_wall_seconds": 0.17048714400152676,
+      "peak_rss_kib": 26768
+    }
+  }
+}

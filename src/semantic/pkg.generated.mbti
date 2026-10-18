@@ -307,6 +307,7 @@ pub enum BodyControlKind {
 pub enum BodyFlowDiagnostic {
   NonExhaustiveMatch(Int, HirSpan, UInt64)
   NonExhaustiveFunctionalLoop(Int, HirSpan, UInt64)
+  PatternCoverageBudgetExceeded(Int, Int, Int, UInt64)
   RedundantPatternArm(Int, UInt64)
   FunctionalLoopArmFallsThrough(Int, UInt64)
   UnreachableBlockItem(Int, Int, UInt64)
