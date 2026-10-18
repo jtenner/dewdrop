@@ -1,0 +1,37 @@
+{
+  "status": "historical focused loader pass within a broader failed native run",
+  "scoped_result": {
+    "target": "src/standard_loader/parse_event_cache_wbtest.mbt",
+    "passed": 5,
+    "failed": 0,
+    "lane_seconds": 4.946,
+    "excerpt": [
+      "Total tests: 5, passed: 5, failed: 0.",
+      "self-host timing: native src/standard_loader/parse_event_cache_wbtest.mbt tests: 4.946 seconds"
+    ],
+    "process_exit_status": null,
+    "exit_status_limit": "No independent process exit was saved for this sub-lane. The surrounding run failed elsewhere."
+  },
+  "surrounding_run": {
+    "command": [
+      "bash",
+      "tools/test-native.sh"
+    ],
+    "seconds": 143.43917567500466,
+    "exit": 1,
+    "metadata_source_path": "/tmp/dewdrop-implementation-2026-10-18/validation/native-remaining.json",
+    "metadata_sha256": "30e040e0d722850b70db396c90bba1254a42ba7418f11ddc024a0d4c94c9cc74",
+    "log_source_path": "/tmp/dewdrop-implementation-2026-10-18/validation/native-remaining.log",
+    "log_sha256": "b59c43ee99d08c2797944f96b14d9012bef975a6bdb6c73208734fa896c1cbeb",
+    "failure_scope": "semantic/program_physical_type_invariants_wbtest.mbt: two assertions failed; this record does not claim the surrounding run passed.",
+    "environment": null,
+    "environment_limit": "The old metadata saved argv but no environment selectors. This summary preserves the recorded command without inventing missing environment values."
+  },
+  "build_identity": null,
+  "build_identity_limit": "This surrounding-run record does not save a historical compiler or source digest. The separate isolated owner proof has exact source identities.",
+  "existing_owner_proof": "../cache-owner-boundaries-2026-10-18/",
+  "existing_range_proof": "../cache-range-hashing-2026-10-18/",
+  "existing_depth_proof": "../parse-cache-depth-admission-2026-10-18/",
+  "existing_fragment_proof": "../fragment-cache-generic-enum-accounting-2026-10-18/",
+  "existing_result_warm_cost": "../result-helper-warm-planning-2026-10-18/"
+}

@@ -96,4 +96,8 @@ python3 docs/research/data/cache-owner-boundaries-2026-10-18/reproduce.py
 The root validation also ran the actual parse-cache owning file. All five
 tests passed in 4.946 seconds, including both new cases. Full output is in
 `/tmp/dewdrop-implementation-2026-10-18/validation/native-remaining.log`.
+The [compact historical record](data/language-improvement-implementation-2026-10-18/cache-owner-loader.json)
+saves this scoped pass and its command record. The surrounding native run
+failed in unrelated physical-type fixtures. Its recorded exit is preserved;
+this file result does not establish that the whole run passed.
 No runtime speed gain is claimed.

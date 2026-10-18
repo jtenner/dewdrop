@@ -1,0 +1,147 @@
+{
+  "status": "historical focused recovery evidence; does not establish final compiler-C feature status",
+  "scope": "Malformed escape token retention and declaration recovery in native and self-hosted tokenizers/parsers. These are grouped test modules, not the final feature-C request.",
+  "records": {
+    "native_tokenizer_red": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/native-red-tests.log",
+      "sha256": "056919d9d85ebc907e46cf74b4fe3b4832bf5cb3c4c8f54d655f2ffc641a2bca",
+      "bytes": 13871,
+      "selected_lines": [
+        "[jtenner/dewdrop] test tokenizer/string_recovery_wbtest.mbt:2 (\"invalid escapes preserve the closing quote and following delimiters\") failed: src/tokenizer/string_recovery_wbtest.mbt:5:5-5:33@jtenner/dewdrop FAILED: `2 != 6`",
+        "Total tests: 1, passed: 0, failed: 1.",
+        "self-host timing: native src/tokenizer/string_recovery_wbtest.mbt tests: 0.399 seconds"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "metadata_limit": "The saved text log does not contain argv or the process exit status. Counts and diagnostic lines below are the observed test result.",
+      "elapsed_seconds": 0.399,
+      "elapsed_source": "lane timing in log"
+    },
+    "native_parser_red": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/native-parser-red-tests.log",
+      "sha256": "171135730024d40d03527493fb585b1cf38169195eff8c02d4f2806e0eda3b65",
+      "bytes": 168727,
+      "selected_lines": [
+        "[jtenner/dewdrop] test parser/string_recovery_wbtest.mbt:2 (\"malformed escapes do not expose local declarations during module recovery\") failed: src/parser/string_recovery_wbtest.mbt:9:5-9:34@jtenner/dewdrop FAILED: `4 != 2`",
+        "Total tests: 1, passed: 0, failed: 1.",
+        "self-host timing: native src/parser/string_recovery_wbtest.mbt tests: 1.460 seconds"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "metadata_limit": "The saved text log does not contain argv or the process exit status. Counts and diagnostic lines below are the observed test result.",
+      "elapsed_seconds": 1.46,
+      "elapsed_source": "lane timing in log"
+    },
+    "native_focused_green": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/native-green-tests.log",
+      "sha256": "34c6c02782fc761ccba71bd477f0ff5f34777b895c415a176545de52374ff477",
+      "bytes": 164100,
+      "selected_lines": [
+        "Total tests: 3, passed: 3, failed: 0.",
+        "self-host timing: native src/tokenizer/string_recovery_wbtest.mbt tests: 0.352 seconds",
+        "Total tests: 1, passed: 1, failed: 0.",
+        "self-host timing: native src/parser/string_recovery_wbtest.mbt tests: 1.371 seconds"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "metadata_limit": "The saved text log does not contain argv or the process exit status. Counts and diagnostic lines below are the observed test result."
+    },
+    "native_packages_green": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/native-all-green-tests.log",
+      "sha256": "75035e18f1bd8aed54ddd4f949be6830a5ea03a01c993a7433b5defe827394a4",
+      "bytes": 162772,
+      "selected_lines": [
+        "Total tests: 45, passed: 45, failed: 0.",
+        "self-host timing: native src/tokenizer tests: 0.364 seconds",
+        "Total tests: 306, passed: 306, failed: 0.",
+        "self-host timing: native src/parser tests: 1.527 seconds"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "metadata_limit": "The saved text log does not contain argv or the process exit status. Counts and diagnostic lines below are the observed test result."
+    },
+    "self_host_red": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/red-tests.log",
+      "sha256": "b18639f66b8cb5736caf5cd89135bff74b9f5f6a9c6cf1dc6149fa77304dc901",
+      "bytes": 442,
+      "selected_lines": [
+        "FAIL self_host.compiler::parser_string_recovery_test.dew::malformed escapes keep following tokens outside the string: unexpected trap unreachable: assertion failed: one error and five following tokens",
+        "FAIL self_host.compiler::parser_string_recovery_test.dew::malformed escapes keep valid declarations after broken function: unexpected trap unreachable: assertion failed: one error and following declaration only",
+        "Dew tests: 0 passed, 2 failed"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "metadata_limit": "The saved text log does not contain argv or the process exit status. Counts and diagnostic lines below are the observed test result."
+    },
+    "self_host_green": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/green-tests.log",
+      "sha256": "c1cd5559c20106228d95ea48dfa4f527410db65a2c275f672b732f94384b0404",
+      "bytes": 21,
+      "selected_lines": [
+        "Dew tests passed: 29"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "metadata_limit": "The saved text log does not contain argv or the process exit status. Counts and diagnostic lines below are the observed test result.",
+      "elapsed_seconds": 0.066,
+      "elapsed_source": "research note; not present in raw text log"
+    },
+    "self_host_generation_green": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/green-generate.log",
+      "sha256": "fb46fdc361e21d032a6f389b6135d6bda7d848804911ba7eaffda5a8ac0721cb",
+      "bytes": 460,
+      "selected_lines": [
+        "wrote self-describing Dew test module"
+      ],
+      "command": null,
+      "process_exit_status": null,
+      "elapsed_seconds": 4.75,
+      "elapsed_source": "research note; not present in raw text log",
+      "metadata_limit": "Historical argv and process exit were not saved in this log."
+    },
+    "self_host_link_green": {
+      "source_path": "/home/dev/Projects/dewdrop/.tmp/malformed-escape-recovery/green-link.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "selected_lines": [],
+      "command": null,
+      "process_exit_status": null,
+      "elapsed_seconds": 1.126,
+      "elapsed_source": "research note; not present in raw text log",
+      "metadata_limit": "Historical argv and process exit were not saved in this log."
+    }
+  },
+  "source_identity": {
+    "self_host_source_manifest": "malformed-string-self-host-source-sha256.json",
+    "manifest_sha256": "07f479e0cb130840ef7f893d4948e42adcf7df8ee3b6090b546ffe3b273be58f",
+    "source_count": 199,
+    "native_historical_build_identity": null,
+    "native_identity_limit": "The historical native logs did not save a commit, source hash manifest, or executable digest. Current workspace hashes cannot prove the old build identity.",
+    "retained_self_host_artifacts": {
+      "tests.raw.wasm": {
+        "sha256": "c01957d8645cc8fcf1e42cc84b2ff62a3211b0f84eec5cac86761c3f4cc1ce7b",
+        "bytes": 2982839
+      },
+      "tests.wasm": {
+        "sha256": "7d1b15697c1d5f3e5108f0e88d51b5da83edacd7b229e17a3597a421b467928e",
+        "bytes": 2386547
+      }
+    },
+    "retained_artifact_limit": "These are the retained module files at summary time. The earlier red module was overwritten, so no historical red executable digest is claimed."
+  },
+  "reproduction_commands_not_historical_argv": [
+    [
+      "env",
+      "DEW_NATIVE_TEST_PACKAGES=tokenizer/string_recovery_wbtest.mbt parser/string_recovery_wbtest.mbt",
+      "bash",
+      "tools/test-native.sh"
+    ],
+    [
+      "env",
+      "DEW_NATIVE_TEST_PACKAGES=tokenizer parser",
+      "bash",
+      "tools/test-native.sh"
+    ]
+  ],
+  "existing_privacy_record": "../module-private-fields-2026-10-18/validation.json"
+}

@@ -59,3 +59,10 @@ execution took 0.066 seconds. The logs are `green-generate.log`, `green-link.log
 and `green-tests.log` in the evidence directory above. Source SHA-256 hashes
 are saved in `source-sha256.json` beside those logs. No measured compiler
 activity exceeded 30 seconds.
+
+The [compact historical record](data/language-improvement-implementation-2026-10-18/malformed-string-recovery.json)
+now saves the result lines, timings, log hashes, retained module hashes, and
+source manifest in the repository. Historical command lines, process exit
+codes, and native build hashes that the old logs did not save are marked
+unknown. Reproduction commands are labeled separately. These focused tests do
+not establish the final compiler-C feature result.
