@@ -36,6 +36,13 @@ The deterministic host suite checks complete output and explicit host failures. 
 
 The generated Dew source and Wasm binary are ignored.
 
+The native test generator uses a debug build to keep a clean build below the
+30-second compiler budget. Its Dew production pipeline and runtime checks are
+unchanged. Each phase prints its elapsed time. Moon options can be passed to the
+script, for example `tools/wasi-parity/run.sh --target-dir /tmp/dew-wasi-build`.
+See [cold generator build measurements](../../docs/research/parity-generator-cold-builds-2026-10-18.md)
+for the measured time and disk-space tradeoff.
+
 The benchmark stage functions are ordinary Dew code in [staging.dew](staging.dew).
 They use byte loads/stores and BytesBuilder, with a 65,520-byte bound checked
 before any copy. Neither compiler provides a staging runtime builtin. Raw host

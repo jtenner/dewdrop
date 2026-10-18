@@ -165,6 +165,9 @@ tools/module-snapshots/run.sh --jobs 1
 tools/module-snapshots/run.sh --jobs 4
 DEW_SNAPSHOT_JOBS=4 tools/module-snapshots/run.sh
 
+# Use a separate Moon build directory for the native debug generator.
+tools/module-snapshots/run.sh --target-dir /tmp/dew-snapshot-build
+
 # Run only one runtime while debugging an engine-specific failure.
 tools/module-snapshots/run.sh --runtime node
 tools/module-snapshots/run.sh --runtime wago

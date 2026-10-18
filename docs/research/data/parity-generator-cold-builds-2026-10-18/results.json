@@ -1,0 +1,201 @@
+{
+  "debug-cold-build": {
+    "command": [
+      "moon",
+      "build",
+      "--target",
+      "native",
+      "--target-dir",
+      "/tmp/dewdrop-implementation-2026-10-18/parity-debug-cold",
+      "-j",
+      "2",
+      "src/utf_parity_gen",
+      "src/wasi_parity_gen"
+    ],
+    "elapsed_seconds": 13.360369175992673,
+    "exit": 0,
+    "timed_out": false
+  },
+  "utf-debug-runtime2": {
+    "command": [
+      "/tmp/dewdrop-implementation-2026-10-18/parity-debug-cold/native/debug/build/jtenner/dewdrop/utf_parity_gen/utf_parity_gen.exe"
+    ],
+    "cwd": "/tmp/dewdrop-review-2026-10-18/runtime/parity-tools/utf-debug-runtime",
+    "elapsed_seconds": 12.83024839599966,
+    "exit": 0,
+    "timed_out": false,
+    "exe_sha256": "6e56391e82d1fc14c0b809013d39d01ae98c70a7667cec48b52723808aea65b4",
+    "wasm_bytes": 8109244,
+    "wasm_sha256": "05c160d07da02322663ee94a6f888955814ed80e989398053c9cbf4d77f05f37",
+    "release_wasm_sha256": "05c160d07da02322663ee94a6f888955814ed80e989398053c9cbf4d77f05f37"
+  },
+  "wasi-debug-runtime": {
+    "command": [
+      "/tmp/dewdrop-implementation-2026-10-18/parity-debug-cold/native/debug/build/jtenner/dewdrop/wasi_parity_gen/wasi_parity_gen.exe"
+    ],
+    "cwd": "/tmp/dewdrop-review-2026-10-18/runtime/parity-tools/wasi-debug-runtime",
+    "elapsed_seconds": 0.8527146209962666,
+    "exit": 0,
+    "timed_out": false,
+    "exe_sha256": "73ee536797331b1b3571b34d0734f90a13778ebdaf4cdb7f53a4bf1c04f65ffe",
+    "wasm_bytes": 575591,
+    "wasm_sha256": "e02b71287f7bf2666574e4333dd9b9b340460aa49ad6651a70a39ad6c2e8827c",
+    "release_wasm_sha256": "e02b71287f7bf2666574e4333dd9b9b340460aa49ad6651a70a39ad6c2e8827c"
+  },
+  "utf-script-cold": {
+    "command": [
+      "bash",
+      "tools/utf-parity/run.sh",
+      "--target-dir",
+      "/tmp/dewdrop-implementation-2026-10-18/parity-script-cold"
+    ],
+    "elapsed_seconds": 23.534351185007836,
+    "exit": 0,
+    "timed_out": false
+  },
+  "wasi-script-cold": {
+    "command": [
+      "bash",
+      "tools/wasi-parity/run.sh",
+      "--target-dir",
+      "/tmp/dewdrop-implementation-2026-10-18/wasi-parity-script-cold"
+    ],
+    "elapsed_seconds": 11.82571272700443,
+    "exit": 0,
+    "timed_out": false,
+    "child_peak_rss_kib": 775548,
+    "wasm_sha256": "e02b71287f7bf2666574e4333dd9b9b340460aa49ad6651a70a39ad6c2e8827c"
+  },
+  "snapshot-script-cold": {
+    "command": [
+      "mise",
+      "exec",
+      "wasm-tools@1.262.0",
+      "--",
+      "python3",
+      "tools/module-snapshots/run.py",
+      "--fixture",
+      "text/concat",
+      "--target-dir",
+      "/tmp/dewdrop-implementation-2026-10-18/snapshot-script-cold"
+    ],
+    "elapsed_seconds": 12.89645087599638,
+    "exit": 2,
+    "timed_out": false,
+    "target_was_absent": true
+  },
+  "release_baseline": [
+    {
+      "command": [
+        "/home/dev/.local/bin/moon",
+        "run",
+        "--target",
+        "native",
+        "--release",
+        "src/utf_parity_gen"
+      ],
+      "cwd": "/home/dev/Projects/dewdrop",
+      "seconds": 96.18822439999349,
+      "exit": 0,
+      "lane": "suites-final",
+      "exceeds_30_seconds": true
+    },
+    {
+      "command": [
+        "/home/dev/.local/bin/moon",
+        "run",
+        "--target",
+        "native",
+        "--release",
+        "src/wasi_parity_gen"
+      ],
+      "cwd": "/home/dev/Projects/dewdrop",
+      "seconds": 93.6978119359992,
+      "exit": 0,
+      "lane": "suites-final",
+      "exceeds_30_seconds": true
+    }
+  ],
+  "executables": {
+    "release/utf_parity_gen": {
+      "bytes": 9009688,
+      "sha256": "f2444ec064b677a7e83d230676080ee0349ed94b020e00b20d82b1520e1467ee"
+    },
+    "release/wasi_parity_gen": {
+      "bytes": 9009472,
+      "sha256": "0b5f4a164a5376e86321e72e68c53a3b9c9a0a9627a47c3448fa9835daeae86c"
+    },
+    "debug/utf_parity_gen": {
+      "bytes": 39467128,
+      "sha256": "6e56391e82d1fc14c0b809013d39d01ae98c70a7667cec48b52723808aea65b4"
+    },
+    "debug/wasi_parity_gen": {
+      "bytes": 39467296,
+      "sha256": "73ee536797331b1b3571b34d0734f90a13778ebdaf4cdb7f53a4bf1c04f65ffe"
+    },
+    "debug/module_snapshot_gen": {
+      "bytes": 39527144,
+      "sha256": "0ca8e7d8d39c1fee245de5c74f84244aa97f116f1066d7d265ef0a8247eee84e"
+    }
+  },
+  "environment": {
+    "head_after_samples": "8a04a2987f2367f6d2ef46ef39a74bac6b8d3f83",
+    "os": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "node": "v24.21.0",
+    "moon": "moon 0.1.20261012 (748b63c 2026-10-12)\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+    "cc": "cc (Debian 14.2.0-19) 14.2.0",
+    "load": "Normal development host load; root validation also ran. Single samples, not CPU-isolated."
+  },
+  "snapshot-script-warm": {
+    "command": [
+      "mise",
+      "exec",
+      "wasm-tools@1.262.0",
+      "go@1.27.2",
+      "--",
+      "python3",
+      "tools/module-snapshots/run.py",
+      "--fixture",
+      "text/concat",
+      "--target-dir",
+      "/tmp/dewdrop-implementation-2026-10-18/snapshot-script-cold"
+    ],
+    "elapsed_seconds": 3.871996700996533,
+    "exit": 1,
+    "timed_out": false
+  },
+  "snapshot-direct-identity": [
+    {
+      "kind": "release",
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/module_snapshot_gen/module_snapshot_gen.exe",
+        "/tmp/dewdrop-review-2026-10-18/runtime/parity-tools/snapshot-release.wasm",
+        "production",
+        "snapshot.main",
+        "fixture.dew",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/text/concat.dew"
+      ],
+      "elapsed_seconds": 0.19222093500138726,
+      "exit": 0,
+      "exe_sha256": "1a2eda37d98dcbf3597b9e4d57ce612f186acfc9febfce547e3cfca56fe23f13",
+      "wasm_sha256": "6cf2ed1cb10f5c721e82a7e67db3161702db6440ceaab5d46543d0544e6d6721",
+      "diagnostics": ""
+    },
+    {
+      "kind": "debug",
+      "command": [
+        "/tmp/dewdrop-implementation-2026-10-18/snapshot-script-cold/native/debug/build/jtenner/dewdrop/module_snapshot_gen/module_snapshot_gen.exe",
+        "/tmp/dewdrop-review-2026-10-18/runtime/parity-tools/snapshot-debug.wasm",
+        "production",
+        "snapshot.main",
+        "fixture.dew",
+        "/home/dev/Projects/dewdrop/tests/module-snapshots/text/concat.dew"
+      ],
+      "elapsed_seconds": 0.46523295300721657,
+      "exit": 0,
+      "exe_sha256": "0ca8e7d8d39c1fee245de5c74f84244aa97f116f1066d7d265ef0a8247eee84e",
+      "wasm_sha256": "6cf2ed1cb10f5c721e82a7e67db3161702db6440ceaab5d46543d0544e6d6721",
+      "diagnostics": ""
+    }
+  ]
+}

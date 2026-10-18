@@ -10,6 +10,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,8 +48,20 @@ def check_wasm_tools_version() -> None:
         )
 
 
-def build_snapshot_compiler() -> Path:
-    run(["moon", "build", "--target", "native", "--release", "src/module_snapshot_gen"])
+def build_snapshot_compiler(target_dir: Path) -> Path:
+    # Keep the same Dew production pipeline without the large native C
+    # optimizer pass needed by a release build of this test tool.
+    started = time.perf_counter()
+    try:
+        run([
+            "moon", "build", "--target", "native", "-j", "2",
+            "--target-dir", str(target_dir), "src/module_snapshot_gen",
+        ])
+    finally:
+        elapsed = time.perf_counter() - started
+        print(f"snapshot timing: native generator build: {elapsed:.3f} seconds", file=sys.stderr)
+        if elapsed > 30:
+            print("snapshot performance bug: native generator build exceeded 30 seconds", file=sys.stderr)
     module_name = None
     for line in (ROOT / "moon.mod").read_text(encoding="utf-8").splitlines():
         if line.startswith("name = "):
@@ -57,14 +70,14 @@ def build_snapshot_compiler() -> Path:
     if not isinstance(module_name, str) or not module_name:
         raise SnapshotError("moon.mod does not contain a valid module name")
     compiler = (
-        ROOT
-        / "_build/native/release/build"
+        target_dir
+        / "native/debug/build"
         / module_name
         / "module_snapshot_gen/module_snapshot_gen.exe"
     )
     if not compiler.is_file():
         raise SnapshotError(
-            f"native snapshot compiler was not built at {compiler.relative_to(ROOT)}"
+            f"native snapshot compiler was not built at {compiler}"
         )
     return compiler
 
@@ -526,6 +539,10 @@ def main() -> int:
     parser.add_argument("--list", action="store_true", help="list fixture names")
     parser.add_argument("--no-repro-check", action="store_true", help="compile only once")
     parser.add_argument(
+        "--target-dir", type=Path, default=ROOT / "_build",
+        help="Moon build output directory (default: _build)",
+    )
+    parser.add_argument(
         "--jobs",
         type=int,
         default=default_snapshot_jobs(),
@@ -552,7 +569,7 @@ def main() -> int:
     if not fixtures:
         raise SnapshotError("no <feature>/<test>.dew fixtures found")
     check_wasm_tools_version()
-    compiler = build_snapshot_compiler()
+    compiler = build_snapshot_compiler(args.target_dir.resolve())
 
     failures = 0
     with tempfile.TemporaryDirectory(prefix="dew-module-snapshots-") as temporary:

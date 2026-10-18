@@ -1,0 +1,25 @@
+=== utf-script-cold ===
+generated 971 UTF cases
+wrote tools/utf-parity/utf_parity.wasm
+UTF parity passed: 17471 checks
+self-host timing: UTF parity case generation: 0.134 seconds
+self-host timing: UTF parity generator build and Dew compilation: 23.230 seconds
+self-host timing: UTF parity runtime checks: 0.154 seconds
+=== wasi-script-cold ===
+generated tools/wasi-parity/generated_cases.dew
+wrote tools/wasi-parity/wasi_parity.wasm
+WASI parity passed: 196 checks
+self-host timing: WASI parity case generation: 0.108 seconds
+self-host timing: WASI parity generator build and Dew compilation: 11.517 seconds
+self-host timing: WASI parity runtime checks: 0.185 seconds
+=== snapshot-script-cold ===
+Finished. moon: ran 40 tasks, now up to date (3157 warnings, 0 errors)
+snapshot timing: native generator build: 12.806 seconds
+module snapshot error: cannot build Wago snapshot runner: mise ERROR No version is set for shim: go
+
+=== snapshot-script-warm ===
+checking text/concat
+snapshot timing: native generator build: 0.027 seconds
+--- tests/module-snapshots/text/concat.wat
++++ text__concat.actual.wat
+module snapshots failed: 1 fixture(s)

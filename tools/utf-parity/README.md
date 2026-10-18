@@ -43,3 +43,10 @@ tools/utf-parity/run.sh
 ```
 
 The current deterministic set performs 17,471 executable checks. Generated Dew, expectations, and Wasm are ignored and must not be committed.
+
+The native test generator uses a debug build to keep a clean build below the
+30-second compiler budget. Its Dew production pipeline and runtime checks are
+unchanged. Each phase prints its elapsed time. Moon options can be passed to the
+script, for example `tools/utf-parity/run.sh --target-dir /tmp/dew-utf-build`.
+See [cold generator build measurements](../../docs/research/parity-generator-cold-builds-2026-10-18.md)
+for the measured time and disk-space tradeoff.

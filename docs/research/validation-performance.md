@@ -43,7 +43,7 @@ validation host limit: the fixture depth and all assertions remain intact.
 The module-snapshot runner previously launched `moon run` for both compilations
 of every fixture. It now:
 
-1. builds the release native `module_snapshot_gen` executable once;
+1. builds the native `module_snapshot_gen` executable once;
 2. invokes that executable directly;
 3. gives each fixture a temporary private interface cache;
 4. processes independent fixtures concurrently;
@@ -55,13 +55,19 @@ writers and prevent an inherited `DEW_CACHE_DIR` from contaminating snapshots.
 The two compilations of one fixture share its private cache, retaining the
 miss-versus-hit reproducibility check.
 
-## Release UTF parity generator
+## Historical release UTF parity generator
 
 The UTF parity generator compiles and links a large generated Dew workload. The
 debug native generator spent most of the full-check wall time in compiler work.
-The harness now runs `src/utf_parity_gen` as a release native executable. It
+The August harness ran `src/utf_parity_gen` as a release native executable. It
 still generates all 971 cases and executes the same 17,471 independent parity
 checks.
+
+On October 18, clean release builds exceeded the 30-second compiler budget.
+UTF, WASI, and snapshot test generators now use debug native builds. The Dew
+production pipeline and check coverage stay unchanged. See
+[current cold-build measurements](parity-generator-cold-builds-2026-10-18.md)
+for times, output identity, and the disk-space and warm-runtime tradeoffs.
 
 ## Measurements
 
