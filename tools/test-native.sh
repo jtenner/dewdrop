@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 # lane below the compiler activity limit instead of hiding one slow aggregate.
 source tools/self-host-common.sh
 read -r -a packages <<< "${DEW_NATIVE_TEST_PACKAGES:-tokenizer parser standard_sources semantic backend standard_loader compiler_driver}"
+test_status=0
 for package in "${packages[@]}"; do
   targets=("src/$package")
   if [[ ( "$package" == semantic || "$package" == backend ) && $# == 0 ]]; then
@@ -15,6 +16,7 @@ for package in "${packages[@]}"; do
   fi
   for target in "${targets[@]}"; do
     self_host_measure "native $target tests" \
-      moon test --target native --no-parallelize "$target" "$@"
+      moon test --target native --no-parallelize "$target" "$@" || test_status=1
   done
 done
+exit "$test_status"
