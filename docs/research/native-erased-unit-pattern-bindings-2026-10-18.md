@@ -28,12 +28,13 @@ evaluation remains in the existing loop emitter.
 Two new native tests cover generic Unit loops, generic Unit matches, concrete
 Unit loops, and I32/I64/F32/F64/reference controls. The Unit cases encode real
 Wasm bytes, decode them, and validate the decoded module. Both tests pass in
-7.904 seconds. All seven existing functional-loop backend tests pass in 2.061
+9.327 seconds. All seven existing functional-loop backend tests pass in 2.061
 seconds. The new Unit test failed before the correction with the original
 `InvalidLocal` emission error. No compiler activity exceeded 30 seconds.
 
 Evidence logs are `.tmp/unit-loop-native-red.log` and
-`.tmp/unit-loop-native-green.log`. Backend source, test source, executable, and
+`.tmp/unit-loop-native-green.log`; the final formatted test run is in
+`.tmp/unit-loop-native-formatted-green.log`. Backend source, test source, executable, and
 log hashes are in `data/native-unit-pattern-bindings-2026-10-18/validation.json`.
 These isolated checks cover the binding change. The source identity of a
 concurrent semantic callback-liveness change was not captured during this build,

@@ -43,10 +43,13 @@ has no local access. Scalar identity loops use concrete I32/I64/F32/F64 blocks;
 the reference loop uses eqref. None of these identity functions allocates a
 struct or array. These checks show the output shape; no speed gain is claimed.
 
-The existing native compiler compiled all reduced scalar, reference, and nested
-cases, but failed the Unit binding case with `InvalidLocal`. That separate
-native repair is owned by the native backend lane. This self-host record does
-not claim that the native Unit case passed.
+The old native compiler compiled all reduced scalar, reference, and nested
+cases, but failed the Unit binding case with `InvalidLocal`. The separate native
+backend repair now also passes the unchanged complete runtime matrix. Its
+compiler SHA-256 is `95be90af8d7f80123ef26da936f3af41a1d60d99daa9b1b4615ba9d995bc0942`.
+Compilation took 0.161 seconds and produced 2,388 bytes; execution returned 42
+in a 0.031-second process. The exact native source/output hashes and commands
+are in the validation record.
 
 A patched compiler C was built from the fresh source request with three files
 changed: the prior lambda and numeric-pattern repairs, and this loop repair.

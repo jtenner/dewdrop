@@ -286,5 +286,19 @@
       "status": 0,
       "stderr": ""
     }
+  },
+  "private_construction_negative": {
+    "command": [
+      "node",
+      "--stack-size=65500",
+      "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/negative-request.bin"
+    ],
+    "seconds": 1.1204023489990504,
+    "status": 1,
+    "stdout": "",
+    "stderr": "self-host smoke: INV-002: semantic diagnostics must be resolved before specialization; count=3\nmodule=7233 names=0 signatures=0 inference=3\n  count inference error=1\n  count missing imported construction field=1\n  count no matching method=1\n  inference error offset=69\n  missing imported construction field offset=61\n  no matching method offset=115 file=invalid.dew expression=6 kind=unresolved.call receiver=4 receiver-type=0 receiver-kind=local.get\n",
+    "output_exists": false
   }
 }

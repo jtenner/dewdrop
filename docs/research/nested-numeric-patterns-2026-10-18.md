@@ -42,11 +42,12 @@ provider linking 0.996 seconds. It passed both repaired stages on the unchanged
 full feature probe. It then exposed a separate fault in generic `iter_fold`:
 a loop block expected a reference but its break supplied I32. This record does
 not claim that the full feature probe passed or that a final A/B/C fixed point
-passed. Those checks follow the generic-loop repair.
+passed. Those checks follow the generic-loop repair. The separate private-field
+construction probe was rejected in 1.120 seconds, reported the missing imported
+construction field, and produced no output.
 
 Exact outputs, timings, source and compiler hashes, emitted-code inspection,
 and the following full-probe error are in
 [`data/nested-numeric-patterns-2026-10-18/validation.json`](data/nested-numeric-patterns-2026-10-18/validation.json).
-The same directory has the runtime source and its runner. The runner reads a
-focused compiler test module that includes the small temporary byte-access
-bridge; normal hardening uses its existing byte-access exports.
+The same directory has the runtime source and its runner. The runner reads the hardening compiler test module and uses its existing
+byte-access exports; it also accepts the focused test module used here.
