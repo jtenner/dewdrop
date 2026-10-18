@@ -46,7 +46,8 @@ branch; it is not a native Windows runtime measurement.
 
 ## Tests
 
-All 14 `node --test tools/test-dew-run.mjs` tests passed in 0.444 seconds.
+The first vector-read run passed all 14 `node --test tools/test-dew-run.mjs`
+tests in 0.444 seconds.
 The exact-first-vector pipe test now returns in about 21 ms with stdin still
 open. Added tests cover 65 nonempty vectors and caller reads of remaining data,
 an invalid range after the 64-view bound before any input, `EINTR` retry, and
@@ -57,6 +58,18 @@ The multi-vector test checks the legal Windows prefix counts separately.
 [Failing test](data/run-host-readv-2026-10-18/red.stdout) and
 [passing tests](data/run-host-readv-2026-10-18/green.stdout) are retained.
 Node syntax checks and `git diff --check` also pass. No Moon build ran.
+
+A review follow-up added an `EAGAIN` test that requires zero reported bytes and
+WASI errno 6 without waiting for input. The simulated Windows hook now writes
+its expected/actual view count to stderr and exits with status 70 on a mismatch.
+The runner cannot turn that test failure into a generic WASI I/O error. A direct
+hook check with two views confirmed the message and exit status.
+
+All 15 runner tests then passed in 0.458 seconds. The
+[follow-up test record](data/run-host-readv-2026-10-18/review-polish-tests.json)
+and [hook diagnostic](data/run-host-readv-2026-10-18/hook-diagnostic.json) retain
+the results. The production runner stayed unchanged, with the same `d6d545ae...`
+hash recorded below. The follow-up changed tests, notes, and report output paths.
 
 ## Final-source memory samples
 
@@ -108,5 +121,18 @@ full-input memory regression; they do not isolate the cost of a single view.
 the repository root:
 
 ```sh
-python3 docs/research/data/run-host-readv-2026-10-18/measure.py
+python3 docs/research/data/run-host-readv-2026-10-18/measure.py --output .tmp/run-host-readv-repeat.json
 ```
+
+Without `--output`, the harness creates a unique system temporary directory and
+prints the report path. A repeat run no longer replaces the saved `final-rss.json`
+report. The saved measurements above are unchanged; their recorded harness hash
+refers to the first harness revision. The output-path change does not alter the
+measurement loop or the production runner.
+
+
+Default and explicit output paths were both run successfully. The saved report's
+SHA-256 stayed unchanged in both checks. The
+[output-path checks](data/run-host-readv-2026-10-18/harness-output-check.json)
+record their paths, commands, and times. These checks verify report handling;
+they do not replace the historical samples or add a new performance claim.

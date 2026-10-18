@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 import hashlib
 import json
 import os
@@ -11,6 +12,11 @@ import time
 BASELINE = "9d86b829292b1efa8f1aca32b0ff49565c878ee0"
 REPOSITORY = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
 HERE = Path(__file__).resolve().parent
+parser = argparse.ArgumentParser(description="Measure runner RSS without replacing saved research data.")
+parser.add_argument("--output", type=Path, help="JSON report path; default is a unique system temporary directory")
+arguments = parser.parse_args()
+output = arguments.output or Path(tempfile.mkdtemp(prefix="dew-run-readv-report-")) / "rss.json"
+output.parent.mkdir(parents=True, exist_ok=True)
 fixture = HERE / "read-stream.wasm"
 current = REPOSITORY / "tools/dew-run.mjs"
 old_source = subprocess.check_output(["git", "show", BASELINE + ":tools/dew-run.mjs"], cwd=REPOSITORY)
@@ -60,5 +66,5 @@ for size in (1024 * 1024, 64 * 1024 * 1024):
             median_peak_rss_kib=statistics.median(row["peak_rss_kib"] for row in rows),
             median_elapsed_ms=statistics.median(row["elapsed_seconds"] for row in rows) * 1000)
 report["summary"] = summary
-(HERE / "final-rss.json").write_text(json.dumps(report, indent=2) + "\n")
-print(json.dumps(dict(after_runner_sha256=report["after_runner_sha256"], summary=summary), indent=2))
+output.write_text(json.dumps(report, indent=2) + "\n")
+print(json.dumps(dict(report_path=str(output.resolve()), after_runner_sha256=report["after_runner_sha256"], summary=summary), indent=2))

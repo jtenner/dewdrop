@@ -1,8 +1,13 @@
 # Run host input reads — 2026-10-18
 
-## Change
+This is a historical record of the first demand-driven `readSync` host. Its
+nine-test count, partial-error behavior, and measured runner hash describe that
+implementation. The current bounded vector host and its tests are recorded in
+[the final `readvSync` follow-up](run-host-readv-2026-10-18.md).
 
-`tools/dew-run.mjs` now reads stdin only when the guest calls WASI
+## Initial change (historical)
+
+The first implementation changed `tools/dew-run.mjs` to read stdin only when the guest calls WASI
 `fd_read`. It reads into the guest memory view. It does not load and copy the
 whole input before the program starts. Programs can write output before input
 is available, and programs that do not read input can exit with stdin open.
@@ -14,17 +19,17 @@ error preserves a successful partial read. This host exposes only descriptor
 0 for reading; other descriptors return BADF. The file and process adapters
 still need their own full WASI host.
 
-## Tests
+## Initial tests (historical)
 
 The old host failed the new open-stdin test after its 5-second timeout. With
-the fix, `node --test tools/test-dew-run.mjs` passes all 9 tests in 0.33 seconds.
+that initial fix, `node --test tools/test-dew-run.mjs` passed all 9 tests in 0.33 seconds.
 Tests cover open stdin, output before input, repeated incremental reads without
 EOF, exact byte data, short reads across iovecs, empty iovecs, multiple buffers,
 EOF, invalid descriptors, invalid guest ranges, and a Linux host read error.
 The fixtures are Core Wasm bytes made in the test. They need no Dew build.
 The host error test uses a directory as stdin and is Linux-only.
 
-The existing Node metadata test group plus these tests passes all 17 tests:
+The Node metadata group plus those initial tests passed all 17 tests:
 
 ```sh
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs tools/test-dew-run.mjs

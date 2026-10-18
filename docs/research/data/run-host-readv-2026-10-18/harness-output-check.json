@@ -1,0 +1,23 @@
+{
+  "command": [
+    "python3",
+    "docs/research/data/run-host-readv-2026-10-18/measure.py"
+  ],
+  "elapsed_seconds": 1.0482146829963312,
+  "exit": 0,
+  "report_path": "/tmp/dew-run-readv-report-1vwf4bbq/rss.json",
+  "saved_report_unchanged": true,
+  "saved_report_sha256": "d5923075d13d37950ddf98378797f2fcfae6dd0f368445f7db1aeedba68e6b4a",
+  "explicit_output_check": {
+    "command": [
+      "python3",
+      "docs/research/data/run-host-readv-2026-10-18/measure.py",
+      "--output",
+      "/tmp/dewdrop-review-2026-10-18/runtime/readv/explicit-output.json"
+    ],
+    "elapsed_seconds": 1.0432060019957135,
+    "exit": 0,
+    "printed_path": "/tmp/dewdrop-review-2026-10-18/runtime/readv/explicit-output.json",
+    "saved_report_unchanged": true
+  }
+}

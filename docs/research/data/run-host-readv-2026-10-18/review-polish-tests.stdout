@@ -1,0 +1,23 @@
+✔ main returns with stdin still open (24.041225ms)
+✔ output precedes input, short reads return without EOF, and bytes stay exact (22.820429ms)
+✔ multiple and empty iovecs, repeated reads, and EOF report exact counts (21.993832ms)
+✔ zero iovecs do not read stdin (21.941256ms)
+✔ a short first iovec does not wait for the next iovec (20.94954ms)
+✔ a full first iovec does not wait for more input in the next iovec (20.273046ms)
+✔ bounded vector reads leave the remaining bytes for the caller (22.169435ms)
+✔ guest ranges beyond the vector read limit are checked before input (21.414775ms)
+✔ an interrupted vector read retries without losing bytes (21.381042ms)
+✔ a host read that would block returns WASI AGAIN without reading (21.64689ms)
+✔ the Windows prefix rule passes only one view to the host read (23.590928ms)
+✔ empty iovecs do not wait for input (21.370783ms)
+✔ invalid descriptors return WASI BADF without waiting for input (20.223342ms)
+✔ invalid guest ranges return WASI FAULT before input is consumed (83.09144ms)
+✔ host read errors return a WASI errno (22.39ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 426.057066

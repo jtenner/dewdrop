@@ -258,13 +258,34 @@ test("an interrupted vector read retries without losing bytes", async () => {
   assert.equal(output.readUInt32LE(4), 0);
 });
 
+test("a host read that would block returns WASI AGAIN without reading", async () => {
+  const hook = preload("read-again", `
+    const fs = require("node:fs");
+    fs.readvSync = () => {
+      const error = new Error("test read would block");
+      error.code = "EAGAIN";
+      throw error;
+    };
+    require("node:module").syncBuiltinESMExports();
+  `);
+  const path = fixture("again", [...read(), ...write()], {
+    0: 128, 4: 8, 16: 12345, 32: 16, 36: 8,
+  });
+  const output = await run(path, "pipe", hook).finished;
+  assert.equal(output.readUInt32LE(0), 0);
+  assert.equal(output.readUInt32LE(4), 6);
+});
+
 test("the Windows prefix rule passes only one view to the host read", async () => {
   const hook = preload("windows-prefix", `
     Object.defineProperty(process, "platform", { value: "win32" });
     const fs = require("node:fs");
     const readv = fs.readvSync;
     fs.readvSync = (fd, buffers, position) => {
-      require("node:assert/strict").equal(buffers.length, 1);
+      if (buffers.length !== 1) {
+        process.stderr.write("Windows prefix rule expected one view, got " + buffers.length + "\\n");
+        process.exit(70);
+      }
       return readv(fd, buffers, position);
     };
     require("node:module").syncBuiltinESMExports();
