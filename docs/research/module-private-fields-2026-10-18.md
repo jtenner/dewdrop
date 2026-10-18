@@ -125,3 +125,9 @@ The compact test record is in
 [`data/module-private-fields-2026-10-18/validation.json`](data/module-private-fields-2026-10-18/validation.json).
 Full native logs are in
 `/tmp/dewdrop-review-2026-10-18/runtime/privacy/focused-exact.{stdout,stderr,json}`.
+
+An additional native regression in `src/semantic/json_provenance_wbtest.mbt`
+imports the actual standard module and rejects forged JsonNumber, JsonString,
+JsonDocument, and JsonRawDocument constructors. It passed with the final flow
+test group. This checks the library's private modifiers as well as the general
+language rule, so removal of a JSON modifier causes a test failure.
