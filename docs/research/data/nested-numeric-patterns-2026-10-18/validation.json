@@ -1,0 +1,290 @@
+{
+  "source_sha256": {
+    "self_host/compiler/semantic_nested_pattern_emit.dew": "c47049ff56febe0304bbcd25bacfe3ee91e95c43cf708738a7008857832399bf",
+    "self_host/compiler/semantic_nested_literal_carriers_test.dew": "faa9fb9b813cacd4cfccee35df9b56a5c1022e33d135472aa23ad9ac04009386",
+    "tools/test-self-host-hardening.sh": "17cd54c544c5a60837e6eda6cbb410e1735d8ca905e7dab257c98c812fcdddd8",
+    "tools/check-self-host-emission.mjs": "ce9871c7a9abe6dd96031b15cbff422859bd5b260a294762bc2f523166f06e3c"
+  },
+  "reduced_source_bytes_red": [
+    {
+      "label": "positive-u32",
+      "literal": "42u32",
+      "seconds": 1.1946495440060971,
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "output_exists": true
+    },
+    {
+      "label": "negative-i32",
+      "literal": "-2147483648i32",
+      "seconds": 1.1417825509997783,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: nested literal pattern has no physical comparison recipe\n",
+      "output_exists": false
+    },
+    {
+      "label": "negative-i64",
+      "literal": "-9223372036854775808i64",
+      "seconds": 1.1573912970052334,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: nested literal pattern has no physical comparison recipe\n",
+      "output_exists": false
+    },
+    {
+      "label": "reference",
+      "literal": "\"text\"",
+      "seconds": 1.2625356869975803,
+      "status": 0,
+      "stdout": "",
+      "stderr": "",
+      "output_exists": true
+    }
+  ],
+  "regression_red": [
+    {
+      "label": "generate",
+      "seconds": 4.622656171995914,
+      "status": 0,
+      "stdout": "semantic_specialized_body_shapes.dew:56:11: warning: UnreachableBlockItem(10622, 1, 1972)\n  |\n56 |           unreachable()\n  |           ^\nstarshine_module.dew:12677:28: warning: RedundantPatternArm(11671, 452291)\n  |\n12677 |             PlannedLocalSet(_, _) => {\n  |                            ^\nstarshine_module.dew:12724:13: warning: RedundantPatternArm(11686, 454630)\n  |\n12724 |             _ => {\n  |             ^\nwrote self-describing Dew test module\n",
+      "stderr": ""
+    },
+    {
+      "label": "time-provider",
+      "seconds": 0.012685759997111745,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "link",
+      "seconds": 1.1231286520051071,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "test",
+      "seconds": 0.14201655899523757,
+      "status": 1,
+      "stdout": "",
+      "stderr": "FAIL self_host.compiler::semantic_nested_literal_carriers_test.dew::nested numeric literal emission integer minima unsigned bounds and positive prefix: unexpected trap unreachable: assertion failed: nested literal pattern has no physical comparison recipe\nFAIL self_host.compiler::semantic_nested_literal_carriers_test.dew::nested numeric literal emission F32 and F64 constants signs and signed zero: unexpected trap unreachable: assertion failed: nested literal pattern has no physical comparison recipe\nFAIL self_host.compiler::semantic_nested_literal_carriers_test.dew::nested numeric literal emission struct fields below an enum guard: unexpected trap unreachable: assertion failed: nested literal pattern has no physical comparison recipe\nDew tests: 0 passed, 3 failed\n"
+    }
+  ],
+  "regression_green": [
+    {
+      "label": "generate",
+      "seconds": 4.7140438279893715,
+      "status": 0,
+      "stdout": "semantic_specialized_body_shapes.dew:56:11: warning: UnreachableBlockItem(10644, 1, 1972)\n  |\n56 |           unreachable()\n  |           ^\nstarshine_module.dew:12677:28: warning: RedundantPatternArm(11686, 452291)\n  |\n12677 |             PlannedLocalSet(_, _) => {\n  |                            ^\nstarshine_module.dew:12724:13: warning: RedundantPatternArm(11701, 454630)\n  |\n12724 |             _ => {\n  |             ^\nwrote self-describing Dew test module\n",
+      "stderr": ""
+    },
+    {
+      "label": "time-provider",
+      "seconds": 0.012389823008561507,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "link",
+      "seconds": 1.1458343300037086,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "test",
+      "seconds": 0.26620223200006876,
+      "status": 0,
+      "stdout": "Dew tests passed: 3 selected from 3\n",
+      "stderr": ""
+    }
+  ],
+  "selfhost_emitter_runtime": {
+    "command": [
+      "node",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/run-pattern-output.mjs",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/pattern-regression/tests.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/nested-pattern-selfhost.wasm"
+    ],
+    "seconds": 0.269175864988938,
+    "status": 0,
+    "stdout": "{\"result\":42,\"generated_ms\":131.017471,\"total_ms\":131.40510999999998,\"wasm_bytes\":4255}\n",
+    "stderr": ""
+  },
+  "native_compile": {
+    "command": [
+      "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+      "build",
+      "--bootstrap-std",
+      "--no-cache-pack",
+      "--root",
+      "probe.main",
+      "--module",
+      "probe.main",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/nested-pattern-matrix.dew",
+      "-o",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/nested-pattern-native.wasm"
+    ],
+    "seconds": 0.18657887399604078,
+    "status": 0,
+    "stdout": "wrote /tmp/dewdrop-review-2026-10-18/feature-probe/nested-pattern-native.wasm (11811 bytes)\n",
+    "stderr": ""
+  },
+  "native_runtime": {
+    "command": [
+      "node",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/run-output.mjs",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/nested-pattern-native.wasm"
+    ],
+    "seconds": 0.03231021999090444,
+    "status": 0,
+    "stdout": "{\"result\":42,\"elapsed_ms\":0.49001100000000086}\n",
+    "stderr": ""
+  },
+  "patched_compiler_build": {
+    "command": [
+      "node",
+      "--stack-size=65500",
+      "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/fixed-compiler-request.bin"
+    ],
+    "seconds": 15.87525400800223,
+    "status": 0,
+    "changed": [
+      {
+        "module": "self_host.compiler",
+        "path": "self_host/compiler/semantic_nested_pattern_emit.dew",
+        "before_sha256": "72d216fe1dc1100d096c5f6cf94a2a76a20dabd5565926dc78e7edc9b099197d",
+        "after_sha256": "c47049ff56febe0304bbcd25bacfe3ee91e95c43cf708738a7008857832399bf"
+      },
+      {
+        "module": "self_host.compiler",
+        "path": "self_host/compiler/semantic_program_link_plan.dew",
+        "before_sha256": "12987f56d62c4e5b96d4387de009685017a7d5ea2da5e32bed7e2e2fcb65fbe8",
+        "after_sha256": "12f3c9ba3345fb350897ab3e9f4b65d4fd036eee197325bc86e563ef700f8d50"
+      }
+    ],
+    "request_sha256": "9a214e4f3dce8a1ab12531a42cf431b0ec5e6bac59542b773806919097d95534",
+    "parent_compiler_sha256": "6b10f92aedc19836076745d728d0d0280200103be1fb2b8170ed33b8d14165cf",
+    "stdout": "",
+    "stderr": "",
+    "output_exists": true,
+    "output_sha256": "abe5d1cf7dafa0e94bf3a86b25306b01b781d7830ad4e8d1388ebdddc14d43f9"
+  },
+  "patched_compiler_link": {
+    "command": [
+      "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/self_host_link_fixture/self_host_link_fixture.exe",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-fixed.wasm",
+      "/home/dev/Projects/dewdrop/starshine-mb/dist/ffi/starshine-ffi.wasm",
+      "/home/dev/Projects/dewdrop/fixtures/facet/facet-adapter.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/regression/time.wasm",
+      "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-fixed-linked.wasm",
+      "--single-validation"
+    ],
+    "seconds": 0.9960413759981748,
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "unchanged_full_probe_next_failure": {
+    "compiler_sha256": "0d5a8679c43c461ba923bb730660afedc51be7f2a9f9873f8a22a9442e8b87e3",
+    "host_compiler_sha256": "d167a73e478ae2b715ce990d5b05066111bd6c1afdb8cef88f3826cd4a476cf5",
+    "template_sha256": "36d40b9b17e3070f0363c58d91071fd2013f4085098b4d6f6acc4712d7e620a5",
+    "results": [
+      {
+        "label": "export-memory",
+        "command": [
+          "mise",
+          "exec",
+          "wasm-tools@1.262.0",
+          "--",
+          "python3",
+          "/home/dev/Projects/dewdrop/tools/export-wasm-memory.py",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c.wasm",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm"
+        ],
+        "cwd": "/home/dev/Projects/dewdrop",
+        "elapsed_seconds": 1.0201414839975769,
+        "exit_status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      {
+        "label": "rewrite-request",
+        "command": [
+          "python3",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/rewrite-request.py",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/fresh-template.bin",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe"
+        ],
+        "cwd": "/home/dev/Projects/dewdrop",
+        "elapsed_seconds": 0.08429250000335742,
+        "exit_status": 0,
+        "stdout": "positive 8836233 bytes 34 modules\nnegative 8831160 bytes 34 modules\n",
+        "stderr": ""
+      },
+      {
+        "label": "positive-c-compile",
+        "command": [
+          "node",
+          "--stack-size=65500",
+          "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/compiler-c-memory.wasm",
+          "/tmp/dewdrop-review-2026-10-18/feature-probe/positive-request.bin"
+        ],
+        "cwd": "/tmp/dewdrop-review-2026-10-18/feature-probe",
+        "elapsed_seconds": 1.3740431539918063,
+        "exit_status": 1,
+        "stdout": "",
+        "stderr": "self-host smoke: Starshine rejected the linked self-host output module function=65: instruction[5] (block (RefType Null (HeapType (AbsHeapType Eq))) (loop (Void) (local.get (Local 6))(ref.test (RefType Not Null (HeapType Idx 5)))(if (Void) (local.get (Local 6)) (ref.cast (RefType Not Null (HeapType Idx 5))) (struct.get (Type 5) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 229))) (struct.get (Type 229) U32(0)) (local.set (Local 4)) (local.get (Local 2)) (local.set (Local 5)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.test (RefType Not Null (HeapType Idx 256))) (if I32 (local.get (Local 3)) (local.get (Local 4)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 256))) (call_ref (Type 256)) else (local.get (Local 5)) (local.get (Local 3)) (local.get (Local 4)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 257))) (call_ref (Type 257)) ) (local.set (Local 3)) (local.get (Local 0)) (call (Func 29)) (local.set (Local 6)) (br (Label 1)) else (local.get (Local 6)) (ref.test (RefType Not Null (HeapType Idx 3))) (if (Void) (local.get (Local 3)) (br (Label 3)) else unreachable ) )(end))unreachable(end)): instruction[0] (loop (Void) (local.get (Local 6))(ref.test (RefType Not Null (HeapType Idx 5)))(if (Void) (local.get (Local 6)) (ref.cast (RefType Not Null (HeapType Idx 5))) (struct.get (Type 5) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 229))) (struct.get (Type 229) U32(0)) (local.set (Local 4)) (local.get (Local 2)) (local.set (Local 5)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.test (RefType Not Null (HeapType Idx 256))) (if I32 (local.get (Local 3)) (local.get (Local 4)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 256))) (call_ref (Type 256)) else (local.get (Local 5)) (local.get (Local 3)) (local.get (Local 4)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 257))) (call_ref (Type 257)) ) (local.set (Local 3)) (local.get (Local 0)) (call (Func 29)) (local.set (Local 6)) (br (Label 1)) else (local.get (Local 6)) (ref.test (RefType Not Null (HeapType Idx 3))) (if (Void) (local.get (Local 3)) (br (Label 3)) else unreachable ) )(end)): instruction[2] (if (Void) (local.get (Local 6)) (ref.cast (RefType Not Null (HeapType Idx 5))) (struct.get (Type 5) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 229))) (struct.get (Type 229) U32(0)) (local.set (Local 4)) (local.get (Local 2)) (local.set (Local 5)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.test (RefType Not Null (HeapType Idx 256))) (if I32 (local.get (Local 3)) (local.get (Local 4)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 256))) (call_ref (Type 256)) else (local.get (Local 5)) (local.get (Local 3)) (local.get (Local 4)) (local.get (Local 5)) (ref.cast (RefType Not Null (HeapType Idx 52))) (struct.get (Type 52) U32(0)) (ref.cast (RefType Not Null (HeapType Idx 257))) (call_ref (Type 257)) ) (local.set (Local 3)) (local.get (Local 0)) (call (Func 29)) (local.set (Local 6)) (br (Label 1)) else (local.get (Local 6)) (ref.test (RefType Not Null (HeapType Idx 3))) (if (Void) (local.get (Local 3)) (br (Label 3)) else unreachable ) ): instruction[2] (if (Void) (local.get (Local 3)) (br (Label 3)) else unreachable ): instruction[1] (br (Label 3)): type mismatch: expected=(RefType Null (HeapType (AbsHeapType Eq))) actual=I32; stack=[]; stack=[]; stack=[]; stack=[]; stack=[] linked_function=65 name=iter_fold module=4294901807 declaration=18446462800596303874 specialization=18\n"
+      }
+    ],
+    "status": 1
+  },
+  "emitted_predicate_inspection": {
+    "checked": [
+      "i8",
+      "i16",
+      "i32",
+      "i64",
+      "u8",
+      "u16",
+      "u32",
+      "u64",
+      "positive",
+      "f32_negative",
+      "f32_positive",
+      "f32_direct",
+      "f32_zero",
+      "f64_negative",
+      "f64_positive",
+      "f64_direct",
+      "f64_zero",
+      "nested",
+      "wrap_u8",
+      "wrap_u16"
+    ],
+    "no_function_calls": true,
+    "no_runtime_float_negation": true,
+    "wasm_sha256": "bb54eaf2c7a0baf5f11ecc768668b7aff465f3711ed7e07fad1901fdcf0b2624",
+    "wat_print": {
+      "command": [
+        "mise",
+        "exec",
+        "wasm-tools@1.262.0",
+        "--",
+        "wasm-tools",
+        "print",
+        "/tmp/dewdrop-review-2026-10-18/feature-probe/nested-pattern-selfhost.wasm"
+      ],
+      "seconds": 0.013273496006149799,
+      "status": 0,
+      "stderr": ""
+    }
+  }
+}

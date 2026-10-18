@@ -535,6 +535,7 @@ if (selectCorpus()) {
     ["self_host_emit_short_constructor_probe", 42],
     ["self_host_emit_nested_binding_probe", 42n],
     ["self_host_emit_nested_literal_probe", 235],
+    ["self_host_emit_nested_numeric_literal_probe", 42],
     ["self_host_emit_type_stack_probe", -507],
   ]) {
     const start = performance.now();

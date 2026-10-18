@@ -213,7 +213,33 @@ fn self_host_emit_nested_pattern_tests(
             if expression >= module_.expressions.length() {
               return Some("nested literal expression is outside its arena")
             }
+            let mut literal_expression = expression
+            let mut negative = false
+            // Numeric signs are primitive syntax, without operator selection.
+            // The parser permits exactly one sign before a numeric literal.
             match module_.expressions[expression].kind {
+              PlannedPrefixExpression(operator, operand) => {
+                if !(operator is Positive) && !(operator is Negative) {
+                  return Some("nested literal prefix has no physical comparison recipe")
+                }
+                if operand >= module_.expressions.length() {
+                  return Some("nested literal prefix operand is outside its arena")
+                }
+                match module_.expressions[operand].kind {
+                  PlannedI8Const(_), PlannedU8Const(_),
+                  PlannedI16Const(_), PlannedU16Const(_),
+                  PlannedI32Const(_), PlannedU32Const(_),
+                  PlannedI64Const(_), PlannedU64Const(_),
+                  PlannedF32Const(_), PlannedF64Const(_) => {}
+                  _ => return Some("nested literal prefix requires a numeric constant")
+                }
+                literal_expression = operand
+                negative = operator is Negative
+              }
+              _ => {}
+            }
+            let literal_kind = module_.expressions[literal_expression].kind
+            match literal_kind {
               PlannedBoolConst(value) => {
                 let bit = if value {
                   1i32
@@ -227,21 +253,68 @@ fn self_host_emit_nested_pattern_tests(
               PlannedU8Const(value),
               PlannedI16Const(value),
               PlannedU16Const(value),
-              PlannedI32Const(value) => {
-                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(value))))
-                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
-              }
+              PlannedI32Const(value),
               PlannedU32Const(value) => {
-                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(value))))
+                let mut constant = if negative {
+                  0u64 - value
+                } else {
+                  value
+                }
+                // Packed payload reads restore the declared signedness.
+                match literal_kind {
+                  PlannedI8Const(_) => {
+                    let bits = constant & 255u64
+                    constant = if bits >= 128u64 {
+                      bits - 256u64
+                    } else {
+                      bits
+                    }
+                  }
+                  PlannedU8Const(_) => {
+                    constant = constant & 255u64
+                  }
+                  PlannedI16Const(_) => {
+                    let bits = constant & 65535u64
+                    constant = if bits >= 32768u64 {
+                      bits - 65536u64
+                    } else {
+                      bits
+                    }
+                  }
+                  PlannedU16Const(_) => {
+                    constant = constant & 65535u64
+                  }
+                  _ => {}
+                }
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(constant))))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
               }
-              PlannedI64Const(value) => {
-                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value))))
+              PlannedI64Const(value), PlannedU64Const(value) => {
+                let constant = if negative {
+                  0u64 - value
+                } else {
+                  value
+                }
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(constant))))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_eq())
               }
-              PlannedU64Const(value) => {
-                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value))))
-                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_eq())
+              PlannedF32Const(value) => {
+                let constant = if negative {
+                  -value
+                } else {
+                  value
+                }
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_f32_const(StarshineFfi.ffi_lib_F32_new(constant)))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_f32_eq())
+              }
+              PlannedF64Const(value) => {
+                let constant = if negative {
+                  -value
+                } else {
+                  value
+                }
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_f64_const(StarshineFfi.ffi_lib_F64_new(constant)))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_f64_eq())
               }
               PlannedStringConst(value) => {
                 let equality = match canonical {

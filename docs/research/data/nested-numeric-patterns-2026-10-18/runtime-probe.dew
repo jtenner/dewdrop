@@ -1,0 +1,171 @@
+enum Box<t> {
+  Value(t)
+  Empty
+}
+fn i8(value: Box<I8>) -> Bool {
+  value is Box::Value(-128i8)
+}
+fn i16(value: Box<I16>) -> Bool {
+  value is Box::Value(-32768i16)
+}
+fn i32(value: Box<I32>) -> Bool {
+  value is Box::Value(-2147483648i32)
+}
+fn i64(value: Box<I64>) -> Bool {
+  value is Box::Value(-9223372036854775808i64)
+}
+fn u8(value: Box<U8>) -> Bool {
+  value is Box::Value(255u8)
+}
+fn u16(value: Box<U16>) -> Bool {
+  value is Box::Value(65535u16)
+}
+fn u32(value: Box<U32>) -> Bool {
+  value is Box::Value(4294967295u32)
+}
+fn u64(value: Box<U64>) -> Bool {
+  value is Box::Value(18446744073709551615u64)
+}
+fn positive(value: Box<I32>) -> Bool {
+  value is Box::Value(+42i32)
+}
+fn f32_negative(value: Box<F32>) -> Bool {
+  value is Box::Value(-1.5f32)
+}
+fn f32_positive(value: Box<F32>) -> Bool {
+  value is Box::Value(+1.5f32)
+}
+fn f32_direct(value: Box<F32>) -> Bool {
+  value is Box::Value(2.5f32)
+}
+fn f32_zero(value: Box<F32>) -> Bool {
+  value is Box::Value(-0.0f32)
+}
+fn f64_negative(value: Box<F64>) -> Bool {
+  value is Box::Value(-1.5f64)
+}
+fn f64_positive(value: Box<F64>) -> Bool {
+  value is Box::Value(+1.5f64)
+}
+fn f64_direct(value: Box<F64>) -> Bool {
+  value is Box::Value(2.5f64)
+}
+fn f64_zero(value: Box<F64>) -> Bool {
+  value is Box::Value(-0.0f64)
+}
+struct Pair {
+  low: I32
+  high: F64
+}
+enum Outer {
+  Wrap(Pair)
+  Empty
+}
+fn nested(value: Outer) -> Bool {
+  match value {
+    Outer::Wrap(Pair {
+      low: -2147483648i32
+      high: -1.5f64
+    }) => true
+    _ => false
+  }
+}
+fn wrap_u8(value: Box<U8>) -> Bool {
+  value is Box::Value(-1u8)
+}
+fn wrap_u16(value: Box<U16>) -> Bool {
+  value is Box::Value(-1u16)
+}
+builtin stop() -> Never = "unreachable"
+trait Neg {
+  fn neg(self) -> Self
+}
+trait Pos {
+  fn pos(self) -> Self
+}
+impl Neg for I32 {
+  fn neg(self) -> I32 {
+    stop()
+  }
+}
+impl Pos for I32 {
+  fn pos(self) -> I32 {
+    stop()
+  }
+}
+pub fn main() -> I32 {
+  if wrap_u8(Box::Value(255u8)) &&
+    !wrap_u8(Box::Value(254u8)) &&
+    wrap_u16(Box::Value(65535u16)) &&
+    !wrap_u16(Box::Value(65534u16)) &&
+    i8(Box::Value(-128i8)) &&
+    !i8(Box::Value(-127i8)) &&
+    !i8(Box::Empty) &&
+    i16(Box::Value(-32768i16)) &&
+    !i16(Box::Value(-32767i16)) &&
+    !i16(Box::Empty) &&
+    i32(Box::Value(-2147483648i32)) &&
+    !i32(Box::Value(-2147483647i32)) &&
+    !i32(Box::Empty) &&
+    i64(Box::Value(-9223372036854775808i64)) &&
+    !i64(Box::Value(-9223372036854775807i64)) &&
+    !i64(Box::Empty) &&
+    u8(Box::Value(255u8)) &&
+    !u8(Box::Value(254u8)) &&
+    !u8(Box::Empty) &&
+    u16(Box::Value(65535u16)) &&
+    !u16(Box::Value(65534u16)) &&
+    !u16(Box::Empty) &&
+    u32(Box::Value(4294967295u32)) &&
+    !u32(Box::Value(4294967294u32)) &&
+    !u32(Box::Empty) &&
+    u64(Box::Value(18446744073709551615u64)) &&
+    !u64(Box::Value(18446744073709551614u64)) &&
+    !u64(Box::Empty) &&
+    positive(Box::Value(+42i32)) &&
+    !positive(Box::Value(41i32)) &&
+    !positive(Box::Empty) &&
+    f32_negative(Box::Value(-1.5f32)) &&
+    !f32_negative(Box::Value(1.5f32)) &&
+    !f32_negative(Box::Empty) &&
+    f32_positive(Box::Value(+1.5f32)) &&
+    !f32_positive(Box::Value(-1.5f32)) &&
+    !f32_positive(Box::Empty) &&
+    f32_direct(Box::Value(2.5f32)) &&
+    !f32_direct(Box::Value(1.5f32)) &&
+    !f32_direct(Box::Empty) &&
+    f32_zero(Box::Value(-0.0f32)) &&
+    !f32_zero(Box::Value(1.0f32)) &&
+    !f32_zero(Box::Empty) &&
+    f32_zero(Box::Value(0.0f32)) &&
+    f64_negative(Box::Value(-1.5f64)) &&
+    !f64_negative(Box::Value(1.5f64)) &&
+    !f64_negative(Box::Empty) &&
+    f64_positive(Box::Value(+1.5f64)) &&
+    !f64_positive(Box::Value(-1.5f64)) &&
+    !f64_positive(Box::Empty) &&
+    f64_direct(Box::Value(2.5f64)) &&
+    !f64_direct(Box::Value(1.5f64)) &&
+    !f64_direct(Box::Empty) &&
+    f64_zero(Box::Value(-0.0f64)) &&
+    !f64_zero(Box::Value(1.0f64)) &&
+    !f64_zero(Box::Empty) &&
+    f64_zero(Box::Value(0.0f64)) &&
+    nested(Outer::Wrap(Pair::{
+      low: -2147483648i32
+      high: -1.5f64
+    })) &&
+    !nested(Outer::Wrap(Pair::{
+      low: -2147483647i32
+      high: -1.5f64
+    })) &&
+    !nested(Outer::Wrap(Pair::{
+      low: -2147483648i32
+      high: 1.5f64
+    })) &&
+    !nested(Outer::Empty) {
+    42i32
+  } else {
+    0i32
+  }
+}
