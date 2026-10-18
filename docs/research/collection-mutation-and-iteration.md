@@ -1,6 +1,6 @@
 # Collection mutation and iteration contract
 
-Date: 2026-08-11
+Date: 2026-08-11. API check: 2026-10-18.
 
 Dew's current Array, Map, Set, Stack, Queue, CircularBuffer, Deque, BinaryHeap, PriorityQueue, RedBlackTree, OrderedMap, and OrderedSet values are mutable reference objects. Assigning one to another variable creates an alias; it does not copy storage or create a persistent version. Mutation through any alias is visible through every alias. APIs that promise copying, such as BinaryHeap's Floyd constructor from Array, state that behavior explicitly.
 
@@ -10,7 +10,9 @@ A **replacement mutation** preserves logical shape. Array indexed assignment, Ma
 
 An iterator is valid from construction until its source collection receives a structural mutation. Structural mutation invalidates all outstanding iterators for that collection. Calling `has_next` or `next` on an invalidated iterator has unspecified traversal results, but remains subject to WasmGC memory and type safety. Dew does not currently pay an epoch counter and branch on every iterator operation to force a deterministic invalidation trap.
 
-Replacement mutations do not invalidate iterators. An item not yet yielded is observed with the value stored when it is reached; already yielded scalar values and immutable entry snapshots do not change retroactively. Iterators retain their source collection strongly for their own lifetime. Exhausted valid iterators trap on `next`; callers use `has_next` at non-trapping boundaries.
+Replacement mutations do not invalidate iterators. An item not yet yielded has the value stored when the iterator reaches it. A scalar value already returned does not change. A `MapEntry` is a live reference to an internal map node. If the map replaces that key's value, a saved entry shows the new value. It is not a snapshot. Callers must not change its internal links or key.
+
+Iterators retain their source collection for their own lifetime. The `Iter` method `next` returns `Option`: `Some(value)` for an item and `None` at the end. Repeated calls after the end return `None` while the iterator remains valid. Some low-level helpers, such as `map_entry_iter_next`, return an item directly and trap at the end. Their callers must first use the matching `has_next` helper.
 
 No current mutable collection provides persistence, snapshot isolation, concurrent mutation guarantees, or thread-safe synchronization. A future persistent collection must use a distinct nominal type and API rather than silently changing these alias semantics.
 
