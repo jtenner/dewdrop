@@ -156,7 +156,8 @@ fn Parser::parse_enum_variant_field(
     Err(error) => return Err(error)
   }
   match self.finish_enum_variant_field_line(variant_offset) {
-    Ok(_) => Ok({ mutable_: false, module_private: false, name, type_, offset, })
+    Ok(_) =>
+      Ok({ mutable_: false, module_private: false, name, type_, offset, })
     Err(error) => Err(error)
   }
 }

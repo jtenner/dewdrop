@@ -241,7 +241,9 @@ pub fn blake3_range(
   length : Int32,
 ) -> Result[FixedArray[Byte], String] {
   // Subtract only after validating start, so neither bounds check can overflow.
-  if start < 0 || length < 0 || start > input.length() ||
+  if start < 0 ||
+    length < 0 ||
+    start > input.length() ||
     length > input.length() - start {
     return Err("BLAKE3 range is outside the input")
   }

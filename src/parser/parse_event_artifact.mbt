@@ -486,7 +486,9 @@ fn parse_read_visibility(
 }
 
 ///|
-fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr,
+fn parse_write_type(
+  writer : @cache_binary.Writer,
+  value : TypeExpr,
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
@@ -968,7 +970,9 @@ fn parse_read_exprs(
 }
 
 ///|
-fn parse_write_block(writer : @cache_binary.Writer, value : Block,
+fn parse_write_block(
+  writer : @cache_binary.Writer,
+  value : Block,
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
@@ -1038,7 +1042,9 @@ fn parse_read_optional_expr(
 }
 
 ///|
-fn parse_write_expr(writer : @cache_binary.Writer, value : Expr,
+fn parse_write_expr(
+  writer : @cache_binary.Writer,
+  value : Expr,
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
@@ -1650,7 +1656,9 @@ fn parse_read_patterns(
 }
 
 ///|
-fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern,
+fn parse_write_pattern(
+  writer : @cache_binary.Writer,
+  value : Pattern,
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
@@ -1817,7 +1825,12 @@ fn parse_write_pattern_arms(
   writer.write_var_u64(values.length().to_uint64())
   for value in values {
     parse_write_pattern(writer, value.pattern, admission, depth + 1)
-    parse_write_optional_expr(writer, value.guard_condition, admission, depth + 1)
+    parse_write_optional_expr(
+      writer,
+      value.guard_condition,
+      admission,
+      depth + 1,
+    )
     parse_write_expr(writer, value.body, admission, depth + 1)
     parse_write_offset(writer, value.offset)
   }
@@ -2024,7 +2037,12 @@ fn parse_write_function(
   parse_write_visibility(writer, value.visibility)
   writer.write_string(value.name)
   parse_write_offset(writer, value.name_offset)
-  parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+  parse_write_type_parameters(
+    writer,
+    value.type_parameters,
+    admission,
+    depth + 1,
+  )
   parse_write_receiver(writer, value.receiver, admission, depth + 1)
   parse_write_fn_parameters(writer, value.parameters, admission, depth + 1)
   parse_write_type(writer, value.return_type, admission, depth + 1)
@@ -2142,7 +2160,12 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type_parameters(
+        writer,
+        value.type_parameters,
+        admission,
+        depth + 1,
+      )
       parse_write_fn_parameters(writer, value.parameters, admission, depth + 1)
       parse_write_type(writer, value.return_type, admission, depth + 1)
       writer.write_bytes(value.builtin_name)
@@ -2162,14 +2185,34 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type_parameters(
+        writer,
+        value.type_parameters,
+        admission,
+        depth + 1,
+      )
       writer.write_var_u64(value.methods.length().to_uint64())
       for trait_method in value.methods {
         writer.write_string(trait_method.name)
         parse_write_offset(writer, trait_method.name_offset)
-        parse_write_type_parameters(writer, trait_method.type_parameters, admission, depth + 1)
-        parse_write_receiver(writer, trait_method.receiver, admission, depth + 1)
-        parse_write_fn_parameters(writer, trait_method.parameters, admission, depth + 1)
+        parse_write_type_parameters(
+          writer,
+          trait_method.type_parameters,
+          admission,
+          depth + 1,
+        )
+        parse_write_receiver(
+          writer,
+          trait_method.receiver,
+          admission,
+          depth + 1,
+        )
+        parse_write_fn_parameters(
+          writer,
+          trait_method.parameters,
+          admission,
+          depth + 1,
+        )
         parse_write_type(writer, trait_method.return_type, admission, depth + 1)
         parse_write_offset(writer, trait_method.offset)
       }
@@ -2197,7 +2240,12 @@ fn parse_write_declaration(
     Impl(value) => {
       writer.write_byte(6)
       writer.write_bool(value.foreign_)
-      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type_parameters(
+        writer,
+        value.type_parameters,
+        admission,
+        depth + 1,
+      )
       match value.trait_type {
         Some(type_) => {
           parse_write_option_tag(writer, true)
@@ -2217,7 +2265,12 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type_parameters(
+        writer,
+        value.type_parameters,
+        admission,
+        depth + 1,
+      )
       parse_write_struct_fields(writer, value.fields, admission, depth + 1)
       parse_write_derive_requests(writer, value.derives)
       parse_write_offset(writer, value.offset)
@@ -2227,7 +2280,12 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type_parameters(
+        writer,
+        value.type_parameters,
+        admission,
+        depth + 1,
+      )
       parse_write_enum_variants(writer, value.variants, admission, depth + 1)
       parse_write_derive_requests(writer, value.derives)
       parse_write_offset(writer, value.offset)
@@ -2237,7 +2295,12 @@ fn parse_write_declaration(
       parse_write_visibility(writer, value.visibility)
       writer.write_string(value.name)
       parse_write_offset(writer, value.name_offset)
-      parse_write_type_parameters(writer, value.type_parameters, admission, depth + 1)
+      parse_write_type_parameters(
+        writer,
+        value.type_parameters,
+        admission,
+        depth + 1,
+      )
       parse_write_type(writer, value.target, admission, depth + 1)
       parse_write_offset(writer, value.offset)
     }
@@ -2257,7 +2320,12 @@ fn parse_write_declaration(
       parse_write_offset(writer, value.alias_offset)
       writer.write_var_u64(value.members.length().to_uint64())
       for foreign_member in value.members {
-        parse_write_foreign_library_member(writer, foreign_member, admission, depth + 1)
+        parse_write_foreign_library_member(
+          writer,
+          foreign_member,
+          admission,
+          depth + 1,
+        )
       }
       parse_write_offset(writer, value.offset)
     }
@@ -3364,7 +3432,11 @@ fn parse_read_declaration_error(
 }
 
 ///|
-fn parse_write_event(writer : @cache_binary.Writer, event : ParseEvent, admission : ParseEventAdmission) -> Unit {
+fn parse_write_event(
+  writer : @cache_binary.Writer,
+  event : ParseEvent,
+  admission : ParseEventAdmission,
+) -> Unit {
   match event {
     Declaration(value) => {
       writer.write_byte(0)
@@ -3430,11 +3502,9 @@ pub fn serialize_parse_events(
 ///|
 /// Encodes a cache entry in one pass. Deep fresh syntax remains usable but
 /// does not produce an entry that the persistent reader would reject.
-pub fn serialize_parse_events_for_cache(
-  events : Array[ParseEvent],
-) -> Bytes? {
+pub fn serialize_parse_events_for_cache(events : Array[ParseEvent]) -> Bytes? {
   let writer = @cache_binary.Writer::new(size_hint=events.length() * 24 + 8)
-  let admission = { depth_exceeded: false }
+  let admission = { depth_exceeded: false, }
   writer.write_u32_le(parse_event_payload_version)
   writer.write_var_u64(events.length().to_uint64())
   for event in events {

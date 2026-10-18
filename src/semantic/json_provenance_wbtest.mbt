@@ -12,8 +12,9 @@ test "ordinary imported JSON constructors cannot forge checked provenance" {
     assert_eq(program.modules[0].diagnostics, [])
     let analyzed = analyze_program_semantics(program)
     assert_true(
-      analyzed.modules[0].inferred.diagnostics.any(diagnostic =>
-        diagnostic is UnknownConstructionField(_, _, _)),
+      analyzed.modules[0].inferred.diagnostics.any(diagnostic => {
+        diagnostic is UnknownConstructionField(_, _, _)
+      }),
     )
   }
 }

@@ -400,6 +400,8 @@ pub enum ParseEvent {
   Diagnostic(ParseDiagnostic)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+type ParseEventAdmission
+
 pub struct Parser {
   tokens : Iter[@tokenizer.Token]
   mut lookahead_loaded : Bool

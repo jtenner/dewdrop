@@ -159,11 +159,14 @@ test "parse-event writer and reader agree on recursive type depth" {
       value = ComputedType(value, b"item", 0UL)
     }
     let writer = @cache_binary.Writer::new()
-    let admission = { depth_exceeded: false }
+    let admission = { depth_exceeded: false, }
     parse_write_type(writer, value, admission, 0)
     assert_eq(admission.depth_exceeded, depth > parse_event_maximum_depth)
     if !admission.depth_exceeded {
-      let reader = @cache_binary.Reader::new(writer.to_bytes(), detailed_paths=false)
+      let reader = @cache_binary.Reader::new(
+        writer.to_bytes(),
+        detailed_paths=false,
+      )
       let _ = parse_read_type(reader, "type", 0)
       assert_eq(reader.finish(), Ok(()))
     }
@@ -178,11 +181,14 @@ test "parse-event writer and reader agree on recursive pattern depth" {
       value = QualifiedPattern(value, "item", 0UL)
     }
     let writer = @cache_binary.Writer::new()
-    let admission = { depth_exceeded: false }
+    let admission = { depth_exceeded: false, }
     parse_write_pattern(writer, value, admission, 0)
     assert_eq(admission.depth_exceeded, depth > parse_event_maximum_depth)
     if !admission.depth_exceeded {
-      let reader = @cache_binary.Reader::new(writer.to_bytes(), detailed_paths=false)
+      let reader = @cache_binary.Reader::new(
+        writer.to_bytes(),
+        detailed_paths=false,
+      )
       let _ = parse_read_pattern(reader, "pattern", 0)
       assert_eq(reader.finish(), Ok(()))
     }
@@ -204,7 +210,10 @@ test "parse-event reader still rejects stored syntax above the depth limit" {
   for _ in 0..<(parse_event_maximum_depth + 1) {
     writer.write_var_u64(0UL)
   }
-  let reader = @cache_binary.Reader::new(writer.to_bytes(), detailed_paths=false)
+  let reader = @cache_binary.Reader::new(
+    writer.to_bytes(),
+    detailed_paths=false,
+  )
   let _ = parse_read_expr(reader, "expression", 0)
   match reader.finish() {
     Err(error) => assert_true(error.contains("syntax nesting exceeds limit"))

@@ -135,10 +135,7 @@ test "range footer verification rejects covered-byte corruption" {
     buffer.write_byte(if index == mutation { byte ^ 1 } else { byte })
   }
   let corrupt = { ..opened, encoded: Some(buffer.to_bytes()), }
-  assert_eq(
-    corrupt.verify_footer(),
-    Err("artifact pack FOOT digest mismatch"),
-  )
+  assert_eq(corrupt.verify_footer(), Err("artifact pack FOOT digest mismatch"))
   for covered in [-1, encoded.length() + 1] {
     assert_eq(
       { ..opened, footer_covered_bytes: covered, }.verify_footer(),
@@ -157,7 +154,13 @@ test "strict and lazy packs reject a corrupt footer digest" {
   // FOOT ends with its 32-byte covered-range digest and has no trailing padding.
   let buffer = Buffer(size_hint=encoded.length())
   for index, byte in encoded {
-    buffer.write_byte(if index == encoded.length() - 1 { byte ^ 1 } else { byte })
+    buffer.write_byte(
+      if index == encoded.length() - 1 {
+        byte ^ 1
+      } else {
+        byte
+      },
+    )
   }
   let corrupt = buffer.to_bytes()
   assert_true(decode_artifact_pack(corrupt) is Err(_))

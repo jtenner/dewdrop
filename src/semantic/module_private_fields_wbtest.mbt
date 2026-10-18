@@ -5,17 +5,19 @@ fn private_field_library() -> Bytes {
 
 ///|
 test "imported private fields reject reads writes construction and patterns" {
-  for consumer in [
-    b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  box.value\n}\n",
-    b"open app.library\npub fn run(box: Box<I32>) -> Unit {\n  box.value = 3\n}\n",
-    b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    value: 3\n    label: 7\n  }\n}\n",
-    b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    label: 7\n  }\n}\n",
-    b"open app.library\npub fn run() -> Box<I32> {\n  {\n    value: 3\n    label: 7\n  }\n}\n",
-    b"import app.library as @lib\npub fn run(box: @lib.Box<I32>) -> I32 {\n  box.value\n}\n",
-    b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  match box {\n    Box {\n      value: value\n      ...\n    } => value\n  }\n}\n",
-  ] {
+  for
+    consumer in [
+      b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  box.value\n}\n",
+      b"open app.library\npub fn run(box: Box<I32>) -> Unit {\n  box.value = 3\n}\n",
+      b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    value: 3\n    label: 7\n  }\n}\n",
+      b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    label: 7\n  }\n}\n",
+      b"open app.library\npub fn run() -> Box<I32> {\n  {\n    value: 3\n    label: 7\n  }\n}\n",
+      b"import app.library as @lib\npub fn run(box: @lib.Box<I32>) -> I32 {\n  box.value\n}\n",
+      b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  match box {\n    Box {\n      value: value\n      ...\n    } => value\n  }\n}\n",
+    ] {
     let (program, frozen, _, names, inferred) = imported_semantic_program(
-      consumer, private_field_library(),
+      consumer,
+      private_field_library(),
     )
     assert_eq(program.diagnostics, [])
     for module_ in program.modules {
@@ -59,15 +61,16 @@ test "frozen interface cache preserves private field source rules" {
   let resolved = reloaded.interfaces[0].resolved_types
   let imports = resolve_module_imports(resolved, scope)
   let names = resolve_module_names_with_imports(collected, scope)
-  let inferred = infer_module_bodies_with_imports(collected, resolved, imports, names)
+  let inferred = infer_module_bodies_with_imports(
+    collected, resolved, imports, names,
+  )
   assert_true(inferred.diagnostics.length() > 0)
 }
 
 ///|
 test "private fields permit construction mutation and patterns in their module" {
   let (collected, resolved, names, inferred) = infer_test_module(
-    28401UL,
-    b"pub struct Box {\n  private mut value: I32\n}\nfn make(value: I32) -> Box {\n  Box::{\n    value: value\n  }\n}\nfn run(box: Box) -> I32 {\n  box.value = 4\n  match box {\n    Box {\n      value\n    } => value\n  }\n}\n",
+    28401UL, b"pub struct Box {\n  private mut value: I32\n}\nfn make(value: I32) -> Box {\n  Box::{\n    value: value\n  }\n}\nfn run(box: Box) -> I32 {\n  box.value = 4\n  match box {\n    Box {\n      value\n    } => value\n  }\n}\n",
   )
   assert_eq(collected.diagnostics, [])
   assert_eq(resolved.diagnostics, [])
@@ -93,8 +96,12 @@ test "private fields remain accessible across files in one module" {
     28402UL,
     ProgramManifest::new([
       ManifestModule::new("app.local", [
-        ManifestFile::new("type.dew", b"pub struct Box {\n  private mut value: I32\n}\n"),
-        ManifestFile::new("use.dew", b"fn run(box: Box) -> I32 {\n  box.value = 4\n  box.value\n}\n"),
+        ManifestFile::new(
+          "type.dew", b"pub struct Box {\n  private mut value: I32\n}\n",
+        ),
+        ManifestFile::new(
+          "use.dew", b"fn run(box: Box) -> I32 {\n  box.value = 4\n  box.value\n}\n",
+        ),
       ]),
     ]),
   )
@@ -102,8 +109,13 @@ test "private fields remain accessible across files in one module" {
   let collected = program.modules[0]
   let resolved = frozen.interfaces[0].resolved_types
   let imports = resolve_module_imports(resolved, frozen.import_scopes[0])
-  let names = resolve_module_names_with_imports(collected, frozen.import_scopes[0])
-  let inferred = infer_module_bodies_with_imports(collected, resolved, imports, names)
+  let names = resolve_module_names_with_imports(
+    collected,
+    frozen.import_scopes[0],
+  )
+  let inferred = infer_module_bodies_with_imports(
+    collected, resolved, imports, names,
+  )
   assert_eq(program.diagnostics, [])
   assert_eq(collected.diagnostics, [])
   assert_eq(resolved.diagnostics, [])
@@ -114,15 +126,15 @@ test "private fields remain accessible across files in one module" {
 ///|
 test "field privacy changes declaration ABI fingerprints" {
   let (_, before, _, _, _) = imported_semantic_program(
-    b"open app.library\npub fn run() -> I32 {\n  1\n}\n",
-    b"pub struct Box {\n  value: I32\n}\n",
+    b"open app.library\npub fn run() -> I32 {\n  1\n}\n", b"pub struct Box {\n  value: I32\n}\n",
   )
   let (_, after, _, _, _) = imported_semantic_program(
-    b"open app.library\npub fn run() -> I32 {\n  1\n}\n",
-    b"pub struct Box {\n  private value: I32\n}\n",
+    b"open app.library\npub fn run() -> I32 {\n  1\n}\n", b"pub struct Box {\n  private value: I32\n}\n",
   )
-  assert_true(before.interfaces[1].declaration_abi_fingerprints !=
-    after.interfaces[1].declaration_abi_fingerprints)
+  assert_true(
+    before.interfaces[1].declaration_abi_fingerprints !=
+    after.interfaces[1].declaration_abi_fingerprints,
+  )
 }
 
 ///|
@@ -131,10 +143,14 @@ test "private fields support methods derives and structural compile time queries
     28403UL,
     ProgramManifest::new([
       ManifestModule::new("app.consumer", [
-        ManifestFile::new("consumer.dew", b"open app.library\nopen dew.std.types\nopen dew.std.array\npub fn fields() -> Array<String> {\n  field_names::<Record>()\n}\npub fn field_is_i32() -> Bool {\n  type_equal::<field_type<Record>(\"value\"), I32>()\n}\npub fn equal(left: Record, right: Record) -> Bool {\n  left == right\n}\npub fn read(value: Record) -> I32 {\n  value.value()\n}\n"),
+        ManifestFile::new(
+          "consumer.dew", b"open app.library\nopen dew.std.types\nopen dew.std.array\npub fn fields() -> Array<String> {\n  field_names::<Record>()\n}\npub fn field_is_i32() -> Bool {\n  type_equal::<field_type<Record>(\"value\"), I32>()\n}\npub fn equal(left: Record, right: Record) -> Bool {\n  left == right\n}\npub fn read(value: Record) -> I32 {\n  value.value()\n}\n",
+        ),
       ]),
       ManifestModule::new("app.library", [
-        ManifestFile::new("library.dew", b"pub struct Record {\n  private value: I32\n} derive(Eq, Debug, Hash)\nimpl Record {\n  fn value(self) -> I32 {\n    self.value\n  }\n}\n"),
+        ManifestFile::new(
+          "library.dew", b"pub struct Record {\n  private value: I32\n} derive(Eq, Debug, Hash)\nimpl Record {\n  fn value(self) -> I32 {\n    self.value\n  }\n}\n",
+        ),
       ]),
     ]),
   )

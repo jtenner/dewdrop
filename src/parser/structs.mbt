@@ -69,10 +69,11 @@ fn Parser::parse_struct_field(
   }
   let (name, offset) = match leading_name {
     Some(value) => value
-    None => match self.parse_identifier(StructFieldName) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
+    None =>
+      match self.parse_identifier(StructFieldName) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
   }
   match self.peek_token() {
     Some(token) =>

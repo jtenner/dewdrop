@@ -30,10 +30,7 @@ test "BLAKE3 matches official short and tree test vectors" {
   ]
   for vector in vectors {
     let input = blake3_vector_input(vector.0)
-    assert_eq(
-      @crypto.bytes_to_hex_string(blake3(input)),
-      vector.1,
-    )
+    assert_eq(@crypto.bytes_to_hex_string(blake3(input)), vector.1)
     for start in [0, 19] {
       let buffer = Buffer(size_hint=start + input.length() + 7)
       for _ in 0..<start {
@@ -58,10 +55,16 @@ test "BLAKE3 accepts an empty range at the end and rejects invalid bounds" {
   let input = b"abc"
   assert_eq(blake3_range(input, 3, 0).unwrap(), blake3(b""))
   assert_eq(blake3_range(b"", 0, 0).unwrap(), blake3(b""))
-  for range in [
-    (-1, 0), (0, -1), (4, 0), (3, 1), (2, 2),
-    (2147483647, 1), (1, 2147483647),
-  ] {
+  for
+    range in [
+      (-1, 0),
+      (0, -1),
+      (4, 0),
+      (3, 1),
+      (2, 2),
+      (2147483647, 1),
+      (1, 2147483647),
+    ] {
     match blake3_range(input, range.0, range.1) {
       Err(error) => assert_eq(error, "BLAKE3 range is outside the input")
       Ok(_) => fail("invalid BLAKE3 range must return an error")
