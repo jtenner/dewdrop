@@ -2480,6 +2480,66 @@ fn program_fold_bool_callable_opcode(
 }
 
 ///|
+fn program_fold_callable_primitive(
+  module_ : PlannedModuleLowering,
+  callable : PlannedCallable,
+  type_ : ResolvedTypeId,
+) -> PrimitiveType? {
+  if type_ < 0 || type_ >= module_.resolved_types.length() {
+    return None
+  }
+  let resolved = match module_.resolved_types[type_] {
+    SelfType(_) => callable.self_type
+    _ => type_
+  }
+  if resolved < 0 || resolved >= module_.resolved_types.length() {
+    return None
+  }
+  match module_.resolved_types[resolved] {
+    PrimitiveType(value) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn program_fold_operator_result_matches(
+  module_ : PlannedModuleLowering,
+  callable : PlannedCallable,
+  opcode : Bytes,
+) -> Bool {
+  let left = program_fold_callable_primitive(
+    module_, callable,
+    module_.functions.parameters[callable.parameters.start].type_,
+  )
+  let right = program_fold_callable_primitive(
+    module_, callable,
+    module_.functions.parameters[callable.parameters.start + 1].type_,
+  )
+  let result = program_fold_callable_primitive(
+    module_, callable, callable.result_type,
+  )
+  if left is None || left != right || result is None {
+    return false
+  }
+  let comparison = opcode == b"i32.eq" ||
+    opcode == b"i32.ne" ||
+    opcode == b"i32.lt_s" || opcode == b"i32.lt_u" ||
+    opcode == b"i32.le_s" || opcode == b"i32.le_u" ||
+    opcode == b"i32.gt_s" || opcode == b"i32.gt_u" ||
+    opcode == b"i32.ge_s" || opcode == b"i32.ge_u" ||
+    opcode == b"i64.eq" || opcode == b"i64.ne" ||
+    opcode == b"i64.lt_s" || opcode == b"i64.lt_u" ||
+    opcode == b"i64.le_s" || opcode == b"i64.le_u" ||
+    opcode == b"i64.gt_s" || opcode == b"i64.gt_u" ||
+    opcode == b"i64.ge_s" || opcode == b"i64.ge_u"
+  if comparison {
+    result == Some(BoolType)
+  } else {
+    result == left
+  }
+}
+
+///|
 fn program_fold_operator_intrinsics(
   modules : Array[PlannedModuleLowering],
 ) -> Map[DeclId, Bytes] {
@@ -2511,7 +2571,8 @@ fn program_fold_operator_intrinsics(
       } else {
         program_fold_bool_callable_opcode(module_, callable)
       }
-      if name.length() > 0 {
+      if name.length() > 0 &&
+        program_fold_operator_result_matches(module_, callable, name) {
         result[callable.declaration] = name
       }
     }

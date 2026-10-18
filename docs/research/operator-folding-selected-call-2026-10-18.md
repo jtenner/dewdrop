@@ -71,7 +71,9 @@ in the new query test: pruning correctly removes the condition. The corrected
 test checks the selected result, `7u32`, rather than retained dead condition data.
 Full stdout, stderr, and command timing are in the session evidence directory.
 
-The native change adds no emitted runtime allocation. It builds two temporary
+The operator proof itself adds no emitted runtime calls or allocations. Required
+conversions in the selected implementation remain part of its runtime behavior.
+The proof builds two temporary
 metadata maps for operator proof. Type-query contexts build and retain one map
 lazily, then share it across concrete bodies. Runtime and whole-compiler memory
 gains are not claimed.
@@ -89,3 +91,38 @@ its existing `--allow-unused-host-imports` option. Each such import throws if it
 is actually called; the tests did not call one. An initial run without that flag
 stopped during instantiation, before running a test. Commands, binary identity,
 full output, and timing remain in the session evidence directory.
+
+## Result coercion follow-up
+
+An independent source review found that the reused forwarding checker did not
+inspect runtime trait-object coercions. A custom `Add for I32` can return a
+`Value` trait object by forwarding its operands to an `i32.add` builtin. The
+body still needs to wrap the scalar result as that trait object.
+
+The current native compiler accepted the source but failed emission. The
+constant-only program produced an `i32.const 3` where a reference local was
+required. The dynamic-only program failed with `InvalidBuiltinSignature` for
+`i32.add` returning `WasmNullableEqRefValue`. These builds took 0.170 and
+0.162 seconds. The latter path also exposed the pre-existing forwarding fault,
+independent of constant folding.
+
+The shared forwarding proof now rejects coercions on the result and forwarded
+operands. Cast stripping stops at a coercion and the caller rejects that node.
+This keeps the ordinary call and its required conversion. Scalar folding also
+checks the selected callable's primitive result: comparisons must return Bool,
+and arithmetic must keep the operands' exact primitive type. An I32 operation
+that returns U32 remains a call instead of becoming an I32 constant.
+
+Two native regression tests check result coercion in both the forwarding proof
+and constant folder, plus the signed-to-unsigned result case. Reproduction
+source, exact compiler hashes, commands, output and times are saved for this
+session in `/tmp/dewdrop-review-2026-10-18/compiler-perf/operator-coercion*` and
+`operator-guard-*`. No new map or runtime dispatch is added.
+
+All ten focused native tests pass in 10.689 seconds. The native release CLI
+build passes in 26.828 seconds. With the fixed CLI, the combined constant and
+dynamic probe builds in 0.153 seconds; isolated constant and dynamic probes
+build in 0.160 and 0.153 seconds. All three Wasm modules validate and execute
+in Node. Both `constant()` and `dynamic(1, 2)` return `3`. The fixed native CLI
+has SHA-256 `24665a1a8605c6c51061901a2aa2a88f5eb619f561e5f45c105643970a2832a3`.
+These are correctness checks and activity times, not performance gains.

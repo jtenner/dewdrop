@@ -2403,6 +2403,9 @@ fn wasmgc_strip_carrier_identity_casts(
       return expression
     }
     let value = lowering.expressions[current]
+    if !(value.trait_object_coercion is NoInferredTraitObjectCoercion) {
+      return current
+    }
     let (target, arguments) = match value.kind {
       PlannedDirectCall(target, receiver, arguments, _) if receiver < 0 =>
         (target, arguments)
@@ -2469,6 +2472,10 @@ fn wasmgc_direct_builtin_of(
     expression - body.expressions.start >= body.expressions.length {
     return b""
   }
+  if !(lowering.expressions[expression].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
+    return b""
+  }
   // Divergence in the body does not replace the callable's declared result.
   if lowering.expressions[expression].shape is NeverPlannedValueShape &&
     !(callable.result_shape is NeverPlannedValueShape) {
@@ -2480,6 +2487,10 @@ fn wasmgc_direct_builtin_of(
     body.expressions,
     expression,
   )
+  if !(lowering.expressions[unwrapped].trait_object_coercion
+    is NoInferredTraitObjectCoercion) {
+    return b""
+  }
   if unwrapped != expression &&
     callable.parameters.length == 1 &&
     lowering.expressions[unwrapped].kind is PlannedLocalGet(0) &&
@@ -2517,6 +2528,10 @@ fn wasmgc_direct_builtin_of(
       body.expressions,
       source,
     )
+    if !(lowering.expressions[argument].trait_object_coercion
+      is NoInferredTraitObjectCoercion) {
+      return b""
+    }
     match lowering.expressions[argument].kind {
       PlannedLocalGet(local_id) => {
         if local_id != index || local_id >= body.locals.length {

@@ -168,3 +168,49 @@ test "Boolean query checks retain proven source equality" {
   )
   assert_eq(lowering.modules[0].expressions[root].kind, PlannedBoolConst(true))
 }
+
+///|
+test "constant folding and intrinsic forwarding retain a result trait coercion" {
+  let original = selected_operator_test_lowering(
+    b"builtin sum(left: I32, right: I32) -> I32 = \"i32.add\"\ntrait Value {\n  fn value(self) -> I32\n}\nimpl Value for I32 {\n  fn value(self) -> I32 {\n    self\n  }\n}\ntrait Add {\n  fn add(self, right: Self) -> Value\n}\nimpl Add for I32 {\n  fn add(self, right: I32) -> Value {\n    sum(self, right)\n  }\n}\npub fn run() -> I32 {\n  (1 + 2).value()\n}\n",
+  )
+  let module_ = original.modules[0]
+  let expression = selected_operator_test_expression(original)
+  let target = match module_.expressions[expression].kind {
+    PlannedOperatorCall(target, _, _, _, _) => target
+    _ => fail("missing operator call")
+  }
+  assert_true(module_.expressions.any(expression => {
+    expression.trait_object_coercion is SelectedInferredTraitObjectCoercion(_, _)
+  }))
+  let builtins : Map[DeclId, Bytes] = {}
+  for callable in module_.functions.callables {
+    if callable.kind is PlannedBuiltinCallable(name) {
+      builtins[callable.declaration] = name
+    }
+  }
+  assert_eq(
+    wasmgc_direct_builtin_of(
+      module_, module_.functions.callable_of(target).unwrap(), builtins,
+    ),
+    b"",
+  )
+  let optimized = optimize_program_lowering(original)
+  assert_eq(
+    optimized.modules[0].expressions[expression].kind,
+    module_.expressions[expression].kind,
+  )
+}
+
+///|
+test "constant folding keeps the selected signed to unsigned result type" {
+  let original = selected_operator_test_lowering(
+    b"builtin sum(left: I32, right: I32) -> U32 = \"i32.add\"\ntrait Add {\n  fn add(self, right: Self) -> U32\n}\nimpl Add for I32 {\n  fn add(self, right: I32) -> U32 {\n    sum(self, right)\n  }\n}\npub fn run() -> U32 {\n  1 + 2\n}\n",
+  )
+  let expression = selected_operator_test_expression(original)
+  let optimized = optimize_program_lowering(original)
+  assert_eq(
+    optimized.modules[0].expressions[expression].kind,
+    original.modules[0].expressions[expression].kind,
+  )
+}
