@@ -51,6 +51,7 @@ pub struct JsonDocument {
 
 pub struct JsonRawDocument {
   private source: String
+  private limits: JsonLimits
 }
 
 
@@ -1389,6 +1390,7 @@ pub fn json_parse_raw_document_with_limits(
     Result::Err(error) => Result::Err(error)
     Result::Ok(_) => Result::Ok(JsonRawDocument::{
       source: input
+      limits: limits
     })
   }
 }
@@ -1407,7 +1409,7 @@ impl JsonRawDocument {
     self.source
   }
   fn materialize(self) -> Result<JsonValue, JsonParseError> {
-    json_parse_retained(self.source)
+    json_parse_retained_with_limits(self.source, self.limits)
   }
 }
 

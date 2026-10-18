@@ -1,0 +1,55 @@
+open dew.std.json
+open dew.std.string
+open dew.std.string_builder
+
+fn json_raw_deep_source() -> String {
+  let builder = StringBuilder::new()
+  while 0u32 {
+    index if index < 129u32 => {
+      builder.append("[")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  builder.append("null")
+  while 0u32 {
+    index if index < 129u32 => {
+      builder.append("]")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  builder.finish()
+}
+
+test "JSON raw documents keep custom materialization limits" {
+  let source = json_raw_deep_source()
+  let limits = JsonLimits::{
+    max_input_bytes: 1024u32
+    max_depth: 130u32
+    max_values: 256u32
+    max_string_bytes: 1024u32
+  }
+  assert(json_parse_raw_document(source) is Result::Err(JsonParseError::DepthLimitExceeded(129u32)), "default depth control")
+  match json_parse_raw_document_with_limits(source, limits) {
+    Result::Err(_) => assert(false, "custom validation failed")
+    Result::Ok(document) => {
+      assert(document.source().equals(source), "raw source changed")
+      assert(document.materialize() is Result::Ok(JsonValue::Array(_)), "custom limits lost on materialization")
+    }
+  }
+}
+
+test "JSON raw document validation still rejects caller limit errors" {
+  let limits = JsonLimits::{
+    max_input_bytes: 3u32
+    max_depth: 8u32
+    max_values: 8u32
+    max_string_bytes: 8u32
+  }
+  assert(json_parse_raw_document_with_limits("null", limits) is Result::Err(JsonParseError::InputLimitExceeded(4u32)), "input limit ignored")
+  match json_parse_raw_document("[null]") {
+    Result::Err(_) => assert(false, "default validation failed")
+    Result::Ok(document) => assert(document.materialize() is Result::Ok(JsonValue::Array(_)), "default materialization failed")
+  }
+}
