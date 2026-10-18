@@ -1355,7 +1355,7 @@ struct SelfHostPatternCoverageWork {
 
 impl SelfHostPatternCoverageWork {
   fn spend(self, cells: U32) -> Bool {
-    if cells > self.remaining {
+    if self.exhausted || cells > self.remaining {
       self.exhausted = true
       false
     } else {
@@ -1466,6 +1466,105 @@ impl SelfHostBodyFlowAnalyzer {
       } else {
         break self_host_semantic_unit()
       }
+    }
+  }
+
+  fn matrix_enum_variants(
+    self,
+    declaration: U64,
+    work: SelfHostPatternCoverageWork,
+  ) -> Option<Array<U64>> {
+    if !work.spend(1u32) {
+      return None
+    }
+    let variants = array_new::<U64>()
+    let _ = while 0u32 {
+      index => if index < self.collected.variants.length() {
+        if !work.spend(1u32) {
+          return None
+        }
+        let variant = self.collected.variants[index]
+        if variant.declaration == declaration {
+          if !work.spend(1u32) {
+            return None
+          }
+          variants.push(variant.id)
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let _ = while 0u32 {
+      index => if index < self.imported_variants.length() {
+        if !work.spend(1u32) {
+          return None
+        }
+        let variant = self.imported_variants[index]
+        if variant.declaration == declaration {
+          if !work.spend(1u32) {
+            return None
+          }
+          variants.push(variant.variant)
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    Some(variants)
+  }
+
+  fn matrix_domain(
+    self,
+    pattern: U32,
+    work: SelfHostPatternCoverageWork,
+  ) -> SelfHostFlowCoverageDomain {
+    if !work.spend(1u32) {
+      return OpenFlowCoverageDomain
+    }
+    match self.inferred.pattern_constructors[self.pattern_index(pattern)] {
+      SelectedBasicPatternConstructor(constructor, variant_payload, _) => {
+        if self.collected.patterns[pattern] is StructPattern(_, _, _, _, _) && !variant_payload {
+          return OpenFlowCoverageDomain
+        }
+        if self_host_semantic_id_module(constructor) == self.collected.module_id {
+          if !work.spend(1u32) {
+            return OpenFlowCoverageDomain
+          }
+          let index = self_host_semantic_id_local(constructor)
+          self_host_assert_compiler_invariant(index < self.collected.variants.length(), "PAT-102 matrix variant owner")
+          return EnumFlowCoverageDomain(self.collected.variants[index].declaration)
+        }
+        let _ = while 0u32 {
+          index => if index < self.imported_variants.length() {
+            if !work.spend(1u32) {
+              return OpenFlowCoverageDomain
+            }
+            let variant = self.imported_variants[index]
+            if variant.variant == constructor {
+              return EnumFlowCoverageDomain(variant.declaration)
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        OpenFlowCoverageDomain
+      }
+      NoBasicPatternConstructor => match self.collected.patterns[pattern] {
+        LiteralPattern(expression, _) => {
+          if !work.spend(1u32) {
+            return OpenFlowCoverageDomain
+          }
+          match self.collected.expressions[expression] {
+            BoolExpr(_, _) => BoolFlowCoverageDomain
+            _ => OpenFlowCoverageDomain
+          }
+        }
+        _ => OpenFlowCoverageDomain
+      }
+      ErrorBasicPatternConstructor => OpenFlowCoverageDomain
     }
   }
 
@@ -1673,7 +1772,10 @@ impl SelfHostBodyFlowAnalyzer {
     if work.exhausted || sample == 4294967295u32 {
       return false
     }
-    let domain = self.body_coverage_domain(self.inferred.pattern_types[self.pattern_index(sample)])
+    let domain = self.matrix_domain(sample, work)
+    if work.exhausted {
+      return false
+    }
     match domain {
       BoolFlowCoverageDomain => {
         for value in [false, true] {
@@ -1696,9 +1798,9 @@ impl SelfHostBodyFlowAnalyzer {
         true
       }
       EnumFlowCoverageDomain(declaration) => {
-        let variants = self.enum_variants(declaration)
-        if !work.spend(variants.length()) {
-          return false
+        let variants = match self.matrix_enum_variants(declaration, work) {
+          Some(variants) => variants
+          None => return false
         }
         for variant in variants {
           let mut model = 4294967295u32

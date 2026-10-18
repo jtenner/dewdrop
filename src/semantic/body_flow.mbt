@@ -743,12 +743,82 @@ fn PatternCoverageWork::spend(
   self : PatternCoverageWork,
   cells : Int32,
 ) -> Bool {
-  if cells > self.remaining {
+  if self.exhausted || cells > self.remaining {
     self.exhausted = true
     false
   } else {
     self.remaining -= cells
     true
+  }
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_enum_variants(
+  self : BodyFlowAnalyzer,
+  declaration : DeclId,
+  work : PatternCoverageWork,
+) -> Array[VariantId]? {
+  if !work.spend(1) { return None }
+  if semantic_id_module(declaration) == self.collected.module_id {
+    let span = self.variant_span(declaration)
+    if !work.spend(span.length) { return None }
+    Some(Array::makei(span.length, index => self.collected.variants[span.start + index].id))
+  } else {
+    match self.imports {
+      Some(imports) => {
+        let variants = imports.variants_of(declaration)
+        if !work.spend(variants.length()) { return None }
+        Some(Array::makei(variants.length(), index => variants[index].variant))
+      }
+      None => Some([])
+    }
+  }
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_domain(
+  self : BodyFlowAnalyzer,
+  pattern : PatternId,
+  work : PatternCoverageWork,
+) -> CoverageDomain {
+  if !work.spend(1) { return ErrorCoverageDomain }
+  match self.inferred.pattern_constructors[pattern] {
+    VariantInferredPatternConstructor(variant, _) => {
+      if !work.spend(1) { return ErrorCoverageDomain }
+      if semantic_id_module(variant) == self.collected.module_id {
+        let index = semantic_id_local(variant)
+        guard index >= 0 && index < self.collected.variants.length() else {
+          abort("PAT-102 matrix variant owner")
+        }
+        EnumCoverageDomain(self.collected.variants[index].declaration)
+      } else {
+        match self.imports {
+          Some(imports) => {
+            for index in 0..<imports.variants.length() {
+              if !work.spend(1) { return ErrorCoverageDomain }
+              let info = imports.variants[index]
+              if info.variant == variant {
+                return EnumCoverageDomain(info.declaration)
+              }
+            }
+            ErrorCoverageDomain
+          }
+          None => ErrorCoverageDomain
+        }
+      }
+    }
+    StructInferredPatternConstructor(_, _) => OpenCoverageDomain
+    ErrorInferredPatternConstructor => ErrorCoverageDomain
+    NoInferredPatternConstructor => match self.collected.patterns[pattern] {
+      HirLiteralPattern(expression, _) => {
+        if !work.spend(1) { return ErrorCoverageDomain }
+        match self.collected.expressions[expression] {
+          HirBoolExpr(_, _) => BoolCoverageDomain
+          _ => OpenCoverageDomain
+        }
+      }
+      _ => OpenCoverageDomain
+    }
   }
 }
 
@@ -927,7 +997,7 @@ fn BodyFlowAnalyzer::matrix_complete(
   if work.exhausted || sample < 0 {
     return false
   }
-  let domain = self.coverage_domain(self.inferred.pattern_types[sample])
+  let domain = self.matrix_domain(sample, work)
   match domain {
     BoolCoverageDomain => {
       for value in [false, true] {
@@ -955,9 +1025,9 @@ fn BodyFlowAnalyzer::matrix_complete(
       true
     }
     EnumCoverageDomain(declaration) => {
-      let variants = self.enum_variants(declaration)
-      if !work.spend(variants.length()) {
-        return false
+      let variants = match self.matrix_enum_variants(declaration, work) {
+        Some(variants) => variants
+        None => return false
       }
       for variant in variants {
         let mut model = -1
