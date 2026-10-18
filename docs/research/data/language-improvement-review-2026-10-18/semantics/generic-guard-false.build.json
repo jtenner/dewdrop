@@ -1,0 +1,14 @@
+{
+  "case": "generic-guard-false.build",
+  "command": [
+    "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+    "build",
+    "-o",
+    "/tmp/dewdrop-review-2026-10-18/semantics/generic-guard-false.wasm",
+    "/tmp/dewdrop-review-2026-10-18/semantics/generic-guard-false.dew"
+  ],
+  "exit": 0,
+  "wall_seconds": 0.15530871400551405,
+  "stdout": "wrote /tmp/dewdrop-review-2026-10-18/semantics/generic-guard-false.wasm (590 bytes)\n",
+  "stderr": ""
+}

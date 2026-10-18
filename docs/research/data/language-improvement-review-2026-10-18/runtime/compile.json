@@ -1,0 +1,12 @@
+{
+  "command": [
+    "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+    "build",
+    "/tmp/dewdrop-review-2026-10-18/runtime/probe.dew",
+    "-o",
+    "/tmp/dewdrop-review-2026-10-18/runtime/probe.wasm"
+  ],
+  "exit": 0,
+  "elapsed_seconds": 0.3715338990004966,
+  "maxrss_kb": 53956
+}

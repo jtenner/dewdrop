@@ -1,0 +1,10 @@
+{
+  "node": "v24.21.0",
+  "results": {
+    "raw_custom_limit": 129,
+    "map_saved_entry": 20,
+    "forged_number": 1,
+    "forged_string": 1
+  },
+  "elapsed_ms": 1.7087310000000002
+}

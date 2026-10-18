@@ -1,0 +1,28 @@
+[
+  {
+    "case": "generic-empty-check-independent",
+    "command": [
+      "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+      "check",
+      "/tmp/dewdrop-review-2026-10-18/semantics/generic-empty.dew"
+    ],
+    "seconds": 0.15676390300359344,
+    "exit": 0,
+    "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+    "stderr": ""
+  },
+  {
+    "case": "empty-main-open-stdin-independent",
+    "seconds": 0.503529048000928,
+    "result": "blocked with no input read needed; killed after 0.5s",
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "case": "empty-main-closed-stdin-independent",
+    "seconds": 0.02944061000016518,
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "exports": [
+    "constant",
+    "dynamic"
+  ],
+  "constant": 3,
+  "dynamic": 77
+}

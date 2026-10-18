@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+    "build",
+    "--bootstrap-std",
+    "--no-default-preamble",
+    "--no-program-cache",
+    "--no-cache-pack",
+    "-o",
+    "/tmp/dewdrop-review-2026-10-18/backend/custom-add.wasm",
+    "/tmp/dewdrop-review-2026-10-18/backend/custom-add.dew"
+  ],
+  "elapsed_s": 0.1510884029994486,
+  "exit": 0,
+  "max_rss_kb": 23324
+}

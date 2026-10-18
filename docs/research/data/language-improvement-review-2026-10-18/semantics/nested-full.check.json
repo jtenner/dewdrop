@@ -1,0 +1,7 @@
+{
+  "case": "nested-full",
+  "exit": 1,
+  "wall_seconds": 0.17249750399787445,
+  "stdout": "/tmp/dewdrop-review-2026-10-18/semantics/nested-full.dew:9:3: error: NonExhaustiveMatch(3, { start: 0, length: 1 }, 82)\n  |\n9 |   match value {\n  |   ^\n",
+  "stderr": ""
+}

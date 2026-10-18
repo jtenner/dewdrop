@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+    "check",
+    "--bootstrap-std",
+    "--no-cache-pack",
+    "--no-program-cache",
+    "--no-parse-event-cache",
+    "/tmp/dewdrop-review-2026-10-18/claude-check/deep-array.dew"
+  ],
+  "source_open_array_count": 30000,
+  "seconds": 0.19082673500088276,
+  "exit": 1,
+  "stdout": "/tmp/dewdrop-review-2026-10-18/claude-check/deep-array.dew:3:1: error: ParseDiagnostic(\n  17179869184256,\n  {\n    severity: Error,\n    error: DeclarationExpressionError(ExpectedValue(Some(Token(Symbol(RightBrace), 30024, 30010)))),\n  },\n)\n  |\n3 | }\n  | ^\n",
+  "stderr": ""
+}

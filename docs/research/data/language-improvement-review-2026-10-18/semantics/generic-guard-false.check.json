@@ -1,0 +1,12 @@
+{
+  "case": "generic-guard-false.check",
+  "command": [
+    "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+    "check",
+    "/tmp/dewdrop-review-2026-10-18/semantics/generic-guard-false.dew"
+  ],
+  "exit": 0,
+  "wall_seconds": 0.19485274200269487,
+  "stdout": "checked 1 Dew source file(s) in 1 module(s)\n",
+  "stderr": ""
+}

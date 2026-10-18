@@ -1,0 +1,12 @@
+{
+  "case": "bool-guard-false.check",
+  "command": [
+    "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+    "check",
+    "/tmp/dewdrop-review-2026-10-18/semantics/bool-guard-false.dew"
+  ],
+  "exit": 1,
+  "wall_seconds": 0.1693322729988722,
+  "stdout": "/tmp/dewdrop-review-2026-10-18/semantics/bool-guard-false.dew:2:3: error: NonExhaustiveMatch(3, { start: 0, length: 2 }, 25)\n  |\n2 |   match true {\n  |   ^\n",
+  "stderr": ""
+}

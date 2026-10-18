@@ -1,0 +1,8 @@
+fn good<t>(value: t) -> I32 {
+  match value {
+    _ => 42
+  }
+}
+pub fn main() -> I32 {
+  good(7)
+}

@@ -1,0 +1,13 @@
+{
+  "case": "generic-wildcard.runtime",
+  "command": [
+    "node",
+    "-e",
+    "const fs=require('node:fs'); const instance=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); console.log(instance.exports.main());",
+    "/tmp/dewdrop-review-2026-10-18/semantics/generic-wildcard.wasm"
+  ],
+  "exit": 0,
+  "wall_seconds": 0.02728957200451987,
+  "stdout": "42\n",
+  "stderr": ""
+}

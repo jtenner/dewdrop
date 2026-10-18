@@ -1,0 +1,14 @@
+trait Add {
+  fn add(self, right: Self) -> Self
+}
+impl Add for I32 {
+  fn add(self, right: I32) -> I32 {
+    77
+  }
+}
+pub fn constant() -> I32 {
+  1 + 2
+}
+pub fn dynamic(left: I32, right: I32) -> I32 {
+  left + right
+}

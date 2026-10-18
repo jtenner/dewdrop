@@ -1,0 +1,13 @@
+{
+  "case": "generic-guard-false.runtime",
+  "command": [
+    "node",
+    "-e",
+    "const fs=require('node:fs'); const instance=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); console.log(instance.exports.main());",
+    "/tmp/dewdrop-review-2026-10-18/semantics/generic-guard-false.wasm"
+  ],
+  "exit": 1,
+  "wall_seconds": 0.029020203997788485,
+  "stdout": "",
+  "stderr": "wasm://wasm/8fc89aee:1\n\n\nRuntimeError: unreachable\n    at wasm://wasm/8fc89aee:wasm-function[1]:0xcb\n    at wasm://wasm/8fc89aee:wasm-function[0]:0xae\n    at [eval]:1:158\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)\n    at node:internal/main/eval_string:71:3\n\nNode.js v24.21.0\n"
+}

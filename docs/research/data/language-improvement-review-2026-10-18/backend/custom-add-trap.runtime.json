@@ -1,0 +1,8 @@
+{
+  "constant": {
+    "value": 3
+  },
+  "dynamic": {
+    "trap": "unreachable"
+  }
+}

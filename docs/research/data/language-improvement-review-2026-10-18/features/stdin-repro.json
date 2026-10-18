@@ -1,0 +1,25 @@
+{
+  "command": [
+    "node",
+    "tools/dew-run.mjs",
+    "/tmp/dewdrop-review-2026-10-18/features/empty-main.wasm"
+  ],
+  "node": "v24.21.0",
+  "fixture_hex": "0061736d0100000001040160000003020100070801046d61696e00000a040102000b",
+  "samples": [
+    {
+      "case": "stdin_open",
+      "outcome": "blocked",
+      "returncode": -9,
+      "elapsed_seconds": 1.0042525329990895,
+      "stderr": ""
+    },
+    {
+      "case": "stdin_eof",
+      "outcome": "exited",
+      "returncode": 0,
+      "elapsed_seconds": 0.03239226099685766,
+      "stderr": ""
+    }
+  ]
+}
