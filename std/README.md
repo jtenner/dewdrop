@@ -115,6 +115,12 @@ The self-host compiler uses the declared enum fragments for Option and Result, w
 range error and `Some` for an exact value. Existing `Into` bit and wrapping
 conversions keep their current behavior.
 
+`dew.std.text` provides `parse_u32_decimal(StringView)` and
+`parse_i32_decimal(StringView)`. The parsers accept ASCII decimal digits,
+leading zeros, and an optional minus for I32. They reject whitespace, plus,
+separators, fractions, and exponents. `DecimalParseError` reports empty text,
+an invalid digit, or overflow. Offsets count bytes from the start of the view.
+
 `BytesBuilder` remains the name of the one-shot, consuming construction type. A future `Buffer` would imply a reusable mutable/random-access abstraction and should be designed separately rather than aliasing the builder.
 
 The compiler performs a deterministic leading-import prepass, loads only selected on-disk `dew.std` source paths from a fixed compiler registry, independently collects the selected compiler-owned modules, freezes their immutable interfaces, and resolves user code only through those interfaces. `dew.std.preamble`, `dew.std.option`, and `dew.std.result` are ambient unless `--no-default-preamble` is used; text, builder, bytes, WASI, and lane modules remain selective. Private text-runtime declarations live in their own compiler-owned module, and immutable range-copy implementations call private raw intrinsics rather than depending on public builder modules. Unused imported signatures, functions, and nominal layouts are removed before final Wasm type/function indexing.

@@ -1,6 +1,90 @@
 open dew.std.string
 open dew.std.fixed_array
 
+pub enum DecimalParseError {
+  Empty
+  InvalidDigit(U32)
+  Overflow(U32)
+}
+
+fn parse_decimal_magnitude(
+  value: StringView,
+  start: U32,
+  limit: U32,
+) -> Result<U32, DecimalParseError> {
+  let length = value.byte_length()
+  let quotient = limit / 10u32
+  let remainder = limit % 10u32
+  let mut number = 0u32
+  while start {
+    index if index < length => {
+      let byte = value.byte_at(index)
+      if byte < 48u8 || byte > 57u8 {
+        break Result::Err(DecimalParseError::InvalidDigit(index))
+      } else {
+        let digit = code_point_u8_to_u32(byte - 48u8)
+        if number > quotient || (number == quotient && digit > remainder) {
+          break Result::Err(DecimalParseError::Overflow(index))
+        } else {
+          number = number * 10u32 + digit
+          continue index + 1u32
+        }
+      }
+    }
+    _ => break Result::Ok(number)
+  }
+}
+
+pub fn parse_u32_decimal(value: StringView) -> Result<U32, DecimalParseError> {
+  if value.byte_length() == 0u32 {
+    Result::Err(DecimalParseError::Empty)
+  } else {
+    parse_decimal_magnitude(value, 0u32, 4294967295u32)
+  }
+}
+
+pub fn parse_i32_decimal(value: StringView) -> Result<I32, DecimalParseError> {
+  let length = value.byte_length()
+  if length == 0u32 {
+    Result::Err(DecimalParseError::Empty)
+  } else {
+    let negative = value.byte_at(0u32) == 45u8
+    let start = if negative {
+      1u32
+    } else {
+      0u32
+    }
+    if start == length {
+      Result::Err(DecimalParseError::InvalidDigit(0u32))
+    } else {
+      let limit = if negative {
+        2147483648u32
+      } else {
+        2147483647u32
+      }
+      match parse_decimal_magnitude(value, start, limit) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(magnitude) => {
+          if negative && magnitude == 2147483648u32 {
+            Result::Ok(-2147483648i32)
+          } else {
+            let signed = decimal_magnitude_to_i32(magnitude)
+            Result::Ok(if negative {
+              -signed
+            } else {
+              signed
+            })
+          }
+        }
+      }
+    }
+  }
+}
+
+fn decimal_magnitude_to_i32(value: U32) -> I32 {
+  value.into()
+}
+
 pub struct StringCodePoints {
   value: String
   state: FixedArray<U32>

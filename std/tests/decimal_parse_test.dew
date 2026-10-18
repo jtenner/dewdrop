@@ -1,0 +1,32 @@
+open dew.std.string
+open dew.std.text
+
+test "decimal parsers accept exact scalar boundaries and views" {
+  assert(parse_u32_decimal("0".view(0u32, 1u32)) is Result::Ok(0u32), "unsigned zero")
+  assert(parse_u32_decimal("4294967295".view(0u32, 10u32)) is Result::Ok(4294967295u32), "unsigned maximum")
+  assert(parse_i32_decimal("-2147483648".view(0u32, 11u32)) is Result::Ok(-2147483648i32), "signed minimum")
+  assert(parse_i32_decimal("2147483647".view(0u32, 10u32)) is Result::Ok(2147483647i32), "signed maximum")
+  assert(parse_i32_decimal("-0".view(0u32, 2u32)) is Result::Ok(0i32), "negative zero")
+  assert(parse_u32_decimal("x00042y".view(1u32, 5u32)) is Result::Ok(42u32), "nonzero view and leading zeros")
+  assert(parse_i32_decimal("x-00042y".view(1u32, 6u32)) is Result::Ok(-42i32), "negative view")
+}
+
+test "decimal parsers reject overflow at the first digit" {
+  assert(parse_u32_decimal("4294967296".view(0u32, 10u32)) is Result::Err(DecimalParseError::Overflow(9u32)), "unsigned overflow")
+  assert(parse_i32_decimal("2147483648".view(0u32, 10u32)) is Result::Err(DecimalParseError::Overflow(9u32)), "signed overflow")
+  assert(parse_i32_decimal("-2147483649".view(0u32, 11u32)) is Result::Err(DecimalParseError::Overflow(10u32)), "signed underflow")
+}
+
+test "decimal parsers report byte offsets and reject extra syntax" {
+  assert(parse_u32_decimal("".view(0u32, 0u32)) is Result::Err(DecimalParseError::Empty), "empty text")
+  assert(parse_i32_decimal("-".view(0u32, 1u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "minus without digits")
+  assert(parse_u32_decimal("-1".view(0u32, 2u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "unsigned minus")
+  assert(parse_i32_decimal("+1".view(0u32, 2u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "plus sign")
+  assert(parse_u32_decimal(" 1".view(0u32, 2u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "leading space")
+  assert(parse_u32_decimal("1 ".view(0u32, 2u32)) is Result::Err(DecimalParseError::InvalidDigit(1u32)), "trailing space")
+  assert(parse_u32_decimal("1.0".view(0u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(1u32)), "fraction")
+  assert(parse_u32_decimal("1e2".view(0u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(1u32)), "exponent")
+  assert(parse_u32_decimal("1_2".view(0u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(1u32)), "separator")
+  assert(parse_u32_decimal("x12ay".view(1u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(2u32)), "view-relative offset")
+  assert(parse_u32_decimal("١".view(0u32, 2u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "non-ASCII digit")
+}
