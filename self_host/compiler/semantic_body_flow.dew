@@ -298,6 +298,7 @@ struct SelfHostBodyFlowAnalyzer {
   body: SelfHostHirBody
   inferred: SelfHostBasicInferredBody
   imported_variants: Array<SelfHostResolvedImportedVariant>
+  imported_fields: Array<SelfHostResolvedImportedField>
   expression_flows: Array<U32>
   block_flows: Array<U32>
   block_done: Array<Bool>
@@ -315,6 +316,7 @@ impl SelfHostBodyFlowAnalyzer {
     body: SelfHostHirBody,
     inferred: SelfHostBasicInferredBody,
     imported_variants: Array<SelfHostResolvedImportedVariant>,
+    imported_fields: Array<SelfHostResolvedImportedField>,
   ) -> SelfHostBodyFlowAnalyzer {
     self_host_assert_body_owned_spans(collected, body, 3u32)
     {
@@ -323,6 +325,7 @@ impl SelfHostBodyFlowAnalyzer {
       body: body
       inferred: inferred
       imported_variants: imported_variants
+      imported_fields: imported_fields
       expression_flows: self_host_flow_slots(body.expressions.length)
       block_flows: self_host_flow_slots(body.blocks.length)
       block_done: self_host_module_value_bool_slots(body.blocks.length)
@@ -760,6 +763,7 @@ impl SelfHostBodyFlowAnalyzer {
     let covered_variants = self_host_module_value_bool_slots(enum_variants.length())
     let mut covered_variant_count = 0u32
     let mut coverage_error = false
+    let mut has_guard = false
     let mut branches = self_host_flow_empty()
     let mut catch_all = false
     let mut covered_false = false
@@ -771,6 +775,7 @@ impl SelfHostBodyFlowAnalyzer {
           self_host_u32_add(arms.start, current)
         ]
         let info = self.collected.pattern_arms[arm]
+        has_guard = has_guard || info.guard_condition != 4294967295u32
         if self.pattern_has_error(info.pattern) {
           coverage_error = true
         }
@@ -894,7 +899,9 @@ impl SelfHostBodyFlowAnalyzer {
            break self_host_semantic_unit()
          }
       }
-      if !work.exhausted && self.matrix_complete(rows, work, 0u32) {
+      let (mutable_path, literal_call) = self.matrix_stability(rows, work)
+      let stable = !mutable_path || (!has_guard && !literal_call)
+      if stable && !work.exhausted && self.matrix_complete(rows, work, 0u32) {
          exhaustive = true
        }
       if work.exhausted {
@@ -1270,6 +1277,7 @@ fn self_host_analyze_basic_module_flows_internal(
   resolved: SelfHostResolvedModuleTypes,
   inferred: SelfHostBasicInferredModuleBodies,
   imported_variants: Array<SelfHostResolvedImportedVariant>,
+  imported_fields: Array<SelfHostResolvedImportedField>,
 ) -> SelfHostAnalyzedModuleFlows {
   let bodies = []
   let mut index = 0u32
@@ -1282,6 +1290,7 @@ fn self_host_analyze_basic_module_flows_internal(
           collected.bodies[current],
           inferred.bodies[current],
           imported_variants,
+          imported_fields,
         ).finish(),
       )
       continue current + 1u32
@@ -1299,6 +1308,7 @@ fn self_host_analyze_basic_module_flows_internal(
         self_host_flow_lambda_body(collected, collected.lambdas[current]),
         inferred.lambdas[current].body,
         imported_variants,
+        imported_fields,
       ).finish()
       lambdas.push({
         lambda: current
@@ -1331,6 +1341,7 @@ fn self_host_analyze_basic_module_flows(
     resolved,
     inferred,
     [],
+    [],
   )
 }
 
@@ -1345,6 +1356,19 @@ fn self_host_analyze_basic_module_flows_with_imports(
     resolved,
     inferred,
     imported_variants,
+    [],
+  )
+}
+
+fn self_host_analyze_basic_module_flows_with_field_imports(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  inferred: SelfHostBasicInferredModuleBodies,
+  imported_variants: Array<SelfHostResolvedImportedVariant>,
+  imported_fields: Array<SelfHostResolvedImportedField>,
+) -> SelfHostAnalyzedModuleFlows {
+  self_host_analyze_basic_module_flows_internal(
+    collected, resolved, inferred, imported_variants, imported_fields,
   )
 }
 
@@ -1689,6 +1713,134 @@ impl SelfHostBodyFlowAnalyzer {
       BindingPattern(_, _), QualifiedPattern(_, _, _) => Some([])
       _ => None
     }
+  }
+
+  fn matrix_struct_field_mutable(
+    self,
+    declaration: U64,
+    name: U32,
+    work: SelfHostPatternCoverageWork,
+  ) -> Bool {
+    if self_host_semantic_id_module(declaration) == self.collected.module_id {
+      let _ = while 0u32 {
+        index => if index < self.collected.fields.length() {
+          if !work.spend(1u32) {
+            return true
+          }
+          let field = self.collected.fields[index]
+          if field.declaration == declaration && field.name == name {
+            return field.mutable_
+          }
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    } else {
+      let _ = while 0u32 {
+        index => if index < self.imported_fields.length() {
+          if !work.spend(1u32) {
+            return true
+          }
+          let field = self.imported_fields[index]
+          if field.declaration == declaration && field.name == self.collected.name(name) {
+            return field.mutable_
+          }
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    true
+  }
+
+  fn matrix_stability(
+    self,
+    rows: Array<Array<U32>>,
+    work: SelfHostPatternCoverageWork,
+  ) -> (Bool, Bool) {
+    let tasks = array_new::<U32>()
+    for row in rows {
+      if !work.spend(1u32) {
+        return (true, true)
+      }
+      tasks.push(row[0u32])
+    }
+    let mut mutable_path = false
+    let mut literal_call = false
+    let _ = while tasks.length() {
+      length => if length > 0u32 {
+        if !work.spend(1u32) {
+          return (true, true)
+        }
+        let pattern = tasks[length - 1u32]
+        tasks.truncate(length - 1u32)
+        match self.collected.patterns[pattern] {
+          LiteralPattern(expression, _) => {
+            if self.collected.expressions[expression] is StringExpr(_, _) {
+              literal_call = true
+            }
+          }
+          TuplePattern(_, children, _), ProductPattern(children, _) => {
+            if !work.spend(children.length) {
+              return (true, true)
+            }
+            let _ = while 0u32 {
+              index => if index < children.length {
+                tasks.push(self.collected.pattern_children[children.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          StructPattern(_, fields, _, _, _) => {
+            let _ = while 0u32 {
+              index => if index < fields.length {
+                if !work.spend(1u32) {
+                  return (true, true)
+                }
+                let field = self.collected.pattern_fields[fields.start + index]
+                if !self.matrix_wildcard(field.pattern) {
+                  match self.inferred.pattern_constructors[self.pattern_index(pattern)] {
+                    SelectedBasicPatternConstructor(declaration, false, _) => {
+                      if self.matrix_struct_field_mutable(declaration, field.name, work) {
+                        mutable_path = true
+                      }
+                    }
+                    _ => {}
+                  }
+                }
+                tasks.push(field.pattern)
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          AlternativePattern(first, alternatives, _) => {
+            if !work.spend(alternatives.length + 1u32) {
+              return (true, true)
+            }
+            tasks.push(first)
+            let _ = while 0u32 {
+              index => if index < alternatives.length {
+                tasks.push(self.collected.pattern_children[alternatives.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          _ => {}
+        }
+        continue tasks.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    (mutable_path, literal_call)
   }
 
   fn matrix_complete(

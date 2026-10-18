@@ -1738,11 +1738,12 @@ fn self_host_plan_program_lowering(
           names,
           imports,
           self_host_merge_module_inference(basic),
-          self_host_analyze_basic_module_flows_with_imports(
+          self_host_analyze_basic_module_flows_with_field_imports(
             collected,
             imports.resolved,
             basic,
             imports.variants,
+            imports.fields,
           ),
         )
         planned_indices.push(module_index)

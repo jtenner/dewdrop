@@ -527,3 +527,126 @@ test "matrix variant collection charges before materialization" {
   assert_eq(sufficient.remaining, 0)
   assert_false(sufficient.exhausted)
 }
+
+///|
+test "matrix stability mutable guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    280UL, b"struct Flag {\n  mut value: Bool\n}\nfn read(flag: Flag) -> I32 {\n  match flag {\n    Flag {\n      value: true\n    } => 10\n    _ if false => 20\n    Flag {\n      value: false\n    } => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "matrix stability immutable guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    281UL, b"struct Flag {\n  value: Bool\n}\nfn read(flag: Flag) -> I32 {\n  match flag {\n    Flag {\n      value: true\n    } => 10\n    _ if false => 20\n    Flag {\n      value: false\n    } => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "matrix stability mutable without guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    282UL, b"struct Flag {\n  mut value: Bool\n}\nfn read(flag: Flag) -> I32 {\n  match flag {\n    Flag {\n      value: true\n    } => 10\n    Flag {\n      value: false\n    } => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "matrix stability mutable guard fallback" {
+  let (_, _, inferred, flows) = flow_test_module(
+    283UL, b"struct Flag {\n  mut value: Bool\n}\nfn read(flag: Flag) -> I32 {\n  match flag {\n    Flag {\n      value: true\n    } => 10\n    _ if false => 20\n    Flag {\n      value: false\n    } => 30\n    _ => 40\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "matrix stability nested mutable enum guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    284UL, b"struct Flag {\n  mut value: Bool\n}\nenum Box {\n  Wrap(Flag)\n}\nfn read(flag: Flag) -> I32 {\n  match Wrap(flag) {\n    Wrap(Flag {\n      value: true\n    }) => 10\n    _ if false => 20\n    Wrap(Flag {\n      value: false\n    }) => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "matrix stability nested mutable product guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    285UL, b"struct Flag {\n  mut value: Bool\n}\nfn read(flag: Flag) -> I32 {\n  match (flag, true) {\n    (Flag {\n      value: true\n    }, _) => 10\n    _ if false => 20\n    (Flag {\n      value: false\n    }, _) => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "matrix stability nested mutable immutable field guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    286UL, b"struct Flag {\n  mut value: Bool\n}\nstruct Holder {\n  flag: Flag\n}\nfn read(flag: Flag) -> I32 {\n  match Holder::{\n    flag: flag\n  } {\n    Holder {\n      flag: Flag {\n      value: true\n    }\n    } => 10\n    _ if false => 20\n    Holder {\n      flag: Flag {\n      value: false\n    }\n    } => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "matrix stability mutable wildcard stable field guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    287UL, b"struct Pair {\n  mut changing: Bool\n  stable: Bool\n}\nfn read(value: Pair) -> I32 {\n  match value {\n    Pair {\n      changing: _\n      stable: true\n    } => 10\n    _ if false => 20\n    Pair {\n      changing: _\n      stable: false\n    } => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "matrix stability imported mutable guard" {
+  let (program, frozen, imports, _, inferred) = imported_semantic_program(
+    b"open app.library\nfn read(flag: Flag) -> I32 {\n  match flag {\n    Flag {\n      value: true\n    } => 10\n    _ if false => 20\n    Flag {\n      value: false\n    } => 30\n  }\n}\n",
+    b"pub struct Flag {\n  mut value: Bool\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  let flows = analyze_module_flows_with_imports(
+    program.modules[0], frozen.interfaces[0].resolved_types, inferred, imports,
+  )
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}
+
+///|
+test "matrix stability imported immutable guard" {
+  let (program, frozen, imports, _, inferred) = imported_semantic_program(
+    b"open app.library\nfn read(flag: Flag) -> I32 {\n  match flag {\n    Flag {\n      value: true\n    } => 10\n    _ if false => 20\n    Flag {\n      value: false\n    } => 30\n  }\n}\n",
+    b"pub struct Flag {\n  value: Bool\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  let flows = analyze_module_flows_with_imports(
+    program.modules[0], frozen.interfaces[0].resolved_types, inferred, imports,
+  )
+  assert_eq(flows.diagnostics, [])
+}
+
+///|
+test "matrix stability mutable functional loop guard" {
+  let (_, _, inferred, flows) = flow_test_module(
+    292UL, b"struct Flag {\n  mut value: Bool\n}\nfn read(flag: Flag) -> I32 {\n  while flag {\n    Flag {\n      value: true\n    } => break 10\n    _ if false => break 20\n    Flag {\n      value: false\n    } => break 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveFunctionalLoop(_, _, _))
+}
+
+///|
+test "matrix stability mutable selected string comparison" {
+  let (_, _, inferred, flows) = flow_test_module(
+    293UL, b"trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nimpl Eq for String {\n  fn eq(self, right: String) -> Bool {\n    false\n  }\n}\nstruct Flag {\n  mut value: Bool\n}\nfn read(flag: Flag, text: String) -> I32 {\n  match (flag, text) {\n    (Flag {\n      value: true\n    }, _) => 10\n    (_, \"x\") => 20\n    (Flag {\n      value: false\n    }, _) => 30\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
+}

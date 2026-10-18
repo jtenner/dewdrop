@@ -926,6 +926,95 @@ fn BodyFlowAnalyzer::matrix_children(
 }
 
 ///|
+fn BodyFlowAnalyzer::matrix_struct_field_mutable(
+  self : BodyFlowAnalyzer,
+  declaration : DeclId,
+  name : NameId,
+  work : PatternCoverageWork,
+) -> Bool {
+  if semantic_id_module(declaration) == self.collected.module_id {
+    for index in 0..<self.collected.fields.length() {
+      if !work.spend(1) { return true }
+      let field = self.collected.fields[index]
+      if field.declaration == declaration && field.name == name {
+        return field.mutable_
+      }
+    }
+  } else {
+    match self.imports {
+      Some(imports) => {
+        if !work.spend(1) { return true }
+        let fields = imports.fields_of(declaration)
+        for index in 0..<fields.length() {
+          if !work.spend(1) { return true }
+          let field = fields[index]
+          if field.name == self.collected.name(name) { return field.mutable_ }
+        }
+      }
+      None => ()
+    }
+  }
+  // Missing metadata cannot prove that this field remains stable.
+  true
+}
+
+///|
+fn BodyFlowAnalyzer::matrix_stability(
+  self : BodyFlowAnalyzer,
+  rows : Array[Array[PatternId]],
+  work : PatternCoverageWork,
+) -> (Bool, Bool) {
+  let tasks : Array[PatternId] = []
+  for row in rows {
+    if !work.spend(1) { return (true, true) }
+    tasks.push(row[0])
+  }
+  let mut mutable_path = false
+  let mut literal_call = false
+  while !tasks.is_empty() {
+    if !work.spend(1) { return (true, true) }
+    let pattern = tasks.pop().unwrap()
+    match self.collected.patterns[pattern] {
+      HirLiteralPattern(expression, _) =>
+        if self.collected.expressions[expression] is HirStringExpr(_, _) {
+          literal_call = true
+        }
+      HirTuplePattern(_, children, _) | HirProductPattern(children, _) => {
+        if !work.spend(children.length) { return (true, true) }
+        for index in 0..<children.length {
+          tasks.push(self.collected.pattern_children[children.start + index])
+        }
+      }
+      HirStructPattern(_, fields, _, _, _) => {
+        for index in 0..<fields.length {
+          if !work.spend(1) { return (true, true) }
+          let field = self.collected.pattern_fields[fields.start + index]
+          if !self.matrix_wildcard(field.pattern) {
+            match self.inferred.pattern_constructors[pattern] {
+              StructInferredPatternConstructor(declaration, _) =>
+                if self.matrix_struct_field_mutable(declaration, field.name, work) {
+                  mutable_path = true
+                }
+              _ => ()
+            }
+          }
+          tasks.push(field.pattern)
+        }
+      }
+      HirAlternativePattern(first, alternatives, _) => {
+        if !work.spend(alternatives.length + 1) { return (true, true) }
+        tasks.push(first)
+        for index in 0..<alternatives.length {
+          tasks.push(self.collected.pattern_children[alternatives.start + index])
+        }
+      }
+      _ => ()
+    }
+  }
+  (mutable_path, literal_call)
+}
+
+///|
 fn BodyFlowAnalyzer::matrix_complete(
   self : BodyFlowAnalyzer,
   input : Array[Array[PatternId]],
@@ -1129,9 +1218,11 @@ fn BodyFlowAnalyzer::analyze_coverage(
   let mut catch_all = false
   let mut coverage_error = false
   let mut has_refutable = false
+  let mut has_guard = false
   for arm_index in 0..<arms.length {
     let arm_id = self.collected.arm_children[arms.start + arm_index]
     let arm = self.collected.pattern_arms[arm_id]
+    has_guard = has_guard || arm.guard_condition >= 0
     self.push_pattern_alternatives(arm.pattern)
     let mut useful = false
     while true {
@@ -1232,7 +1323,9 @@ fn BodyFlowAnalyzer::analyze_coverage(
         rows.push([arm.pattern])
       }
     }
-    if !work.exhausted && self.matrix_complete(rows, work, 0) {
+    let (mutable_path, literal_call) = self.matrix_stability(rows, work)
+    let stable = !mutable_path || (!has_guard && !literal_call)
+    if stable && !work.exhausted && self.matrix_complete(rows, work, 0) {
       catch_all = true
     }
     if work.exhausted {
