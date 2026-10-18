@@ -1,0 +1,486 @@
+open dew.std.array
+open dew.std.option
+open dew.std.string_builder
+
+fn self_host_metadata_test_scan_field_container_owner_module_id(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: SelfHostLinkedWasmFieldLink,
+) -> U64 {
+  for linked_type in link.types {
+    if self_host_u32_equal(linked_type.type_index, field.type_index) {
+      let physical_module = link.fragments.modules[linked_type.module_index]
+      let physical = self_host_linked_physical_type_at(
+        physical_module,
+        linked_type.fragment_index,
+      )
+      if field.field_index < physical.fields.length {
+        let physical_field = self_host_linked_physical_field_at(
+          physical_module,
+          self_host_u32_add(physical.fields.start, field.field_index),
+        )
+        let lowering_module = link.fragments.specialization.lowering.modules[
+          linked_type.module_index
+        ]
+        for layout_field in lowering_module.type_layouts.fields {
+          if self_host_u64_equal(
+            layout_field.field,
+            physical_field.declaration,
+          ) {
+            return self_host_linked_type_owner_module_id(
+              link,
+              lowering_module,
+              -self_host_u32_to_i32(layout_field.type_) - 2i32,
+            )
+          }
+        }
+      }
+    }
+  }
+  0u64
+}
+
+fn self_host_metadata_test_scan_field_value_nominal_declaration(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: SelfHostLinkedWasmFieldLink,
+) -> U64 {
+  for linked_type in link.types {
+    if self_host_u32_equal(linked_type.type_index, field.type_index) {
+      let physical_module = link.fragments.modules[linked_type.module_index]
+      let physical = self_host_linked_physical_type_at(
+        physical_module,
+        linked_type.fragment_index,
+      )
+      if field.field_index < physical.fields.length {
+        let physical_field = self_host_linked_physical_field_at(
+          physical_module,
+          self_host_u32_add(physical.fields.start, field.field_index),
+        )
+        let lowering_module = link.fragments.specialization.lowering.modules[
+          linked_type.module_index
+        ]
+        match physical_field.role {
+          WasmVariantPayloadField(
+            variant,
+            payload_index,
+          ) => {
+            for layout_variant in lowering_module.type_layouts.variants {
+              if self_host_u64_equal(layout_variant.variant, variant) {
+                let payload = match layout_variant.payload {
+                  PlannedTupleVariantLayout(span) => span
+                  PlannedStructVariantLayout(span) => span
+                  PlannedUnitVariantLayout => ({
+                    start: 0u32
+                    length: 0u32
+                  })
+                }
+                if payload_index < payload.length {
+                  let index = self_host_u32_add(payload.start, payload_index)
+                  if index < lowering_module.type_layouts.payload_types.length() {
+                    let nominal = self_host_linked_resolved_nominal_declaration(
+                      lowering_module,
+                      lowering_module.type_layouts.payload_types[index],
+                    )
+                    if !self_host_u64_equal(nominal, 0u64) {
+                      return nominal
+                    }
+                  }
+                }
+              }
+            }
+          }
+          _ => {}
+        }
+        for layout_field in lowering_module.type_layouts.fields {
+          if self_host_u64_equal(
+            layout_field.field,
+            physical_field.declaration,
+          ) {
+            return self_host_linked_resolved_nominal_declaration(
+              lowering_module,
+              layout_field.type_,
+            )
+          }
+        }
+      }
+    }
+  }
+  0u64
+}
+
+fn self_host_metadata_test_scan_callable_declared_result_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+) -> Option<SelfHostPlannedValueShape> {
+  for module_ in link.fragments.specialization.lowering.modules {
+    let mut callable_index = 0u32
+    let _ = while callable_index {
+      current => if current < self_host_program_specialization_callable_count(
+        module_,
+      ) {
+        let callable = self_host_program_specialization_callable_at(
+          module_,
+          current,
+        )
+        if self_host_u64_equal(callable.declaration, declaration) {
+          if !(callable.result_shape is ErrorPlannedValueShape) {
+            return Some(callable.result_shape)
+          }
+          let shape = self_host_planned_resolved_value_shape(
+            module_.resolved_types,
+            callable.result_type,
+          )
+          if !(shape is ErrorPlannedValueShape) {
+            return Some(shape)
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  None
+}
+
+fn self_host_metadata_test_link(length: U32) -> SelfHostPlannedProgramWasmGCLink {
+  let source = StringBuilder::new()
+  source.append("pub struct Item {\n  value: I32\n}\npub enum Choice<t> {\n  Empty\n  Tuple(Item)\n  Named {\n    item: Item\n  }\n  Scalar(I32)\n  Generic(t)\n}\npub fn hold(value: Choice<Item>) -> Choice<Item> {\n  value\n}\nfn identity<t>(value: t) -> t {\n  value\n}\npub fn generic(value: Item) -> Item {\n  identity(value)\n}\nforeign impl \"host\" as host {\n  fn read(value: I32) -> I64 = \"read\"\n}\npub fn foreign_result() -> I64 {\n  read(1)\n}\n")
+  while 0u32 {
+    index if index < length => {
+      source.append("pub struct Record")
+      source.append_u32(index)
+      source.append(" {\n  child: Item\n}\npub fn echo")
+      source.append_u32(index)
+      source.append("(value: Record")
+      source.append_u32(index)
+      source.append(") -> Record")
+      source.append_u32(index)
+      source.append(" {\n  value\n}\n")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let collected = self_host_collect_program_manifest(6200u64, {
+    modules: [
+      {
+        path: "app.records"
+        files: [{
+          path: "records.dew"
+          source: source.finish().as_bytes()
+          test_only: false
+        }]
+      },
+      {
+        path: "app.main"
+        files: [{
+          path: "main.dew"
+          source: b"open app.records\npub fn run(value: Item) -> Item {\n  generic(value)\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+  assert(collected.diagnostics.length() == 0u32, "metadata manifest")
+  while 0u32 {
+    index if index < collected.modules.length() => {
+      assert(collected.modules.at(index).diagnostic_count() == 0u32, "metadata source")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let lowering = self_host_plan_program_lowering(
+    self_host_freeze_program_signature_interfaces(collected),
+  )
+  for module_ in lowering.modules {
+    assert(module_.inferred.diagnostics.length() == 0u32, "metadata inference")
+  }
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(
+      self_host_plan_program_specialization(lowering, false),
+    ), false,
+  )
+  assert(link.diagnostics.length() == 0u32, "metadata link")
+  assert(link.types.length() >= length, "metadata has every requested record")
+  link
+}
+
+let self_host_metadata_test_links = [self_host_metadata_test_link(64u32), self_host_metadata_test_link(256u32)]
+
+fn self_host_metadata_test_same_shape(
+  actual: Option<SelfHostPlannedValueShape>,
+  expected: Option<SelfHostPlannedValueShape>,
+) -> Unit {
+  match expected {
+    Some(shape) => match actual {
+      Some(value) => assert(self_host_specialization_shapes_equal(value, shape), "same result shape")
+      None => assert(false, "result shape is present")
+    }
+    None => assert(actual is None, "result shape stays absent")
+  }
+}
+
+test "index lookups metadata fields and callables match old scans" {
+  let link = self_host_metadata_test_links[0u32]
+  let mut nominal_fields = 0u32
+  let mut scalar_fields = 0u32
+  let mut payload_fields = 0u32
+  for linked_type in link.types {
+    let physical_module = link.fragments.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(physical_module, linked_type.fragment_index)
+    while 0u32 {
+      index if index < physical.fields.length => {
+        let field = {
+          type_index: linked_type.type_index
+          field_index: index
+        }
+        let expected = self_host_metadata_test_scan_field_value_nominal_declaration(link, field)
+        assert(self_host_linked_field_value_nominal_declaration(link, field) == expected, "field nominal matches scan")
+        assert(self_host_linked_field_container_owner_module_id(link, field) ==
+          self_host_metadata_test_scan_field_container_owner_module_id(link, field), "field module owner matches scan")
+        if expected == 0u64 {
+          scalar_fields = scalar_fields + 1u32
+        } else {
+          nominal_fields = nominal_fields + 1u32
+        }
+        let source_field = self_host_linked_physical_field_at(physical_module, physical.fields.start + index)
+        if source_field.role is WasmVariantPayloadField(_, _) {
+          payload_fields = payload_fields + 1u32
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let missing = {
+      type_index: linked_type.type_index
+      field_index: physical.fields.length
+    }
+    assert(self_host_linked_field_value_nominal_declaration(link, missing) == 0u64, "upper field bound")
+    assert(self_host_linked_field_container_owner_module_id(link, missing) == 0u64, "upper field owner bound")
+  }
+  assert(nominal_fields > 0u32 && scalar_fields > 0u32 && payload_fields > 0u32, "fixture covers nominal, scalar and enum payload fields")
+  for index in [link.types.length(), 4294967295u32] {
+    let missing = {
+      type_index: index
+      field_index: 0u32
+    }
+    assert(self_host_linked_field_value_nominal_declaration(link, missing) == 0u64, "missing type nominal")
+    assert(self_host_linked_field_container_owner_module_id(link, missing) == 0u64, "missing type owner")
+  }
+  let mut callables = 0u32
+  for module_ in link.fragments.specialization.lowering.modules {
+    for callable in module_.functions.callables {
+      self_host_metadata_test_same_shape(
+        self_host_linked_callable_declared_result_shape(link, callable.declaration),
+        self_host_metadata_test_scan_callable_declared_result_shape(link, callable.declaration),
+      )
+      callables = callables + 1u32
+    }
+  }
+  assert(callables > 64u32, "fixture has generic, ordinary and foreign callables")
+  for declaration in [0u64, 18446744073709551615u64] {
+    self_host_metadata_test_same_shape(
+      self_host_linked_callable_declared_result_shape(link, declaration),
+      self_host_metadata_test_scan_callable_declared_result_shape(link, declaration),
+    )
+  }
+}
+
+test "ARN-106 index lookups metadata reject a moved type slot" expect_trap "unreachable" {
+  let types = [
+    {
+      module_index: 0u32
+      fragment_index: 0u32
+      type_index: 0u32
+    },
+    {
+      module_index: 0u32
+      fragment_index: 1u32
+      type_index: 1u32
+    },
+  ]
+  types[0u32] = types[1u32]
+  let _ = self_host_linked_type_slot(types, 0u32)
+}
+
+fn self_host_metadata_test_callable_result(
+  callable: SelfHostPlannedCallable,
+  type_: U32,
+) -> SelfHostPlannedCallable {
+  {
+    declaration: callable.declaration
+    name: callable.name
+    visibility: callable.visibility
+    compiler_owned: callable.compiler_owned
+    is_main: callable.is_main
+    main_code: callable.main_code
+    is_test: callable.is_test
+    is_test_entry: callable.is_test_entry
+    test_name: callable.test_name
+    kind: callable.kind
+    owner_generic_parameters: callable.owner_generic_parameters
+    generic_parameters: callable.generic_parameters
+    parameters: callable.parameters
+    has_receiver: callable.has_receiver
+    self_type: callable.self_type
+    self_shape: callable.self_shape
+    result_type: type_
+    result_shape: ErrorPlannedValueShape
+    offset: callable.offset
+  }
+}
+
+test "index lookups metadata keep resolved and missing result shape fallback" {
+  let link = self_host_metadata_test_link(1u32)
+  let module_ = link.fragments.specialization.lowering.modules[1u32]
+  let callable = module_.functions.callables[0u32]
+  assert(self_host_linked_callable_declared_result_shape(link, callable.declaration) is Some(_), "known result before removing cached shape")
+  module_.functions.callables[0u32] = self_host_metadata_test_callable_result(callable, callable.result_type)
+  self_host_metadata_test_same_shape(
+    self_host_linked_callable_declared_result_shape(link, callable.declaration),
+    self_host_metadata_test_scan_callable_declared_result_shape(link, callable.declaration),
+  )
+  assert(self_host_linked_callable_declared_result_shape(link, callable.declaration) is Some(_), "resolved result fallback")
+  module_.functions.callables[0u32] = self_host_metadata_test_callable_result(callable, module_.resolved_types.error_type)
+  assert(self_host_linked_callable_declared_result_shape(link, callable.declaration) is None, "error result stays absent")
+}
+
+test "ARN-105 index lookups metadata reject an invalid callable slot" expect_trap "unreachable" {
+  let link = self_host_metadata_test_link(1u32)
+  let module_ = link.fragments.specialization.lowering.modules[1u32]
+  let declaration = module_.functions.callables[0u32].declaration
+  module_.functions.callable_by_declaration[self_host_semantic_id_local(declaration)] =
+    module_.functions.callables.length()
+  let _ = self_host_linked_callable_declared_result_shape(link, declaration)
+}
+
+pub struct SelfHostMetadataIndexTestFixture {
+  link: SelfHostPlannedProgramWasmGCLink
+  fields: Array<SelfHostLinkedWasmFieldLink>
+  declarations: Array<U64>
+  field_checksum: U64
+  callable_checksum: U64
+}
+
+fn self_host_metadata_test_shape_code(shape: Option<SelfHostPlannedValueShape>) -> U64 {
+  match shape {
+    Some(RefPlannedValueShape) => 1u64
+    Some(I64PlannedValueShape) => 2u64
+    Some(GenericPlannedValueShape) => 3u64
+    Some(_) => 4u64
+    None => 0u64
+  }
+}
+
+fn self_host_metadata_test_fixture(link: SelfHostPlannedProgramWasmGCLink) -> SelfHostMetadataIndexTestFixture {
+  let fields = []
+  let declarations = []
+  for linked_type in link.types {
+    let physical_module = link.fragments.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(physical_module, linked_type.fragment_index)
+    while 0u32 {
+      index if index < physical.fields.length => {
+        fields.push({
+          type_index: linked_type.type_index
+          field_index: index
+        })
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+  }
+  for module_ in link.fragments.specialization.lowering.modules {
+    for callable in module_.functions.callables {
+      declarations.push(callable.declaration)
+    }
+  }
+  assert(fields.length() > 0u32 && declarations.length() > 0u32, "metadata query data is present")
+  let mut field_checksum = 0u64
+  let mut callable_checksum = 0u64
+  while 0u32 {
+    iteration if iteration < 8192u32 => {
+      let field = fields[(iteration * 17u32) % fields.length()]
+      field_checksum = field_checksum + self_host_metadata_test_scan_field_value_nominal_declaration(link, field)
+      field_checksum = field_checksum + self_host_metadata_test_scan_field_container_owner_module_id(link, field)
+      callable_checksum = callable_checksum + self_host_metadata_test_shape_code(
+        self_host_metadata_test_scan_callable_declared_result_shape(link,
+          declarations[(iteration * 17u32) % declarations.length()]),
+      )
+      continue iteration + 1u32
+    }
+    _ => break ()
+  }
+  {
+    link: link
+    fields: fields
+    declarations: declarations
+    field_checksum: field_checksum
+    callable_checksum: callable_checksum
+  }
+}
+
+let self_host_metadata_test_fixtures = [
+  self_host_metadata_test_fixture(self_host_metadata_test_links[0u32]),
+  self_host_metadata_test_fixture(self_host_metadata_test_links[1u32]),
+]
+
+fn self_host_metadata_test_field_benchmark(fixture: SelfHostMetadataIndexTestFixture, direct: Bool) -> Unit {
+  let mut checksum = 0u64
+  while 0u32 {
+    iteration if iteration < 8192u32 => {
+      let field = fixture.fields[(iteration * 17u32) % fixture.fields.length()]
+      if direct {
+        checksum = checksum + self_host_linked_field_value_nominal_declaration(fixture.link, field)
+        checksum = checksum + self_host_linked_field_container_owner_module_id(fixture.link, field)
+      } else {
+        checksum = checksum + self_host_metadata_test_scan_field_value_nominal_declaration(fixture.link, field)
+        checksum = checksum + self_host_metadata_test_scan_field_container_owner_module_id(fixture.link, field)
+      }
+      continue iteration + 1u32
+    }
+    _ => break ()
+  }
+  assert(checksum == fixture.field_checksum, "field benchmark checksum")
+}
+
+fn self_host_metadata_test_callable_benchmark(fixture: SelfHostMetadataIndexTestFixture, direct: Bool) -> Unit {
+  let mut checksum = 0u64
+  while 0u32 {
+    iteration if iteration < 8192u32 => {
+      let declaration = fixture.declarations[(iteration * 17u32) % fixture.declarations.length()]
+      let shape = if direct {
+        self_host_linked_callable_declared_result_shape(fixture.link, declaration)
+      } else {
+        self_host_metadata_test_scan_callable_declared_result_shape(fixture.link, declaration)
+      }
+      checksum = checksum + self_host_metadata_test_shape_code(shape)
+      continue iteration + 1u32
+    }
+    _ => break ()
+  }
+  assert(checksum == fixture.callable_checksum, "callable benchmark checksum")
+}
+
+test "index lookup metadata benchmark field scan 64" {
+  self_host_metadata_test_field_benchmark(self_host_metadata_test_fixtures[0u32], false)
+}
+test "index lookup metadata benchmark field direct 64" {
+  self_host_metadata_test_field_benchmark(self_host_metadata_test_fixtures[0u32], true)
+}
+test "index lookup metadata benchmark field scan 256" {
+  self_host_metadata_test_field_benchmark(self_host_metadata_test_fixtures[1u32], false)
+}
+test "index lookup metadata benchmark field direct 256" {
+  self_host_metadata_test_field_benchmark(self_host_metadata_test_fixtures[1u32], true)
+}
+test "index lookup metadata benchmark callable scan 64" {
+  self_host_metadata_test_callable_benchmark(self_host_metadata_test_fixtures[0u32], false)
+}
+test "index lookup metadata benchmark callable direct 64" {
+  self_host_metadata_test_callable_benchmark(self_host_metadata_test_fixtures[0u32], true)
+}
+test "index lookup metadata benchmark callable scan 256" {
+  self_host_metadata_test_callable_benchmark(self_host_metadata_test_fixtures[1u32], false)
+}
+test "index lookup metadata benchmark callable direct 256" {
+  self_host_metadata_test_callable_benchmark(self_host_metadata_test_fixtures[1u32], true)
+}

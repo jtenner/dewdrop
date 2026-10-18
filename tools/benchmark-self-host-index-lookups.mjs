@@ -13,17 +13,18 @@ import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./
 const args = process.argv.slice(2);
 const worker = args[0] === "--worker";
 if (worker) args.shift();
-const [path, count = "7", mode, size] = args;
+const [path, count = "7", mode, size, family = "function"] = args;
 const runs = Number(count);
 if (!path || !Number.isInteger(runs) || runs < 1 || runs > 30) {
-  throw new Error("usage: node tools/benchmark-self-host-index-lookups.mjs TESTS.wasm [RUNS=7]");
+  throw new Error("usage: node tools/benchmark-self-host-index-lookups.mjs TESTS.wasm [RUNS=7] [function|metadata]");
 }
 const bytes = readFileSync(path);
 if (worker) {
   const module = await WebAssembly.compile(bytes);
   const sections = WebAssembly.Module.customSections(module, "dew.tests");
   if (sections.length !== 1) throw new Error("missing test metadata");
-  const name = `index lookup benchmark ${mode} ${size}`;
+  const name = family === "function" ? `index lookup benchmark ${mode} ${size}` :
+    `index lookup metadata benchmark ${family} ${mode} ${size}`;
   const test = decodeDewTestMetadata(Buffer.from(sections[0])).find(test => test.name === name);
   if (!test || test.expectedTrap !== null) throw new Error(`missing ordinary test: ${name}`);
   let instance;
@@ -70,24 +71,31 @@ if (worker) {
       heap_after_gc_bytes: getHeapStatistics().used_heap_size, rss_bytes: process.memoryUsage().rss });
   }
   const sorted = samples.map(sample => sample.milliseconds).sort((a, b) => a - b);
-  console.log(JSON.stringify({ mode, size: Number(size), samples,
+  console.log(JSON.stringify({ family, mode, size: Number(size), samples,
     median_milliseconds: sorted[Math.floor(sorted.length / 2)],
     peak_rss_kib: process.resourceUsage().maxRSS }));
 } else {
   const cases = [];
-  for (const size of [128, 512, 2048]) {
-    for (const mode of ["scan", "direct"]) {
-      const result = spawnSync(process.execPath, ["--expose-gc", "--no-liftoff", fileURLToPath(import.meta.url),
-        "--worker", path, String(runs), mode, String(size)], { encoding: "utf8", timeout: 30_000 });
-      if (result.status !== 0) throw new Error(`${mode} ${size} failed: ${result.stderr}`, { cause: result.error });
-      cases.push(JSON.parse(result.stdout));
+  const suite = mode ?? "function";
+  if (!["function", "metadata"].includes(suite)) throw new Error(`unknown suite: ${suite}`);
+  for (const family of suite === "function" ? ["function"] : ["field", "callable"]) {
+    for (const size of family === "function" ? [128, 512, 2048] : [64, 256]) {
+      for (const mode of ["scan", "direct"]) {
+        const result = spawnSync(process.execPath, ["--expose-gc", "--no-liftoff", fileURLToPath(import.meta.url),
+          "--worker", path, String(runs), mode, String(size), family], { encoding: "utf8", timeout: 30_000 });
+        if (result.status !== 0) throw new Error(`${family} ${mode} ${size} failed: ${result.stderr}`, { cause: result.error });
+        cases.push(JSON.parse(result.stdout));
+      }
     }
   }
   console.log(JSON.stringify({ wasm_sha256: createHash("sha256").update(bytes).digest("hex"),
+    harness_sha256: createHash("sha256").update(readFileSync(fileURLToPath(import.meta.url))).digest("hex"),
     wasm_bytes: bytes.length, node: process.version, v8: process.versions.v8,
     worker_node_flags: ["--expose-gc", "--no-liftoff"],
     environment: { platform: platform(), release: release(), arch: arch(), cpu: cpus()[0].model },
-    runs, warmup_runs_per_case: 3, queries_per_sample: 8192, fixture_construction_included: true,
+    runs, suite, warmup_runs_per_case: 3, queries_per_sample: 8192,
+    field_queries_per_iteration: suite === "metadata" ? 2 : 0,
+    fixture_construction_included: suite === "function",
     memory_limits: "V8 heap sizes and process RSS include runtime overhead. Heap deltas are not allocation totals; collection can occur during a sample.",
     cases }, null, 2));
 }

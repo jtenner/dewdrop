@@ -4939,37 +4939,62 @@ fn self_host_linked_field_container_element_nominal_declaration(
   0u64
 }
 
+fn self_host_linked_type_slot(
+  types: Array<SelfHostPlannedProgramWasmType>,
+  type_index: U32,
+) -> SelfHostPlannedProgramWasmType {
+  if type_index >= types.length() {
+    let _ = self_host_assert_compiler_invariant(false,
+      "field metadata type is outside the linked type table")
+  }
+  let linked_type = types[type_index]
+  if linked_type.type_index != type_index {
+    let _ = self_host_assert_compiler_invariant_with_failure(false, {
+      code: 106u32
+      phase: 5u32
+      module_id: 0u64
+      declaration: 0u64
+      body: 0u64
+      expression: 4294967295u32
+      expected: u32_into_u64(type_index)
+      actual: u32_into_u64(linked_type.type_index)
+      detail: u32_into_u64(linked_type.fragment_index)
+    }, "field metadata type does not match its linked type slot")
+  }
+  linked_type
+}
+
 fn self_host_linked_field_container_owner_module_id(
   link: SelfHostPlannedProgramWasmGCLink,
   field: SelfHostLinkedWasmFieldLink,
 ) -> U64 {
-  for linked_type in link.types {
-    if self_host_u32_equal(linked_type.type_index, field.type_index) {
-      let physical_module = link.fragments.modules[linked_type.module_index]
-      let physical = self_host_linked_physical_type_at(
-        physical_module,
-        linked_type.fragment_index,
-      )
-      if field.field_index < physical.fields.length {
-        let physical_field = self_host_linked_physical_field_at(
-          physical_module,
-          self_host_u32_add(physical.fields.start, field.field_index),
+  if field.type_index >= link.types.length() {
+    return 0u64
+  }
+  let linked_type = self_host_linked_type_slot(link.types, field.type_index)
+  let physical_module = link.fragments.modules[linked_type.module_index]
+  let physical = self_host_linked_physical_type_at(
+    physical_module,
+    linked_type.fragment_index,
+  )
+  if field.field_index < physical.fields.length {
+    let physical_field = self_host_linked_physical_field_at(
+      physical_module,
+      self_host_u32_add(physical.fields.start, field.field_index),
+    )
+    let lowering_module = link.fragments.specialization.lowering.modules[
+      linked_type.module_index
+    ]
+    for layout_field in lowering_module.type_layouts.fields {
+      if self_host_u64_equal(
+        layout_field.field,
+        physical_field.declaration,
+      ) {
+        return self_host_linked_type_owner_module_id(
+          link,
+          lowering_module,
+          -self_host_u32_to_i32(layout_field.type_) - 2i32,
         )
-        let lowering_module = link.fragments.specialization.lowering.modules[
-          linked_type.module_index
-        ]
-        for layout_field in lowering_module.type_layouts.fields {
-          if self_host_u64_equal(
-            layout_field.field,
-            physical_field.declaration,
-          ) {
-            return self_host_linked_type_owner_module_id(
-              link,
-              lowering_module,
-              -self_host_u32_to_i32(layout_field.type_) - 2i32,
-            )
-          }
-        }
       }
     }
   }
@@ -5000,64 +5025,64 @@ fn self_host_linked_field_value_nominal_declaration(
   link: SelfHostPlannedProgramWasmGCLink,
   field: SelfHostLinkedWasmFieldLink,
 ) -> U64 {
-  for linked_type in link.types {
-    if self_host_u32_equal(linked_type.type_index, field.type_index) {
-      let physical_module = link.fragments.modules[linked_type.module_index]
-      let physical = self_host_linked_physical_type_at(
-        physical_module,
-        linked_type.fragment_index,
-      )
-      if field.field_index < physical.fields.length {
-        let physical_field = self_host_linked_physical_field_at(
-          physical_module,
-          self_host_u32_add(physical.fields.start, field.field_index),
-        )
-        let lowering_module = link.fragments.specialization.lowering.modules[
-          linked_type.module_index
-        ]
-        match physical_field.role {
-          WasmVariantPayloadField(
-            variant,
-            payload_index,
-          ) => {
-            for layout_variant in lowering_module.type_layouts.variants {
-              if self_host_u64_equal(layout_variant.variant, variant) {
-                let payload = match layout_variant.payload {
-                  PlannedTupleVariantLayout(span) => span
-                  PlannedStructVariantLayout(span) => span
-                  PlannedUnitVariantLayout => ({
-                    start: 0u32
-                    length: 0u32
-                  })
-                }
-                if payload_index < payload.length {
-                  let index = self_host_u32_add(payload.start, payload_index)
-                  if index < lowering_module.type_layouts.payload_types.length() {
-                    let nominal = self_host_linked_resolved_nominal_declaration(
-                      lowering_module,
-                      lowering_module.type_layouts.payload_types[index],
-                    )
-                    if !self_host_u64_equal(nominal, 0u64) {
-                      return nominal
-                    }
-                  }
+  if field.type_index >= link.types.length() {
+    return 0u64
+  }
+  let linked_type = self_host_linked_type_slot(link.types, field.type_index)
+  let physical_module = link.fragments.modules[linked_type.module_index]
+  let physical = self_host_linked_physical_type_at(
+    physical_module,
+    linked_type.fragment_index,
+  )
+  if field.field_index < physical.fields.length {
+    let physical_field = self_host_linked_physical_field_at(
+      physical_module,
+      self_host_u32_add(physical.fields.start, field.field_index),
+    )
+    let lowering_module = link.fragments.specialization.lowering.modules[
+      linked_type.module_index
+    ]
+    match physical_field.role {
+      WasmVariantPayloadField(
+        variant,
+        payload_index,
+      ) => {
+        for layout_variant in lowering_module.type_layouts.variants {
+          if self_host_u64_equal(layout_variant.variant, variant) {
+            let payload = match layout_variant.payload {
+              PlannedTupleVariantLayout(span) => span
+              PlannedStructVariantLayout(span) => span
+              PlannedUnitVariantLayout => ({
+                start: 0u32
+                length: 0u32
+              })
+            }
+            if payload_index < payload.length {
+              let index = self_host_u32_add(payload.start, payload_index)
+              if index < lowering_module.type_layouts.payload_types.length() {
+                let nominal = self_host_linked_resolved_nominal_declaration(
+                  lowering_module,
+                  lowering_module.type_layouts.payload_types[index],
+                )
+                if !self_host_u64_equal(nominal, 0u64) {
+                  return nominal
                 }
               }
             }
           }
-          _ => {}
         }
-        for layout_field in lowering_module.type_layouts.fields {
-          if self_host_u64_equal(
-            layout_field.field,
-            physical_field.declaration,
-          ) {
-            return self_host_linked_resolved_nominal_declaration(
-              lowering_module,
-              layout_field.type_,
-            )
-          }
-        }
+      }
+      _ => {}
+    }
+    for layout_field in lowering_module.type_layouts.fields {
+      if self_host_u64_equal(
+        layout_field.field,
+        physical_field.declaration,
+      ) {
+        return self_host_linked_resolved_nominal_declaration(
+          lowering_module,
+          layout_field.type_,
+        )
       }
     }
   }
@@ -14963,33 +14988,22 @@ fn self_host_linked_callable_declared_result_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   declaration: U64,
 ) -> Option<SelfHostPlannedValueShape> {
-  for module_ in link.fragments.specialization.lowering.modules {
-    let mut callable_index = 0u32
-    let _ = while callable_index {
-      current => if current < self_host_program_specialization_callable_count(
-        module_,
-      ) {
-        let callable = self_host_program_specialization_callable_at(
-          module_,
-          current,
-        )
-        if self_host_u64_equal(callable.declaration, declaration) {
-          if !(callable.result_shape is ErrorPlannedValueShape) {
-            return Some(callable.result_shape)
-          }
-          let shape = self_host_planned_resolved_value_shape(
-            module_.resolved_types,
-            callable.result_type,
-          )
-          if !(shape is ErrorPlannedValueShape) {
-            return Some(shape)
-          }
-        }
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
-      }
-    }
+  let lowering = link.fragments.specialization.lowering
+  let owner = match lowering.index.declaration_owner(declaration) {
+    Some(value) => value
+    None => return None
+  }
+  let module_ = lowering.modules[owner]
+  let callable = match self_host_program_specialization_callable(module_, declaration) {
+    Some(value) => value
+    None => return None
+  }
+  if !(callable.result_shape is ErrorPlannedValueShape) {
+    return Some(callable.result_shape)
+  }
+  let shape = self_host_planned_resolved_value_shape(module_.resolved_types, callable.result_type)
+  if !(shape is ErrorPlannedValueShape) {
+    return Some(shape)
   }
   None
 }

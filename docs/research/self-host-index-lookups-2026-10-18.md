@@ -8,7 +8,7 @@ these scans next to each other for each call. Parameter and declaration queries
 used the same scan.
 
 The linker appends each function with `function_index: functions.length()`.
-The planner now reads that slot directly. Each public query keeps its former
+The planner now reads that slot directly. Each query keeps its former
 missing result for out-of-range indices, including the missing-index sentinel.
 The shared helper checks bounds and the stored slot identity. A wrong identity
 reports ARN-106 with the declaration, expected slot, actual slot and fragment.
@@ -104,3 +104,80 @@ Evidence:
 - [Build identity](data/self-host-index-lookups-2026-10-18/function-build-identity.json)
 - [Build and test log](data/self-host-index-lookups-2026-10-18/index-tests.log)
 - [Final sample command time](data/self-host-index-lookups-2026-10-18/function-samples-timing.txt)
+
+## Field metadata and callable result queries
+
+The second change removes the outer type-table scan from field nominal-type
+and field container-owner queries. Linked types are appended with
+`type_index: types.length()`. A shared checked lookup reads that existing slot
+and returns the existing type record. A moved record reports ARN-106 with the
+expected slot, stored slot and fragment. Out-of-range field queries still
+return zero. The inner field and enum-payload scans and all their rules remain
+unchanged. This change does not make the full field query constant time.
+
+Declared callable result-shape queries now use the existing declaration-owner
+lookup, then the checked `callable_by_declaration` slot lookup. They keep the
+stored result shape, resolved-type fallback and final absence for an error
+shape. The existing owner lookup retains its module-ID fallback path; the
+change removes the scan of every callable. It adds no stored index.
+
+`semantic_metadata_index_lookups_test.dew` preserves the three old query bodies
+as test oracles. Its linked fixtures have two source modules, 64 or 256 record
+types, scalar and nominal fields, generic enum payloads, a generic function and
+a foreign call. Every physical field and callable in the smaller fixture is
+compared against the old scan. Bounds, moved type slots, damaged callable
+indices, resolved result fallback and error-result absence have separate tests.
+
+All 21 focused tests pass: nine from the function-query change and 12 from this
+change. Generation took 4.648 seconds, time-provider preparation 0.004 seconds,
+linking 1.082 seconds and execution 0.227 seconds. The first metadata test source
+used unsupported comma-separated record fields; these were corrected before
+the passing build.
+
+The metadata benchmark uses one binary with both old and new queries. Fixture
+building and expected-checksum generation run in module initialization, outside
+the sample timer. Each field sample makes 8,192 pairs of nominal-type and owner
+queries. Each callable sample makes 8,192 result-shape queries. Query order is
+`(iteration * 17) % count`. Three warm-up calls and seven measured calls use the
+same fixed optimizing tier, collection controls and process-memory reporting as
+the function benchmark.
+
+| Query group | Fixture record types | Old scan, median | Indexed query, median |
+| --- | ---: | ---: | ---: |
+| Field nominal and owner pair | 64 | 9.521 ms | 4.475 ms |
+| Field nominal and owner pair | 256 | 32.224 ms | 16.679 ms |
+| Callable result shape | 64 | 0.524 ms | 0.180 ms |
+| Callable result shape | 256 | 1.915 ms | 0.269 ms |
+
+Each row covers 8,192 iterations. The field rows contain two queries per
+iteration. These are query timings, not whole-compiler gains. Field time still
+grows with the inner layout scans. The final quiet sample command took
+8.333 seconds; every worker has a 30-second timeout.
+
+Peak process RSS remained close: at 256 records, the old/new field workers
+used 138,984/137,564 KiB and the callable workers used 138,992/136,972 KiB. The
+64-record field worker was slightly larger on the new path. These values do
+not support a process-memory gain. At 256 records, median V8 sample heap growth
+for fields was 6,993,320/758,920 bytes; median retained change after collection
+was 384 bytes for both paths. Callable sample heap growth was 801,968/735,416
+bytes. Heap growth is not a count of all allocations, particularly when
+collection runs during a call. No extra retained index was introduced.
+
+The second test binary is 2,441,068 bytes with SHA-256
+`9ebe33152fdf8b24112f0ed1f50faf975e564ef4595f110c01b7ee66dc7461dd`.
+The raw report also records the benchmark harness hash. This binary contains
+both query versions and additional tests, so its size is not a before/after
+compiler code-size result. Host and runtime versions match the function-query
+run. These measurements are not native Dew execution or an ARM result.
+
+```sh
+node tools/benchmark-self-host-index-lookups.mjs \
+  .tmp/self-host-index-lookups/tests.wasm 7 metadata
+```
+
+Evidence:
+
+- [Metadata raw samples](data/self-host-index-lookups-2026-10-18/metadata-samples.json)
+- [Metadata build identity](data/self-host-index-lookups-2026-10-18/metadata-build-identity.json)
+- [Metadata build and test log](data/self-host-index-lookups-2026-10-18/metadata-index-tests.log)
+- [Metadata sample command time](data/self-host-index-lookups-2026-10-18/metadata-samples-timing.txt)
