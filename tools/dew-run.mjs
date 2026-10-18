@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { readSync, writeSync } from "node:fs";
+import { readvSync, writeSync } from "node:fs";
 
 const [binaryPath] = process.argv.slice(2);
 if (!binaryPath) {
@@ -9,6 +9,10 @@ if (!binaryPath) {
 }
 
 let instance;
+
+// Windows libuv reads vectors in sequence; keep its stdin call to one view.
+// POSIX uses one readv and applies the host's IOV_MAX limit itself.
+const maxReadIovecs = process.platform === "win32" ? 1 : 64;
 
 const readErrno = { EACCES: 2, EAGAIN: 6, EBADF: 8, EFAULT: 21,
   EINTR: 27, EINVAL: 28, EIO: 29, EISDIR: 31, EOVERFLOW: 61, EPERM: 63 };
@@ -42,28 +46,28 @@ const imports = {
         const iovec = iovs + index * 8;
         if (memory.getUint32(iovec, true) + memory.getUint32(iovec + 4, true) > memory.byteLength) return 21;
       }
-      let total = 0;
-      for (let index = 0; index < count; index++) {
+      const buffers = [];
+      for (let index = 0; index < count && buffers.length < maxReadIovecs; index++) {
         const iovec = iovs + index * 8;
         const pointer = memory.getUint32(iovec, true);
         const length = memory.getUint32(iovec + 4, true);
-        if (length === 0) continue;
-        let received;
-        for (;;) {
-          try {
-            received = readSync(0, new Uint8Array(memory.buffer, pointer, length));
-            break;
-          } catch (error) {
-            if (error.code === "EINTR") continue;
-            memory.setUint32(read, total, true);
-            return total > 0 ? 0 : (readErrno[error.code] ?? 29);
-          }
-        }
-        total += received;
-        if (received < length) break;
+        if (length > 0) buffers.push(new Uint8Array(memory.buffer, pointer, length));
       }
-      memory.setUint32(read, total, true);
-      return 0;
+      if (buffers.length === 0) {
+        memory.setUint32(read, 0, true);
+        return 0;
+      }
+      for (;;) {
+        try {
+          const received = readvSync(0, buffers);
+          memory.setUint32(read, received, true);
+          return 0;
+        } catch (error) {
+          if (error.code === "EINTR") continue;
+          memory.setUint32(read, 0, true);
+          return readErrno[error.code] ?? 29;
+        }
+      }
     },
   },
 };

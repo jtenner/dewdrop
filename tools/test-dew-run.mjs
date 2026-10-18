@@ -42,7 +42,10 @@ const write = (iovs = 32, count = 1) => [...call(1, 1, iovs, count, 24), 0x1a];
 
 // Build tiny Core Wasm fixtures directly. Tests need Node only, not a Dew build.
 function fixture(name, instructions, words = {}, data = []) {
-  const initial = Buffer.alloc(512);
+  const initialLength = Math.max(512,
+    ...Object.keys(words).map((address) => Number(address) + 4),
+    ...data.map(([address, bytes]) => address + bytes.length));
+  const initial = Buffer.alloc(initialLength);
   for (const [address, value] of Object.entries(words)) initial.writeUInt32LE(value, Number(address));
   for (const [address, bytes] of data) initial.set(bytes, address);
   const body = [0, ...instructions, 0x0b];
@@ -63,8 +66,8 @@ function fixture(name, instructions, words = {}, data = []) {
   return path;
 }
 
-function run(path, stdin = "pipe") {
-  const child = spawn(process.execPath, [runner, path], { stdio: [stdin, "pipe", "pipe"] });
+function run(path, stdin = "pipe", execArgv = []) {
+  const child = spawn(process.execPath, [...execArgv, runner, path], { stdio: [stdin, "pipe", "pipe"] });
   const chunks = [];
   let stderr = "";
   let output = Buffer.alloc(0);
@@ -121,19 +124,31 @@ test("output precedes input, short reads return without EOF, and bytes stay exac
 });
 
 test("multiple and empty iovecs, repeated reads, and EOF report exact counts", async () => {
-  const corrected = fixture("iovecs-correct", [
-    ...read(0, 0, 3, 64, 68), ...write(48), ...write(40),
-    ...read(0, 0, 3, 64, 68), ...write(48),
-  ], { 0: 128, 4: 3, 8: 131, 12: 0, 16: 131, 20: 4,
-    40: 128, 44: 7, 48: 64, 52: 4 });
+  const windowsPrefix = process.platform === "win32";
+  const instructions = [...read(0, 0, 3, 64, 68), ...write(48), ...write(40)];
+  if (windowsPrefix) instructions.push(...store(0, 131), ...store(4, 4));
+  instructions.push(...read(0, 0, 3, 64, 68), ...write(48));
+  if (windowsPrefix) instructions.push(...write(56), ...read(0, 0, 3, 64, 68), ...write(48));
+  const corrected = fixture("iovecs-correct", instructions,
+    { 0: 128, 4: 3, 8: 131, 12: 0, 16: 131, 20: 4,
+      40: 128, 44: 7, 48: 64, 52: 4, 56: 131, 60: 4 });
   const input = join(directory, "input.bin");
-  writeFileSync(input, Buffer.from([0, 255, 128, 10, 13, 1, 2]));
+  const bytes = Buffer.from([0, 255, 128, 10, 13, 1, 2]);
+  writeFileSync(input, bytes);
   const descriptor = openSync(input, "r");
   try {
     const output = await run(corrected, descriptor).finished;
-    assert.equal(output.readUInt32LE(0), 7);
-    assert.deepEqual(output.subarray(4, 11), Buffer.from([0, 255, 128, 10, 13, 1, 2]));
-    assert.equal(output.readUInt32LE(11), 0);
+    assert.equal(output.readUInt32LE(0), windowsPrefix ? 3 : 7);
+    if (windowsPrefix) {
+      assert.deepEqual(output.subarray(4, 7), bytes.subarray(0, 3));
+      assert.deepEqual(output.subarray(7, 11), Buffer.alloc(4));
+      assert.equal(output.readUInt32LE(11), 4);
+      assert.deepEqual(output.subarray(15, 19), bytes.subarray(3));
+      assert.equal(output.readUInt32LE(19), 0);
+    } else {
+      assert.deepEqual(output.subarray(4, 11), bytes);
+      assert.equal(output.readUInt32LE(11), 0);
+    }
   } finally { closeSync(descriptor); }
 });
 
@@ -148,6 +163,116 @@ test("a short first iovec does not wait for the next iovec", async () => {
     0: 128, 4: 8, 8: 144, 12: 8, 32: 16, 36: 8,
   });
   const process = run(path);
+  process.child.stdin.write(Buffer.from([1, 2, 3]));
+  const output = await process.finished;
+  assert.equal(output.readUInt32LE(0), 3);
+  assert.equal(output.readUInt32LE(4), 0);
+});
+
+test("a full first iovec does not wait for more input in the next iovec", async () => {
+  const path = fixture("full-first-iovec", [...read(0, 0, 2), ...write(), ...write(40), ...write(48)], {
+    0: 128, 4: 3, 8: 144, 12: 4, 32: 16, 36: 8,
+    40: 128, 44: 3, 48: 144, 52: 4,
+  });
+  const process = run(path);
+  process.child.stdin.write(Buffer.from([1, 2, 3]));
+  const output = await process.finished;
+  assert.equal(output.readUInt32LE(0), 3);
+  assert.equal(output.readUInt32LE(4), 0);
+  assert.deepEqual(output.subarray(8, 11), Buffer.from([1, 2, 3]));
+  assert.deepEqual(output.subarray(11, 15), Buffer.alloc(4));
+});
+
+test("bounded vector reads leave the remaining bytes for the caller", async () => {
+  const offered = process.platform === "win32" ? 1 : 64;
+  const words = { 1040: 1024, 1044: 8, 1048: 2048, 1052: 65, 1056: 0, 1060: 1 };
+  for (let index = 0; index < 65; index++) {
+    words[index * 8] = 2048 + index;
+    words[index * 8 + 4] = 1;
+  }
+  const instructions = [...read(0, 0, 65, 1024, 1028), ...write(1040), ...write(1048)];
+  for (let index = offered; index < 65; index++) {
+    instructions.push(...store(0, 2048 + index), ...read(0, 0, 1, 1024, 1028),
+      ...write(1040), ...store(1056, 2048 + index), ...write(1056));
+  }
+  instructions.push(...read(0, 0, 1, 1024, 1028), ...write(1040));
+  const path = fixture("bounded-vectors", instructions, words);
+  const input = join(directory, "bounded-input.bin");
+  const bytes = Buffer.from(Array.from({ length: 65 }, (_, index) => index + 1));
+  writeFileSync(input, bytes);
+  const descriptor = openSync(input, "r");
+  try {
+    const output = await run(path, descriptor).finished;
+    assert.equal(output.readUInt32LE(0), offered);
+    assert.equal(output.readUInt32LE(4), 0);
+    assert.deepEqual(output.subarray(8, 8 + offered), bytes.subarray(0, offered));
+    assert.deepEqual(output.subarray(8 + offered, 73), Buffer.alloc(65 - offered));
+    let offset = 73;
+    for (let index = offered; index < 65; index++, offset += 9) {
+      assert.equal(output.readUInt32LE(offset), 1);
+      assert.equal(output.readUInt32LE(offset + 4), 0);
+      assert.equal(output[offset + 8], bytes[index]);
+    }
+    assert.equal(output.readUInt32LE(offset), 0);
+    assert.equal(output.readUInt32LE(offset + 4), 0);
+  } finally { closeSync(descriptor); }
+});
+
+test("guest ranges beyond the vector read limit are checked before input", async () => {
+  const words = { 1040: 1028, 1044: 4 };
+  for (let index = 0; index < 65; index++) {
+    words[index * 8] = index === 64 ? 65535 : 2048 + index;
+    words[index * 8 + 4] = index === 64 ? 2 : 1;
+  }
+  const path = fixture("invalid-vector-tail", [...read(0, 0, 65, 1024, 1028), ...write(1040)], words);
+  assert.equal((await run(path).finished).readUInt32LE(0), 21);
+});
+
+function preload(name, source) {
+  const path = join(directory, `${name}.cjs`);
+  writeFileSync(path, source);
+  return ["--require", path];
+}
+
+test("an interrupted vector read retries without losing bytes", async () => {
+  const hook = preload("read-eintr", `
+    const fs = require("node:fs");
+    const readv = fs.readvSync;
+    let interrupted = false;
+    fs.readvSync = (...args) => {
+      if (!interrupted) {
+        interrupted = true;
+        const error = new Error("interrupted test read");
+        error.code = "EINTR";
+        throw error;
+      }
+      return readv(...args);
+    };
+    require("node:module").syncBuiltinESMExports();
+  `);
+  const path = fixture("eintr", [...read(), ...write()], { 0: 128, 4: 8, 32: 16, 36: 8 });
+  const process = run(path, "pipe", hook);
+  process.child.stdin.write(Buffer.from([1, 2, 3]));
+  const output = await process.finished;
+  assert.equal(output.readUInt32LE(0), 3);
+  assert.equal(output.readUInt32LE(4), 0);
+});
+
+test("the Windows prefix rule passes only one view to the host read", async () => {
+  const hook = preload("windows-prefix", `
+    Object.defineProperty(process, "platform", { value: "win32" });
+    const fs = require("node:fs");
+    const readv = fs.readvSync;
+    fs.readvSync = (fd, buffers, position) => {
+      require("node:assert/strict").equal(buffers.length, 1);
+      return readv(fd, buffers, position);
+    };
+    require("node:module").syncBuiltinESMExports();
+  `);
+  const path = fixture("windows-prefix", [...read(0, 0, 2), ...write()], {
+    0: 128, 4: 3, 8: 144, 12: 4, 32: 16, 36: 8,
+  });
+  const process = run(path, "pipe", hook);
   process.child.stdin.write(Buffer.from([1, 2, 3]));
   const output = await process.finished;
   assert.equal(output.readUInt32LE(0), 3);

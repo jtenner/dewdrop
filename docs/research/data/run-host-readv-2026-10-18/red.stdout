@@ -1,0 +1,19 @@
+✖ a full first iovec does not wait for more input in the next iovec (5013.056868ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5057.185936
+
+✖ failing tests:
+
+test at tools/test-dew-run.mjs:157:1
+✖ a full first iovec does not wait for more input in the next iovec (5013.056868ms)
+  Error: runner exit null, signal SIGKILL: 
+      at ChildProcess.<anonymous> (file:///home/dev/Projects/dewdrop/tools/test-dew-run.mjs:81:30)
+      at ChildProcess.emit (node:events:514:28)
+      at maybeClose (node:internal/child_process:1141:16)
+      at ChildProcess._handle.onexit (node:internal/child_process:306:5)

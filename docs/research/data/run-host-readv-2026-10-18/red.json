@@ -1,0 +1,1 @@
+{"command": ["node", "--test", "--test-name-pattern", "a full first iovec", "tools/test-dew-run.mjs"], "elapsed_seconds": 5.08986762099812, "exit": 1}

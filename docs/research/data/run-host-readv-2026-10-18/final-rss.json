@@ -1,0 +1,189 @@
+{
+  "baseline": "9d86b829292b1efa8f1aca32b0ff49565c878ee0",
+  "node": "v24.21.0",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "architecture": "x86_64",
+  "load_before": [
+    0.4384765625,
+    0.7646484375,
+    0.94140625
+  ],
+  "load_after": [
+    0.4384765625,
+    0.7646484375,
+    0.94140625
+  ],
+  "baseline_runner_sha256": "797130445cee84f691fe375654e466172c2bc2517f632b4f418d7559d0828413",
+  "after_runner_sha256": "d6d545ae0cb82b91186c5864ecda412ecdaf2e98dd6cb0ee8e37f83759e81bb1",
+  "fixture_sha256": "1ec057a2634abbe825b731b4de8ff95be1f2b0c6f4387ad85972d2ebcff8ec5f",
+  "harness_sha256": "28e365bf34f4270da1e424d2afdc798ba0e3b0fcef25de9255d96ca3318f40de",
+  "method": "fresh Node via fresh Python worker; alternating pairs; normal host load; no CPU pinning or warmup; source snapshots; byte count asserted",
+  "samples": [
+    {
+      "identity": "before",
+      "input_bytes": 1048576,
+      "sample": 0,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 54948,
+      "elapsed_seconds": 0.048843630000192206,
+      "processed_bytes": 1048576
+    },
+    {
+      "identity": "after",
+      "input_bytes": 1048576,
+      "sample": 0,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 51080,
+      "elapsed_seconds": 0.04663904100016225,
+      "processed_bytes": 1048576
+    },
+    {
+      "identity": "after",
+      "input_bytes": 1048576,
+      "sample": 1,
+      "order": [
+        "after",
+        "before"
+      ],
+      "peak_rss_kib": 51032,
+      "elapsed_seconds": 0.04890860299929045,
+      "processed_bytes": 1048576
+    },
+    {
+      "identity": "before",
+      "input_bytes": 1048576,
+      "sample": 1,
+      "order": [
+        "after",
+        "before"
+      ],
+      "peak_rss_kib": 55032,
+      "elapsed_seconds": 0.05114275799860479,
+      "processed_bytes": 1048576
+    },
+    {
+      "identity": "before",
+      "input_bytes": 1048576,
+      "sample": 2,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 54728,
+      "elapsed_seconds": 0.04981468500045594,
+      "processed_bytes": 1048576
+    },
+    {
+      "identity": "after",
+      "input_bytes": 1048576,
+      "sample": 2,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 51016,
+      "elapsed_seconds": 0.04682478799804812,
+      "processed_bytes": 1048576
+    },
+    {
+      "identity": "before",
+      "input_bytes": 67108864,
+      "sample": 0,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 304100,
+      "elapsed_seconds": 0.1416521979990648,
+      "processed_bytes": 67108864
+    },
+    {
+      "identity": "after",
+      "input_bytes": 67108864,
+      "sample": 0,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 60580,
+      "elapsed_seconds": 0.08891220000077737,
+      "processed_bytes": 67108864
+    },
+    {
+      "identity": "after",
+      "input_bytes": 67108864,
+      "sample": 1,
+      "order": [
+        "after",
+        "before"
+      ],
+      "peak_rss_kib": 60508,
+      "elapsed_seconds": 0.08880630100611597,
+      "processed_bytes": 67108864
+    },
+    {
+      "identity": "before",
+      "input_bytes": 67108864,
+      "sample": 1,
+      "order": [
+        "after",
+        "before"
+      ],
+      "peak_rss_kib": 302888,
+      "elapsed_seconds": 0.13874220199795673,
+      "processed_bytes": 67108864
+    },
+    {
+      "identity": "before",
+      "input_bytes": 67108864,
+      "sample": 2,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 306168,
+      "elapsed_seconds": 0.13460019299964188,
+      "processed_bytes": 67108864
+    },
+    {
+      "identity": "after",
+      "input_bytes": 67108864,
+      "sample": 2,
+      "order": [
+        "before",
+        "after"
+      ],
+      "peak_rss_kib": 60732,
+      "elapsed_seconds": 0.09238851900590817,
+      "processed_bytes": 67108864
+    }
+  ],
+  "summary": {
+    "1048576": {
+      "before": {
+        "median_peak_rss_kib": 54948,
+        "median_elapsed_ms": 49.81468500045594
+      },
+      "after": {
+        "median_peak_rss_kib": 51032,
+        "median_elapsed_ms": 46.82478799804812
+      }
+    },
+    "67108864": {
+      "before": {
+        "median_peak_rss_kib": 304100,
+        "median_elapsed_ms": 138.74220199795673
+      },
+      "after": {
+        "median_peak_rss_kib": 60580,
+        "median_elapsed_ms": 88.91220000077737
+      }
+    }
+  }
+}
