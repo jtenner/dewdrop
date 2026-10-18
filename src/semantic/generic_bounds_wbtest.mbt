@@ -515,7 +515,9 @@ test "imported generic implementation bounds constrain visible evidence" {
         }
       }
     }
-    if implementation.generic_parameters.length > 0 {
+    if semantic_id_module(implementation.declaration) ==
+      program.modules[1].module_id &&
+      implementation.generic_parameters.length > 0 {
       bounded_impls += 1
       assert_eq(implementation.generic_parameters.length, 1)
       assert_eq(implementation.generic_bounds.length, 1)
