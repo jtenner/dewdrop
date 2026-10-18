@@ -2,6 +2,10 @@
 
 Date: 2026-10-18. Source commit: `9d86b829292b1efa8f1aca32b0ff49565c878ee0`.
 
+This report records the initial search. The user then asked for implementation.
+See [the implementation report](language-improvement-implementation-2026-10-18.md)
+for the changes, final checks, review scope, and measurement limits.
+
 Five GPT agents reviewed semantics, runtime libraries, compiler speed, the
 backend, and language use. The lead checked their strongest findings against
 source and repeated the main probes. Claude Code received a separate read-only
