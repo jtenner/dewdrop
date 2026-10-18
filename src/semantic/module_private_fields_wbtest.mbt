@@ -4,17 +4,60 @@ fn private_field_library() -> Bytes {
 }
 
 ///|
+fn private_field_diagnostic_names(
+  collected : CollectedModule,
+  diagnostics : Array[BodyInferenceDiagnostic],
+) -> Array[(String, String)] {
+  diagnostics.map(fn(diagnostic) {
+    match diagnostic {
+      UnknownFieldForType(name, _, _, _) =>
+        ("UnknownFieldForType", collected.name(name))
+      UnknownConstructionField(name, _, _) =>
+        ("UnknownConstructionField", collected.name(name))
+      MissingConstructionField(name, _, _) =>
+        ("MissingConstructionField", collected.name(name))
+      UnknownPatternField(name, _, _) =>
+        ("UnknownPatternField", collected.name(name))
+      MissingImportedPatternField(name, _, _) =>
+        ("MissingImportedPatternField", name)
+      _ => ("UnexpectedDiagnostic", diagnostic.to_repr().to_string())
+    }
+  })
+}
+
+///|
 test "imported private fields reject reads writes construction and patterns" {
-  for
-    consumer in [
+  let cases = [
+    (
       b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  box.value\n}\n",
+      [("UnknownFieldForType", "value")],
+    ),
+    (
       b"open app.library\npub fn run(box: Box<I32>) -> Unit {\n  box.value = 3\n}\n",
+      [("UnknownFieldForType", "value")],
+    ),
+    (
       b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    value: 3\n    label: 7\n  }\n}\n",
-      b"open app.library\npub fn run() -> Box<I32> {\n  Box::{\n    label: 7\n  }\n}\n",
+      [("MissingConstructionField", "value"), ("UnknownConstructionField", "value")],
+    ),
+    (
+      b"open app.library\npub fn run(value: I32) -> Box<I32> {\n  Box::{\n    label: 7\n  }\n}\n",
+      [("MissingConstructionField", "value")],
+    ),
+    (
       b"open app.library\npub fn run() -> Box<I32> {\n  {\n    value: 3\n    label: 7\n  }\n}\n",
+      [("MissingConstructionField", "value"), ("UnknownConstructionField", "value")],
+    ),
+    (
       b"import app.library as @lib\npub fn run(box: @lib.Box<I32>) -> I32 {\n  box.value\n}\n",
+      [("UnknownFieldForType", "value")],
+    ),
+    (
       b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  match box {\n    Box {\n      value: value\n      ...\n    } => value\n  }\n}\n",
-    ] {
+      [("UnknownPatternField", "value")],
+    ),
+  ]
+  for (consumer, expected) in cases {
     let (program, frozen, _, names, inferred) = imported_semantic_program(
       consumer,
       private_field_library(),
@@ -25,7 +68,10 @@ test "imported private fields reject reads writes construction and patterns" {
     }
     assert_eq(frozen.import_diagnostics, [])
     assert_eq(names.diagnostics, [])
-    assert_true(inferred.diagnostics.length() > 0)
+    assert_eq(
+      private_field_diagnostic_names(program.modules[0], inferred.diagnostics),
+      expected,
+    )
     assert_true(frozen.interfaces[1].fields[0].module_private)
     assert_false(frozen.interfaces[1].fields[1].module_private)
   }
@@ -64,7 +110,10 @@ test "frozen interface cache preserves private field source rules" {
   let inferred = infer_module_bodies_with_imports(
     collected, resolved, imports, names,
   )
-  assert_true(inferred.diagnostics.length() > 0)
+  assert_eq(
+    private_field_diagnostic_names(collected, inferred.diagnostics),
+    [("UnknownFieldForType", "value")],
+  )
 }
 
 ///|
@@ -88,6 +137,24 @@ test "imported private fields can be ignored by a rest pattern" {
   assert_eq(frozen.import_diagnostics, [])
   assert_eq(names.diagnostics, [])
   assert_eq(inferred.diagnostics, [])
+}
+
+///|
+test "imported patterns without rest diagnose the omitted private field" {
+  let (program, frozen, _, names, inferred) = imported_semantic_program(
+    b"open app.library\npub fn run(box: Box<I32>) -> I32 {\n  match box {\n    Box {\n      label\n    } => label\n  }\n}\n",
+    private_field_library(),
+  )
+  assert_eq(program.diagnostics, [])
+  for module_ in program.modules {
+    assert_eq(module_.diagnostics, [])
+  }
+  assert_eq(frozen.import_diagnostics, [])
+  assert_eq(names.diagnostics, [])
+  assert_eq(
+    private_field_diagnostic_names(program.modules[0], inferred.diagnostics),
+    [("MissingImportedPatternField", "value")],
+  )
 }
 
 ///|
