@@ -1,0 +1,177 @@
+open dew.std.array
+open dew.std.option
+
+fn self_host_index_test_functions(length: U32) -> Array<SelfHostPlannedProgramWasmFunction> {
+  let functions = []
+  while 0u32 {
+    index if index < length => {
+      functions.push({
+        module_index: index % 3u32
+        fragment_index: index * 2u32
+        declaration: u32_into_u64(index) + 1u64
+        specialization: if index % 3u32 == 0u32 {
+          4294967295u32
+        } else {
+          index
+        }
+        lambda: if index % 3u32 == 2u32 {
+          index
+        } else {
+          4294967295u32
+        }
+        function_index: index
+        imported: index % 4u32 == 0u32
+      })
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  functions
+}
+
+fn self_host_index_test_scan_function(
+  functions: Array<SelfHostPlannedProgramWasmFunction>,
+  index: U32,
+) -> Option<SelfHostPlannedProgramWasmFunction> {
+  for function_ in functions {
+    if function_.function_index == index {
+      return Some(function_)
+    }
+  }
+  None
+}
+
+test "index lookups preserve all linked function fields" {
+  for length in [0u32, 1u32, 17u32, 2048u32] {
+    let functions = self_host_index_test_functions(length)
+    while 0u32 {
+      index if index < length => {
+        match self_host_index_test_scan_function(functions, index) {
+          Some(expected) => {
+            let actual = self_host_body_linked_function_at(functions, index)
+            assert(actual.module_index == expected.module_index, "module owner")
+            assert(actual.fragment_index == expected.fragment_index, "fragment owner")
+            assert(actual.declaration == expected.declaration, "declaration")
+            assert(actual.specialization == expected.specialization, "specialization")
+            assert(actual.lambda == expected.lambda, "lambda identity")
+            assert(actual.function_index == expected.function_index, "logical function slot")
+            assert(actual.imported == expected.imported, "import class")
+          }
+          None => assert(false, "scan function is present")
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+  }
+}
+
+test "ARN-106 index lookups reject a moved linked function" expect_trap "unreachable" {
+  let functions = self_host_index_test_functions(2u32)
+  functions[0u32] = functions[1u32]
+  let _ = self_host_body_linked_function_at(functions, 0u32)
+}
+
+test "index lookups preserve missing function query results" {
+  let collected = self_host_collect_program_manifest(5100u64, {
+    modules: [{
+      path: "app.main"
+      files: [{
+        path: "main.dew"
+        source: b"pub fn run() -> I32 {\n  7\n}\n"
+        test_only: false
+      }]
+    }]
+  })
+  assert(collected.diagnostics.length() == 0u32, "manifest is valid")
+  assert(collected.modules.at(0u32).diagnostic_count() == 0u32, "source is valid")
+  let lowering = self_host_plan_program_lowering(
+    self_host_freeze_program_signature_interfaces(collected),
+  )
+  for module_ in lowering.modules {
+    assert(module_.inferred.diagnostics.length() == 0u32, "inference is valid")
+  }
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(
+      self_host_plan_program_specialization(lowering, false),
+    ), false,
+  )
+  assert(link.diagnostics.length() == 0u32, "link is valid")
+  assert(link.functions.length() > 0u32, "fixture contains a function")
+  assert(self_host_body_function_result_carrier(link, 0u32) is I32BodyCarrier,
+    "valid result retains its scalar carrier")
+  for index in [link.functions.length(), 4294967295u32] {
+    assert(self_host_body_function_result_carrier(link, index) is UnresolvedBodyCarrier,
+      "missing result carrier")
+    assert(self_host_body_function_result_nominal_owner(link, index) == 0u64,
+      "missing result owner")
+    assert(self_host_body_function_parameter_carrier(link, index, 0u32) is UnresolvedBodyCarrier,
+      "missing parameter carrier")
+    assert(self_host_body_function_declaration(link, index) == 0u64,
+      "missing declaration")
+  }
+}
+
+fn self_host_index_test_scan_declaration(
+  functions: Array<SelfHostPlannedProgramWasmFunction>,
+  index: U32,
+) -> U64 {
+  for function_ in functions {
+    if self_host_u32_equal(function_.function_index, index) {
+      return function_.declaration
+    }
+  }
+  0u64
+}
+
+fn self_host_index_test_benchmark_scan(length: U32) -> Unit {
+  let functions = self_host_index_test_functions(length)
+  let mut checksum = 0u64
+  while 0u32 {
+    iteration if iteration < 8192u32 => {
+      let index = (iteration * 17u32) % length
+      checksum = checksum + self_host_index_test_scan_declaration(functions, index)
+      continue iteration + 1u32
+    }
+    _ => break ()
+  }
+  assert(checksum == 4096u64 * (u32_into_u64(length) + 1u64), "scan checksum")
+}
+
+fn self_host_index_test_benchmark_direct(length: U32) -> Unit {
+  let functions = self_host_index_test_functions(length)
+  let mut checksum = 0u64
+  while 0u32 {
+    iteration if iteration < 8192u32 => {
+      let index = (iteration * 17u32) % length
+      let declaration = if index >= functions.length() {
+        0u64
+      } else {
+        self_host_body_linked_function_at(functions, index).declaration
+      }
+      checksum = checksum + declaration
+      continue iteration + 1u32
+    }
+    _ => break ()
+  }
+  assert(checksum == 4096u64 * (u32_into_u64(length) + 1u64), "direct checksum")
+}
+
+test "index lookup benchmark scan 128" {
+  self_host_index_test_benchmark_scan(128u32)
+}
+test "index lookup benchmark direct 128" {
+  self_host_index_test_benchmark_direct(128u32)
+}
+test "index lookup benchmark scan 512" {
+  self_host_index_test_benchmark_scan(512u32)
+}
+test "index lookup benchmark direct 512" {
+  self_host_index_test_benchmark_direct(512u32)
+}
+test "index lookup benchmark scan 2048" {
+  self_host_index_test_benchmark_scan(2048u32)
+}
+test "index lookup benchmark direct 2048" {
+  self_host_index_test_benchmark_direct(2048u32)
+}

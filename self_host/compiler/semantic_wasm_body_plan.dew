@@ -951,36 +951,60 @@ fn self_host_body_field_value_nominal_owner(
   }
 }
 
+fn self_host_body_linked_function_at(
+  functions: Array<SelfHostPlannedProgramWasmFunction>,
+  logical_function_index: U32,
+) -> SelfHostPlannedProgramWasmFunction {
+  if logical_function_index >= functions.length() {
+    let _ = self_host_assert_compiler_invariant(false,
+      "physical body function is outside the linked function table")
+  }
+  let function_ = functions[logical_function_index]
+  if function_.function_index != logical_function_index {
+    let _ = self_host_assert_compiler_invariant_with_failure(false, {
+      code: 106u32
+      phase: 5u32
+      module_id: self_host_semantic_id_module(function_.declaration)
+      declaration: function_.declaration
+      body: 0u64
+      expression: 4294967295u32
+      expected: u32_into_u64(logical_function_index)
+      actual: u32_into_u64(function_.function_index)
+      detail: u32_into_u64(function_.fragment_index)
+    }, "physical body function does not match its linked function slot")
+  }
+  function_
+}
+
 fn self_host_body_function_result_carrier(
   link: SelfHostPlannedProgramWasmGCLink,
   logical_function_index: U32,
 ) -> SelfHostWasmBodyCarrier {
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical_function_index) {
-      let module_ = self_host_body_fragment_module(
-        link,
-        function_.module_index,
-      )
-      let fragment = self_host_body_function_fragment(
-        module_,
-        function_.fragment_index,
-      )
-      if self_host_u32_equal(fragment.results.length, 0u32) {
-        return UnitBodyCarrier
-      }
-      if self_host_u32_equal(fragment.results.length, 1u32) &&
-        self_host_u32_greater(
-          module_.function_value_types.length(),
-          fragment.results.start,
-        ) {
-        return self_host_body_carrier_from_value_type(
-          self_host_body_function_value_type(module_, fragment.results.start),
-        )
-      }
-      return UnresolvedBodyCarrier
-    }
+  if logical_function_index >= link.functions.length() {
+    return UnresolvedBodyCarrier
   }
-  UnresolvedBodyCarrier
+  let function_ = self_host_body_linked_function_at(link.functions, logical_function_index)
+  let module_ = self_host_body_fragment_module(
+    link,
+    function_.module_index,
+  )
+  let fragment = self_host_body_function_fragment(
+    module_,
+    function_.fragment_index,
+  )
+  if self_host_u32_equal(fragment.results.length, 0u32) {
+    return UnitBodyCarrier
+  }
+  if self_host_u32_equal(fragment.results.length, 1u32) &&
+    self_host_u32_greater(
+      module_.function_value_types.length(),
+      fragment.results.start,
+    ) {
+    return self_host_body_carrier_from_value_type(
+      self_host_body_function_value_type(module_, fragment.results.start),
+    )
+  }
+  return UnresolvedBodyCarrier
 }
 
 fn self_host_body_declaration_result_nominal_owner(
@@ -1013,25 +1037,26 @@ fn self_host_body_function_result_nominal_owner(
   link: SelfHostPlannedProgramWasmGCLink,
   logical_function_index: U32,
 ) -> U64 {
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical_function_index) &&
-      self_host_u32_greater(
-        link.fragments.specialization.lowering.modules.length(),
-        function_.module_index,
-      ) {
-      let module_ = link.fragments.specialization.lowering.modules[
-        function_.module_index
-      ]
-      match self_host_program_specialization_callable(
+  if logical_function_index >= link.functions.length() {
+    return 0u64
+  }
+  let function_ = self_host_body_linked_function_at(link.functions, logical_function_index)
+  if self_host_u32_greater(
+      link.fragments.specialization.lowering.modules.length(),
+      function_.module_index,
+    ) {
+    let module_ = link.fragments.specialization.lowering.modules[
+      function_.module_index
+    ]
+    match self_host_program_specialization_callable(
+      module_,
+      function_.declaration,
+    ) {
+      Some(callable) => return self_host_linked_resolved_nominal_declaration(
         module_,
-        function_.declaration,
-      ) {
-        Some(callable) => return self_host_linked_resolved_nominal_declaration(
-          module_,
-          callable.result_type,
-        )
-        None => return 0u64
-      }
+        callable.result_type,
+      )
+      None => return 0u64
     }
   }
   0u64
@@ -1042,25 +1067,24 @@ fn self_host_body_function_parameter_carrier(
   logical_function_index: U32,
   parameter: U32,
 ) -> SelfHostWasmBodyCarrier {
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical_function_index) {
-      let module_ = self_host_body_fragment_module(link, function_.module_index)
-      let fragment = self_host_body_function_fragment(
-        module_,
-        function_.fragment_index,
+  if logical_function_index >= link.functions.length() {
+    return UnresolvedBodyCarrier
+  }
+  let function_ = self_host_body_linked_function_at(link.functions, logical_function_index)
+  let module_ = self_host_body_fragment_module(link, function_.module_index)
+  let fragment = self_host_body_function_fragment(
+    module_,
+    function_.fragment_index,
+  )
+  if parameter < fragment.parameters.length {
+    let index = self_host_u32_add(fragment.parameters.start, parameter)
+    if self_host_u32_greater(module_.function_value_types.length(), index) {
+      return self_host_body_carrier_from_value_type(
+        self_host_body_function_value_type(module_, index),
       )
-      if parameter < fragment.parameters.length {
-        let index = self_host_u32_add(fragment.parameters.start, parameter)
-        if self_host_u32_greater(module_.function_value_types.length(), index) {
-          return self_host_body_carrier_from_value_type(
-            self_host_body_function_value_type(module_, index),
-          )
-        }
-      }
-      return UnresolvedBodyCarrier
     }
   }
-  UnresolvedBodyCarrier
+  return UnresolvedBodyCarrier
 }
 
 fn self_host_body_call_function(
@@ -1116,16 +1140,11 @@ fn self_host_body_function_declaration(
   link: SelfHostPlannedProgramWasmGCLink,
   function_index: U32,
 ) -> U64 {
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, function_index) {
-      return function_.declaration
-    }
+  if function_index >= link.functions.length() {
+    return 0u64
   }
-  0u64
+  self_host_body_linked_function_at(link.functions, function_index).declaration
 }
-
-
-
 
 
 fn self_host_body_local_parameter_nominal_owner(

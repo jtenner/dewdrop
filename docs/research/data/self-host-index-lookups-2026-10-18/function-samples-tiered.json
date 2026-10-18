@@ -1,0 +1,361 @@
+{
+  "wasm_sha256": "851acbd78b99df8ab7e21b6831cc03673eff9972990b04f9bdd368bdc8481c8b",
+  "wasm_bytes": 2420720,
+  "node": "v24.21.0",
+  "v8": "13.6.233.17-node.53",
+  "environment": {
+    "platform": "linux",
+    "release": "6.12.111+deb13-amd64",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 7 8845HS w/ Radeon 780M Graphics"
+  },
+  "runs": 7,
+  "warmup_runs_per_case": 3,
+  "queries_per_sample": 8192,
+  "fixture_construction_included": true,
+  "memory_limits": "V8 heap sizes and process RSS include runtime overhead. Heap deltas are not allocation totals; collection can occur during a sample.",
+  "cases": [
+    {
+      "mode": "scan",
+      "size": 128,
+      "samples": [
+        {
+          "milliseconds": 1.7491850000000042,
+          "heap_before_bytes": 6573256,
+          "heap_after_bytes": 7023208,
+          "heap_after_gc_bytes": 6568328,
+          "rss_bytes": 77033472
+        },
+        {
+          "milliseconds": 1.7627509999999944,
+          "heap_before_bytes": 6567152,
+          "heap_after_bytes": 7014744,
+          "heap_after_gc_bytes": 6567504,
+          "rss_bytes": 77033472
+        },
+        {
+          "milliseconds": 1.7839120000000008,
+          "heap_before_bytes": 6567488,
+          "heap_after_bytes": 7015080,
+          "heap_after_gc_bytes": 6567648,
+          "rss_bytes": 77033472
+        },
+        {
+          "milliseconds": 1.7562790000000064,
+          "heap_before_bytes": 6568152,
+          "heap_after_bytes": 6994728,
+          "heap_after_gc_bytes": 6569848,
+          "rss_bytes": 77033472
+        },
+        {
+          "milliseconds": 1.782418000000007,
+          "heap_before_bytes": 6569832,
+          "heap_after_bytes": 7012072,
+          "heap_after_gc_bytes": 6570392,
+          "rss_bytes": 77033472
+        },
+        {
+          "milliseconds": 1.8103119999999961,
+          "heap_before_bytes": 6570376,
+          "heap_after_bytes": 6989664,
+          "heap_after_gc_bytes": 6570536,
+          "rss_bytes": 77033472
+        },
+        {
+          "milliseconds": 1.8899339999999967,
+          "heap_before_bytes": 6570520,
+          "heap_after_bytes": 6989808,
+          "heap_after_gc_bytes": 6570680,
+          "rss_bytes": 77033472
+        }
+      ],
+      "median_milliseconds": 1.782418000000007,
+      "peak_rss_kib": 75744
+    },
+    {
+      "mode": "direct",
+      "size": 128,
+      "samples": [
+        {
+          "milliseconds": 0.08033299999999599,
+          "heap_before_bytes": 6573104,
+          "heap_after_bytes": 6601680,
+          "heap_after_gc_bytes": 6568248,
+          "rss_bytes": 73535488
+        },
+        {
+          "milliseconds": 0.07944100000000276,
+          "heap_before_bytes": 6567072,
+          "heap_after_bytes": 6593816,
+          "heap_after_gc_bytes": 6567424,
+          "rss_bytes": 73535488
+        },
+        {
+          "milliseconds": 0.08515200000000078,
+          "heap_before_bytes": 6567376,
+          "heap_after_bytes": 6594120,
+          "heap_after_gc_bytes": 6567536,
+          "rss_bytes": 73535488
+        },
+        {
+          "milliseconds": 0.020648999999998807,
+          "heap_before_bytes": 6568040,
+          "heap_after_bytes": 6582408,
+          "heap_after_gc_bytes": 6569768,
+          "rss_bytes": 73535488
+        },
+        {
+          "milliseconds": 0.02098999999999762,
+          "heap_before_bytes": 6569752,
+          "heap_after_bytes": 6592600,
+          "heap_after_gc_bytes": 6570312,
+          "rss_bytes": 73535488
+        },
+        {
+          "milliseconds": 0.05065600000000359,
+          "heap_before_bytes": 6570296,
+          "heap_after_bytes": 6579536,
+          "heap_after_gc_bytes": 6570456,
+          "rss_bytes": 73535488
+        },
+        {
+          "milliseconds": 0.02096900000000801,
+          "heap_before_bytes": 6570440,
+          "heap_after_bytes": 6579680,
+          "heap_after_gc_bytes": 6570600,
+          "rss_bytes": 73535488
+        }
+      ],
+      "median_milliseconds": 0.05065600000000359,
+      "peak_rss_kib": 72724
+    },
+    {
+      "mode": "scan",
+      "size": 512,
+      "samples": [
+        {
+          "milliseconds": 6.51239799999999,
+          "heap_before_bytes": 6573184,
+          "heap_after_bytes": 7097664,
+          "heap_after_gc_bytes": 6568256,
+          "rss_bytes": 75694080
+        },
+        {
+          "milliseconds": 6.808662999999996,
+          "heap_before_bytes": 6567048,
+          "heap_after_bytes": 7089232,
+          "heap_after_gc_bytes": 6567432,
+          "rss_bytes": 75694080
+        },
+        {
+          "milliseconds": 6.8625359999999915,
+          "heap_before_bytes": 6567384,
+          "heap_after_bytes": 7089568,
+          "heap_after_gc_bytes": 6567544,
+          "rss_bytes": 75694080
+        },
+        {
+          "milliseconds": 6.858559,
+          "heap_before_bytes": 6568048,
+          "heap_after_bytes": 7069184,
+          "heap_after_gc_bytes": 6569776,
+          "rss_bytes": 75694080
+        },
+        {
+          "milliseconds": 6.905187999999995,
+          "heap_before_bytes": 6569760,
+          "heap_after_bytes": 7086528,
+          "heap_after_gc_bytes": 6570320,
+          "rss_bytes": 75694080
+        },
+        {
+          "milliseconds": 7.23080800000001,
+          "heap_before_bytes": 6570304,
+          "heap_after_bytes": 7064152,
+          "heap_after_gc_bytes": 6570464,
+          "rss_bytes": 75825152
+        },
+        {
+          "milliseconds": 6.650372000000004,
+          "heap_before_bytes": 6570448,
+          "heap_after_bytes": 7064296,
+          "heap_after_gc_bytes": 6570608,
+          "rss_bytes": 75825152
+        }
+      ],
+      "median_milliseconds": 6.858559,
+      "peak_rss_kib": 74420
+    },
+    {
+      "mode": "direct",
+      "size": 512,
+      "samples": [
+        {
+          "milliseconds": 0.08829899999999924,
+          "heap_before_bytes": 6572896,
+          "heap_after_bytes": 6626096,
+          "heap_after_gc_bytes": 6568424,
+          "rss_bytes": 72642560
+        },
+        {
+          "milliseconds": 0.08420999999999879,
+          "heap_before_bytes": 6567184,
+          "heap_after_bytes": 6618552,
+          "heap_after_gc_bytes": 6567568,
+          "rss_bytes": 72642560
+        },
+        {
+          "milliseconds": 0.09332799999999963,
+          "heap_before_bytes": 6567520,
+          "heap_after_bytes": 6618888,
+          "heap_after_gc_bytes": 6567680,
+          "rss_bytes": 72773632
+        },
+        {
+          "milliseconds": 0.026870999999999867,
+          "heap_before_bytes": 6568184,
+          "heap_after_bytes": 6607176,
+          "heap_after_gc_bytes": 6569912,
+          "rss_bytes": 72773632
+        },
+        {
+          "milliseconds": 0.026540999999994597,
+          "heap_before_bytes": 6569896,
+          "heap_after_bytes": 6617368,
+          "heap_after_gc_bytes": 6570456,
+          "rss_bytes": 72773632
+        },
+        {
+          "milliseconds": 0.026299999999999102,
+          "heap_before_bytes": 6570440,
+          "heap_after_bytes": 6604304,
+          "heap_after_gc_bytes": 6570600,
+          "rss_bytes": 72773632
+        },
+        {
+          "milliseconds": 0.04169900000000837,
+          "heap_before_bytes": 6570584,
+          "heap_after_bytes": 6604448,
+          "heap_after_gc_bytes": 6570744,
+          "rss_bytes": 72773632
+        }
+      ],
+      "median_milliseconds": 0.04169900000000837,
+      "peak_rss_kib": 71440
+    },
+    {
+      "mode": "scan",
+      "size": 2048,
+      "samples": [
+        {
+          "milliseconds": 27.005347,
+          "heap_before_bytes": 6573184,
+          "heap_after_bytes": 7393712,
+          "heap_after_gc_bytes": 6568256,
+          "rss_bytes": 81539072
+        },
+        {
+          "milliseconds": 25.719064000000003,
+          "heap_before_bytes": 6567080,
+          "heap_after_bytes": 7385216,
+          "heap_after_gc_bytes": 6567432,
+          "rss_bytes": 81539072
+        },
+        {
+          "milliseconds": 25.695679000000013,
+          "heap_before_bytes": 6567416,
+          "heap_after_bytes": 7385552,
+          "heap_after_gc_bytes": 6567544,
+          "rss_bytes": 81539072
+        },
+        {
+          "milliseconds": 25.925948000000005,
+          "heap_before_bytes": 6568048,
+          "heap_after_bytes": 7365200,
+          "heap_after_gc_bytes": 6569776,
+          "rss_bytes": 81539072
+        },
+        {
+          "milliseconds": 26.28070500000001,
+          "heap_before_bytes": 6569760,
+          "heap_after_bytes": 7382512,
+          "heap_after_gc_bytes": 6570320,
+          "rss_bytes": 81539072
+        },
+        {
+          "milliseconds": 26.344304000000022,
+          "heap_before_bytes": 6570304,
+          "heap_after_bytes": 7360136,
+          "heap_after_gc_bytes": 6570464,
+          "rss_bytes": 81670144
+        },
+        {
+          "milliseconds": 24.73481700000002,
+          "heap_before_bytes": 6570448,
+          "heap_after_bytes": 7360280,
+          "heap_after_gc_bytes": 6570608,
+          "rss_bytes": 81670144
+        }
+      ],
+      "median_milliseconds": 25.925948000000005,
+      "peak_rss_kib": 79756
+    },
+    {
+      "mode": "direct",
+      "size": 2048,
+      "samples": [
+        {
+          "milliseconds": 0.10703399999999874,
+          "heap_before_bytes": 6573248,
+          "heap_after_bytes": 6724800,
+          "heap_after_gc_bytes": 6568704,
+          "rss_bytes": 72957952
+        },
+        {
+          "milliseconds": 0.10121300000000133,
+          "heap_before_bytes": 6567464,
+          "heap_after_bytes": 6717184,
+          "heap_after_gc_bytes": 6567848,
+          "rss_bytes": 72957952
+        },
+        {
+          "milliseconds": 0.1099400000000017,
+          "heap_before_bytes": 6567800,
+          "heap_after_bytes": 6717520,
+          "heap_after_gc_bytes": 6567960,
+          "rss_bytes": 73089024
+        },
+        {
+          "milliseconds": 0.05071699999999879,
+          "heap_before_bytes": 6568464,
+          "heap_after_bytes": 6705808,
+          "heap_after_gc_bytes": 6570192,
+          "rss_bytes": 73089024
+        },
+        {
+          "milliseconds": 0.05050699999999608,
+          "heap_before_bytes": 6570176,
+          "heap_after_bytes": 6716000,
+          "heap_after_gc_bytes": 6570736,
+          "rss_bytes": 73089024
+        },
+        {
+          "milliseconds": 0.05034599999999756,
+          "heap_before_bytes": 6570720,
+          "heap_after_bytes": 6702936,
+          "heap_after_gc_bytes": 6570880,
+          "rss_bytes": 73089024
+        },
+        {
+          "milliseconds": 0.0503659999999968,
+          "heap_before_bytes": 6570864,
+          "heap_after_bytes": 6703080,
+          "heap_after_gc_bytes": 6571024,
+          "rss_bytes": 73089024
+        }
+      ],
+      "median_milliseconds": 0.05071699999999879,
+      "peak_rss_kib": 71740
+    }
+  ]
+}
