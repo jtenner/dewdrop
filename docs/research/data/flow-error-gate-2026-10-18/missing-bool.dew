@@ -1,0 +1,5 @@
+pub fn main() -> I32 {
+  match false {
+    true => 42
+  }
+}

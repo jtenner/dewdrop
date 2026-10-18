@@ -61,4 +61,22 @@ runs prove behavior; they do not measure a small runtime or memory change.
 The final source also checks error text. Its results are in
 `final-generate.json`, `final-link.json`, and `final-run.json`.
 
-A new bootstrap compiler C must still be built and tested by the main task.
+The final clean bootstrap produced byte-identical compilers B and C. Compiler
+C SHA-256 is `e7211b7fa9daf63b820717fe9b8b90ae0fb8668f003e32c1587951941a3e01ab`.
+The final source test set passed all 1,371 tests in the main validation lane.
+
+The [repeatable final probe](data/flow-error-gate-2026-10-18/run.py) uses this
+fresh C and its matching A request. It preserves the request tail and standard
+module sources. Both the original missing Boolean match and a called generic
+function with only a guarded wildcard return status 1. Both print
+`source flow error: non-exhaustive match` with module, expression, and source
+offset. Neither writes an output module. The [record](data/flow-error-gate-2026-10-18/validation.json)
+contains commands, compiler/request/source hashes, times, and exact error text.
+Run it from the repository root:
+
+```sh
+python3 docs/research/data/flow-error-gate-2026-10-18/run.py .tmp/self-host-bootstrap/c/compiler.wasm .tmp/self-host-bootstrap/a/request.bin
+```
+
+This probe changes only a temporary compiler copy to export its memory for the
+host runner. The record includes both compiler file hashes.

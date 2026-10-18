@@ -1,0 +1,72 @@
+{
+  "compiler": "/home/dev/Projects/dewdrop/.tmp/self-host-bootstrap/c/compiler.wasm",
+  "compiler_sha256": "e7211b7fa9daf63b820717fe9b8b90ae0fb8668f003e32c1587951941a3e01ab",
+  "template_sha256": "1162bdd682a7204b1b1d5ec8c055ccf4c2c2501052f95415a43c3c38d3995a9b",
+  "host_compiler_sha256": "91b2d3979da099eb73f3e5fac573f4ed28b8f9aff09ce2a71e1f5781d0d22d8e",
+  "harness_sha256": "4a812753177b954b6ce6fd86f9ac3f4a18c360fadc2520eaae5c66119a02ba25",
+  "request_codec_sha256": "af94ba0d1416326b57c5e889420b6d197042560af4265eeffa7bae45c635b6d9",
+  "source_sha256": {
+    "self_host/compiler/semantic_body_flow.dew": "239c9c0f4b55fb21e94d2cf04e468fb2a40590ccfbf111c815d74aadc62ca778",
+    "self_host/compiler/semantic_program_lowering.dew": "4d4695418366df067ca06dafe6131fac1554674ce5345508476766cfd479324e"
+  },
+  "results": [
+    {
+      "command": [
+        "mise",
+        "exec",
+        "wasm-tools@1.262.0",
+        "--",
+        "python3",
+        "/home/dev/Projects/dewdrop/tools/export-wasm-memory.py",
+        "/home/dev/Projects/dewdrop/.tmp/self-host-bootstrap/c/compiler.wasm",
+        "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final/compiler-c-memory.wasm"
+      ],
+      "cwd": "/home/dev/Projects/dewdrop",
+      "wall_seconds": 0.9805066219996661,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "node",
+        "--stack-size=65500",
+        "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+        "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final/compiler-c-memory.wasm",
+        "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final/missing-bool-request.bin"
+      ],
+      "cwd": "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final",
+      "wall_seconds": 1.0687688900070498,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: source flow error: non-exhaustive match module=7230 expression=3 offset=25\n",
+      "case": "missing-bool",
+      "source_sha256": "9a370535178be937388644c4334b48e0a0b4e6757cd7709fd51b4cb32b7b28d9",
+      "request_sha256": "841e60279dcf5cba3fbe6d52ac287cb94c1c9c794538688b0a45adf70097140d",
+      "output_exists": false,
+      "flow_error_kind": "non-exhaustive match",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "--stack-size=65500",
+        "/home/dev/Projects/dewdrop/tools/run-dew-facet.mjs",
+        "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final/compiler-c-memory.wasm",
+        "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final/generic-guarded-request.bin"
+      ],
+      "cwd": "/tmp/dewdrop-review-2026-10-18/semantics/flow-error-review/fresh-final",
+      "wall_seconds": 1.07021080199047,
+      "status": 1,
+      "stdout": "",
+      "stderr": "self-host smoke: source flow error: non-exhaustive match module=7230 expression=3 offset=31\n",
+      "case": "generic-guarded",
+      "source_sha256": "16a846a758728e8ae9869458db2a54592dbe9a4cffeb202c34f1d116bbc35373",
+      "request_sha256": "6db9e767f724118c8ebd46214b06b156e7fe6a70e3b9f17f34a4eeb1ad7f6f6e",
+      "output_exists": false,
+      "flow_error_kind": "non-exhaustive match",
+      "passed": true
+    }
+  ],
+  "passed": true
+}
