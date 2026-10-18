@@ -1104,6 +1104,54 @@ fn self_host_decimal_value(
   self_host_round_decimal_exact(source, start, end, exponent, approximate)
 }
 
+fn self_host_round_f32_decimal(
+  source: Bytes,
+  start: U32,
+  end: U32,
+  exponent: SelfHostExponentScan,
+  value: F64,
+) -> F32 {
+  let narrowed = self_host_f64_to_f32(value)
+  if (f64_to_bits(value) & 268435455u64) != 0u64 {
+    return narrowed
+  }
+  let bits = f32_to_bits(narrowed)
+  let exact = f32_into_f64(narrowed)
+  if value == exact || f64_is_infinite(value) {
+    narrowed
+  } else {
+    let lower_bits = if exact > value {
+      bits - 1u32
+    } else {
+      bits
+    }
+    let lower = f32_into_f64(f32_from_bits(lower_bits))
+    let upper = if lower_bits == 2139095039u32 {
+      f64_from_bits(5183643171103440896u64)
+    } else {
+      f32_into_f64(f32_from_bits(lower_bits + 1u32))
+    }
+    let midpoint = (lower + upper) * 0.5
+    if value != midpoint {
+      narrowed
+    } else {
+      let decimal_info = self_host_decimal_exponent(source, start, end, exponent)
+      let decimal = self_host_big_decimal(source, start, end)
+      let dyadic = self_host_f64_dyadic(f64_to_bits(midpoint))
+      let comparison = self_host_decimal_compare_dyadic(
+        decimal, decimal_info.exponent, dyadic.significand, dyadic.exponent,
+      )
+      if comparison < 0i32 {
+        f32_from_bits(lower_bits)
+      } else if comparison > 0i32 {
+        f32_from_bits(lower_bits + 1u32)
+      } else {
+        narrowed
+      }
+    }
+  }
+}
+
 fn self_host_scan_exponent(tokenizer: SelfHostTokenizer) -> SelfHostExponentScan {
   if tokenizer.position >= tokenizer.source.byte_length() {
     {
@@ -1325,7 +1373,7 @@ fn self_host_scan_number(
     }
     if valid {
       if width == 32u32 {
-        let narrowed = self_host_f64_to_f32(value)
+        let narrowed = self_host_round_f32_decimal(tokenizer.source, start, mantissa_end, exponent, value)
         self_host_tokenizer_emit(tokenizer, output, F32(narrowed), offset)
       } else {
         self_host_tokenizer_emit(tokenizer, output, F64(value), offset)

@@ -510,7 +510,7 @@ fn Tokenizer::scan_number(
     _ => return self.emit(Error(InvalidFloat(text)), offset)
   }
   if width == 32 {
-    self.emit(F32(Float::from_double(value)), offset)
+    self.emit(F32(round_f32_decimal(text, value)), offset)
   } else {
     self.emit(F64(value), offset)
   }
