@@ -49,3 +49,87 @@ test "Result carries success and error values" {
     "Result error payload",
   )
 }
+
+fn absent_u32() -> Option<U32> {
+  Option::None
+}
+
+test "Option maps between scalar and reference values" {
+  assert(option_u32_value().map(fn(value: U32) -> String {
+    if value == 42u32 {
+      "mapped"
+    } else {
+      "wrong"
+    }
+  }) is Option::Some("mapped"), "Option map to reference")
+  assert(option_string_value().map(fn(value: String) -> U32 {
+    value.byte_length()
+  }) is Option::Some(5u32), "Option map to scalar")
+}
+
+test "Option skips absent callbacks and lazy defaults run once" {
+  let mut calls = 0u32
+  let mapped = absent_u32().map(fn(value: U32) -> U32 {
+    calls = calls + 1u32
+    value
+  })
+  assert(mapped is Option::None && calls == 0u32, "None evaluated map")
+  let present = option_u32_value().unwrap_or_else(fn() -> U32 {
+    calls = calls + 1u32
+    9u32
+  })
+  assert(present == 42u32 && calls == 0u32, "Some evaluated default")
+  let missing = absent_u32().unwrap_or_else(fn() -> U32 {
+    calls = calls + 1u32
+    9u32
+  })
+  assert(missing == 9u32 && calls == 1u32, "None default count")
+  assert(option_u32_value().and_then(fn(value: U32) -> Option<String> {
+    calls = calls + 1u32
+    Option::Some("bound")
+  }) is Option::Some("bound") && calls == 2u32, "Option and_then count")
+  assert(absent_u32().and_then(fn(value: U32) -> Option<String> {
+    calls = calls + 1u32
+    Option::Some("wrong")
+  }) is Option::None && calls == 2u32, "None evaluated and_then")
+}
+
+test "Result maps success and error types independently" {
+  assert(result_ok_value().map(fn(value: U32) -> String {
+    "ok"
+  }) is Result::Ok("ok"), "Result map to reference")
+  assert(result_error_value().map_err(fn(error: String) -> U32 {
+    error.byte_length()
+  }) is Result::Err(3u32), "Result map_err to scalar")
+  assert(result_ok_value().map_err(fn(error: String) -> U32 {
+    error.byte_length()
+  }) is Result::Ok(7u32), "map_err changed success")
+}
+
+test "Result callbacks preserve branches and execute once" {
+  let mut calls = 0u32
+  assert(result_error_value().map(fn(value: U32) -> Bool {
+    calls = calls + 1u32
+    true
+  }) is Result::Err("bad") && calls == 0u32, "Err evaluated map")
+  assert(result_ok_value().map_err(fn(error: String) -> U32 {
+    calls = calls + 1u32
+    0u32
+  }) is Result::Ok(7u32) && calls == 0u32, "Ok evaluated map_err")
+  assert(result_ok_value().and_then(fn(value: U32) -> Result<String, String> {
+    calls = calls + 1u32
+    Result::Err("stopped")
+  }) is Result::Err("stopped") && calls == 1u32, "and_then changed error")
+  assert(result_error_value().and_then(fn(value: U32) -> Result<String, String> {
+    calls = calls + 1u32
+    Result::Ok("wrong")
+  }) is Result::Err("bad") && calls == 1u32, "Err evaluated and_then")
+  assert(result_ok_value().unwrap_or_else(fn(error: String) -> U32 {
+    calls = calls + 1u32
+    0u32
+  }) == 7u32 && calls == 1u32, "Ok evaluated lazy default")
+  assert(result_error_value().unwrap_or_else(fn(error: String) -> U32 {
+    calls = calls + 1u32
+    error.byte_length()
+  }) == 3u32 && calls == 2u32, "Err default count")
+}

@@ -14,3 +14,26 @@ pub fn dew_option_u32_from_raw(index: U32) -> Option<U32> {
     Option::Some(index)
   }
 }
+
+impl<t> Option<t> {
+  fn map<u>(self, transform: fn(t) -> u) -> Option<u> {
+    match self {
+      Option::Some(value) => Option::Some(transform(value))
+      Option::None => Option::None
+    }
+  }
+
+  fn and_then<u>(self, transform: fn(t) -> Option<u>) -> Option<u> {
+    match self {
+      Option::Some(value) => transform(value)
+      Option::None => Option::None
+    }
+  }
+
+  fn unwrap_or_else(self, fallback: fn() -> t) -> t {
+    match self {
+      Option::Some(value) => value
+      Option::None => fallback()
+    }
+  }
+}
