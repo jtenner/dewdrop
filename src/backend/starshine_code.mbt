@@ -2649,9 +2649,20 @@ fn starshine_simple_match_pattern_instructions(
       condition.push(@lib.Instruction::i32_const(@lib.I32::new(1)))
       match source.reference {
         @semantic.PatternBindingReference(local_id) => {
-          if local_id < 0 ||
-            local_id >= local_indices.length() ||
-            local_indices[local_id] < 0 {
+          if local_id < 0 || local_id >= local_indices.length() {
+            return Err(InvalidLocal(body.body, local_id))
+          }
+          let local_info = lowering.locals[body.locals.start + local_id]
+          let local_shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            local_info.type_,
+            local_info.shape,
+          )
+          if local_shape is @semantic.UnitPlannedValueShape {
+            return Ok((condition, bindings))
+          }
+          if local_indices[local_id] < 0 {
             return Err(InvalidLocal(body.body, local_id))
           }
           bindings.push(starshine_match_local_get(scratch_local))

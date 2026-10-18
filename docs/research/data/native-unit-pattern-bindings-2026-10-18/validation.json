@@ -1,0 +1,30 @@
+{
+  "repository_head": "0b584d35a9f023340957daef7921f47406ae252d",
+  "source_sha256": {
+    "src/backend/starshine_code.mbt": "c92e2e58c7cab248187904deaf347123182e3948ca300c7f18ffb5c6b00fa4ed",
+    "src/backend/starshine_erased_pattern_bindings_wbtest.mbt": "9426c4f5e540214ce732feb27354f337da41dcfc8d20605fff2b134f322376ba",
+    "src/backend/starshine_while_wbtest.mbt": "d33a73a2a1c71c11e9bb8af08fa209e982bef49e4b1f0d0aa8988c923740f2bc"
+  },
+  "test_executable": {
+    "path": "/tmp/dewdrop-implementation-2026-10-18/unit-loop-build/native/debug/test/jtenner/dewdrop/backend/backend.whitebox_test.exe",
+    "sha256": "b2bd9f9c20286bfd8c4527a4f6bbb82e63c507539137baa41dcbef8fc9aa902f"
+  },
+  "green_log_sha256": "12e3b57f1a1142b4e68caa4a29847afd5e9e5b3f0b8c10aeb2ab4c393f73d5a3",
+  "red_log_sha256": "e6641dc96ac9abc2459c65920d858c213ccd120afca16bb72ae33cdc53b1c0ec",
+  "tests": [
+    {
+      "file": "src/backend/starshine_erased_pattern_bindings_wbtest.mbt",
+      "count": 2,
+      "passed": 2,
+      "seconds": 7.904
+    },
+    {
+      "file": "src/backend/starshine_while_wbtest.mbt",
+      "count": 7,
+      "passed": 7,
+      "seconds": 2.061
+    }
+  ],
+  "scope": "Unit binding emission and existing while regressions only",
+  "limitation": "Concurrent semantic callback-liveness source identity was not captured at build. This does not establish joint callback-filter validation."
+}
