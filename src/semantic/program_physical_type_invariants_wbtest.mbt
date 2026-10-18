@@ -16,6 +16,23 @@ fn physical_type_test_link() -> PlannedProgramWasmGCLink raise {
 }
 
 ///|
+fn physical_type_source_signature_slot(link : PlannedProgramWasmGCLink) -> Int32 {
+  for slot, signature in link.program_signature_types {
+    if signature.module_index == 0 {
+      match signature.kind {
+        PlannedProgramFunctionSignature(index) =>
+          if link.modules[0].functions[index].declaration ==
+            make_semantic_id(23960UL, 1) {
+            return slot
+          }
+        _ => ()
+      }
+    }
+  }
+  abort("expected the read function's canonical signature")
+}
+
+///|
 test "physical type fragments are valid before mutation" {
   let _ = physical_type_test_link()
 }
@@ -177,6 +194,17 @@ test "a physical type cannot select another in-range linked index" {
   let original = link.module_type_indices[0][0]
   let other = original + 1
   assert_true(other < link.type_count)
+  let mut relocation_detail = 17UL << 32
+  if !link.program_type_groups.is_empty() {
+    let mut node_slot = -1
+    for slot, node in link.program_physical_types {
+      if node.module_index == 0 && node.fragment_index == 0 {
+        node_slot = slot
+      }
+    }
+    assert_true(node_slot >= 0)
+    relocation_detail = (23UL << 32) | node_slot.to_uint64()
+  }
   link.module_type_indices[0][0] = other
   assert_eq(
     verify_program_physical_type_fragments(link),
@@ -189,7 +217,7 @@ test "a physical type cannot select another in-range linked index" {
       expression: 0xffffffffU,
       expected: original.to_uint64(),
       actual: other.to_uint64(),
-      detail: 17UL << 32,
+      detail: relocation_detail,
     }),
   )
 }
@@ -425,9 +453,10 @@ test "canonical signature owners are checked before reads" {
 ///|
 test "canonical signatures require their source function" {
   let link = physical_type_test_link()
-  let original = link.program_signature_types[0]
+  let source_slot = physical_type_source_signature_slot(link)
+  let original = link.program_signature_types[source_slot]
   assert_true(original.kind is PlannedProgramFunctionSignature(_))
-  link.program_signature_types[0] = {
+  link.program_signature_types[source_slot] = {
     ..original,
     kind: PlannedProgramFunctionSignature(-1),
   }
@@ -442,7 +471,7 @@ test "canonical signatures require their source function" {
       expression: 0xffffffffU,
       expected: link.modules[0].functions.length().to_uint64(),
       actual: 0xffffffffUL,
-      detail: 31UL << 32,
+      detail: (31UL << 32) | source_slot.to_uint64(),
     }),
   )
 }
@@ -450,7 +479,7 @@ test "canonical signatures require their source function" {
 ///|
 test "canonical signature physical indices cannot be duplicated" {
   let link = physical_type_test_link()
-  let duplicate = link.program_signature_types[0]
+  let duplicate = link.program_signature_types[physical_type_source_signature_slot(link)]
   let slot = link.program_signature_types.length()
   assert_true(duplicate.kind is PlannedProgramFunctionSignature(_))
   link.program_signature_types.push(duplicate)
@@ -516,7 +545,8 @@ test "erased boxes cannot reuse an existing physical type index" {
 test "the type section cannot omit all source signatures" {
   let link = physical_type_test_link()
   let count = link.type_count
-  assert_eq(link.program_signature_types.length(), 1)
+  let signature_count = link.program_signature_types.length()
+  assert_true(signature_count > 0)
   link.program_signature_types.clear()
   assert_eq(
     verify_program_physical_type_fragments(link),
@@ -528,7 +558,7 @@ test "the type section cannot omit all source signatures" {
       body: 0UL,
       expression: 0xffffffffU,
       expected: count.to_uint64(),
-      actual: (count - 1).to_uint64(),
+      actual: (count - signature_count).to_uint64(),
       detail: 45UL << 32,
     }),
   )
