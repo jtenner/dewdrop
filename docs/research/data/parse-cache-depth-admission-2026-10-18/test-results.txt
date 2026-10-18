@@ -3,7 +3,7 @@ Parser: Total tests: 305, passed: 305, failed: 0.
 Parser elapsed: 0.131 seconds.
 Loader: Total tests: 24, passed: 23, failed: 1.
 Loader elapsed: 7.615 seconds.
-Unrelated failure: planning_cache_wbtest.mbt:120 fragment-cache expected hits 5; actual hits 4.
+Test accounting failure: planning_cache_wbtest.mbt:120 fragment-cache expected cold misses 5; actual cold misses 4. The added Result methods require the existing generic-enum bypass. The separate accounting fix corrects the test.
 
 Command: DEW_NATIVE_TEST_PACKAGES=standard_loader tools/test-native.sh --filter '*parse-event*'
 Loader: Total tests: 3, passed: 3, failed: 0.
