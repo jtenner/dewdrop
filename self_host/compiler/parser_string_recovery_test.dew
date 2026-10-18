@@ -1,0 +1,43 @@
+open dew.std.array
+open dew.std.testing
+
+test "malformed escapes keep following tokens outside the string" {
+  let sources = [b"\"\\q\", fn() {", b"\"\\xG0\", fn() {", b"b\"\\x0\", fn() {"]
+  for source in sources {
+    let tokens = self_host_tokenize(source)
+    assert(tokens.length() == 6u32, "one error and five following tokens")
+    assert(tokens[0u32].kind is Error(InvalidEscape(_)), "one invalid escape")
+    assert(tokens[1u32].kind is Symbol(25u32, _), "comma preserved")
+    assert(tokens[5u32].kind is Symbol(2u32, _), "opening brace preserved")
+  }
+}
+
+test "malformed escapes keep valid declarations after broken function" {
+  let module_ = self_host_parse_module(
+    b"fn broken() -> Unit {\n  f(\"\\q\", fn() {\n    let inner = 1\n  })\n  let leaked = 2\n}\ntype After = I32\n",
+  )
+  assert(module_.events.length() == 2u32, "one error and following declaration only")
+  assert(module_.events[0u32] is Diagnostic(_, _, _, _, _, _), "bad escape diagnosed")
+  match module_.events[1u32] {
+    Declaration(TypeAlias(value), _) => assert(value.name == "After", "valid following alias")
+    _ => assert(false, "local declarations must stay inside malformed function")
+  }
+}
+
+test "malformed escape recovery preserves newlines and escaped quotes" {
+  let escaped = self_host_tokenize(b"\"\\q\\\"tail\" after")
+  assert(escaped.length() == 2u32, "escaped quote stays within bad string")
+  assert(escaped[0u32].kind is Error(InvalidEscape(_)), "bad escape diagnosed")
+  assert(escaped[1u32].kind is Identifier("after", _), "following name preserved")
+  for source in [b"\"\\q\nafter", b"\"\\x\nafter", b"\"\\x0\r\nafter"] {
+    let tokens = self_host_tokenize(source)
+    assert(tokens.length() == 3u32, "bad escape keeps line boundary")
+    assert(tokens[0u32].kind is Error(InvalidEscape(_)), "invalid escape diagnosed")
+    assert(tokens[1u32].kind is Newline, "newline preserved")
+    assert(tokens[2u32].kind is Identifier("after", _), "next line preserved")
+  }
+  let unfinished = self_host_tokenize(b"\"\\\nafter")
+  assert(unfinished.length() == 3u32, "unfinished escape keeps newline")
+  assert(unfinished[0u32].kind is Error(UnterminatedString), "unterminated string diagnosed")
+  assert(unfinished[1u32].kind is Newline, "unfinished escape does not consume newline")
+}

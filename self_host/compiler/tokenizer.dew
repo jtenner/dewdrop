@@ -1402,6 +1402,37 @@ self_host_u8_to_u32(value - 87u8)
 }
 }
 
+// Keep syntax after a malformed string visible to declaration recovery.
+fn self_host_scan_invalid_string_escape(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  offset: U32,
+  escaped: U8,
+) -> Unit {
+  let mut after_backslash = false
+  let _ = while 0u32 {
+    _ => {
+      if tokenizer.position >= tokenizer.source.byte_length() {
+        break ()
+      }
+      let value = tokenizer.source.byte_at(tokenizer.position)
+      if value == 10u8 || value == 13u8 {
+        break ()
+      }
+      tokenizer.position = tokenizer.position + 1u32
+      if after_backslash {
+        after_backslash = false
+      } else if value == 34u8 {
+        break ()
+      } else if value == 92u8 {
+        after_backslash = true
+      }
+      continue 0u32
+    }
+  }
+  self_host_tokenizer_emit(tokenizer, output, Error(InvalidEscape(escaped.into())), offset)
+}
+
 fn self_host_scan_string(
   tokenizer: SelfHostTokenizer,
   output: Array<SelfHostToken>,
@@ -1426,6 +1457,10 @@ fn self_host_scan_string(
           break tokenizer.position
         } else {
           let escaped = tokenizer.source.byte_at(index + 1u32)
+          if escaped == 10u8 || escaped == 13u8 {
+            tokenizer.position = index + 1u32
+            break tokenizer.position
+          }
           tokenizer.position = index + 2u32
           if escaped == 34u8 {
 builder.append_byte(34u8)
@@ -1444,29 +1479,27 @@ builder.append_byte(8u8)
 } else if escaped == 102u8 {
 builder.append_byte(12u8)
 } else if escaped == 120u8 {
-            if tokenizer.position >= tokenizer.source.byte_length() {
-              self_host_tokenizer_emit(tokenizer, output, Error(InvalidEscape(escaped.into())), offset)
-              return
-            } else {
+            let mut byte = 0u32
+            let _ = while 0u32 {
+              count if count < 2u32 => {
+                if tokenizer.position >= tokenizer.source.byte_length() {
+                  self_host_scan_invalid_string_escape(tokenizer, output, offset, escaped)
+                  return
+                }
+                let digit = self_host_hex(tokenizer.source.byte_at(tokenizer.position))
+                if digit >= 16u32 {
+                  self_host_scan_invalid_string_escape(tokenizer, output, offset, escaped)
+                  return
+                }
+                byte = (byte << 4u32) | digit
+                tokenizer.position = tokenizer.position + 1u32
+                continue count + 1u32
+              }
+              _ => break ()
             }
-            let high = self_host_hex(tokenizer.source.byte_at(tokenizer.position))
-            tokenizer.position = tokenizer.position + 1u32
-            if tokenizer.position >= tokenizer.source.byte_length() {
-              self_host_tokenizer_emit(tokenizer, output, Error(InvalidEscape(escaped.into())), offset)
-              return
-            } else {
-            }
-            let low = self_host_hex(tokenizer.source.byte_at(tokenizer.position))
-            tokenizer.position = tokenizer.position + 1u32
-            if high < 16u32 && low < 16u32 {
-              let byte = self_host_u32_to_u8((high << 4u32) | low)
-              builder.append_byte(byte)
-            } else {
-              self_host_tokenizer_emit(tokenizer, output, Error(InvalidEscape(escaped.into())), offset)
-              return
-            }
+            builder.append_byte(self_host_u32_to_u8(byte))
           } else {
-            self_host_tokenizer_emit(tokenizer, output, Error(InvalidEscape(escaped.into())), offset)
+            self_host_scan_invalid_string_escape(tokenizer, output, offset, escaped)
             return
           }
           continue tokenizer.position

@@ -527,6 +527,39 @@ fn hex_digit(value : UtfCodepoint) -> Int32? {
 }
 
 ///|
+// Preserve delimiters outside a malformed string for parser recovery.
+fn Tokenizer::invalid_string_escape(
+  self : Tokenizer,
+  offset : ByteOffset,
+  escaped : UtfCodepoint,
+) -> Token {
+  let mut after_backslash = false
+  while true {
+    match self.peek() {
+      None => return self.emit(Error(InvalidEscape(escaped)), offset)
+      Some((value, _)) if is_io_error(value) => {
+        ignore(self.take())
+        return self.emit(Error(SourceIo(io_error_code(value).unwrap())), offset)
+      }
+      Some((value, _)) if is_newline(value) =>
+        return self.emit(Error(InvalidEscape(escaped)), offset)
+      Some((value, _)) => {
+        ignore(self.take())
+        if after_backslash {
+          after_backslash = false
+        } else if value == 0x22U {
+          return self.emit(Error(InvalidEscape(escaped)), offset)
+        } else if value == 0x5CU {
+          after_backslash = true
+        }
+      }
+    }
+  } nobreak {
+    abort("unreachable invalid string escape recovery")
+  }
+}
+
+///|
 fn Tokenizer::scan_string(
   self : Tokenizer,
   offset : ByteOffset,
@@ -556,6 +589,9 @@ fn Tokenizer::scan_string(
         return self.emit(Error(UnterminatedString), offset)
       Some((0x5CU, _)) => {
         ignore(self.take())
+        if self.peek() is Some((value, _)) && is_newline(value) {
+          return self.emit(Error(UnterminatedString), offset)
+        }
         let escaped = match self.take() {
           Some((escaped, _)) if is_io_error(escaped) =>
             return self.emit(
@@ -575,31 +611,30 @@ fn Tokenizer::scan_string(
           0x62U => output.write_byte(b'\x08')
           0x66U => output.write_byte(b'\x0C')
           0x78U => {
-            let first = match self.take() {
-              Some((digit, _)) if is_io_error(digit) =>
-                return self.emit(
-                  Error(SourceIo(io_error_code(digit).unwrap())),
-                  offset,
-                )
-              Some((digit, _)) => hex_digit(digit)
-              None => None
+            let mut byte = 0
+            for _ in 0..<2 {
+              match self.peek() {
+                Some((digit, _)) if is_io_error(digit) => {
+                  ignore(self.take())
+                  return self.emit(
+                    Error(SourceIo(io_error_code(digit).unwrap())),
+                    offset,
+                  )
+                }
+                Some((digit, _)) =>
+                  match hex_digit(digit) {
+                    Some(value) => {
+                      ignore(self.take())
+                      byte = (byte << 4) | value
+                    }
+                    None => return self.invalid_string_escape(offset, escaped)
+                  }
+                None => return self.invalid_string_escape(offset, escaped)
+              }
             }
-            let second = match self.take() {
-              Some((digit, _)) if is_io_error(digit) =>
-                return self.emit(
-                  Error(SourceIo(io_error_code(digit).unwrap())),
-                  offset,
-                )
-              Some((digit, _)) => hex_digit(digit)
-              None => None
-            }
-            match (first, second) {
-              (Some(high), Some(low)) =>
-                output.write_byte(((high << 4) | low).to_byte())
-              _ => return self.emit(Error(InvalidEscape(escaped)), offset)
-            }
+            output.write_byte(byte.to_byte())
           }
-          _ => return self.emit(Error(InvalidEscape(escaped)), offset)
+          _ => return self.invalid_string_escape(offset, escaped)
         }
       }
       Some((value, _)) => {
