@@ -1,0 +1,6 @@
+{
+  "owner_source": "fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {\n  // A counted module path preserves the boundary even when either path has ':'.\n  \"file-paths-v1:\\{owner_path.length()}:\\{owner_path}\\{file_path}\"\n}",
+  "owner_sha256": "e696627fa643087367fbfa2e5bb90babf0408b827f289c6cc755ad1cf3953657",
+  "seconds": 0.19705742099904455,
+  "exit": 0
+}

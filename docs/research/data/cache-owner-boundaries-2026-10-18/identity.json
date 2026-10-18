@@ -1,0 +1,12 @@
+{
+  "baseline_commit": "7ac4abc716079c85d1db6f521f57c44d1e718acd",
+  "owner_source": "fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {\n  \"file:\" + owner_path + \":\" + file_path\n}",
+  "copied_sources_sha256": {
+    "blake3.mbt": "c8fb5c1aff3a2962d4c581a210d7856821bccf1be09fd7a2f7f171ab29248c65",
+    "owner_wbtest.mbt": "3109c0122925ccae08044bfe55b6b499586b5c75991e6e54cc7f6db68f1b1806",
+    "artifact_pack.mbt": "0cf7732c6ae26b29295f7405a2f105bb509b5318246d910747330d2f3df29823",
+    "owner.mbt": "b3f65ffce08c656a9afac36fda00966d6bb53b1069f34c63aee3ae4d468e5b8a",
+    "codec.mbt": "a34045463cd07b2a3f6bd29635cdd88ca6e56b90f9a063d9f6920755a2ccf6fc",
+    "artifact_pack_lazy.mbt": "8e523d71c38e85863cd30007b1ba08455c96c449d41850c8b72965cf823ff913"
+  }
+}

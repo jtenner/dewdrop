@@ -1,0 +1,4 @@
+fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {
+  // A counted module path preserves the boundary even when either path has ':'.
+  "file-paths-v1:\{owner_path.length()}:\{owner_path}\{file_path}"
+}

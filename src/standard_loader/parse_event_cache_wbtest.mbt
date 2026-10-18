@@ -161,3 +161,82 @@ test "parse-event cache keeps stored corruption visible" {
     Ok(_) => fail("expected corrupt stored bytes to remain visible")
   }
 }
+
+///|
+test "parse-event pack owners preserve module and file path boundaries" {
+  // Both pairs used to produce the owner "file:a:b:c.dew".
+  let first = @semantic.ManifestFile::new(
+    "b:c.dew", b"fn first() -> I32 { 1 }\n",
+  )
+  let second = @semantic.ManifestFile::new(
+    "c.dew", b"fn second() -> I32 { 2 }\n",
+  )
+  let session = program_output_test_session()
+  let prepared : Array[Array[@parser.ParseEvent]] = []
+  for pair in [("a", first), ("a:b", second)] {
+    let (file, status) = prepare_manifest_file_parse_events(
+      pair.0, pair.1, true, pack=Some(session),
+    ).unwrap()
+    assert_true(status is ParseEventCacheMiss)
+    prepared.push(file.parse_events.unwrap())
+  }
+  assert_eq(session.pack.entries.length(), 2)
+  let reopened = {
+    ..session,
+    pack: @cache_binary.open_artifact_pack(session.pack.encode().unwrap()).unwrap(),
+    dirty: false,
+  }
+  for candidate in [session, reopened] {
+    for index, pair in [("a", first), ("a:b", second)] {
+      let (file, status) = prepare_manifest_file_parse_events(
+        pair.0, pair.1, true, pack=Some(candidate),
+      ).unwrap()
+      assert_true(status is ParseEventCacheHit)
+      assert_eq(file.parse_events.unwrap(), prepared[index])
+    }
+    assert_eq(
+      @cache_binary.decode_artifact_pack(candidate.pack.encode().unwrap())
+      .unwrap()
+      .entries
+      .length(),
+      2,
+    )
+  }
+}
+
+///|
+test "parse-event pack colliding path pairs cannot create duplicate saved owners" {
+  let first = @semantic.ManifestFile::new(
+    "b:c.dew", b"fn first() -> I32 { 1 }\n",
+  )
+  let second = @semantic.ManifestFile::new(
+    "c.dew", b"fn second() -> I32 { 2 }\n",
+  )
+  let session = program_output_test_session()
+  ignore(
+    prepare_manifest_file_parse_events(
+      "a", first, true, pack=Some(session),
+    ).unwrap(),
+  )
+  let reopened = {
+    ..session,
+    pack: @cache_binary.open_artifact_pack(session.pack.encode().unwrap()).unwrap(),
+    dirty: false,
+  }
+  let (_, status) = prepare_manifest_file_parse_events(
+    "a:b", second, true, pack=Some(reopened),
+  ).unwrap()
+  assert_true(status is ParseEventCacheMiss)
+  let (_, first_status) = prepare_manifest_file_parse_events(
+    "a", first, true, pack=Some(reopened),
+  ).unwrap()
+  assert_true(first_status is ParseEventCacheHit)
+  match reopened.pack.encode() {
+    Err(error) => fail("saving both path pairs failed: \{error}")
+    Ok(bytes) =>
+      assert_eq(
+        @cache_binary.decode_artifact_pack(bytes).unwrap().entries.length(),
+        2,
+      )
+  }
+}

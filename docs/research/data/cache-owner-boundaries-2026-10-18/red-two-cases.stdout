@@ -1,0 +1,5 @@
+[owner_proof] test owner_wbtest.mbt:1 ("distinct path pairs keep separate cache entries") failed: owner_wbtest.mbt:8:2-8:37@owner_proof FAILED: `1 != 2`
+diff:
+-1 +2
+[owner_proof] test owner_wbtest.mbt:14 ("path pair collision cannot create duplicate owners on reuse") failed: owner_wbtest.mbt:23:17-23:64@owner_proof FAILED: saving both path pairs failed: artifact pack contains duplicate section owners
+Total tests: 2, passed: 0, failed: 2.

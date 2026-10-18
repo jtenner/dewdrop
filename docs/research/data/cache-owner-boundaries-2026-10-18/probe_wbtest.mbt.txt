@@ -1,0 +1,26 @@
+test "distinct path pairs keep separate cache entries" {
+ let pack = ArtifactPack::empty()
+ for pair in [("a", "b:c.dew"), ("a:b", "c.dew")] {
+  pack.upsert(ArtifactPackEntry::new(1U, 1U, 0U, 0U,
+    parse_event_pack_owner(pair.0, pair.1), blake3(b"source"),
+    blake3(@utf8.encode(pair.0)), b"payload")).unwrap()
+ }
+ assert_eq(pack.entries.length(), 2)
+}
+
+fn entry_for(owner : String, content : Bytes) -> ArtifactPackEntry {
+ ArtifactPackEntry::new(1U, 1U, 0U, 0U, owner, blake3(content), blake3(b"context"), content)
+}
+test "path pair collision cannot create duplicate owners on reuse" {
+ let first = entry_for(parse_event_pack_owner("a", "b:c.dew"), b"first")
+ let second = entry_for(parse_event_pack_owner("a:b", "c.dew"), b"second")
+ let pack = ArtifactPack::empty()
+ pack.upsert(first).unwrap()
+ let reopened = open_artifact_pack(pack.encode().unwrap()).unwrap()
+ reopened.upsert(second).unwrap()
+ assert_eq(reopened.lookup(first.kind,first.schema_version,first.owner,first.content_digest,first.context_digest),Some(first.payload))
+ match reopened.encode() {
+  Err(error) => fail("saving both path pairs failed: \{error}")
+  Ok(bytes) => assert_eq(decode_artifact_pack(bytes).unwrap().entries.length(),2)
+ }
+}

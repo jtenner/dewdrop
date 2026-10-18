@@ -1,0 +1,3 @@
+fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {
+  "file:" + owner_path + ":" + file_path
+}

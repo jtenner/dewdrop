@@ -1,0 +1,70 @@
+Warning: [0079]
+    ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:23:10 ]
+    │
+ 23 │ } derive(Eq, Debug)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for ArtifactPackEntry` are implicit promoted as regular method for `ArtifactPackEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackEntry with Eq::{not_equal, equal}` declaration or manually define regular methods for type `ArtifactPackEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:23:14 ]
+    │
+ 23 │ } derive(Eq, Debug)
+    │              ──┬──  
+    │                ╰──── Warning (implicit_impl_as_method): The methods to_repr from `impl @moonbitlang/core/debug.Debug for ArtifactPackEntry` are implicit promoted as regular method for `ArtifactPackEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackEntry with @moonbitlang/core/debug.Debug::{to_repr}` declaration or manually define regular methods for type `ArtifactPackEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:32:10 ]
+    │
+ 32 │ } derive(Eq, Debug)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for ArtifactPackIndexedEntry` are implicit promoted as regular method for `ArtifactPackIndexedEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackIndexedEntry with Eq::{not_equal, equal}` declaration or manually define regular methods for type `ArtifactPackIndexedEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:32:14 ]
+    │
+ 32 │ } derive(Eq, Debug)
+    │              ──┬──  
+    │                ╰──── Warning (implicit_impl_as_method): The methods to_repr from `impl @moonbitlang/core/debug.Debug for ArtifactPackIndexedEntry` are implicit promoted as regular method for `ArtifactPackIndexedEntry`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPackIndexedEntry with @moonbitlang/core/debug.Debug::{to_repr}` declaration or manually define regular methods for type `ArtifactPackIndexedEntry` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:44:10 ]
+    │
+ 44 │ } derive(Eq, Debug)
+    │          ─┬  
+    │           ╰── Warning (implicit_impl_as_method): The methods not_equal, equal from `impl Eq for ArtifactPack` are implicit promoted as regular method for `ArtifactPack`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPack with Eq::{not_equal, equal}` declaration or manually define regular methods for type `ArtifactPack` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0079]
+    ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:44:14 ]
+    │
+ 44 │ } derive(Eq, Debug)
+    │              ──┬──  
+    │                ╰──── Warning (implicit_impl_as_method): The methods to_repr from `impl @moonbitlang/core/debug.Debug for ArtifactPack` are implicit promoted as regular method for `ArtifactPack`. This behavior is deprecated and will be removed in the future. Add a `pub extend ArtifactPack with @moonbitlang/core/debug.Debug::{to_repr}` declaration or manually define regular methods for type `ArtifactPack` instead. If the promotion is not desirable, add `#deprecated` on the `extend` declaration.
+────╯
+Warning: [0082]
+     ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack.mbt:663:54 ]
+     │
+ 663 │   let result : Map[(UInt32, String), Array[Int32]] = {}
+     │                                                      ─┬  
+     │                                                       ╰── Warning (ambiguous_braces): The `{}` is ambiguous among empty map literal, block expression, empty struct literal and empty JSON object. Use `Map([])` for an empty map, `TypeName::{}` for an empty struct literal, `Json::empty_object()` for an empty JSON object, or `{ () }` for an empty block.
+─────╯
+Warning: [0082]
+     ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/artifact_pack_lazy.mbt:112:46 ]
+     │
+ 112 │   let owners : Map[(UInt32, String), Bool] = {}
+     │                                              ─┬  
+     │                                               ╰── Warning (ambiguous_braces): The `{}` is ambiguous among empty map literal, block expression, empty struct literal and empty JSON object. Use `Map([])` for an empty map, `TypeName::{}` for an empty struct literal, `Json::empty_object()` for an empty JSON object, or `{ () }` for an empty block.
+─────╯
+Warning: [0029]
+   ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/moon.pkg:1:10 ]
+   │
+ 1 │ import { "moonbitlang/core/buffer", "moonbitlang/core/encoding/utf8", "moonbitlang/x/crypto" }
+   │          ────────────┬────────────  
+   │                      ╰────────────── Warning (unused_package): Unused package 'moonbitlang/core/buffer'
+───╯
+Warning: [0001]
+   ╭─[ /tmp/dewdrop-implementation-2026-10-18/owner-proof/owner.mbt:1:4 ]
+   │
+ 1 │ fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {
+   │    ───────────┬──────────  
+   │               ╰──────────── Warning (unused_value): Unused function 'parse_event_pack_owner'
+───╯

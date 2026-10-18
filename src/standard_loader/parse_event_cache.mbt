@@ -123,7 +123,8 @@ fn parse_event_cache_file(key_digest : FixedArray[Byte]) -> String {
 
 ///|
 fn parse_event_pack_owner(owner_path : String, file_path : String) -> String {
-  "file:" + owner_path + ":" + file_path
+  // A counted module path preserves the boundary even when either path has ':'.
+  "file-paths-v1:\{owner_path.length()}:\{owner_path}\{file_path}"
 }
 
 ///|
