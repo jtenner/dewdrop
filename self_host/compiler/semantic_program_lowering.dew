@@ -751,6 +751,41 @@ fn self_host_validate_program_lowering(
   let _ = while module_index {
     current_module => if current_module < lowering.modules.length() {
       let module_ = lowering.modules[current_module]
+      for diagnostic in module_.flow_diagnostics {
+        let kind = match diagnostic {
+          NonExhaustiveMatch(_, _, _) => Some("non-exhaustive match")
+          NonExhaustiveFunctionalLoop(_, _, _) => Some("non-exhaustive functional loop")
+          PatternCoverageBudgetExceeded(_, _, _, _) => Some("pattern coverage budget exceeded")
+          FunctionalLoopArmFallsThrough(_, _) => Some("functional loop arm falls through")
+          RedundantPatternArm(_, _), UnreachableBlockItem(_, _, _) => None
+        }
+        match kind {
+          Some(name) => {
+            let message = StringBuilder::new()
+            message.append("source flow error: ")
+            message.append(name)
+            message.append(" module=")
+            message.append_u64(module_.module_id)
+            match diagnostic {
+              NonExhaustiveMatch(expression, _, _),
+              NonExhaustiveFunctionalLoop(expression, _, _),
+              PatternCoverageBudgetExceeded(expression, _, _, _) => {
+                message.append(" expression=")
+                message.append_u32(expression)
+              }
+              FunctionalLoopArmFallsThrough(arm, _) => {
+                message.append(" arm=")
+                message.append_u32(arm)
+              }
+              _ => unreachable()
+            }
+            message.append(" offset=")
+            message.append_u32(self_host_body_flow_diagnostic_offset(diagnostic))
+            return Some(message.finish())
+          }
+          None => {}
+        }
+      }
       let callable_lookup_length = module_.functions.callable_by_declaration.length()
       let callable_lookup_backing = self_host_u32_array_backing_length(
         module_.functions.callable_by_declaration,
