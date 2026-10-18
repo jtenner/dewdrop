@@ -29,6 +29,19 @@ also check empty ranges at the end, invalid bounds, overflow-sized arguments,
 covered-byte corruption, corrupt footer digests, and invalid saved ranges.
 Existing strict, lazy lookup, and materialization tests also passed.
 
+The footer corruption test now rebuilds a FOOT entry with a one-bit wrong
+covered-range digest. Its entry payload checksum, content lane, and metadata
+are consistent. Strict decoding must report exactly
+`artifact pack FOOT digest mismatch`. Lazy opening must pass its metadata
+checks, then deferred footer verification must report that same error. This
+checks the range digest itself instead of accepting an unrelated entry-checksum
+error. No production cache rule changed.
+
+A private native package containing both pack test files passed all ten tests
+in 0.393 seconds. The [validation record](data/cache-range-hashing-2026-10-18/footer-diagnostics-validation.json)
+contains its command, exact source hashes, result, and scope. It used separate
+build output while the main compiler tests were active.
+
 ## Native measurements
 
 The host was an AMD Ryzen 7 8845HS on x86-64 Linux. Moon was

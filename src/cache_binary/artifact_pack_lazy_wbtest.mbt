@@ -151,18 +151,28 @@ test "strict and lazy packs reject a corrupt footer digest" {
   .upsert(artifact_pack_test_entry("owner", b"a", b"context", b"payload"))
   .unwrap()
   let encoded = source.encode().unwrap()
-  // FOOT ends with its 32-byte covered-range digest and has no trailing padding.
-  let buffer = Buffer(size_hint=encoded.length())
-  for index, byte in encoded {
-    buffer.write_byte(
-      if index == encoded.length() - 1 {
-        byte ^ 1
-      } else {
-        byte
-      },
-    )
-  }
-  let corrupt = buffer.to_bytes()
-  assert_true(decode_artifact_pack(corrupt) is Err(_))
-  assert_true(open_artifact_pack(corrupt) is Err(_))
+  let opened = open_artifact_pack(encoded).unwrap()
+  let wrong_digest = opened.footer_digest.copy()
+  wrong_digest[31] = wrong_digest[31] ^ 1
+  let writer = Writer::new(size_hint=encoded.length())
+  writer.write_raw(encoded[0:opened.footer_covered_bytes].to_owned())
+  // Re-encode FOOT so its entry checksum, content lane, and metadata agree.
+  // Only the digest of the covered range is wrong. This pack has two sections.
+  artifact_pack_write_section(writer, artifact_pack_footer_kind, [
+    artifact_pack_footer_entry(
+      encoded.length(), opened.footer_covered_bytes, 2, wrong_digest,
+    ),
+  ]).unwrap()
+  let corrupt = writer.to_bytes()
+  assert_eq(corrupt.length(), encoded.length())
+  assert_eq(
+    decode_artifact_pack(corrupt),
+    Err("artifact pack FOOT digest mismatch"),
+  )
+  // Opening checks metadata; the lazy covered-range check is deferred.
+  let lazy_pack = open_artifact_pack(corrupt).unwrap()
+  assert_eq(
+    lazy_pack.verify_footer(),
+    Err("artifact pack FOOT digest mismatch"),
+  )
 }

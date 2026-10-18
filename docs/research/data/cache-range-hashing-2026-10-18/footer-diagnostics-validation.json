@@ -1,0 +1,25 @@
+{
+  "command": [
+    "moon",
+    "test",
+    "--target",
+    "native",
+    "--no-parallelize",
+    "--frozen"
+  ],
+  "cwd": "/tmp/dewdrop-implementation-2026-10-18/footer-digest-diagnostics",
+  "seconds": 0.392921746999491,
+  "exit": 0,
+  "source_commit": "bf39e85b93c5d19f0dbed7978a31a1c51654777a",
+  "source_sha256": {
+    "blake3.mbt": "c8fb5c1aff3a2962d4c581a210d7856821bccf1be09fd7a2f7f171ab29248c65",
+    "codec.mbt": "a34045463cd07b2a3f6bd29635cdd88ca6e56b90f9a063d9f6920755a2ccf6fc",
+    "artifact_pack.mbt": "0cf7732c6ae26b29295f7405a2f105bb509b5318246d910747330d2f3df29823",
+    "artifact_pack_lazy.mbt": "8e523d71c38e85863cd30007b1ba08455c96c449d41850c8b72965cf823ff913",
+    "artifact_pack_wbtest.mbt": "6706ecc11c1cc6f0139ae2ee7164375ce94e516e526d8254858fef1d7f453e9d",
+    "artifact_pack_lazy_wbtest.mbt": "4ff45fd741905b81590b7d8a4e4a6ad9ce58d2f107b7bd079aa64d7b22570b76"
+  },
+  "stdout": "Total tests: 10, passed: 10, failed: 0.\n",
+  "scope": "Private native package with copied production codec, hash, and pack sources plus both artifact pack test files. Shared build output was not used.",
+  "case": "FOOT entry is re-encoded with consistent entry checksum and metadata but a one-bit wrong covered-range digest. Both strict decode and deferred lazy verification must report artifact pack FOOT digest mismatch."
+}
