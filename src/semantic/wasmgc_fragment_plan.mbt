@@ -2645,28 +2645,137 @@ fn wasmgc_validate_order(order : Array[Int32], count : Int32) -> Unit {
 }
 
 ///|
-fn wasmgc_module_uses_closure_abi(
-  resolved : ResolvedModuleTypes,
-  lowering : PlannedModuleLowering,
+fn wasmgc_body_is_reachable(
+  functions : PlannedModuleFunctions,
+  reachable : Array[Bool],
+  runtime_requirements : Map[DeclId, Bool],
+  function_value_roots : Map[DeclId, Bool],
+  body : PlannedBodyLowering,
 ) -> Bool {
-  for expression in lowering.expressions {
+  let declaration_index = semantic_id_local(body.declaration)
+  if declaration_index >= 0 &&
+    declaration_index < functions.callable_by_declaration.length() {
+    let callable_index = functions.callable_by_declaration[declaration_index]
+    if callable_index >= 0 {
+      guard callable_index < reachable.length() else {
+        abort("ARN-104 callback type owner callable index")
+      }
+      return reachable[callable_index] ||
+        runtime_requirements.contains(body.declaration) ||
+        function_value_roots.contains(body.declaration)
+    }
+  }
+  // Module initializer bodies have no callable and still execute at runtime.
+  true
+}
+
+///|
+fn wasmgc_collect_function_type_roots(
+  lowering : PlannedModuleLowering,
+  span : HirSpan,
+  work : Array[ResolvedTypeId],
+  value_roots : Map[DeclId, Bool],
+) -> Unit {
+  guard program_specialization_span_is_valid(
+    span,
+    lowering.expressions.length(),
+  ) else {
+    abort("ARN-101 callback type owner span")
+  }
+  for index in span.start..<(span.start + span.length) {
+    let expression = lowering.expressions[index]
     match expression.kind {
+      PlannedFunctionReference(declaration, _) => {
+        value_roots[declaration] = true
+        let source_type = program_body_resolved_type(lowering, expression.type_)
+        if source_type >= 0 {
+          work.push(source_type)
+        }
+      }
+      PlannedFunctionValueCall(_, _, type_) if type_ >= 0 => work.push(type_)
+      _ => ()
+    }
+  }
+}
+
+///|
+fn wasmgc_span_uses_closure_abi(
+  lowering : PlannedModuleLowering,
+  span : HirSpan,
+) -> Bool {
+  guard program_specialization_span_is_valid(
+    span,
+    lowering.expressions.length(),
+  ) else {
+    abort("ARN-101 closure ABI owner span")
+  }
+  for index in span.start..<(span.start + span.length) {
+    match lowering.expressions[index].kind {
       PlannedFunctionReference(_, _)
       | PlannedLambdaClosure(_, _)
       | PlannedFunctionValueCall(_, _, _) => return true
       _ => ()
     }
   }
-  for type_ in resolved.parameter_types {
-    match resolved.types[type_] {
-      FunctionType(_, _) => return true
+  false
+}
+
+///|
+fn wasmgc_module_uses_closure_abi(
+  resolved : ResolvedModuleTypes,
+  lowering : PlannedModuleLowering,
+  reachable : Array[Bool],
+  runtime_requirements : Map[DeclId, Bool],
+  function_value_roots : Map[DeclId, Bool],
+) -> Bool {
+  let functions = lowering.functions
+  for body in lowering.bodies {
+    if wasmgc_body_is_reachable(
+        functions, reachable, runtime_requirements, function_value_roots, body,
+      ) &&
+      wasmgc_span_uses_closure_abi(lowering, body.expressions) {
+      return true
+    }
+  }
+  for index, lambda in lowering.lambdas {
+    if lambda.elided {
+      continue
+    }
+    // Non-direct lambdas still get a closure object, even when their owner
+    // body has no other function-value expression.
+    if !lambda.directized ||
+      wasmgc_span_uses_closure_abi(lowering, lambda.expressions) {
+      return true
+    }
+    match resolved.types[resolved.lambda_function_types[index]] {
+      FunctionType(parameters, result) => {
+        if resolved.types[result] is FunctionType(_, _) {
+          return true
+        }
+        for offset in 0..<parameters.length {
+          let parameter = resolved.type_arguments[parameters.start + offset]
+          if resolved.types[parameter] is FunctionType(_, _) {
+            return true
+          }
+        }
+      }
       _ => ()
     }
   }
-  for type_ in resolved.callable_return_types {
-    match resolved.types[type_] {
-      FunctionType(_, _) => return true
-      _ => ()
+  for index, callable in functions.callables {
+    if !reachable[index] &&
+      !runtime_requirements.contains(callable.declaration) &&
+      !function_value_roots.contains(callable.declaration) {
+      continue
+    }
+    for offset in 0..<callable.parameters.length {
+      let parameter = functions.parameters[callable.parameters.start + offset].type_
+      if resolved.types[parameter] is FunctionType(_, _) {
+        return true
+      }
+    }
+    if resolved.types[callable.result_type] is FunctionType(_, _) {
+      return true
     }
   }
   false
@@ -3005,12 +3114,14 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       runtime_requirements[requirement] = true
     }
   }
-  let closure_abi = wasmgc_module_uses_closure_abi(resolved, lowering)
   let reachable_functions = wasmgc_reachable_defined_functions(
     lowering,
     functions,
     options.emit_tests,
     program_roots,
+  )
+  let closure_abi = wasmgc_module_uses_closure_abi(
+    resolved, lowering, reachable_functions, runtime_requirements, program_function_value_roots,
   )
   let required_declarations = wasmgc_required_nominal_declarations(
     resolved, lowering, functions, reachable_functions, program_roots, deferred_callables,
@@ -3314,22 +3425,39 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   let required_function_types = Array::make(resolved.types.length(), false)
   let function_type_work : Array[ResolvedTypeId] = []
   let local_function_value_roots : Map[DeclId, Bool] = Map::default()
-  for expression in lowering.expressions {
-    match expression.kind {
-      PlannedFunctionReference(declaration, _) => {
-        local_function_value_roots[declaration] = true
-        let source_type = program_body_resolved_type(lowering, expression.type_)
-        if source_type >= 0 {
-          function_type_work.push(source_type)
-        }
-      }
-      PlannedFunctionValueCall(_, _, type_) if type_ >= 0 =>
-        function_type_work.push(type_)
-      _ => ()
+  for body in lowering.bodies {
+    if wasmgc_body_is_reachable(
+        functions, reachable_functions, runtime_requirements, program_function_value_roots,
+        body,
+      ) {
+      wasmgc_collect_function_type_roots(
+        lowering,
+        body.expressions,
+        function_type_work,
+        local_function_value_roots,
+      )
+    }
+  }
+  // Every non-elided lambda still gets an emitted entry, including generic
+  // specialization entries. Retain its owned expression roots as well.
+  for lambda in lowering.lambdas {
+    if !lambda.elided {
+      wasmgc_collect_function_type_roots(
+        lowering,
+        lambda.expressions,
+        function_type_work,
+        local_function_value_roots,
+      )
     }
   }
   for callable_index, callable in functions.callables {
     if compile_time_projected_signature(lowering, callable) {
+      continue
+    }
+    if !reachable_functions[callable_index] &&
+      !runtime_requirements.contains(callable.declaration) &&
+      !local_function_value_roots.contains(callable.declaration) &&
+      !program_function_value_roots.contains(callable.declaration) {
       continue
     }
     if local_function_value_roots.contains(callable.declaration) ||

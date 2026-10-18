@@ -150,9 +150,12 @@ fn wasmgc_fragment_program_context(
   frozen : @semantic.FrozenProgramInterfaces,
   root_module_index : Int32,
   options : @semantic.WasmGCPlanningOptions,
+  planner_policy~ : Bytes = b"callback-signature-liveness-v1\x00",
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
   output.write_bytes(b"DEW_WASMGC_FRAGMENT_PROGRAM_CONTEXT_V1\x00")
+  // Planner semantics changed; envelope and codec formats remain version 1.
+  output.write_bytes(planner_policy)
   output.write_byte(if program.default_preamble { 1 } else { 0 })
   planning_write_int(output, root_module_index)
   output.write_bytes(wasmgc_planning_options_bytes(options))

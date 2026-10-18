@@ -280,3 +280,115 @@ test "named signature spans retain declaration context before interning" {
     Err({ ..expected, declaration: source.declaration, }),
   )
 }
+
+///|
+fn function_type_liveness_fixture(
+  source : Bytes,
+) -> PlannedModuleWasmGCFragments raise {
+  let stages = compiler_test_stages(24021UL, [
+    CompilerTestModule::new("app.callback_liveness", [
+      CompilerTestSource::new("main.dew", source),
+    ]),
+  ])
+  assert_eq(stages.diagnostics(), [])
+  let link = plan_program_wasmgc_link(stages.analyzed, stages.lowering, 0)
+  assert_eq(link.diagnostics, [])
+  let module_ = link.modules[0]
+  assert_eq(verify_module_physical_type_fragments(module_), Ok(()))
+  module_
+}
+
+///|
+test "unreachable callback bodies do not retain physical callback signatures" {
+  let stages = compiler_test_stages(24022UL, [
+    CompilerTestModule::new("app.callback_roots", [
+      CompilerTestSource::new(
+        "main.dew", b"fn dead<t>(callback: fn() -> t) -> t {\n  callback()\n}\npub fn main() -> I32 {\n  42\n}\n",
+      ),
+    ]),
+  ])
+  assert_eq(stages.diagnostics(), [])
+  let lowering = stages.lowering.modules[0]
+  let roots : Map[DeclId, Bool] = {}
+  for callable in lowering.functions.callables {
+    if callable.name == b"main" {
+      roots[callable.declaration] = true
+    }
+  }
+  let module_ = plan_module_wasmgc_fragments_with_options_and_roots(
+    stages.analyzed.frozen.interfaces[0].resolved_types,
+    lowering,
+    Some(stages.analyzed.modules[0].imports),
+    WasmGCPlanningOptions::optimized_subtype_families(),
+    roots,
+    {},
+    [],
+    {},
+  )
+  assert_eq(verify_module_physical_type_fragments(module_), Ok(()))
+  assert_eq(module_.function_types.length(), 0)
+  assert_eq(module_.closure_type_index, -1)
+}
+
+///|
+test "live exported nested callback signatures remain physical" {
+  let module_ = function_type_liveness_fixture(
+    b"pub fn keep(callback: fn(fn(I32) -> I64) -> fn() -> I64) -> fn() -> I64 {\n  fn() -> I64 {\n    42i64\n  }\n}\n",
+  )
+  let mut source_signatures = 0
+  for signature in module_.function_types {
+    if signature.resolved_type >= 0 {
+      source_signatures += 1
+    }
+  }
+  assert_true(source_signatures >= 3)
+}
+
+///|
+test "live module initializer function references retain their signatures" {
+  let module_ = function_type_liveness_fixture(
+    b"fn answer() -> I64 {\n  42i64\n}\nlet callback = answer\npub fn read() -> I64 {\n  callback()\n}\n",
+  )
+  assert_true(module_.function_types.length() > 0)
+}
+
+///|
+test "live generic callback applications retain their signatures" {
+  let module_ = function_type_liveness_fixture(
+    b"fn apply<t>(callback: fn() -> t) -> t {\n  callback()\n}\npub fn read() -> I64 {\n  apply(fn() -> I64 {\n    42i64\n  })\n}\n",
+  )
+  assert_true(module_.function_types.length() > 0)
+}
+
+///|
+test "live struct callback fields retain their call signatures" {
+  let module_ = function_type_liveness_fixture(
+    b"struct Callbacks {\n  callback: fn() -> I64\n}\npub fn read(value: Callbacks) -> I64 {\n  let callback = value.callback\n  callback()\n}\n",
+  )
+  assert_true(module_.function_types.length() > 0)
+}
+
+///|
+test "module visible callback ABI roots remain physical" {
+  let module_ = function_type_liveness_fixture(
+    b"fn visible<t>(callback: fn() -> t) -> t {\n  callback()\n}\npub fn main() -> I32 {\n  42\n}\n",
+  )
+  assert_true(module_.function_types.length() > 0)
+  assert_true(module_.closure_type_index >= 0)
+}
+
+///|
+test "dynamic trait callback fields retain their call signatures" {
+  let module_ = function_type_liveness_fixture(
+    b"struct Callbacks {\n  callback: fn() -> I64\n}\ntrait Read {\n  fn read(self) -> I64\n}\nimpl Read for Callbacks {\n  fn read(self) -> I64 {\n    let callback = self.callback\n    callback()\n  }\n}\nfn dispatch(value: Read) -> I64 {\n  value.read()\n}\npub fn read(callback: fn() -> I64) -> I64 {\n  dispatch(Callbacks::{\n    callback: callback\n  })\n}\n",
+  )
+  assert_true(module_.function_types.length() > 0)
+}
+
+///|
+test "direct lambda callback parameters retain the closure ABI" {
+  let module_ = function_type_liveness_fixture(
+    b"pub struct Holder {\n  callback: fn() -> I64\n}\npub fn keep(value: Holder) -> Holder {\n  fn(callback: fn() -> I64) -> Holder {\n    Holder::{\n      callback: callback\n    }\n  }(value.callback)\n}\n",
+  )
+  assert_true(module_.closure_type_index >= 0)
+}

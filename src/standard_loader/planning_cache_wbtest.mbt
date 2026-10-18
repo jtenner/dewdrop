@@ -153,3 +153,24 @@ test "fragment cache accounting excludes usage-dependent enum bypasses" {
   @sys.set_env_var("DEW_PLAN_CACHE", prior_plan)
   @sys.set_env_var("DEW_COMPILER_FINGERPRINT", prior_compiler)
 }
+
+///|
+test "fragment context invalidates pre-liveness planner artifacts" {
+  let program = planning_cache_test_program(
+    b"pub fn main() -> I32 {\n  42\n}\n",
+  )
+  let frozen = @semantic.freeze_program_interfaces(program)
+  let options = @semantic.WasmGCPlanningOptions::optimized_subtype_families()
+  let legacy = wasmgc_fragment_program_context(
+    program,
+    frozen,
+    0,
+    options,
+    planner_policy=b"",
+  ).unwrap()
+  let current = wasmgc_fragment_program_context(program, frozen, 0, options).unwrap()
+  assert_true(legacy != current)
+  let (old_key, _, _) = wasmgc_fragment_cache_key(program, 0, legacy)
+  let (new_key, _, _) = wasmgc_fragment_cache_key(program, 0, current)
+  assert_true(old_key != new_key)
+}
