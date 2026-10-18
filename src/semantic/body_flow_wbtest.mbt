@@ -708,3 +708,25 @@ test "matrix coverage ignores 5000 unrelated imported variants" {
   )
   assert_eq(flows.diagnostics, [])
 }
+
+///|
+test "poisoned match values do not add coverage errors" {
+  for source in [
+    b"fn run(value: Missing) -> I32 {\n  match value {\n  }\n}\n",
+    b"fn run() -> I32 {\n  match missing {\n  }\n}\n",
+  ] {
+    let (_, _, _, flows) = flow_test_module(249UL, source)
+    assert_eq(flows.diagnostics, [])
+    assert_eq(flows.missing_cases, [])
+  }
+}
+
+///|
+test "poisoned functional loop values retain arm flow checks" {
+  let (_, _, _, flows) = flow_test_module(
+    250UL, b"fn run(value: Missing) -> I32 {\n  while value {\n    _ => 42\n  }\n}\n",
+  )
+  assert_eq(flows.missing_cases, [])
+  assert_eq(flows.diagnostics.length(), 1)
+  assert_true(flows.diagnostics[0] is FunctionalLoopArmFallsThrough(_, _))
+}

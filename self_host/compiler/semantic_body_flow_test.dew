@@ -695,3 +695,29 @@ test "body flow matrix ignores 5000 unrelated imported variants" {
   assert(inferred.bodies[0u32].diagnostics.length() == 0u32, "valid imported matrix")
   assert(flows.bodies[0u32].diagnostics.length() == 0u32, "unrelated imported variants do not spend matrix budget")
 }
+
+test "body flow poisoned match values do not add coverage errors" {
+  for source in [
+    b"fn run(value: Missing) -> I32 {\n  match value {\n  }\n}\n",
+    b"fn run() -> I32 {\n  match missing {\n  }\n}\n",
+  ] {
+    let (_, flows) = self_host_flow_source(1004u64, source)
+    assert(flows.bodies[0u32].diagnostics.length() == 0u32, "no extra coverage error")
+    assert(flows.bodies[0u32].missing_cases.length() == 0u32, "no missing pattern for poison")
+  }
+}
+
+test "body flow poisoned functional loop values retain arm flow checks" {
+  let (_, flows) = self_host_flow_source(
+    1005u64, b"fn run(value: Missing) -> I32 {\n  while value {\n    _ => 42\n  }\n}\n",
+  )
+  let flow = flows.bodies[0u32]
+  assert(flow.missing_cases.length() == 0u32, "no missing pattern for poison")
+  assert(flow.diagnostics.length() == 1u32, "arm flow check stays active")
+  assert(self_host_flow_loop_fallthrough_count(flow) == 1u32, "loop arm still falls through")
+}
+
+test "body flow poison suppression keeps generic domains open" {
+  let (_, flows) = self_host_flow_source(1006u64, b"fn run<t>(value: t) -> I32 {\n  match value {\n  }\n}\n")
+  assert(self_host_flow_non_exhaustive_count(flows.bodies[0u32]) == 1u32, "generic value still needs a catch-all")
+}

@@ -107,6 +107,7 @@ pub struct SelfHostAnalyzedModuleFlows {
 }
 
 enum SelfHostFlowCoverageDomain {
+  ErrorFlowCoverageDomain
   OpenFlowCoverageDomain
   BoolFlowCoverageDomain
   EnumFlowCoverageDomain(U64)
@@ -444,6 +445,7 @@ impl SelfHostBodyFlowAnalyzer {
     let mut current = type_
     while current {
       candidate => match self.resolved.types[candidate] {
+        ErrorType => break ErrorFlowCoverageDomain
         PrimitiveType(primitive) => {
           if primitive is BoolType {
             break BoolFlowCoverageDomain
@@ -472,6 +474,7 @@ impl SelfHostBodyFlowAnalyzer {
   fn body_coverage_domain(self, type_: I32) -> SelfHostFlowCoverageDomain {
     while type_ {
       current => match self.inferred.type_term(current) {
+        BodyErrorType, BodyVariableType(_) => break ErrorFlowCoverageDomain
         BodyAppliedType(base, _) => continue base
         BodyResolvedType(resolved_type) => break self.resolved_coverage_domain(resolved_type)
         _ => break OpenFlowCoverageDomain
@@ -765,7 +768,7 @@ impl SelfHostBodyFlowAnalyzer {
     }
     let covered_variants = self_host_module_value_bool_slots(enum_variants.length())
     let mut covered_variant_count = 0u32
-    let mut coverage_error = false
+    let mut coverage_error = domain is ErrorFlowCoverageDomain
     let mut has_guard = false
     let mut branches = self_host_flow_empty()
     let mut catch_all = false
@@ -811,13 +814,13 @@ impl SelfHostBodyFlowAnalyzer {
               }
             }
           }
-          OpenFlowCoverageDomain => {
+          ErrorFlowCoverageDomain, OpenFlowCoverageDomain => {
             if !catches_all {
               useful = true
             }
           }
         }
-        if catch_all || !useful {
+        if !(domain is ErrorFlowCoverageDomain) && (catch_all || !useful) {
           self.diagnostics.push(RedundantPatternArm(
             arm,
             info.offset,
@@ -877,7 +880,7 @@ impl SelfHostBodyFlowAnalyzer {
           enum_variants.length(),
         )
       }
-      OpenFlowCoverageDomain => false
+      ErrorFlowCoverageDomain, OpenFlowCoverageDomain => false
     }
     if !exhaustive {
       let rows = array_new::<Array<U32>>()
@@ -915,6 +918,7 @@ impl SelfHostBodyFlowAnalyzer {
     if !exhaustive {
       let missing_start = self.missing_cases.length()
       match domain {
+        ErrorFlowCoverageDomain => {}
         BoolFlowCoverageDomain => {
           if !covered_false {
             self.missing_cases.push(
@@ -2034,6 +2038,7 @@ impl SelfHostBodyFlowAnalyzer {
       return false
     }
     match domain {
+      ErrorFlowCoverageDomain => false
       BoolFlowCoverageDomain => {
         for value in [false, true] {
           let specialized = array_new::<Array<U32>>()
