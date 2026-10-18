@@ -4,6 +4,15 @@ Date: 2026-08-14
 
 ## Status
 
+Explicit enabled in-memory packs support interface, body-inference, and planning
+reuse on all targets. These layers retain their environment settings. Opening
+and writing a persistent pack still requires platform support; an absent or
+disabled pack does not enable caches on an unsupported platform.
+
+This is an internal lookup/store mode. The public opener creates persistent
+sessions; this change adds no public memory-pack constructor. Committing a
+pack still uses the file backend.
+
 Implemented for native persistent compilation. One `.dwp` pack now owns the hot
 compiler entries that previously lived in separate parser, interface, body,
 layout, and WasmGC-fragment files. It also stores exact successful check, HIR,

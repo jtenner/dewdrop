@@ -1,10 +1,10 @@
 ///|
 pub struct PlanningCacheStatus {
   enabled : Bool
-  layout_hits : Int
-  layout_misses : Int
-  fragment_hits : Int
-  fragment_misses : Int
+  layout_hits : Int32
+  layout_misses : Int32
+  fragment_hits : Int32
+  fragment_misses : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -54,8 +54,8 @@ pub struct CachedProgramWasmGCLink {
 }
 
 ///|
-fn planning_cache_enabled() -> Bool {
-  cache_platform_supported() &&
+fn planning_cache_enabled(pack : CompilationCachePack?) -> Bool {
+  compilation_cache_backend_available(pack) &&
   @sys.get_env_var("DEW_PLAN_CACHE").unwrap_or("0") == "1"
 }
 
@@ -87,7 +87,7 @@ fn planning_write_digest(output : Buffer, digest : FixedArray[Byte]) -> Unit {
 }
 
 ///|
-fn planning_write_int(output : Buffer, value : Int) -> Unit {
+fn planning_write_int(output : Buffer, value : Int32) -> Unit {
   let encoded = value.reinterpret_as_uint()
   output.write_byte((encoded & 0xffU).to_byte())
   output.write_byte(((encoded >> 8) & 0xffU).to_byte())
@@ -106,7 +106,7 @@ fn planning_write_id(output : Buffer, value : UInt64) -> Unit {
 fn type_layout_cache_key(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
 ) -> Result[
   (String, FixedArray[Byte], FixedArray[Byte], FixedArray[Byte]),
   String,
@@ -148,7 +148,7 @@ fn wasmgc_planning_options_bytes(
 fn wasmgc_fragment_program_context(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  root_module_index : Int,
+  root_module_index : Int32,
   options : @semantic.WasmGCPlanningOptions,
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
@@ -185,7 +185,7 @@ fn wasmgc_fragment_program_context(
 ///|
 fn wasmgc_fragment_cache_key(
   program : @semantic.CollectedProgram,
-  module_index : Int,
+  module_index : Int32,
   program_context : FixedArray[Byte],
 ) -> (String, FixedArray[Byte], FixedArray[Byte]) {
   let source = body_inference_source_digest(program, module_index)
@@ -203,7 +203,7 @@ fn wasmgc_fragment_cache_key(
 fn validate_cached_type_layouts(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
   value : @semantic.PlannedModuleTypeLayouts,
 ) -> Result[Unit, String] {
   let collected = program.modules[module_index]
@@ -236,8 +236,8 @@ fn validate_cached_type_layouts(
 fn lookup_type_layout_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
-  pack? : CompilationCachePack? = None,
+  module_index : Int32,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[@semantic.PlannedModuleTypeLayouts?, String] {
   let (fingerprint, key, source, interface_) = match
     type_layout_cache_key(program, frozen, module_index) {
@@ -299,9 +299,9 @@ fn lookup_type_layout_cache(
 fn store_type_layout_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
   layouts : @semantic.PlannedModuleTypeLayouts,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let (fingerprint, key, source, interface_) = match
     type_layout_cache_key(program, frozen, module_index) {
@@ -368,7 +368,7 @@ fn store_type_layout_cache(
 ///|
 fn validate_cached_wasmgc_fragments(
   lowering : @semantic.PlannedProgramLowering,
-  module_index : Int,
+  module_index : Int32,
   options : @semantic.WasmGCPlanningOptions,
   value : @semantic.PlannedModuleWasmGCFragments,
 ) -> Result[Unit, String] {
@@ -405,10 +405,10 @@ fn validate_cached_wasmgc_fragments(
 fn lookup_wasmgc_fragment_cache(
   program : @semantic.CollectedProgram,
   lowering : @semantic.PlannedProgramLowering,
-  module_index : Int,
+  module_index : Int32,
   program_context : FixedArray[Byte],
   options : @semantic.WasmGCPlanningOptions,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[@semantic.PlannedModuleWasmGCFragments?, String] {
   let (fingerprint, key, source) = wasmgc_fragment_cache_key(
     program, module_index, program_context,
@@ -473,11 +473,11 @@ fn lookup_wasmgc_fragment_cache(
 fn store_wasmgc_fragment_cache(
   program : @semantic.CollectedProgram,
   lowering : @semantic.PlannedProgramLowering,
-  module_index : Int,
+  module_index : Int32,
   program_context : FixedArray[Byte],
   options : @semantic.WasmGCPlanningOptions,
   fragments : @semantic.PlannedModuleWasmGCFragments,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   match
     validate_cached_wasmgc_fragments(lowering, module_index, options, fragments) {
@@ -555,9 +555,9 @@ fn store_wasmgc_fragment_cache(
 pub fn plan_program_lowering_with_cache(
   program : @semantic.CollectedProgram,
   analyzed : @semantic.AnalyzedProgramSemantics,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[CachedProgramLowering, String] {
-  let enabled = planning_cache_enabled()
+  let enabled = planning_cache_enabled(pack)
   if !enabled {
     return Ok({
       lowering: @semantic.plan_program_lowering(program, analyzed),
@@ -621,11 +621,11 @@ pub fn plan_program_wasmgc_link_with_cache(
   program : @semantic.CollectedProgram,
   analyzed : @semantic.AnalyzedProgramSemantics,
   lowering : @semantic.PlannedProgramLowering,
-  root_module_index : Int,
+  root_module_index : Int32,
   options : @semantic.WasmGCPlanningOptions,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[CachedProgramWasmGCLink, String] {
-  let enabled = planning_cache_enabled()
+  let enabled = planning_cache_enabled(pack)
   if !enabled {
     let fragments = @semantic.plan_program_wasmgc_fragments_with_options_and_cache_hooks(
       analyzed,

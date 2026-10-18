@@ -8,8 +8,8 @@ pub enum InterfaceBundleCacheLookup {
 ///|
 pub struct InterfaceBundleCacheStatus {
   enabled : Bool
-  hits : Int
-  misses : Int
+  hits : Int32
+  misses : Int32
 }
 
 ///|
@@ -44,17 +44,26 @@ pub struct InterfaceBundleCacheKey {
 pub struct InterfaceBundlePolicy {
   enabled : Bool
   store_on_miss : Bool
-  root_module_index : Int
+  root_module_index : Int32
   include_dependencies : Bool
 }
 
 ///|
 pub fn InterfaceBundlePolicy::for_compilation(
   loaded : StandardLibraryLoad,
-  root_module_index : Int,
+  root_module_index : Int32,
+) -> InterfaceBundlePolicy {
+  interface_bundle_policy_for_compilation(loaded, root_module_index, None)
+}
+
+///|
+fn interface_bundle_policy_for_compilation(
+  loaded : StandardLibraryLoad,
+  root_module_index : Int32,
+  pack : CompilationCachePack?,
 ) -> InterfaceBundlePolicy {
   {
-    enabled: cache_platform_supported() &&
+    enabled: compilation_cache_backend_available(pack) &&
     @sys.get_env_var("DEW_INTERFACE_CACHE").unwrap_or("1") != "0",
     store_on_miss: loaded.cacheable,
     root_module_index,
@@ -65,7 +74,7 @@ pub fn InterfaceBundlePolicy::for_compilation(
 ///|
 fn interface_bundle_cache_key(
   loaded : StandardLibraryLoad,
-  program? : @semantic.CollectedProgram? = None,
+  program~ : @semantic.CollectedProgram? = None,
 ) -> InterfaceBundleCacheKey {
   if loaded.fingerprint == "" {
     return { fingerprint: "", }
@@ -101,7 +110,7 @@ fn interface_bundle_cache_enabled(
 ///|
 fn interface_bundle_module_is_cacheable(
   program : @semantic.CollectedProgram,
-  index : Int,
+  index : Int32,
   policy : InterfaceBundlePolicy,
 ) -> Bool {
   guard program.manifest_module_count >= 0 &&
@@ -197,7 +206,7 @@ fn interface_cache_write_string(output : Buffer, value : String) -> Unit {
 ///|
 fn workspace_interface_source_fingerprint(
   program : @semantic.CollectedProgram,
-  module_index : Int,
+  module_index : Int32,
 ) -> String {
   let module_ = program.modules[module_index]
   let output = Buffer()
@@ -245,7 +254,7 @@ fn workspace_interface_cache_key_from_dependency_records(
 fn workspace_interface_cache_key(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
-  module_index : Int,
+  module_index : Int32,
   cached : Array[@semantic.FrozenModuleInterface?],
 ) -> String? {
   let dependency_records : Array[String] = []
@@ -272,7 +281,7 @@ fn workspace_interface_cache_key(
 fn validate_workspace_interface_cache_hit(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
-  module_index : Int,
+  module_index : Int32,
   cached : Array[@semantic.FrozenModuleInterface?],
   interface_ : @semantic.FrozenModuleInterface,
 ) -> Result[Bool, String] {
@@ -311,10 +320,10 @@ fn interface_pack_context(label : Bytes) -> FixedArray[Byte] {
 fn lookup_workspace_interface(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
-  module_index : Int,
+  module_index : Int32,
   cached : Array[@semantic.FrozenModuleInterface?],
   key : String,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[@semantic.FrozenModuleInterface?, String] {
   let path = workspace_interface_cache_file(key)
   let payload = match pack {
@@ -374,7 +383,7 @@ fn lookup_workspace_interface(
 fn store_workspace_interface(
   key : String,
   interface_ : @semantic.FrozenModuleInterface,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let payload = match @semantic.serialize_frozen_interfaces([interface_]) {
     Ok(value) => value
@@ -428,7 +437,7 @@ fn store_workspace_interface(
 ///|
 fn workspace_module_is_cacheable(
   program : @semantic.CollectedProgram,
-  index : Int,
+  index : Int32,
   policy : InterfaceBundlePolicy,
 ) -> Bool {
   index != policy.root_module_index &&
@@ -439,7 +448,7 @@ fn workspace_module_is_cacheable(
 fn workspace_module_cache_is_eligible(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
-  module_index : Int,
+  module_index : Int32,
   policy : InterfaceBundlePolicy,
 ) -> Bool {
   if !policy.enabled ||
@@ -475,8 +484,8 @@ fn workspace_module_cache_is_eligible(
 ///|
 fn workspace_scc_contains(
   scc : @semantic.HirSpan,
-  members : Array[Int],
-  module_index : Int,
+  members : Array[Int32],
+  module_index : Int32,
 ) -> Bool {
   for item in 0..<scc.length {
     if members[scc.start + item] == module_index {
@@ -490,7 +499,7 @@ fn workspace_scc_contains(
 fn workspace_interface_scc_cache_is_eligible(
   program : @semantic.CollectedProgram,
   scc : @semantic.HirSpan,
-  members : Array[Int],
+  members : Array[Int32],
   policy : InterfaceBundlePolicy,
 ) -> Bool {
   if !policy.enabled || !policy.store_on_miss || scc.length < 1 {
@@ -513,7 +522,7 @@ fn workspace_interface_scc_cache_key(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
   scc : @semantic.HirSpan,
-  members : Array[Int],
+  members : Array[Int32],
   cached : Array[@semantic.FrozenModuleInterface?],
 ) -> String? {
   let source_records : Array[String] = []
@@ -560,10 +569,10 @@ fn lookup_workspace_interface_scc(
   program : @semantic.CollectedProgram,
   graph : @semantic.ModuleDependencyGraph,
   scc : @semantic.HirSpan,
-  members : Array[Int],
+  members : Array[Int32],
   cached : Array[@semantic.FrozenModuleInterface?],
   key : String,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Bool, String] {
   let path = workspace_interface_cache_file(key)
   let representative = members[scc.start]
@@ -678,9 +687,9 @@ fn lookup_workspace_interface_scc(
 fn store_workspace_interface_scc(
   key : String,
   scc : @semantic.HirSpan,
-  members : Array[Int],
+  members : Array[Int32],
   interfaces : Array[@semantic.FrozenModuleInterface?],
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let stored : Array[@semantic.FrozenModuleInterface] = []
   for item in 0..<scc.length {
@@ -754,7 +763,7 @@ pub fn lookup_interface_bundle(
   program : @semantic.CollectedProgram,
   key : InterfaceBundleCacheKey,
   policy : InterfaceBundlePolicy,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[InterfaceBundleCacheLookup, String] {
   if !interface_bundle_cache_enabled(key, policy) {
     return Ok(InterfaceBundleCacheDisabled)
@@ -843,7 +852,7 @@ pub fn store_interface_bundle(
   interfaces : Array[@semantic.FrozenModuleInterface],
   key : InterfaceBundleCacheKey,
   policy : InterfaceBundlePolicy,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   if !interface_bundle_cache_enabled(key, policy) {
     return Ok(())

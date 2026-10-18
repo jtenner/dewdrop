@@ -22,9 +22,14 @@ pub struct CompilationCachePack {
   path : String
   pack : @cache_binary.ArtifactPack
   mut dirty : Bool
-  mut hits : Int
-  mut misses : Int
-  reads : Int
+  mut hits : Int32
+  mut misses : Int32
+  reads : Int32
+}
+
+///|
+fn compilation_cache_backend_available(pack : CompilationCachePack?) -> Bool {
+  cache_platform_supported() || (pack is Some(session) && session.enabled)
 }
 
 ///|
@@ -73,7 +78,7 @@ fn cache_pack_write_string(output : Buffer, value : String) -> Unit {
 }
 
 ///|
-fn cache_pack_write_int(output : Buffer, value : Int) -> Unit {
+fn cache_pack_write_int(output : Buffer, value : Int32) -> Unit {
   let bits = value.reinterpret_as_uint()
   output.write_byte((bits & 0xffU).to_byte())
   output.write_byte(((bits >> 8) & 0xffU).to_byte())
@@ -84,9 +89,9 @@ fn cache_pack_write_int(output : Buffer, value : Int) -> Unit {
 ///|
 fn cache_pack_default_key(
   manifest : @semantic.ProgramManifest,
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
-  planning_mode : Int,
+  planning_mode : Int32,
 ) -> String {
   let output = Buffer()
   output.write_bytes(b"DEW_COMPILATION_CACHE_PACK_KEY_V1_COUNTED_GRAPH\x00")
@@ -121,9 +126,9 @@ fn cache_pack_path(key : String) -> String {
 ///|
 pub fn open_compilation_cache_pack(
   manifest : @semantic.ProgramManifest,
-  root_module_index : Int,
+  root_module_index : Int32,
   default_preamble : Bool,
-  planning_mode : Int,
+  planning_mode : Int32,
 ) -> Result[CompilationCachePack, String] {
   let any_layer_enabled = @sys.get_env_var("DEW_PARSE_EVENT_CACHE").unwrap_or(
       "1",
@@ -184,8 +189,8 @@ pub fn open_compilation_cache_pack(
 ///|
 pub fn CompilationCachePack::lookup(
   self : CompilationCachePack,
-  kind : UInt,
-  schema_version : UInt,
+  kind : UInt32,
+  schema_version : UInt32,
   owner : String,
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],
@@ -216,10 +221,10 @@ pub fn CompilationCachePack::lookup(
 ///|
 pub fn CompilationCachePack::store(
   self : CompilationCachePack,
-  kind : UInt,
-  schema_version : UInt,
-  flags : UInt,
-  owner_kind : UInt,
+  kind : UInt32,
+  schema_version : UInt32,
+  flags : UInt32,
+  owner_kind : UInt32,
   owner : String,
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],

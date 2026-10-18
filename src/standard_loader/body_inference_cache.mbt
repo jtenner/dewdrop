@@ -1,11 +1,11 @@
 ///|
 pub struct BodyInferenceCacheStatus {
   enabled : Bool
-  hits : Int
-  misses : Int
+  hits : Int32
+  misses : Int32
   family_enabled : Bool
-  family_hits : Int
-  family_misses : Int
+  family_hits : Int32
+  family_misses : Int32
 }
 
 ///|
@@ -47,8 +47,8 @@ priv struct BodyInferenceFamilyCacheKey {
 }
 
 ///|
-fn body_inference_cache_enabled() -> Bool {
-  cache_platform_supported() &&
+fn body_inference_cache_enabled(pack : CompilationCachePack?) -> Bool {
+  compilation_cache_backend_available(pack) &&
   (
     @sys.get_env_var("DEW_BODY_CACHE").unwrap_or("0") == "1" ||
     @sys.get_env_var("DEW_BODY_FAMILY_CACHE").unwrap_or("0") == "1"
@@ -56,8 +56,8 @@ fn body_inference_cache_enabled() -> Bool {
 }
 
 ///|
-fn body_inference_family_cache_enabled() -> Bool {
-  body_inference_cache_enabled() &&
+fn body_inference_family_cache_enabled(pack : CompilationCachePack?) -> Bool {
+  body_inference_cache_enabled(pack) &&
   @sys.get_env_var("DEW_BODY_FAMILY_CACHE").unwrap_or("0") == "1"
 }
 
@@ -92,7 +92,7 @@ fn body_family_write_u64(output : Buffer, value : UInt64) -> Unit {
 }
 
 ///|
-fn body_family_write_int(output : Buffer, value : Int) -> Unit {
+fn body_family_write_int(output : Buffer, value : Int32) -> Unit {
   let encoded = value.reinterpret_as_uint().to_uint64()
   body_family_write_u64(output, encoded)
 }
@@ -101,8 +101,8 @@ fn body_family_write_int(output : Buffer, value : Int) -> Unit {
 fn body_family_declaration_sources(
   collected : @semantic.CollectedModule,
 ) -> Result[Array[Bytes?], String] {
-  let file_indices : Map[@semantic.FileId, Int] = Map::default()
-  let declarations_by_file : Array[Array[(Int, @semantic.DeclId)]] = []
+  let file_indices : Map[@semantic.FileId, Int32] = Map::default()
+  let declarations_by_file : Array[Array[(Int32, @semantic.DeclId)]] = []
   for index, file in collected.files {
     file_indices[file] = index
     declarations_by_file.push([])
@@ -187,7 +187,7 @@ fn body_inference_module_value_source_digest(
 fn body_inference_family_context_digest(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
   declaration_sources : Array[Bytes?],
 ) -> Result[FixedArray[Byte], String] {
   let collected = program.modules[module_index]
@@ -245,7 +245,7 @@ fn body_inference_family_context_digest(
 fn body_inference_family_cache_keys(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
 ) -> Result[Array[BodyInferenceFamilyCacheKey?], String] {
   if module_index < 0 || module_index >= program.modules.length() {
     return Err("body-family cache module index is out of range")
@@ -304,7 +304,7 @@ fn body_inference_family_cache_keys(
 ///|
 fn body_inference_source_digest(
   program : @semantic.CollectedProgram,
-  module_index : Int,
+  module_index : Int32,
 ) -> FixedArray[Byte] {
   let module_ = program.modules[module_index]
   let output = Buffer()
@@ -330,7 +330,7 @@ fn body_inference_source_digest(
 ///|
 fn body_inference_interface_digest(
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
 ) -> Result[FixedArray[Byte], String] {
   let output = Buffer()
   output.write_bytes(b"DEW_BODY_INFERENCE_INTERFACE_V1\x00")
@@ -338,7 +338,7 @@ fn body_inference_interface_digest(
     output,
     frozen.interfaces[module_index].interface_fingerprint,
   )
-  let dependencies : Array[Int] = []
+  let dependencies : Array[Int32] = []
   for interface_index in frozen.import_scopes[module_index].imported_interfaces {
     if interface_index != module_index {
       dependencies.push(interface_index)
@@ -363,7 +363,7 @@ fn body_inference_interface_digest(
 ///|
 fn body_inference_cache_key_digest(
   program : @semantic.CollectedProgram,
-  module_index : Int,
+  module_index : Int32,
   source : FixedArray[Byte],
   interface_ : FixedArray[Byte],
 ) -> FixedArray[Byte] {
@@ -384,7 +384,7 @@ fn body_inference_cache_key_digest(
 fn body_inference_cache_key(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
 ) -> Result[
   (String, FixedArray[Byte], FixedArray[Byte], FixedArray[Byte]),
   String,
@@ -464,11 +464,11 @@ fn validate_cached_inferred_module(
 fn lookup_body_inference_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
   resolved : @semantic.ResolvedModuleTypes,
   imports : @semantic.ResolvedModuleImports,
   names : @semantic.ResolvedModuleNames,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[@semantic.InferredModuleBodies?, String] {
   let (key, key_digest, source_digest, interface_digest) = match
     body_inference_cache_key(program, frozen, module_index) {
@@ -543,9 +543,9 @@ fn lookup_body_inference_cache(
 fn store_body_inference_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
   inferred : @semantic.InferredModuleBodies,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let (key, key_digest, source_digest, interface_digest) = match
     body_inference_cache_key(program, frozen, module_index) {
@@ -619,7 +619,7 @@ fn lookup_body_inference_family_cache(
   module_id : @semantic.ModuleId,
   module_path : String,
   context : FixedArray[Byte],
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[@semantic.BodyInferenceFamilyBundleIndex?, String] {
   let fingerprint = @crypto.bytes_to_hex_string(context)
   let path = body_inference_family_cache_file(fingerprint)
@@ -673,7 +673,7 @@ fn store_body_inference_family_cache(
   module_path : String,
   context : FixedArray[Byte],
   bundle : @semantic.BodyInferenceFamilyBundle,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[Unit, String] {
   let payload = match @semantic.serialize_body_inference_family_bundle(bundle) {
     Ok(value) => value
@@ -731,11 +731,11 @@ fn store_body_inference_family_cache(
 fn infer_module_with_body_family_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  module_index : Int,
+  module_index : Int32,
   resolved : @semantic.ResolvedModuleTypes,
   imports : @semantic.ResolvedModuleImports,
   names : @semantic.ResolvedModuleNames,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[@semantic.BodyInferenceFamilyAnalysis, String] {
   let keys = match
     body_inference_family_cache_keys(program, frozen, module_index) {
@@ -850,10 +850,10 @@ fn infer_module_with_body_family_cache(
 pub fn analyze_program_semantics_with_body_cache(
   program : @semantic.CollectedProgram,
   frozen : @semantic.FrozenProgramInterfaces,
-  pack? : CompilationCachePack? = None,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[CachedProgramSemanticAnalysis, String] {
-  let enabled = body_inference_cache_enabled()
-  let family_enabled = body_inference_family_cache_enabled()
+  let enabled = body_inference_cache_enabled(pack)
+  let family_enabled = body_inference_family_cache_enabled(pack)
   let slots : Array[@semantic.AnalyzedProgramModule?] = Array::make(
     program.modules.length(),
     None,
@@ -862,8 +862,10 @@ pub fn analyze_program_semantics_with_body_cache(
   // that were analyzed earlier. Delay publication until every module has been
   // inferred so entries use the same settled interface state that the
   // interface-bundle cache persists.
-  let pending_module_stores : Array[@semantic.InferredModuleBodies?] =
-    Array::make(program.modules.length(), None)
+  let pending_module_stores : Array[@semantic.InferredModuleBodies?] = Array::make(
+    program.modules.length(),
+    None,
+  )
   let mut hits = 0
   let mut misses = 0
   let mut family_hits = 0

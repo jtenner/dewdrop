@@ -5,15 +5,17 @@
 pub fn analyze_program_with_interface_bundle_cache(
   program : @semantic.CollectedProgram,
   loaded : StandardLibraryLoad,
-  root_module_index? : Int = 0,
-  pack? : CompilationCachePack? = None,
+  root_module_index~ : Int32 = 0,
+  pack~ : CompilationCachePack? = None,
 ) -> Result[CachedInterfaceBundleAnalysis, String] {
   let cached : Array[@semantic.FrozenModuleInterface?] = Array::make(
     program.modules.length(),
     None,
   )
   let key = interface_bundle_cache_key(loaded, program=Some(program))
-  let policy = InterfaceBundlePolicy::for_compilation(loaded, root_module_index)
+  let policy = interface_bundle_policy_for_compilation(
+    loaded, root_module_index, pack,
+  )
   let mut hits = 0
   let mut misses = 0
   let mut bundle_miss = false
