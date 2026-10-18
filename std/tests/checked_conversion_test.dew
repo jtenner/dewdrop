@@ -1,0 +1,25 @@
+open dew.std.math
+
+test "checked U32 and I32 conversions reject range errors" {
+  assert(u32_checked_into_i32(0u32) is Option::Some(0), "U32 zero")
+  assert(u32_checked_into_i32(2147483647u32) is Option::Some(2147483647), "I32 maximum")
+  assert(u32_checked_into_i32(2147483648u32) is Option::None, "I32 maximum plus one")
+  assert(u32_checked_into_i32(4294967295u32) is Option::None, "U32 maximum")
+  assert(i32_checked_into_u32(-2147483648i32) is Option::None, "I32 minimum")
+  assert(i32_checked_into_u32(-1i32) is Option::None, "negative to unsigned")
+  assert(i32_checked_into_u32(0i32) is Option::Some(0u32), "I32 zero")
+  assert(i32_checked_into_u32(2147483647i32) is Option::Some(2147483647u32), "positive maximum")
+}
+
+test "checked wide conversions compare before narrowing" {
+  assert(u64_checked_into_u32(0u64) is Option::Some(0u32), "U64 zero")
+  assert(u64_checked_into_u32(4294967295u64) is Option::Some(4294967295u32), "U32 maximum")
+  assert(u64_checked_into_u32(4294967296u64) is Option::None, "U32 maximum plus one")
+  assert(u64_checked_into_u32(18446744073709551615u64) is Option::None, "U64 maximum")
+  assert(i64_checked_into_i32(-2147483648i64) is Option::Some(-2147483648i32), "I32 minimum exact")
+  assert(i64_checked_into_i32(2147483647i64) is Option::Some(2147483647i32), "I32 maximum exact")
+  assert(i64_checked_into_i32(-2147483649i64) is Option::None, "I32 minimum minus one")
+  assert(i64_checked_into_i32(2147483648i64) is Option::None, "I32 maximum plus one")
+  assert(i64_checked_into_i32(-9223372036854775808i64) is Option::None, "I64 minimum")
+  assert(i64_checked_into_i32(9223372036854775807i64) is Option::None, "I64 maximum")
+}

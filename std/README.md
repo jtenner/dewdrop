@@ -110,6 +110,11 @@ The self-host compiler uses the declared enum fragments for Option and Result, w
 
 `StringBuilder` appends every signed and unsigned integer width directly as decimal text, including exact signed minima, without constructing a temporary String. `dew.std.encoding.utf8` provides zero-copy String/StringView encoding, strict validation and decoding with the first malformed byte offset, and deterministic lossy decoding with U+FFFD replacement. `dew.std.blake3` provides deterministic one-shot BLAKE3-256 over Bytes plus the first little-endian U32 lookup lane used by compiler cache packs. `dew.std.integrity.sha256` provides portable one-shot SHA-256 over Bytes and returns 32 digest bytes as `FixedArray<U8>`.
 
+`dew.std.math` provides `u32_checked_into_i32`, `i32_checked_into_u32`,
+`u64_checked_into_u32`, and `i64_checked_into_i32`. They return `None` for a
+range error and `Some` for an exact value. Existing `Into` bit and wrapping
+conversions keep their current behavior.
+
 `BytesBuilder` remains the name of the one-shot, consuming construction type. A future `Buffer` would imply a reusable mutable/random-access abstraction and should be designed separately rather than aliasing the builder.
 
 The compiler performs a deterministic leading-import prepass, loads only selected on-disk `dew.std` source paths from a fixed compiler registry, independently collects the selected compiler-owned modules, freezes their immutable interfaces, and resolves user code only through those interfaces. `dew.std.preamble`, `dew.std.option`, and `dew.std.result` are ambient unless `--no-default-preamble` is used; text, builder, bytes, WASI, and lane modules remain selective. Private text-runtime declarations live in their own compiler-owned module, and immutable range-copy implementations call private raw intrinsics rather than depending on public builder modules. Unused imported signatures, functions, and nominal layouts are removed before final Wasm type/function indexing.

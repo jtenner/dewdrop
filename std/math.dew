@@ -758,6 +758,38 @@ pub fn u64_checked_rem(left: U64, right: U64) -> Option<U64> {
   }
 }
 
+pub fn u32_checked_into_i32(value: U32) -> Option<I32> {
+  if value > 2147483647u32 {
+    Option::None
+  } else {
+    Option::Some(value.into())
+  }
+}
+
+pub fn i32_checked_into_u32(value: I32) -> Option<U32> {
+  if value < 0i32 {
+    Option::None
+  } else {
+    Option::Some(value.into())
+  }
+}
+
+pub fn u64_checked_into_u32(value: U64) -> Option<U32> {
+  if value > 4294967295u64 {
+    Option::None
+  } else {
+    Option::Some(value.into())
+  }
+}
+
+pub fn i64_checked_into_i32(value: I64) -> Option<I32> {
+  if value < -2147483648i64 || value > 2147483647i64 {
+    Option::None
+  } else {
+    Option::Some(value.into())
+  }
+}
+
 pub builtin f32_to_bits(value: F32) -> U32 = "i32.reinterpret_f32"
 pub builtin f32_from_bits(value: U32) -> F32 = "f32.reinterpret_i32"
 pub builtin f32_abs(value: F32) -> F32 = "f32.abs"
