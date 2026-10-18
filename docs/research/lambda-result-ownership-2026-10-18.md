@@ -57,7 +57,8 @@ planning on the valid cases.
 Mutation cases change a reference lambda ABI, a specialized scalar lambda ABI,
 a specialized Unit lambda ABI, and a named function ABI. Each test checks that
 it changed the intended fragment and requires the specific lambda or named
-result diagnostic. The full self-host test lane discovers this `_test.dew` file.
+result diagnostic. The hardening script includes this file. The full self-host
+test lane also discovers this `_test.dew` file.
 
 Before the fix, two tests passed and three failed: the valid mixed parent/lambda
 case was rejected, the corrupted reference lambda used the wrong parent
