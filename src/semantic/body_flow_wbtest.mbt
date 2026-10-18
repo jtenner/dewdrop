@@ -513,15 +513,20 @@ test "matrix variant collection charges before materialization" {
     274UL, b"enum Noise {\n  N0\n  N1\n  N2\n  N3\n  N4\n  N5\n  N6\n  N7\n  N8\n  N9\n  N10\n  N11\n  N12\n  N13\n  N14\n  N15\n  N16\n  N17\n  N18\n  N19\n  N20\n  N21\n  N22\n  N23\n  N24\n  N25\n  N26\n  N27\n  N28\n  N29\n  N30\n  N31\n}\nenum Bit {\n  Zero\n  One\n}\nfn read(value: Bit) -> I32 {\n  match value {\n    Zero => 0\n    One => 1\n  }\n}\n",
   )
   let analyzer = BodyFlowAnalyzer::new(
-    collected, resolved, inferred, None, collected.bodies[0],
-    flow_variant_spans(collected), [],
+    collected,
+    resolved,
+    inferred,
+    None,
+    collected.bodies[0],
+    flow_variant_spans(collected),
+    [],
   )
   let declaration = collected.lookup_type("Bit").unwrap()
-  let limited : PatternCoverageWork = { remaining: 2, exhausted: false }
+  let limited : PatternCoverageWork = { remaining: 2, exhausted: false, }
   assert_true(analyzer.matrix_enum_variants(declaration, limited) is None)
   assert_true(limited.exhausted)
   assert_false(limited.spend(0))
-  let sufficient : PatternCoverageWork = { remaining: 3, exhausted: false }
+  let sufficient : PatternCoverageWork = { remaining: 3, exhausted: false, }
   let variants = analyzer.matrix_enum_variants(declaration, sufficient).unwrap()
   assert_eq(variants.length(), 2)
   assert_eq(sufficient.remaining, 0)
@@ -612,7 +617,10 @@ test "matrix stability imported mutable guard" {
   )
   assert_eq(inferred.diagnostics, [])
   let flows = analyze_module_flows_with_imports(
-    program.modules[0], frozen.interfaces[0].resolved_types, inferred, imports,
+    program.modules[0],
+    frozen.interfaces[0].resolved_types,
+    inferred,
+    imports,
   )
   assert_eq(flows.diagnostics.length(), 1)
   assert_true(flows.diagnostics[0] is NonExhaustiveMatch(_, _, _))
@@ -626,7 +634,10 @@ test "matrix stability imported immutable guard" {
   )
   assert_eq(inferred.diagnostics, [])
   let flows = analyze_module_flows_with_imports(
-    program.modules[0], frozen.interfaces[0].resolved_types, inferred, imports,
+    program.modules[0],
+    frozen.interfaces[0].resolved_types,
+    inferred,
+    imports,
   )
   assert_eq(flows.diagnostics, [])
 }

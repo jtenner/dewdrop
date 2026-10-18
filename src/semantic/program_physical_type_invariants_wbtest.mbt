@@ -16,7 +16,9 @@ fn physical_type_test_link() -> PlannedProgramWasmGCLink raise {
 }
 
 ///|
-fn physical_type_source_signature_slot(link : PlannedProgramWasmGCLink) -> Int32 {
+fn physical_type_source_signature_slot(
+  link : PlannedProgramWasmGCLink,
+) -> Int32 {
   for slot, signature in link.program_signature_types {
     if signature.module_index == 0 {
       match signature.kind {
@@ -479,7 +481,9 @@ test "canonical signatures require their source function" {
 ///|
 test "canonical signature physical indices cannot be duplicated" {
   let link = physical_type_test_link()
-  let duplicate = link.program_signature_types[physical_type_source_signature_slot(link)]
+  let duplicate = link.program_signature_types[physical_type_source_signature_slot(
+      link,
+    )]
   let slot = link.program_signature_types.length()
   assert_true(duplicate.kind is PlannedProgramFunctionSignature(_))
   link.program_signature_types.push(duplicate)

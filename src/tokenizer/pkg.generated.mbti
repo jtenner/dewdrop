@@ -3,6 +3,7 @@ package "jtenner/dewdrop/tokenizer"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -33,7 +34,7 @@ pub fn tokens(Bytes) -> Iter[Token]
 // Errors
 
 // Types and methods
-pub enum Keyword {
+pub(all) enum Keyword {
   Fn
   Test
   Pub
@@ -46,13 +47,16 @@ pub enum Keyword {
   Struct
   Type
   Let
+  Using
   Mut
   If
   Else
   Match
+  Is
   While
   Loop
   Return
+  Defer
   Break
   Continue
   True
@@ -60,13 +64,13 @@ pub enum Keyword {
   As
   In
   Where
-  Global
+  Open
   Import
   Export
   Package
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-pub enum LexError {
+pub(all) enum LexError {
   UnexpectedUnit(UInt)
   InvalidAtIdentifier
   InvalidInteger(String)
@@ -74,9 +78,9 @@ pub enum LexError {
   InvalidEscape(UInt)
   UnterminatedString
   SourceIo(Int)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-pub enum Symbol {
+pub(all) enum Symbol {
   LeftParen
   RightParen
   LeftBrace
@@ -112,15 +116,15 @@ pub enum Symbol {
   Bang
   Ampersand
   Pipe
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-pub struct Token(TokenKind, UInt64, Int) derive(Eq, @debug.Debug)
+pub struct Token(TokenKind, UInt64, Int) derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn Token::index(Self) -> Int
 pub fn Token::kind(Self) -> TokenKind
 pub fn Token::new(TokenKind, UInt64, Int) -> Self
 pub fn Token::offset(Self) -> UInt64
 
-pub enum TokenKind {
+pub(all) enum TokenKind {
   Newline
   Symbol(Symbol)
   Keyword(Keyword)
@@ -140,7 +144,7 @@ pub enum TokenKind {
   BytesLiteral(Bytes)
   MultilineString(Bytes)
   Error(LexError)
-} derive(Eq, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Tokenizer {
   source : Utf8Cursor
@@ -188,4 +192,3 @@ pub type ByteOffset = UInt64
 pub type UtfCodepoint = UInt
 
 // Traits
-

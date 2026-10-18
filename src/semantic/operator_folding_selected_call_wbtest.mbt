@@ -180,9 +180,12 @@ test "constant folding and intrinsic forwarding retain a result trait coercion" 
     PlannedOperatorCall(target, _, _, _, _) => target
     _ => fail("missing operator call")
   }
-  assert_true(module_.expressions.any(expression => {
-    expression.trait_object_coercion is SelectedInferredTraitObjectCoercion(_, _)
-  }))
+  assert_true(
+    module_.expressions.any(expression => {
+      expression.trait_object_coercion
+      is SelectedInferredTraitObjectCoercion(_, _)
+    }),
+  )
   let builtins : Map[DeclId, Bytes] = {}
   for callable in module_.functions.callables {
     if callable.kind is PlannedBuiltinCallable(name) {
@@ -191,7 +194,9 @@ test "constant folding and intrinsic forwarding retain a result trait coercion" 
   }
   assert_eq(
     wasmgc_direct_builtin_of(
-      module_, module_.functions.callable_of(target).unwrap(), builtins,
+      module_,
+      module_.functions.callable_of(target).unwrap(),
+      builtins,
     ),
     b"",
   )

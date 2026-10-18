@@ -2508,30 +2508,43 @@ fn program_fold_operator_result_matches(
   opcode : Bytes,
 ) -> Bool {
   let left = program_fold_callable_primitive(
-    module_, callable,
+    module_,
+    callable,
     module_.functions.parameters[callable.parameters.start].type_,
   )
   let right = program_fold_callable_primitive(
-    module_, callable,
+    module_,
+    callable,
     module_.functions.parameters[callable.parameters.start + 1].type_,
   )
   let result = program_fold_callable_primitive(
-    module_, callable, callable.result_type,
+    module_,
+    callable,
+    callable.result_type,
   )
   if left is None || left != right || result is None {
     return false
   }
   let comparison = opcode == b"i32.eq" ||
     opcode == b"i32.ne" ||
-    opcode == b"i32.lt_s" || opcode == b"i32.lt_u" ||
-    opcode == b"i32.le_s" || opcode == b"i32.le_u" ||
-    opcode == b"i32.gt_s" || opcode == b"i32.gt_u" ||
-    opcode == b"i32.ge_s" || opcode == b"i32.ge_u" ||
-    opcode == b"i64.eq" || opcode == b"i64.ne" ||
-    opcode == b"i64.lt_s" || opcode == b"i64.lt_u" ||
-    opcode == b"i64.le_s" || opcode == b"i64.le_u" ||
-    opcode == b"i64.gt_s" || opcode == b"i64.gt_u" ||
-    opcode == b"i64.ge_s" || opcode == b"i64.ge_u"
+    opcode == b"i32.lt_s" ||
+    opcode == b"i32.lt_u" ||
+    opcode == b"i32.le_s" ||
+    opcode == b"i32.le_u" ||
+    opcode == b"i32.gt_s" ||
+    opcode == b"i32.gt_u" ||
+    opcode == b"i32.ge_s" ||
+    opcode == b"i32.ge_u" ||
+    opcode == b"i64.eq" ||
+    opcode == b"i64.ne" ||
+    opcode == b"i64.lt_s" ||
+    opcode == b"i64.lt_u" ||
+    opcode == b"i64.le_s" ||
+    opcode == b"i64.le_u" ||
+    opcode == b"i64.gt_s" ||
+    opcode == b"i64.gt_u" ||
+    opcode == b"i64.ge_s" ||
+    opcode == b"i64.ge_u"
   if comparison {
     result == Some(BoolType)
   } else {

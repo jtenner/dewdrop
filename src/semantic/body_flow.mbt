@@ -758,16 +758,26 @@ fn BodyFlowAnalyzer::matrix_enum_variants(
   declaration : DeclId,
   work : PatternCoverageWork,
 ) -> Array[VariantId]? {
-  if !work.spend(1) { return None }
+  if !work.spend(1) {
+    return None
+  }
   if semantic_id_module(declaration) == self.collected.module_id {
     let span = self.variant_span(declaration)
-    if !work.spend(span.length) { return None }
-    Some(Array::makei(span.length, index => self.collected.variants[span.start + index].id))
+    if !work.spend(span.length) {
+      return None
+    }
+    Some(
+      Array::makei(span.length, index => {
+        self.collected.variants[span.start + index].id
+      }),
+    )
   } else {
     match self.imports {
       Some(imports) => {
         let variants = imports.variants_of(declaration)
-        if !work.spend(variants.length()) { return None }
+        if !work.spend(variants.length()) {
+          return None
+        }
         Some(Array::makei(variants.length(), index => variants[index].variant))
       }
       None => Some([])
@@ -781,10 +791,14 @@ fn BodyFlowAnalyzer::matrix_domain(
   pattern : PatternId,
   work : PatternCoverageWork,
 ) -> CoverageDomain {
-  if !work.spend(1) { return ErrorCoverageDomain }
+  if !work.spend(1) {
+    return ErrorCoverageDomain
+  }
   match self.inferred.pattern_constructors[pattern] {
     VariantInferredPatternConstructor(variant, _) => {
-      if !work.spend(1) { return ErrorCoverageDomain }
+      if !work.spend(1) {
+        return ErrorCoverageDomain
+      }
       if semantic_id_module(variant) == self.collected.module_id {
         let index = semantic_id_local(variant)
         guard index >= 0 && index < self.collected.variants.length() else {
@@ -795,7 +809,9 @@ fn BodyFlowAnalyzer::matrix_domain(
         match self.imports {
           Some(imports) => {
             for index in 0..<imports.variants.length() {
-              if !work.spend(1) { return ErrorCoverageDomain }
+              if !work.spend(1) {
+                return ErrorCoverageDomain
+              }
               let info = imports.variants[index]
               if info.variant == variant {
                 return EnumCoverageDomain(info.declaration)
@@ -809,16 +825,19 @@ fn BodyFlowAnalyzer::matrix_domain(
     }
     StructInferredPatternConstructor(_, _) => OpenCoverageDomain
     ErrorInferredPatternConstructor => ErrorCoverageDomain
-    NoInferredPatternConstructor => match self.collected.patterns[pattern] {
-      HirLiteralPattern(expression, _) => {
-        if !work.spend(1) { return ErrorCoverageDomain }
-        match self.collected.expressions[expression] {
-          HirBoolExpr(_, _) => BoolCoverageDomain
-          _ => OpenCoverageDomain
+    NoInferredPatternConstructor =>
+      match self.collected.patterns[pattern] {
+        HirLiteralPattern(expression, _) => {
+          if !work.spend(1) {
+            return ErrorCoverageDomain
+          }
+          match self.collected.expressions[expression] {
+            HirBoolExpr(_, _) => BoolCoverageDomain
+            _ => OpenCoverageDomain
+          }
         }
+        _ => OpenCoverageDomain
       }
-      _ => OpenCoverageDomain
-    }
   }
 }
 
@@ -934,7 +953,9 @@ fn BodyFlowAnalyzer::matrix_struct_field_mutable(
 ) -> Bool {
   if semantic_id_module(declaration) == self.collected.module_id {
     for index in 0..<self.collected.fields.length() {
-      if !work.spend(1) { return true }
+      if !work.spend(1) {
+        return true
+      }
       let field = self.collected.fields[index]
       if field.declaration == declaration && field.name == name {
         return field.mutable_
@@ -943,12 +964,18 @@ fn BodyFlowAnalyzer::matrix_struct_field_mutable(
   } else {
     match self.imports {
       Some(imports) => {
-        if !work.spend(1) { return true }
+        if !work.spend(1) {
+          return true
+        }
         let fields = imports.fields_of(declaration)
         for index in 0..<fields.length() {
-          if !work.spend(1) { return true }
+          if !work.spend(1) {
+            return true
+          }
           let field = fields[index]
-          if field.name == self.collected.name(name) { return field.mutable_ }
+          if field.name == self.collected.name(name) {
+            return field.mutable_
+          }
         }
       }
       None => ()
@@ -966,13 +993,17 @@ fn BodyFlowAnalyzer::matrix_stability(
 ) -> (Bool, Bool) {
   let tasks : Array[PatternId] = []
   for row in rows {
-    if !work.spend(1) { return (true, true) }
+    if !work.spend(1) {
+      return (true, true)
+    }
     tasks.push(row[0])
   }
   let mut mutable_path = false
   let mut literal_call = false
   while !tasks.is_empty() {
-    if !work.spend(1) { return (true, true) }
+    if !work.spend(1) {
+      return (true, true)
+    }
     let pattern = tasks.pop().unwrap()
     match self.collected.patterns[pattern] {
       HirLiteralPattern(expression, _) =>
@@ -980,19 +1011,27 @@ fn BodyFlowAnalyzer::matrix_stability(
           literal_call = true
         }
       HirTuplePattern(_, children, _) | HirProductPattern(children, _) => {
-        if !work.spend(children.length) { return (true, true) }
+        if !work.spend(children.length) {
+          return (true, true)
+        }
         for index in 0..<children.length {
           tasks.push(self.collected.pattern_children[children.start + index])
         }
       }
-      HirStructPattern(_, fields, _, _, _) => {
+      HirStructPattern(_, fields, _, _, _) =>
         for index in 0..<fields.length {
-          if !work.spend(1) { return (true, true) }
+          if !work.spend(1) {
+            return (true, true)
+          }
           let field = self.collected.pattern_fields[fields.start + index]
           if !self.matrix_wildcard(field.pattern) {
             match self.inferred.pattern_constructors[pattern] {
               StructInferredPatternConstructor(declaration, _) =>
-                if self.matrix_struct_field_mutable(declaration, field.name, work) {
+                if self.matrix_struct_field_mutable(
+                    declaration,
+                    field.name,
+                    work,
+                  ) {
                   mutable_path = true
                 }
               _ => ()
@@ -1000,12 +1039,15 @@ fn BodyFlowAnalyzer::matrix_stability(
           }
           tasks.push(field.pattern)
         }
-      }
       HirAlternativePattern(first, alternatives, _) => {
-        if !work.spend(alternatives.length + 1) { return (true, true) }
+        if !work.spend(alternatives.length + 1) {
+          return (true, true)
+        }
         tasks.push(first)
         for index in 0..<alternatives.length {
-          tasks.push(self.collected.pattern_children[alternatives.start + index])
+          tasks.push(
+            self.collected.pattern_children[alternatives.start + index],
+          )
         }
       }
       _ => ()
