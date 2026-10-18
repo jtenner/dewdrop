@@ -1,0 +1,144 @@
+{
+  "source_commit": "fc00559474e3397b4573fb1ae23d849f0be22252",
+  "source_inputs_match_commit": true,
+  "source_inputs_count": 749,
+  "source_mismatches": [],
+  "generator": {
+    "command": [
+      "moon",
+      "build",
+      "--target",
+      "native",
+      "-j",
+      "2",
+      "--target-dir",
+      "/tmp/dewdrop-implementation-2026-10-18/snapshot-script-cold",
+      "src/module_snapshot_gen"
+    ],
+    "build_seconds": 7.143381610003416,
+    "sha256": "68d1ee0bd54a7bb493adc9baf15c4be1f1952c680260ac5320b46868b36e873b",
+    "build_source_manifest_sha256": "227ce5433bd8b74daf4a0137e3ff221e9ec0bb0eb582070c3e38076273c3aa0f"
+  },
+  "final_source_identity_raw_sha256": "451b4f35927ac696aa7526107703777c5c636d2b8ebb1428422a20dfe18ff6d3",
+  "final_source_identity_raw_path": "/tmp/dewdrop-implementation-2026-10-18/snapshot-refresh/final-check-identity.json",
+  "runner_sha256": "f186e9994b15e25bd8f531b5ff6e330169f57fcd84f486a26ce92dee6396aa7f",
+  "timing_hook_sha256": "8897d9fb71d9c0aef8eecc236ab0a9910af93c16c9ed03e9da856396f67808c2",
+  "audit_harness_sha256": "30a83d689ab0562c6642f6f68d17925e3e573872f73b929462a217ffe469da89",
+  "host": {
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "machine": "x86_64"
+  },
+  "fixture_count": 461,
+  "repeated_byte_checks": true,
+  "runtimes": [
+    "node",
+    "wago"
+  ],
+  "jobs": 8,
+  "runs": {
+    "final-update": {
+      "command": [
+        "mise",
+        "exec",
+        "wasm-tools@1.262.0",
+        "go@1.27.2",
+        "--",
+        "python3",
+        "tools/module-snapshots/run.py",
+        "--target-dir",
+        "/tmp/dewdrop-implementation-2026-10-18/snapshot-script-cold",
+        "--update"
+      ],
+      "exit": 0,
+      "seconds": 58.13420601400139,
+      "compiler_invocations": 922,
+      "max_compiler_seconds": 1.945911019007326,
+      "compiler_total_seconds": 440.5605728622322,
+      "compiler_exit_counts": {
+        "0": 822,
+        "1": 100
+      },
+      "raw_compiler_timing_sha256": "254a0d57542bafa130b0ac8aa9e51151849e305f92ccae30dca1a875487fbad1",
+      "source_inputs_unchanged": true,
+      "generator_unchanged": true
+    },
+    "final-check": {
+      "command": [
+        "mise",
+        "exec",
+        "wasm-tools@1.262.0",
+        "go@1.27.2",
+        "--",
+        "python3",
+        "tools/module-snapshots/run.py",
+        "--target-dir",
+        "/tmp/dewdrop-implementation-2026-10-18/snapshot-script-cold"
+      ],
+      "exit": 0,
+      "seconds": 63.863671270999475,
+      "compiler_invocations": 922,
+      "max_compiler_seconds": 2.3847917639941443,
+      "compiler_total_seconds": 485.3943197476765,
+      "compiler_exit_counts": {
+        "0": 822,
+        "1": 100
+      },
+      "raw_compiler_timing_sha256": "e5ccfe305476d7a6fb61ccf12906e298b4f7f5cf14b7c35db42d5444f0acf83e",
+      "source_inputs_unchanged": true,
+      "generator_unchanged": true
+    }
+  },
+  "raw_compiler_timings": {
+    "final-update": {
+      "path": "/tmp/dewdrop-implementation-2026-10-18/snapshot-refresh/final-update-compilers.jsonl",
+      "sha256": "254a0d57542bafa130b0ac8aa9e51151849e305f92ccae30dca1a875487fbad1",
+      "records": 922
+    },
+    "final-check": {
+      "path": "/tmp/dewdrop-implementation-2026-10-18/snapshot-refresh/final-check-compilers.jsonl",
+      "sha256": "e5ccfe305476d7a6fb61ccf12906e298b4f7f5cf14b7c35db42d5444f0acf83e",
+      "records": 922
+    }
+  },
+  "changed_wat_files": 219,
+  "changed_json_files": 0,
+  "normalized_bodies_equal": 219,
+  "type_count_delta_distribution": {
+    "-17": 36,
+    "-10": 1,
+    "-12": 4,
+    "-11": 3,
+    "-13": 1,
+    "-15": 167,
+    "-8": 1,
+    "-14": 1,
+    "-16": 1,
+    "2": 1,
+    "0": 3
+  },
+  "residual_type_growth": {
+    "fixture": "generics/option-result-runtime",
+    "old_types": 32,
+    "new_types": 34,
+    "extra_shapes": "Two structurally duplicate Result payload subtypes with i32 tag and eqref payload. Bodies and outputs unchanged. Generic-enum candidate/layout collection includes new helper signatures; necessity/minimality is not established. No extra runtime allocation instruction is introduced."
+  },
+  "performance_budget_cases": 10,
+  "performance_budget_seconds": 0.3575182429922279,
+  "limits": [
+    "Per-child times are validation wall times under host contention, not speed benchmarks. Their sums overlap because eight workers run concurrently.",
+    "The structural type-graph audit uses 64 fingerprint rounds, collapses structurally equal shapes and excludes compiler.facts bytes. It does not prove arbitrary nominal/recursive type equivalence or audit each metadata bit. Full Wasm validation, repeat-byte checks, and both runtime outputs are independent checks.",
+    "Debug generator and release CLI are different binaries using the same committed production pipeline. No compiler code-size or allocation gain is inferred from generator executable size.",
+    "The final runtime lane took more than 30 seconds as a batch. Every measured compiler child and private generator build stayed below 30 seconds."
+  ],
+  "tools": {
+    "node": "v24.21.0",
+    "wasm_tools_pin": "wasm-tools 1.262.0 (e22db44da 2026-10-13)",
+    "go": "go1.27.2"
+  },
+  "fixture_source_inputs": {
+    "count": 503,
+    "all_match_source_commit": true,
+    "raw_path": "/tmp/dewdrop-implementation-2026-10-18/snapshot-refresh/fixture-source-identity.json",
+    "raw_sha256": "a6fd0233e2b81d1251c3431325000e33c440afa9deb443f4739a2dfa9e81d6be"
+  }
+}

@@ -31,27 +31,12 @@
   (type (;28;) (func))
   (type (;29;) (func (param i32 i32) (result eqref)))
   (type (;30;) (func (result i32)))
-  (type (;31;) (sub (struct (field funcref))))
-  (type (;32;) (func (param eqref) (result eqref)))
-  (type (;33;) (func (param eqref i32) (result eqref)))
-  (type (;34;) (func (param eqref eqref) (result eqref)))
-  (type (;35;) (func (param eqref)))
-  (type (;36;) (func (param eqref i32)))
-  (type (;37;) (func (param eqref) (result i32)))
-  (type (;38;) (func (param eqref i32) (result i32)))
-  (type (;39;) (func (param eqref eqref i32) (result eqref)))
-  (type (;40;) (func (param eqref eqref eqref) (result eqref)))
-  (type (;41;) (func (param eqref eqref)))
-  (type (;42;) (func (param eqref eqref i32)))
-  (type (;43;) (func (param eqref eqref) (result i32)))
-  (type (;44;) (func (param eqref eqref i32) (result i32)))
-  (type (;45;) (func (param eqref eqref eqref i32) (result eqref)))
-  (type (;46;) (array (mut v128)))
-  (type (;47;) (struct (field (ref 46)) (field i32) (field i32)))
-  (type (;48;) (struct (field (ref 46)) (field i32) (field i32)))
-  (type (;49;) (struct (field (ref 46)) (field i32) (field i32)))
-  (type (;50;) (struct (field (mut (ref 46))) (field (mut i32)) (field (mut i32))))
-  (type (;51;) (struct (field (mut (ref 46))) (field (mut i32)) (field (mut i32))))
+  (type (;31;) (array (mut v128)))
+  (type (;32;) (struct (field (ref 31)) (field i32) (field i32)))
+  (type (;33;) (struct (field (ref 31)) (field i32) (field i32)))
+  (type (;34;) (struct (field (ref 31)) (field i32) (field i32)))
+  (type (;35;) (struct (field (mut (ref 31))) (field (mut i32)) (field (mut i32))))
+  (type (;36;) (struct (field (mut (ref 31))) (field (mut i32)) (field (mut i32))))
   (import "wasi_snapshot_preview1" "fd_read" (func (;0;) (type 27) (param i32 i32 i32 i32) (result i32)))
   (memory (;0;) 1)
   (export "main" (func 17))
@@ -80,7 +65,7 @@
     local.get 2
     local.get 3
     struct.new 13
-    ref.cast (ref 51)
+    ref.cast (ref 36)
   )
   (func (;4;) (type 16) (param eqref i32)
     (local (ref 13) i32)
@@ -141,7 +126,7 @@
     local.get 3
     local.get 4
     struct.new 14
-    ref.cast (ref 48)
+    ref.cast (ref 33)
   )
   (func (;6;) (type 18) (param i32) (result i32)
     (local i32)
@@ -290,8 +275,8 @@
   )
   (func (;10;) (type 22) (param eqref) (result i32)
     local.get 0
-    ref.cast (ref 48)
-    struct.get 48 2
+    ref.cast (ref 33)
+    struct.get 33 2
   )
   (func (;11;) (type 23) (param eqref) (result i32)
     local.get 0

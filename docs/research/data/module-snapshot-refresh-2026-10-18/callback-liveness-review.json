@@ -1,0 +1,79 @@
+{
+  "reviewer": "independent compiler_perf agent; did not author the liveness/cache/Unit changes",
+  "date": "2026-10-18",
+  "head": "fc00559474e3397b4573fb1ae23d849f0be22252",
+  "confirmed_defects": [
+    {
+      "severity": "medium",
+      "status": "fixed before final freeze",
+      "file": "src/semantic/wasmgc_fragment_plan.mbt",
+      "line": 2732,
+      "trigger": "Export Holder with an erased fn()->I64 field. A live direct lambda accepts that field as a function-typed parameter and returns Holder. No live callback call/reference or top-level function-typed callable signature pins the module closure ABI.",
+      "evidence": "The former closure predicate inspected lambda expressions but omitted lambda signature parameters/results. Direct lambda ABI planning uses closure_abi to choose the function-typed parameter carrier, while struct fields are erased eqref. The owner confirmed the new preflight case failed with no closure base. Final source checks lambda function parameters/results and pins non-direct emitted lambda closures.",
+      "regression": "direct lambda callback parameters retain the closure ABI",
+      "probe": "/tmp/dewdrop-implementation-2026-10-18/snapshot-refresh/lambda-callback-carrier.dew"
+    }
+  ],
+  "remaining_confirmed_defects": [],
+  "assessment": {
+    "roots": "Uses the same reachable array as emission, plus runtime trait requirements and function-value roots. Module initializer bodies remain conservative roots; non-elided lambdas retain expression and signature roots. Public callable signatures remain roots. Function-typed aggregate fields use erased eqref; extracting/calling callbacks or using typed function ABI pins closure mode.",
+    "complexity": "Two bounded passes over owned expression spans plus callable/lambda parameters; deferred lambda lowering gives disjoint spans. Existing required-type graph traversal remains. No new retained map or index; existing work arrays and root maps are reused. This is static complexity/storage evidence, not a new allocation measurement.",
+    "cache": "Adds a fixed policy marker to the existing program context buffer. It changes the context and fragment key, while source/interface/body evidence, root and options remain hashed. The version-1 envelope/codec is unchanged. The regression compares legacy empty-marker and new context/key.",
+    "unit": "The specialized Unit binding still returns a true condition with no carrier copy/local_set; scalar/reference paths retain InvalidLocal guards and storage. Scrutinee evaluation remains outside this helper. Regression covers generic loop/match Unit, non-generic Unit loop and scalar/reference carriers."
+  },
+  "limits": [
+    "Read all changed liveness/cache/test hunks and relevant reachability, emission, lowering spans and cache lookup/store context. Did not audit every unrelated optimizer/backend function.",
+    "No independent build/runtime/allocation measurement was run for this source review. Owner test logs and parent final compiler/snapshot validations are separate evidence.",
+    "The final source private debug generator was rebuilt in 7.143 seconds; full regenerated snapshot validation is recorded separately."
+  ],
+  "pre_format_source_sha256": {
+    "src/semantic/wasmgc_fragment_plan.mbt": "0ebf45937b92fe32a9471a3711081ee7ecfffab8b3aac8a26ea108b083782760",
+    "src/semantic/program_function_type_preflight_wbtest.mbt": "1c67f6b8502ede27d9613cbdeabf89cccf071b9b6714bb2f247911f4eceaedf6",
+    "src/standard_loader/planning_cache.mbt": "63ec097ba6938c9a8c171b3481d892243856c6af9a424896f96998e10ebb43f2",
+    "src/standard_loader/planning_cache_wbtest.mbt": "d684e8c89142803ce1b18c0d342a816f6b587173b8dd77aa9c1f9e8a8d08ac26",
+    "src/backend/starshine_code.mbt": "c92e2e58c7cab248187904deaf347123182e3948ca300c7f18ffb5c6b00fa4ed",
+    "src/backend/starshine_erased_pattern_bindings_wbtest.mbt": "a300302dccbc2ace97393647b375304bab4c811806d55950c2562884e8f41028"
+  },
+  "reviewed_commit": "fc00559474",
+  "formatted_source_sha256": {
+    "src/semantic/wasmgc_fragment_plan.mbt": "0ebf45937b92fe32a9471a3711081ee7ecfffab8b3aac8a26ea108b083782760",
+    "src/semantic/program_function_type_preflight_wbtest.mbt": "1c67f6b8502ede27d9613cbdeabf89cccf071b9b6714bb2f247911f4eceaedf6",
+    "src/standard_loader/planning_cache.mbt": "63ec097ba6938c9a8c171b3481d892243856c6af9a424896f96998e10ebb43f2",
+    "src/standard_loader/planning_cache_wbtest.mbt": "d684e8c89142803ce1b18c0d342a816f6b587173b8dd77aa9c1f9e8a8d08ac26",
+    "src/backend/starshine_code.mbt": "c92e2e58c7cab248187904deaf347123182e3948ca300c7f18ffb5c6b00fa4ed",
+    "src/backend/starshine_erased_pattern_bindings_wbtest.mbt": "a300302dccbc2ace97393647b375304bab4c811806d55950c2562884e8f41028"
+  },
+  "formatted_followup": "Re-read the formatted body reachability, expression roots, closure-ABI lambda/callable guards, root collection call sites, regression case, and cache policy. The predicates, signature scans, assertions, and work/map use are unchanged from the prior reviewed implementation. These are different byte identities, not an assertion of matching hashes.",
+  "owner_test_records_read": [
+    {
+      "path": "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/native-lambda-control.json",
+      "sha256": "986f4fe1e445503cd5e6090d39ec320068c54719528566758d03d7375d624e71",
+      "command": [
+        "tools/test-native.sh"
+      ],
+      "seconds": 14.226681491010822,
+      "exit": 1,
+      "stdout": "[jtenner/dewdrop] test semantic/program_function_type_preflight_wbtest.mbt:389 (\"direct lambda callback parameters retain the closure ABI\") failed: src/semantic/program_function_type_preflight_wbtest.mbt:393:3-393:47@jtenner/dewdrop FAILED: `false` is not true\nTotal tests: 23, passed: 22, failed: 1.\n"
+    },
+    {
+      "path": "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/native-final.json",
+      "sha256": "cd0c066792558ae9a66248a3e9fb78b56e6e19e387d5d0fe52e1d7704b0584f1",
+      "command": [
+        "tools/test-native.sh"
+      ],
+      "seconds": 14.37931975000538,
+      "exit": 0,
+      "stdout": "Total tests: 23, passed: 23, failed: 0.\n"
+    },
+    {
+      "path": "/tmp/dewdrop-review-2026-10-18/semantics/callback-size/cache-final.json",
+      "sha256": "26270eacf9eb962e98298d75a121488ed96a8c95da2a4b179f2069e604f62d1f",
+      "command": [
+        "tools/test-native.sh"
+      ],
+      "seconds": 5.371241975008161,
+      "exit": 0,
+      "stdout": "Total tests: 4, passed: 4, failed: 0.\n"
+    }
+  ]
+}
