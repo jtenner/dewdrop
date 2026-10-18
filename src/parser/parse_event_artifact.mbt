@@ -18,7 +18,53 @@ let parse_event_maximum_bytes = 0x10000000
 
 ///|
 struct ParseEventAdmission {
-  mut depth_exceeded : Bool
+  mut rejected : Bool
+  mut items_exceeded : Bool
+}
+
+///|
+/// Checks a reader-bounded count before the writer visits any list elements.
+fn parse_admit_count(
+  admission : ParseEventAdmission,
+  count : Int32,
+  maximum~ : Int32 = parse_event_maximum_items,
+) -> Bool {
+  if count < 0 || count > maximum {
+    admission.rejected = true
+    admission.items_exceeded = true
+    return false
+  }
+  true
+}
+
+///|
+fn parse_write_count(
+  writer : @cache_binary.Writer,
+  count : Int32,
+  admission : ParseEventAdmission,
+  maximum~ : Int32 = parse_event_maximum_items,
+) -> Bool {
+  if !parse_admit_count(admission, count, maximum~) {
+    return false
+  }
+  writer.write_var_u64(count.to_uint64())
+  true
+}
+
+///|
+/// Scalar indexes and diagnostic arities have bounds, but are not array
+/// lengths. They do not require one remaining payload byte for each unit.
+fn parse_read_bounded_value(
+  reader : @cache_binary.Reader,
+  maximum : Int32,
+  field : String,
+) -> Int32 {
+  let value = reader.read_var_u64(field)
+  if value > maximum.to_uint64() {
+    reader.fail(field, "count exceeds limit \{maximum}")
+    return 0
+  }
+  value.to_int()
 }
 
 ///|
@@ -492,11 +538,11 @@ fn parse_write_type(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
   if depth > parse_event_maximum_depth {
-    admission.depth_exceeded = true
+    admission.rejected = true
     return
   }
 
@@ -521,7 +567,9 @@ fn parse_write_type(
     }
     ProductType(fields, offset) => {
       writer.write_byte(4)
-      writer.write_var_u64(fields.length().to_uint64())
+      if !parse_write_count(writer, fields.length(), admission) {
+        return
+      }
       for field in fields {
         parse_write_type(writer, field, admission, depth + 1)
       }
@@ -530,7 +578,9 @@ fn parse_write_type(
     AppliedType(base, arguments, offset) => {
       writer.write_byte(1)
       parse_write_type(writer, base, admission, depth + 1)
-      writer.write_var_u64(arguments.length().to_uint64())
+      if !parse_write_count(writer, arguments.length(), admission) {
+        return
+      }
       for argument in arguments {
         parse_write_type(writer, argument, admission, depth + 1)
       }
@@ -538,7 +588,9 @@ fn parse_write_type(
     }
     FunctionType(parameters, result, offset) => {
       writer.write_byte(2)
-      writer.write_var_u64(parameters.length().to_uint64())
+      if !parse_write_count(writer, parameters.length(), admission) {
+        return
+      }
       for parameter in parameters {
         parse_write_type(writer, parameter, admission, depth + 1)
       }
@@ -636,12 +688,14 @@ fn parse_write_type_parameter(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
   writer.write_string(value.name)
-  writer.write_var_u64(value.bounds.length().to_uint64())
+  if !parse_write_count(writer, value.bounds.length(), admission) {
+    return
+  }
   for bound in value.bounds {
     parse_write_type(writer, bound, admission, depth + 1)
   }
@@ -674,11 +728,13 @@ fn parse_write_type_parameters(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     parse_write_type_parameter(writer, value, admission, depth)
   }
@@ -706,7 +762,7 @@ fn parse_write_fn_parameter(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -736,11 +792,13 @@ fn parse_write_fn_parameters(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     parse_write_fn_parameter(writer, value, admission, depth)
   }
@@ -768,7 +826,7 @@ fn parse_write_receiver(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -905,11 +963,13 @@ fn parse_write_object_fields(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     writer.write_string(value.name)
     parse_write_expr(writer, value.value, admission, depth + 1)
@@ -944,11 +1004,13 @@ fn parse_write_exprs(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     parse_write_expr(writer, value, admission, depth + 1)
   }
@@ -976,11 +1038,13 @@ fn parse_write_block(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(value.items.length().to_uint64())
+  if !parse_write_count(writer, value.items.length(), admission) {
+    return
+  }
   for item in value.items {
     parse_write_block_item(writer, item, admission, depth + 1)
   }
@@ -1014,7 +1078,7 @@ fn parse_write_optional_expr(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -1048,11 +1112,11 @@ fn parse_write_expr(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
   if depth > parse_event_maximum_depth {
-    admission.depth_exceeded = true
+    admission.rejected = true
     return
   }
 
@@ -1226,7 +1290,9 @@ fn parse_write_expr(
     ExplicitTypeCallExpr(target, types, arguments, offset) => {
       writer.write_byte(28)
       parse_write_expr(writer, target, admission, depth + 1)
-      writer.write_var_u64(types.length().to_uint64())
+      if !parse_write_count(writer, types.length(), admission) {
+        return
+      }
       for type_ in types {
         parse_write_type(writer, type_, admission, depth + 1)
       }
@@ -1254,8 +1320,12 @@ fn parse_write_expr(
     ProductFieldExpr(target, index, arity, offset) => {
       writer.write_byte(34)
       parse_write_expr(writer, target, admission, depth + 1)
-      writer.write_var_u64(index.to_uint64())
-      writer.write_var_u64(arity.to_uint64())
+      if !parse_write_count(writer, index, admission, maximum=32) {
+        return
+      }
+      if !parse_write_count(writer, arity, admission, maximum=32) {
+        return
+      }
       parse_write_offset(writer, offset)
     }
   }
@@ -1471,8 +1541,8 @@ fn parse_read_expr(
     34 =>
       ProductFieldExpr(
         parse_read_expr(reader, field + ".target", depth + 1),
-        reader.read_count(32, field + ".index"),
-        reader.read_count(32, field + ".arity"),
+        parse_read_bounded_value(reader, 32, field + ".index"),
+        parse_read_bounded_value(reader, 32, field + ".arity"),
         parse_read_offset(reader, field + ".offset"),
       )
     35 =>
@@ -1494,7 +1564,7 @@ fn parse_write_block_item(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -1591,11 +1661,13 @@ fn parse_write_pattern_fields(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     writer.write_string(value.name)
     parse_write_pattern(writer, value.pattern, admission, depth + 1)
@@ -1630,11 +1702,13 @@ fn parse_write_patterns(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     parse_write_pattern(writer, value, admission, depth + 1)
   }
@@ -1662,11 +1736,11 @@ fn parse_write_pattern(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
   if depth > parse_event_maximum_depth {
-    admission.depth_exceeded = true
+    admission.rejected = true
     return
   }
 
@@ -1818,11 +1892,13 @@ fn parse_write_pattern_arms(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     parse_write_pattern(writer, value.pattern, admission, depth + 1)
     parse_write_optional_expr(
@@ -1865,8 +1941,11 @@ fn parse_read_pattern_arms(
 fn parse_write_derive_requests(
   writer : @cache_binary.Writer,
   values : Array[DeriveRequest],
+  admission : ParseEventAdmission,
 ) -> Unit {
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     writer.write_string(value.name)
     parse_write_offset(writer, value.offset)
@@ -1897,11 +1976,13 @@ fn parse_write_struct_fields(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     writer.write_bool(value.mutable_)
     writer.write_bool(value.module_private)
@@ -1940,11 +2021,13 @@ fn parse_write_enum_variants(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
-  writer.write_var_u64(values.length().to_uint64())
+  if !parse_write_count(writer, values.length(), admission) {
+    return
+  }
   for value in values {
     match value {
       UnitVariant(name, offset) => {
@@ -1955,7 +2038,9 @@ fn parse_write_enum_variants(
       TupleVariant(name, types, offset) => {
         writer.write_byte(1)
         writer.write_string(name)
-        writer.write_var_u64(types.length().to_uint64())
+        if !parse_write_count(writer, types.length(), admission) {
+          return
+        }
         for type_ in types {
           parse_write_type(writer, type_, admission, depth + 1)
         }
@@ -2030,7 +2115,7 @@ fn parse_write_function(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -2085,7 +2170,7 @@ fn parse_write_foreign_library_member(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -2132,7 +2217,7 @@ fn parse_write_declaration(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -2140,7 +2225,9 @@ fn parse_write_declaration(
     Import(value) => {
       writer.write_byte(0)
       writer.write_bool(value.open_)
-      writer.write_var_u64(value.path.length().to_uint64())
+      if !parse_write_count(writer, value.path.length(), admission) {
+        return
+      }
       for segment in value.path {
         writer.write_string(segment)
       }
@@ -2191,7 +2278,9 @@ fn parse_write_declaration(
         admission,
         depth + 1,
       )
-      writer.write_var_u64(value.methods.length().to_uint64())
+      if !parse_write_count(writer, value.methods.length(), admission) {
+        return
+      }
       for trait_method in value.methods {
         writer.write_string(trait_method.name)
         parse_write_offset(writer, trait_method.name_offset)
@@ -2254,7 +2343,9 @@ fn parse_write_declaration(
         None => parse_write_option_tag(writer, false)
       }
       parse_write_type(writer, value.target_type, admission, depth + 1)
-      writer.write_var_u64(value.methods.length().to_uint64())
+      if !parse_write_count(writer, value.methods.length(), admission) {
+        return
+      }
       for impl_method in value.methods {
         parse_write_function(writer, impl_method, admission, depth + 1)
       }
@@ -2272,7 +2363,7 @@ fn parse_write_declaration(
         depth + 1,
       )
       parse_write_struct_fields(writer, value.fields, admission, depth + 1)
-      parse_write_derive_requests(writer, value.derives)
+      parse_write_derive_requests(writer, value.derives, admission)
       parse_write_offset(writer, value.offset)
     }
     Enum(value) => {
@@ -2287,7 +2378,7 @@ fn parse_write_declaration(
         depth + 1,
       )
       parse_write_enum_variants(writer, value.variants, admission, depth + 1)
-      parse_write_derive_requests(writer, value.derives)
+      parse_write_derive_requests(writer, value.derives, admission)
       parse_write_offset(writer, value.offset)
     }
     TypeAlias(value) => {
@@ -2318,7 +2409,9 @@ fn parse_write_declaration(
       parse_write_offset(writer, value.logical_name_offset)
       writer.write_string(value.namespace_alias)
       parse_write_offset(writer, value.alias_offset)
-      writer.write_var_u64(value.members.length().to_uint64())
+      if !parse_write_count(writer, value.members.length(), admission) {
+        return
+      }
       for foreign_member in value.members {
         parse_write_foreign_library_member(
           writer,
@@ -2723,6 +2816,7 @@ fn parse_read_expectation(
 fn parse_write_pattern_error(
   writer : @cache_binary.Writer,
   value : PatternError,
+  admission : ParseEventAdmission,
 ) -> Unit {
   match value {
     ExpectedPattern(token) => {
@@ -2780,7 +2874,9 @@ fn parse_write_pattern_error(
     }
     InvalidProductPatternArity(arity, offset) => {
       writer.write_byte(12)
-      writer.write_var_u64(arity.to_uint64())
+      if !parse_write_count(writer, arity, admission) {
+        return
+      }
       parse_write_offset(writer, offset)
     }
   }
@@ -2824,7 +2920,7 @@ fn parse_read_pattern_error(
     10 => EmptyTuplePattern(parse_read_offset(reader, field + ".offset"))
     12 =>
       InvalidProductPatternArity(
-        reader.read_count(parse_event_maximum_items, field + ".arity"),
+        parse_read_bounded_value(reader, parse_event_maximum_items, field + ".arity"),
         parse_read_offset(reader, field + ".offset"),
       )
     11 =>
@@ -2843,6 +2939,7 @@ fn parse_read_pattern_error(
 fn parse_write_expression_error(
   writer : @cache_binary.Writer,
   value : ExpressionError,
+  admission : ParseEventAdmission,
 ) -> Unit {
   match value {
     TypeArgumentError(expectation, token, offset) => {
@@ -2992,7 +3089,7 @@ fn parse_write_expression_error(
     }
     MatchPatternError(error) => {
       writer.write_byte(28)
-      parse_write_pattern_error(writer, error)
+      parse_write_pattern_error(writer, error, admission)
     }
     UnclosedObject(offset) => {
       writer.write_byte(29)
@@ -3020,7 +3117,9 @@ fn parse_write_expression_error(
     }
     InvalidProductArity(arity, offset) => {
       writer.write_byte(43)
-      writer.write_var_u64(arity.to_uint64())
+      if !parse_write_count(writer, arity, admission, maximum=32) {
+        return
+      }
       parse_write_offset(writer, offset)
     }
     UnclosedArray(offset) => {
@@ -3216,7 +3315,7 @@ fn parse_read_expression_error(
       )
     43 =>
       InvalidProductArity(
-        reader.read_count(32, field + ".arity"),
+        parse_read_bounded_value(reader, 32, field + ".arity"),
         parse_read_offset(reader, field + ".offset"),
       )
     44 => UnclosedArray(parse_read_offset(reader, field + ".offset"))
@@ -3250,7 +3349,7 @@ fn parse_write_declaration_error(
   admission : ParseEventAdmission,
   depth : Int32,
 ) -> Unit {
-  if admission.depth_exceeded {
+  if admission.rejected {
     return
   }
 
@@ -3267,7 +3366,7 @@ fn parse_write_declaration_error(
     }
     DeclarationExpressionError(error) => {
       writer.write_byte(2)
-      parse_write_expression_error(writer, error)
+      parse_write_expression_error(writer, error, admission)
     }
     ImportAfterDeclaration(offset) => {
       writer.write_byte(3)
@@ -3320,7 +3419,9 @@ fn parse_write_declaration_error(
     }
     InvalidProductTypeArity(arity, offset) => {
       writer.write_byte(22)
-      writer.write_var_u64(arity.to_uint64())
+      if !parse_write_count(writer, arity, admission, maximum=32) {
+        return
+      }
       parse_write_offset(writer, offset)
     }
     UnclosedProductType(offset) => {
@@ -3420,7 +3521,7 @@ fn parse_read_declaration_error(
       )
     22 =>
       InvalidProductTypeArity(
-        reader.read_count(32, field + ".arity"),
+        parse_read_bounded_value(reader, 32, field + ".arity"),
         parse_read_offset(reader, field + ".offset"),
       )
     23 => UnclosedProductType(parse_read_offset(reader, field + ".offset"))
@@ -3489,31 +3590,41 @@ fn parse_read_event(
 
 ///|
 /// Encodes the complete parser syntax graph directly, without a JSON tree.
-/// Returns an error for syntax deeper than the persistent reader accepts.
+/// Returns an error for syntax exceeding a persistent reader bound.
 pub fn serialize_parse_events(
   events : Array[ParseEvent],
 ) -> Result[Bytes, String] {
-  match serialize_parse_events_for_cache(events) {
-    Some(payload) => Ok(payload)
-    None => Err("parse_event_payload: syntax nesting exceeds limit")
+  let admission = { rejected: false, items_exceeded: false, }
+  // Check before the size hint allocates space proportional to event count.
+  if !parse_admit_count(admission, events.length()) {
+    return Err("parse_event_payload: item count exceeds limit")
   }
-}
-
-///|
-/// Encodes a cache entry in one pass. Deep fresh syntax remains usable but
-/// does not produce an entry that the persistent reader would reject.
-pub fn serialize_parse_events_for_cache(events : Array[ParseEvent]) -> Bytes? {
   let writer = @cache_binary.Writer::new(size_hint=events.length() * 24 + 8)
-  let admission = { depth_exceeded: false, }
   writer.write_u32_le(parse_event_payload_version)
   writer.write_var_u64(events.length().to_uint64())
   for event in events {
     parse_write_event(writer, event, admission)
-    if admission.depth_exceeded {
-      return None
+    if admission.rejected {
+      return Err(
+        if admission.items_exceeded {
+          "parse_event_payload: item count exceeds limit"
+        } else {
+          "parse_event_payload: syntax nesting exceeds limit"
+        },
+      )
     }
   }
-  Some(writer.to_bytes())
+  Ok(writer.to_bytes())
+}
+
+///|
+/// Encodes a cache entry in one pass. Fresh syntax outside the reader bounds
+/// remains usable but does not produce an unreadable persistent entry.
+pub fn serialize_parse_events_for_cache(events : Array[ParseEvent]) -> Bytes? {
+  match serialize_parse_events(events) {
+    Ok(payload) => Some(payload)
+    Err(_) => None
+  }
 }
 
 ///|

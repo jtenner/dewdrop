@@ -1,0 +1,48 @@
+{
+  "binary_sha256": "333a14e379d7d3968ec97de6f5dc89c1d21a3f61aaef553d83ebc313356d8d73",
+  "artifact_source_sha256": "9dbba6729e1ace7791fcf5ae6787f3ca1a485d4f22737a847f384ca1df39c50c",
+  "samples": [
+    {
+      "index": 11,
+      "sample": 0,
+      "elapsed_seconds": 0.004504509000980761,
+      "peak_rss_kib": 16184,
+      "exit": 0
+    },
+    {
+      "index": 11,
+      "sample": 1,
+      "elapsed_seconds": 0.004136406998441089,
+      "peak_rss_kib": 16496,
+      "exit": 0
+    },
+    {
+      "index": 11,
+      "sample": 2,
+      "elapsed_seconds": 0.0037615429973811843,
+      "peak_rss_kib": 16496,
+      "exit": 0
+    },
+    {
+      "index": 12,
+      "sample": 0,
+      "elapsed_seconds": 0.004126327999983914,
+      "peak_rss_kib": 16496,
+      "exit": 0
+    },
+    {
+      "index": 12,
+      "sample": 1,
+      "elapsed_seconds": 0.0038212759973248467,
+      "peak_rss_kib": 16496,
+      "exit": 0
+    },
+    {
+      "index": 12,
+      "sample": 2,
+      "elapsed_seconds": 0.0035653539962368086,
+      "peak_rss_kib": 16496,
+      "exit": 0
+    }
+  ]
+}

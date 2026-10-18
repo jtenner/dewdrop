@@ -17,3 +17,15 @@ Current artifact file SHA-256 before formatting:
 Fixture: parse_event_binary_benchmark_events, 128 functions, no struct fields.
 Fixture source SHA-256:
 73b6c391d3c46eadda4fef75bc370805d5f1654aa28ce4bfd382385fe5a4984c
+
+Count and scalar follow-up:
+Command: DEW_NATIVE_TEST_PACKAGES=parser tools/test-native.sh --filter '*parse-event*'
+Total tests: 18, passed: 18, failed: 0.
+Measured native parser lane: 1.410 seconds.
+Python wait4 complete command: 1.416698 seconds; peak child RSS: 244156 KiB.
+This includes compilation. The separate direct native runtime samples exclude it.
+
+The earlier planning-cache failure was resolved by its owner: the new Result
+helpers add a second intentional generic enum module exclusion. The corrected
+test checks option/result exclusions and all four stored fragments. Its three
+focused tests pass in 5.044 seconds.

@@ -159,10 +159,10 @@ test "parse-event writer and reader agree on recursive type depth" {
       value = ComputedType(value, b"item", 0UL)
     }
     let writer = @cache_binary.Writer::new()
-    let admission = { depth_exceeded: false, }
+    let admission = { rejected: false, items_exceeded: false, }
     parse_write_type(writer, value, admission, 0)
-    assert_eq(admission.depth_exceeded, depth > parse_event_maximum_depth)
-    if !admission.depth_exceeded {
+    assert_eq(admission.rejected, depth > parse_event_maximum_depth)
+    if !admission.rejected {
       let reader = @cache_binary.Reader::new(
         writer.to_bytes(),
         detailed_paths=false,
@@ -181,10 +181,10 @@ test "parse-event writer and reader agree on recursive pattern depth" {
       value = QualifiedPattern(value, "item", 0UL)
     }
     let writer = @cache_binary.Writer::new()
-    let admission = { depth_exceeded: false, }
+    let admission = { rejected: false, items_exceeded: false, }
     parse_write_pattern(writer, value, admission, 0)
-    assert_eq(admission.depth_exceeded, depth > parse_event_maximum_depth)
-    if !admission.depth_exceeded {
+    assert_eq(admission.rejected, depth > parse_event_maximum_depth)
+    if !admission.rejected {
       let reader = @cache_binary.Reader::new(
         writer.to_bytes(),
         detailed_paths=false,
@@ -219,4 +219,140 @@ test "parse-event reader still rejects stored syntax above the depth limit" {
     Err(error) => assert_true(error.contains("syntax nesting exceeds limit"))
     Ok(_) => fail("expected an error for corrupt stored deep syntax")
   }
+}
+
+///|
+test "parse-event item admission matches reader count boundaries" {
+  for maximum in [32, parse_event_maximum_items] {
+    for count in [maximum - 1, maximum, maximum + 1] {
+      let writer = @cache_binary.Writer::new()
+      let admission = { rejected: false, items_exceeded: false, }
+      let admitted = parse_write_count(writer, count, admission, maximum~)
+      assert_eq(admitted, count <= maximum)
+      assert_eq(admission.rejected, count > maximum)
+      assert_eq(admission.items_exceeded, count > maximum)
+      if admitted {
+        // Each list entry requires at least one payload byte. These bytes
+        // exercise the reader guard without allocating syntax objects.
+        for _ in 0..<count {
+          writer.write_byte(0)
+        }
+        let reader = @cache_binary.Reader::new(writer.to_bytes())
+        assert_eq(reader.read_count(maximum, "count"), count)
+        reader.skip(count, "items")
+        assert_eq(reader.finish(), Ok(()))
+      } else {
+        assert_eq(writer.length(), 0)
+      }
+    }
+  }
+}
+
+///|
+test "parse-event oversized array rejects before writing or walking elements" {
+  let shared = I32Expr(1UL, 0UL)
+  let elements = Array::make(parse_event_maximum_items + 1, shared)
+  let writer = @cache_binary.Writer::new()
+  let admission = { rejected: false, items_exceeded: false, }
+  parse_write_exprs(writer, elements, admission, 0)
+  assert_true(admission.rejected)
+  assert_true(admission.items_exceeded)
+  assert_eq(writer.length(), 0)
+  let events = [
+    Declaration(
+      Let({
+        visibility: ModuleVisible,
+        mutable_: false,
+        name: "large",
+        name_offset: 0UL,
+        value: ArrayExpr(elements, 0UL),
+        offset: 0UL,
+      }),
+    ),
+  ]
+  assert_eq(serialize_parse_events_for_cache(events), None)
+  assert_eq(
+    serialize_parse_events(events),
+    Err("parse_event_payload: item count exceeds limit"),
+  )
+  assert_eq(elements.length(), parse_event_maximum_items + 1)
+  assert_eq(elements[0], shared)
+  assert_eq(elements[elements.length() - 1], shared)
+}
+
+///|
+test "parse-event oversized event count rejects before writer allocation" {
+  let shared = Diagnostic({
+    severity: Error,
+    error: ImportAfterDeclaration(0UL),
+  })
+  let events = Array::make(parse_event_maximum_items + 1, shared)
+  assert_eq(serialize_parse_events_for_cache(events), None)
+  assert_eq(
+    serialize_parse_events(events),
+    Err("parse_event_payload: item count exceeds limit"),
+  )
+}
+
+///|
+test "parse-event product diagnostic counts obey the reader bound" {
+  for arity in [31, 32, 33] {
+    let events = [
+      Diagnostic({
+        severity: Error,
+        error: DeclarationExpressionError(InvalidProductArity(arity, 0UL)),
+      }),
+      Diagnostic({
+        severity: Error,
+        error: InvalidProductTypeArity(arity, 0UL),
+      }),
+    ]
+    if arity <= 32 {
+      let payload = serialize_parse_events(events).unwrap()
+      assert_eq(deserialize_parse_events(payload).unwrap(), events)
+    } else {
+      assert_eq(serialize_parse_events_for_cache(events), None)
+      assert_eq(
+        serialize_parse_events(events),
+        Err("parse_event_payload: item count exceeds limit"),
+      )
+    }
+  }
+}
+
+///|
+test "parse-event reader keeps oversized stored counts visible" {
+  let writer = @cache_binary.Writer::new()
+  writer.write_u32_le(parse_event_payload_version)
+  writer.write_var_u64((parse_event_maximum_items + 1).to_uint64())
+  match deserialize_parse_events(writer.to_bytes()) {
+    Err(error) => assert_true(error.contains("count exceeds limit"))
+    Ok(_) => fail("expected stored oversized event count to be rejected")
+  }
+}
+
+///|
+test "parse-event scalar field bounds do not require array payload bytes" {
+  let events = [
+    Declaration(
+      Let({
+        visibility: ModuleVisible,
+        mutable_: false,
+        name: "last",
+        name_offset: 0UL,
+        value: ProductFieldExpr(NameExpr("value", 0UL), 31, 32, 0UL),
+        offset: 0UL,
+      }),
+    ),
+    Diagnostic({
+      severity: Error,
+      error: DeclarationExpressionError(
+        MatchPatternError(
+          InvalidProductPatternArity(parse_event_maximum_items, 0UL),
+        ),
+      ),
+    }),
+  ]
+  let payload = serialize_parse_events(events).unwrap()
+  assert_eq(deserialize_parse_events(payload).unwrap(), events)
 }
