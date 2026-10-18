@@ -12,6 +12,7 @@ struct CompileTimeProgramContext {
   analyzed : AnalyzedProgramSemantics
   modules : Array[PlannedModuleLowering]
   targets : Map[DeclId, Bytes]
+  mut operator_intrinsics : Map[DeclId, Bytes]?
   sensitive : Map[DeclId, Bool]
   // Bound calls benefit from exact logical instances but can still use an
   // explicit runtime dictionary ABI. Pure queries cannot use that ABI.
@@ -185,6 +186,7 @@ fn compile_time_program_context(
     analyzed,
     modules: lowering.modules,
     targets,
+    operator_intrinsics: None,
     sensitive,
     logical,
     instances: {},

@@ -238,3 +238,64 @@ test "String pattern without trait evidence has a missing target diagnostic" {
   assert(physical.diagnostics.length() == 1u32, "missing pattern target must be reported once")
   assert(physical.diagnostics[0u32].code == 607u32, "BOD-607: missing equality must not reach runtime lookup")
 }
+
+
+test "constant scalar operators retain a selected custom result" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"trait Add {\n  fn add(self, right: Self) -> Self\n}\nimpl Add for I32 {\n  fn add(self, right: I32) -> I32 {\n    77\n  }\n}\npub fn run() -> I32 {\n  1 + 2\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "custom scalar operator ABI is valid")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = 0u32
+  for plan in physical.bodies {
+    for call in plan.calls {
+      match module_.expressions[call.expression].kind {
+        PlannedOperatorCall(target, Add, left, right, _) => {
+          match self_host_program_specialization_callable(module_, target) {
+            Some(callable) => assert(callable.kind is PlannedImplMethodCallable(_, _), "the selected custom method remains the target")
+            None => assert(false, "the selected custom method must exist")
+          }
+          assert(module_.expressions[left].kind is PlannedI32Const(1u64), "left remains a constant input")
+          assert(module_.expressions[right].kind is PlannedI32Const(2u64), "right remains a constant input")
+          assert(call.evaluations.length == 2u32 && call.operands.length == 2u32, "both inputs reach the selected method")
+          checked = checked + 1u32
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(checked == 1u32, "one custom constant addition remains a physical call")
+}
+
+test "constant Bool equality retains a selected trapping method" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin stop() -> Never = \"unreachable\"\ntrait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nimpl Eq for Bool {\n  fn eq(self, right: Bool) -> Bool {\n    stop()\n  }\n}\npub fn run() -> Bool {\n  true == true\n}\n",
+  )
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => assert(false, error)
+    None => {}
+  }
+  // Exercise the same folder used after type queries resolve, even though
+  // this fixture needs no query to expose its constant operands.
+  let module_ = lowering.modules[0u32]
+  for body in module_.bodies {
+    self_host_fold_compile_time_body(lowering, module_, body, 4294967295u32,
+      self_host_empty_compile_time_bindings())
+  }
+  let mut checked = 0u32
+  for expression in module_.expressions {
+    match expression.kind {
+      PlannedOperatorCall(target, Equal, _, _, _) => {
+        match self_host_program_specialization_callable(module_, target) {
+          Some(callable) => assert(callable.kind is PlannedImplMethodCallable(_, _), "trapping equality remains the selected custom method")
+          None => assert(false, "trapping equality target must exist")
+        }
+        checked = checked + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(checked == 1u32, "constant equality cannot erase the selected trap")
+}

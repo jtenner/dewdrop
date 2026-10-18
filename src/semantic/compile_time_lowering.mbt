@@ -229,7 +229,16 @@ fn fold_module_compile_time_queries(
       _ => ()
     }
   }
-  fold_program_constants([module_], fold_immutable_locals=true)
+  if context.operator_intrinsics is None {
+    context.operator_intrinsics = Some(
+      program_fold_operator_intrinsics(context.modules),
+    )
+  }
+  fold_program_constants(
+    [module_],
+    fold_immutable_locals=true,
+    operator_intrinsics=context.operator_intrinsics,
+  )
   // A constant left operand proves that the right operand is not evaluated.
   // Its type may still be deferred, so do not require a right-hand constant.
   for index, source in module_.expressions {

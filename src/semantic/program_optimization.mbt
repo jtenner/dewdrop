@@ -2332,10 +2332,247 @@ fn program_fold_binary(
 }
 
 ///|
+fn program_fold_bool_block(
+  module_ : PlannedModuleLowering,
+  block : BlockId,
+  left : Bool,
+  right : Bool,
+  remaining : Int32,
+) -> Bool? {
+  if remaining <= 0 || block < 0 || block >= module_.blocks.length() {
+    return None
+  }
+  let items = module_.blocks[block].items
+  if items.length != 1 ||
+    items.start < 0 ||
+    items.start >= module_.block_items.length() {
+    return None
+  }
+  match module_.block_items[items.start].kind {
+    PlannedExpressionItem(value) =>
+      program_fold_bool_expression(module_, value, left, right, remaining - 1)
+    _ => None
+  }
+}
+
+///|
+fn program_fold_bool_expression(
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  left : Bool,
+  right : Bool,
+  remaining : Int32,
+) -> Bool? {
+  if remaining <= 0 ||
+    expression < 0 ||
+    expression >= module_.expressions.length() {
+    return None
+  }
+  let source = module_.expressions[expression]
+  if !(source.trait_object_coercion is NoInferredTraitObjectCoercion) {
+    return None
+  }
+  match source.kind {
+    PlannedBoolConst(value) => Some(value)
+    PlannedLocalGet(0) => Some(left)
+    PlannedLocalGet(1) => Some(right)
+    PlannedPrefixExpression(HirLogicalNot, value) =>
+      match
+        program_fold_bool_expression(module_, value, left, right, remaining - 1) {
+        Some(value) => Some(!value)
+        None => None
+      }
+    PlannedBlockExpression(block) =>
+      program_fold_bool_block(module_, block, left, right, remaining - 1)
+    PlannedIfExpression(condition, block, alternative) =>
+      match
+        program_fold_bool_expression(
+          module_,
+          condition,
+          left,
+          right,
+          remaining - 1,
+        ) {
+        Some(true) =>
+          program_fold_bool_block(module_, block, left, right, remaining - 1)
+        Some(false) =>
+          program_fold_bool_expression(
+            module_,
+            alternative,
+            left,
+            right,
+            remaining - 1,
+          )
+        None => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn program_fold_bool_callable_opcode(
+  module_ : PlannedModuleLowering,
+  callable : PlannedCallable,
+) -> Bytes {
+  for index in 0..<callable.parameters.length {
+    let parameter = module_.functions.parameters[callable.parameters.start +
+      index]
+    if parameter.type_ < 0 || parameter.type_ >= module_.resolved_types.length() {
+      return b""
+    }
+    let type_ = match module_.resolved_types[parameter.type_] {
+      SelfType(_) => callable.self_type
+      _ => parameter.type_
+    }
+    if type_ < 0 ||
+      type_ >= module_.resolved_types.length() ||
+      !(module_.resolved_types[type_] is PrimitiveType(BoolType)) {
+      return b""
+    }
+  }
+  if callable.result_type < 0 ||
+    callable.result_type >= module_.resolved_types.length() ||
+    !(module_.resolved_types[callable.result_type] is PrimitiveType(BoolType)) {
+    return b""
+  }
+  let body_id = match callable.kind {
+    PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
+      body
+    _ => return b""
+  }
+  let index = semantic_id_local(body_id)
+  if index < 0 || index >= module_.bodies.length() {
+    return b""
+  }
+  let body = module_.bodies[index]
+  if body.locals.length < 2 {
+    return b""
+  }
+  for local in 0..<2 {
+    let value = module_.locals[body.locals.start + local]
+    if value.mutable_ || !(value.kind is ParameterLocal) {
+      return b""
+    }
+  }
+  // Four total evaluations prove both branches. Calls, mutation, captures,
+  // extra statements, and bodies exceeding the fixed depth budget fail proof.
+  let mut table = 0
+  for bits in 0..<4 {
+    let left = (bits & 2) != 0
+    let right = (bits & 1) != 0
+    let value = match body.root {
+      ExpressionBodyRoot(value) =>
+        program_fold_bool_expression(module_, value, left, right, 16)
+      BlockBodyRoot(block) =>
+        program_fold_bool_block(module_, block, left, right, 16)
+    }
+    match value {
+      Some(true) => table = table | (1 << bits)
+      Some(false) => ()
+      None => return b""
+    }
+  }
+  match table {
+    9 => b"i32.eq"
+    6 => b"i32.ne"
+    _ => b""
+  }
+}
+
+///|
+fn program_fold_operator_intrinsics(
+  modules : Array[PlannedModuleLowering],
+) -> Map[DeclId, Bytes] {
+  let builtins : Map[DeclId, Bytes] = {}
+  for module_ in modules {
+    for callable in module_.functions.callables {
+      match callable.kind {
+        PlannedBuiltinCallable(name) => builtins[callable.declaration] = name
+        _ => ()
+      }
+    }
+  }
+  let result : Map[DeclId, Bytes] = {}
+  for module_ in modules {
+    for callable in module_.functions.callables {
+      if callable.parameters.length != 2 ||
+        program_callable_generic_parameters(callable).length != 0 {
+        continue
+      }
+      // This existing proof accepts only a single intrinsic call with the
+      // original parameters in order, optionally through carrier identity casts.
+      // Seed it with actual builtin metadata, never source names or module IDs.
+      let direct = match callable.kind {
+        PlannedBuiltinCallable(name) => name
+        _ => wasmgc_direct_builtin_of(module_, callable, builtins)
+      }
+      let name = if direct.length() > 0 {
+        direct
+      } else {
+        program_fold_bool_callable_opcode(module_, callable)
+      }
+      if name.length() > 0 {
+        result[callable.declaration] = name
+      }
+    }
+  }
+  result
+}
+
+///|
+fn program_fold_operator_opcode(
+  operator : HirBinaryOperator,
+  left : ProgramFoldConstant,
+) -> Bytes {
+  match (operator, left) {
+    (HirAdd, ProgramFoldI32(_) | ProgramFoldU32(_)) => b"i32.add"
+    (HirSubtract, ProgramFoldI32(_) | ProgramFoldU32(_)) => b"i32.sub"
+    (HirMultiply, ProgramFoldI32(_) | ProgramFoldU32(_)) => b"i32.mul"
+    (HirBitAnd, ProgramFoldI32(_) | ProgramFoldU32(_)) => b"i32.and"
+    (HirBitOr, ProgramFoldI32(_) | ProgramFoldU32(_)) => b"i32.or"
+    (HirBitXor, ProgramFoldI32(_) | ProgramFoldU32(_)) => b"i32.xor"
+    (HirEqual, ProgramFoldI32(_) | ProgramFoldU32(_) | ProgramFoldBool(_)) =>
+      b"i32.eq"
+    (HirNotEqual, ProgramFoldI32(_) | ProgramFoldU32(_) | ProgramFoldBool(_)) =>
+      b"i32.ne"
+    (HirLess, ProgramFoldI32(_)) => b"i32.lt_s"
+    (HirLessEqual, ProgramFoldI32(_)) => b"i32.le_s"
+    (HirGreater, ProgramFoldI32(_)) => b"i32.gt_s"
+    (HirGreaterEqual, ProgramFoldI32(_)) => b"i32.ge_s"
+    (HirLess, ProgramFoldU32(_)) => b"i32.lt_u"
+    (HirLessEqual, ProgramFoldU32(_)) => b"i32.le_u"
+    (HirGreater, ProgramFoldU32(_)) => b"i32.gt_u"
+    (HirGreaterEqual, ProgramFoldU32(_)) => b"i32.ge_u"
+    (HirAdd, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.add"
+    (HirSubtract, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.sub"
+    (HirMultiply, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.mul"
+    (HirBitAnd, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.and"
+    (HirBitOr, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.or"
+    (HirBitXor, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.xor"
+    (HirEqual, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.eq"
+    (HirNotEqual, ProgramFoldI64(_) | ProgramFoldU64(_)) => b"i64.ne"
+    (HirLess, ProgramFoldI64(_)) => b"i64.lt_s"
+    (HirLessEqual, ProgramFoldI64(_)) => b"i64.le_s"
+    (HirGreater, ProgramFoldI64(_)) => b"i64.gt_s"
+    (HirGreaterEqual, ProgramFoldI64(_)) => b"i64.ge_s"
+    (HirLess, ProgramFoldU64(_)) => b"i64.lt_u"
+    (HirLessEqual, ProgramFoldU64(_)) => b"i64.le_u"
+    (HirGreater, ProgramFoldU64(_)) => b"i64.gt_u"
+    (HirGreaterEqual, ProgramFoldU64(_)) => b"i64.ge_u"
+    _ => b""
+  }
+}
+
+///|
 fn fold_program_constants(
   modules : Array[PlannedModuleLowering],
   fold_immutable_locals~ : Bool = false,
+  operator_intrinsics~ : Map[DeclId, Bytes]? = None,
 ) -> Unit {
+  let operator_intrinsics = match operator_intrinsics {
+    Some(value) => value
+    None => program_fold_operator_intrinsics(modules)
+  }
   for module_ in modules {
     let local_sources = if fold_immutable_locals {
       compile_time_planned_local_initializers(module_)
@@ -2359,14 +2596,26 @@ fn fold_program_constants(
               Some(constant) => program_fold_prefix(operator, constant)
               None => None
             }
-          PlannedBinaryExpression(operator, left, right)
-          | PlannedOperatorCall(_, operator, left, right, _) =>
+          PlannedBinaryExpression(operator, left, right) =>
             match
               (
                 program_fold_constant(module_, left),
                 program_fold_constant(module_, right),
               ) {
               (Some(left), Some(right)) =>
+                program_fold_binary(operator, left, right)
+              _ => None
+            }
+          PlannedOperatorCall(target, operator, left, right, type_arguments) if type_arguments.length ==
+            0 =>
+            match
+              (
+                operator_intrinsics.get(target),
+                program_fold_constant(module_, left),
+                program_fold_constant(module_, right),
+              ) {
+              (Some(opcode), Some(left), Some(right)) if opcode ==
+                program_fold_operator_opcode(operator, left) =>
                 program_fold_binary(operator, left, right)
               _ => None
             }
