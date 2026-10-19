@@ -25,6 +25,10 @@ claims about the current interpreter.
 - [x] Concrete trait methods.
 - [x] Methods with the same name on different types.
 - [x] Generic source helpers without dynamic trait dispatch.
+- [x] Immutable module constants during interpretation.
+- [x] Imported public constants through checked references.
+- [x] Constant initialization cached within one transform application.
+- [x] Constant state reset between transform applications.
 - [x] Receiver evaluation exactly once.
 - [x] Argument evaluation in source order.
 - [x] Source bodies for custom binary operators.
@@ -154,7 +158,6 @@ These need a further language or execution design. They remain open.
 - [ ] Syntax quotation and splicing.
 - [ ] Automatic name hygiene.
 - [ ] Transform arguments on annotations.
-- [ ] Immutable module constants during interpretation.
 - [ ] Complete default/null reference behavior for raw arrays.
 - [ ] Generic trait evidence during interpretation.
 - [ ] Dynamic trait objects.

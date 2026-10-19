@@ -6,10 +6,12 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations; do
+for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants; do
   args=("examples/transforms/$kind.dew")
   if [[ "$kind" == imported || "$kind" == imported_methods ]]; then
     args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)
+  elif [[ "$kind" == imported_constants ]]; then
+    args=("examples/transforms/$kind.dew" --module example.constant_tools examples/transforms/constant_tools.dew)
   elif [[ "$kind" == patterns ]]; then
     args=(examples/transforms/patterns.dew)
   elif [[ "$kind" == record ]]; then
@@ -195,7 +197,20 @@ pub fn main() -> I32 {
 }
 DEW
 
-for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias; do
+cat > "$work/mutable-global.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+let mut answer = 42i32
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(answer))
+}
+#wrong
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+
+for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias mutable-global; do
   expected='invalid transform signature'
   if [[ "$kind" == sibling-declaration ]]; then
     expected='transform must produce one valid function body'
@@ -207,6 +222,8 @@ for kind in bad-signature sibling-declaration host-call array-bounds array-budge
     expected='allocation limit exceeded'
   elif [[ "$kind" == invalid-field ]]; then
     expected='invalid generated field name'
+  elif [[ "$kind" == mutable-global ]]; then
+    expected='mutable module bindings'
   elif [[ "$kind" == declaration-kind ]]; then
     expected='expected one valid generated declaration'
   elif [[ "$kind" == import-alias ]]; then

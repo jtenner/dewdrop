@@ -2,6 +2,7 @@ open dew.std.map
 
 pub enum CtCallTarget {
   Source(U32, String, SelfHostFunctionDeclaration, String)
+  Global(U32, String, SelfHostLetDeclaration)
   Intrinsic(SelfHostBuiltinDeclaration, String)
   FunctionValue(String)
   Unsupported
@@ -166,6 +167,7 @@ fn ct_checked_source_target(plan: CtPlan, collected: SelfHostCollectedProgram, s
                       }
                     }
                   }
+                  Let(value) if value.offset == offset => return Global(mi, file.original.path, value)
                   Builtin(b) if b.offset == offset => return Intrinsic(b, kind)
                   _ => {
                   }
@@ -191,6 +193,7 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
     for expression in source.expressions {
       if ei < lowering.modules[mi].expressions.length() {
         let reference = match lowering.modules[mi].expressions[ei].kind {
+          PlannedModuleValueGet(selected) => Some(ct_checked_source_target(plan, collected, selected, ""))
           PlannedFunctionReference(selected) => Some(ct_checked_source_target(plan, collected, selected, ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, true)))
           _ => match lowering.modules[mi].expressions[ei].selection {
             VariantConstructionBasicExpressionSelection(selected, 2u32, _) => match ct_pattern_variant_key(collected, selected) {
@@ -370,6 +373,11 @@ fn ct_unit_variant(machine: CtMachine, key: String) -> CtValue {
 fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
   match machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) {
     Some(target) => {
+      match target {
+        Global(mi, path, declaration) => return ct_global_value(machine, mi, path, declaration)
+        _ => {
+        }
+      }
       if target is UnitConstructor(key) {
         return CtValue::Variant(key, [])
       }

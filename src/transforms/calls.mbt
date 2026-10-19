@@ -1,6 +1,7 @@
 ///|
 enum CallTarget {
   Source(Int32, Int32, @parser.FunctionDeclaration, String)
+  Global(Int32, Int32, @parser.LetDeclaration)
   Intrinsic(@parser.BuiltinDeclaration, String)
   FunctionValue(String)
   Unsupported
@@ -64,6 +65,8 @@ pub fn Plan::add_call_proof(
                 sites[site] = Source(target_module, ti, f, result_kind)
               }
             }
+          @parser.Let(value) if value.offset == target_offset =>
+            sites[site] = Global(target_module, ti, value)
           @parser.Builtin(b) if b.offset == target_offset =>
             sites[site] = Intrinsic(b, result_kind)
           _ => ()
@@ -272,6 +275,9 @@ fn Machine::function_reference(
     )
     is Some(target) else {
     return eval_fail("global value has no checked function reference")
+  }
+  if target is Global(mi, fi, declaration) {
+    return self.global_value(mi, fi, declaration)
   }
   if target is UnitConstructor(key) {
     return Variant(key, [])

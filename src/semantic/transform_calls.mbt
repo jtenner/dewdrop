@@ -22,7 +22,9 @@ pub fn compile_time_calls(
   let targets : Map[DeclId, (Int32, FileId, UInt64)] = Map::default()
   for mi, module_ in program.modules {
     for declaration in module_.declarations {
-      if declaration.kind is FunctionDecl || declaration.kind is BuiltinDecl {
+      if declaration.kind is FunctionDecl ||
+        declaration.kind is BuiltinDecl ||
+        declaration.kind is LetDecl {
         targets[declaration.id] = (
           mi,
           module_.declaration_files[semantic_id_local(declaration.id)],
@@ -42,6 +44,23 @@ pub fn compile_time_calls(
   for mi, source in program.modules {
     let inferred = analyzed.modules[mi].inferred
     for ei, expression in source.expressions {
+      if lowering.modules[mi].expressions[ei].kind
+        is PlannedModuleValueGet(selected, _) {
+        if targets.get(selected)
+          is Some((target_module, target_file, target_offset)) {
+          result.push({
+            reference: true,
+            module_index: mi,
+            file: source.expression_files[ei],
+            offset: expression.offset(),
+            target_module,
+            target_file,
+            target_offset,
+            result_kind: "",
+            constructor_key: "",
+          })
+        }
+      }
       if inferred.expression_selections[ei]
         is FunctionReferenceSelection(selected, _) {
         if targets.get(selected)

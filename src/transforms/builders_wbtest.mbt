@@ -1,6 +1,14 @@
 ///|
 fn builder_machine() -> Machine raise {
-  { plan: fixture(""), steps: 100_000, depth: 0, allocated: 0, file_index: 0, }
+  {
+    plan: fixture(""),
+    steps: 100_000,
+    depth: 0,
+    allocated: 0,
+    file_index: 0,
+    globals: {},
+    initializing: {},
+  }
 }
 
 ///|

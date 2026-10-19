@@ -72,6 +72,8 @@ pub struct CtMachine {
   mut allocated: U32
   mut flow: U32
   mut result: CtValue
+  globals: Map<String, CtValue>
+  initializing: Map<String, Bool>
   mut file_path: String
 }
 
@@ -88,6 +90,8 @@ fn ct_machine(plan: CtPlan) -> CtMachine {
     allocated: 0u32
     flow: 0u32
     result: CtValue::Empty
+    globals: map_empty::<String, CtValue>()
+    initializing: map_empty::<String, Bool>()
     file_path: ""
   }
 }

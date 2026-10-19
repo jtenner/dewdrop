@@ -1,0 +1,14 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+let factor = 6i32
+let answer = factor * 7i32
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(answer))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

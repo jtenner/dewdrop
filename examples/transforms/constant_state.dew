@@ -1,0 +1,26 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+struct Counter {
+  mut value: I32
+}
+
+let counter = Counter::{
+  value: 40i32
+}
+
+fn next() -> I32 {
+  counter.value = counter.value + 1i32
+  counter.value
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let _ = next()
+  node.with_body(@ast.integer(next()))
+}
+
+#replace
+#replace
+pub fn main() -> I32 {
+  0i32
+}

@@ -143,6 +143,9 @@ work. Runnable examples are in `examples/transforms/`:
 | `signature_info.dew` | Structured parameter names and source types |
 | `type_info.dew` | Generic bounds, tuple types, function types, applied types |
 | `declarations.dew` | Generated imports, types, functions, and implementations |
+| `constants.dew` | Local module constants and dependent initializers |
+| `constant_state.dew` | Initialization once per application, fresh state for stacked transforms |
+| `imported_constants.dew` | Public module constants from another module |
 
 ## Add declarations and imports
 
@@ -213,8 +216,16 @@ values use normal destructuring, such as `let (value, flag) = pair`. Unsupported
 floating-point values cannot enter integer execution through a generic record
 or optional value. Array copies preserve overlap behavior. These operations add no host calls.
 
+Immutable module bindings can run their checked initializers on first use.
+They can call source functions and refer to other constants, including public
+constants in imported modules. Values are cached during one transform
+application. A new application starts with a new cache. An immutable binding can
+hold a record with mutable fields; aliases share those changes within the
+application. Mutable module bindings remain unavailable. Initializer cycles,
+escaped control flow, and host calls produce errors.
+
 Unsupported operations produce errors when reached. These include host calls,
-module-level value bindings, unresolved generic trait dispatch, floating-point
+mutable module bindings, unresolved generic trait dispatch, floating-point
 execution, SIMD execution, and general text-library operations. Generic source helpers work
 when execution needs no missing type or trait evidence. All branches must pass
 the normal source checks, including branches that execution does not reach.

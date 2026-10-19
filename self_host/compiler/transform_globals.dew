@@ -1,0 +1,33 @@
+fn ct_global_value(machine: CtMachine, mi: U32, path: String, declaration: SelfHostLetDeclaration) -> CtValue {
+  if declaration.mutable_ {
+    return ct_fail(machine, "mutable module bindings cannot execute at compile time")
+  }
+  let key = machine.plan.manifest.modules[mi].path.concat("::").concat(declaration.name)
+  if !ct_charge(machine, 32u32 + key.byte_length()) {
+    return CtValue::Empty
+  }
+  match machine.globals.get(key) {
+    Some(value) => return value
+    _ => {
+    }
+  }
+  match machine.initializing.get(key) {
+    Some(true) => return ct_fail(machine, "cyclic compile-time constant initialization: ".concat(key))
+    _ => {
+    }
+  }
+  machine.initializing.set(key, true)
+  let previous = machine.file_path
+  machine.file_path = path
+  let value = ct_eval(machine, mi, declaration.value, [])
+  machine.file_path = previous
+  machine.initializing.set(key, false)
+  if machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if machine.flow != 0u32 {
+    return ct_fail(machine, "control flow escaped a compile-time constant initializer")
+  }
+  machine.globals.set(key, value)
+  value
+}

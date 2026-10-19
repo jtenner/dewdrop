@@ -236,6 +236,8 @@ fn Machine::apply(
       annotation.target >= fn_.name_offset.to_int() {
       continue
     }
+    self.globals.clear()
+    self.initializing.clear()
     self.steps = 100_000
     self.allocated = 0
     let key = self.annotation_key(function.module_, annotation.name)
@@ -389,6 +391,8 @@ pub fn Plan::expand(
     depth: 0,
     allocated: 0,
     file_index: 0,
+    globals: {},
+    initializing: {},
   }
   let modules : Array[SourceModule] = []
   for mi, module_ in self.modules {

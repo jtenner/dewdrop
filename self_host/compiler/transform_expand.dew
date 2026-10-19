@@ -305,6 +305,8 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
   ])
   for annotation in file.annotations {
     if annotation.target >= function.start && annotation.target < fn_.name_offset {
+      machine.globals.clear()
+      machine.initializing.clear()
       machine.steps = 100000u32
       machine.allocated = 0u32
       let key = ct_annotation_key(machine, file.module_index, annotation.name)

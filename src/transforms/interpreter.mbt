@@ -39,6 +39,8 @@ struct Machine {
   mut steps : Int32
   mut depth : Int32
   mut allocated : Int32
+  globals : Map[String, Value]
+  initializing : Map[String, Bool]
   mut file_index : Int32
 }
 

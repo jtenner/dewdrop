@@ -1,0 +1,15 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import example.constant_tools as @constants
+
+let multiplier = 7i32
+let answer = @constants.factor * multiplier
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(answer))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}
