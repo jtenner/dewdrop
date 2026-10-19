@@ -128,6 +128,46 @@ fn read_generic<t>(value: Option<(I32, t)>) -> t {
   }
 }
 
+enum WideProductCase {
+  Number(U64, String)
+  Missing
+}
+
+fn read_wide_operation(operation: U32, left: WideProductCase, right: WideProductCase) -> U64 {
+  match (left, right) {
+    (Number(a, kind), Number(b, other)) if kind == other => match operation {
+      0u32 => a + b
+      1u32 => a - b
+      2u32 => a * b
+      3u32 => a & b
+      4u32 => a | b
+      5u32 => a ^ b
+      6u32 => if a == b {
+        42u64
+      } else {
+        0u64
+      }
+      7u32 => if a < b {
+        42u64
+      } else {
+        0u64
+      }
+      8u32 => a / b
+      9u32 => a % b
+      _ => 0u64
+    }
+    _ => 0u64
+  }
+}
+
+fn check_wide_operation(operation: U32, left: U64, right: U64, expected: U64) -> I32 {
+  if read_wide_operation(operation, WideProductCase::Number(left, "U64"), WideProductCase::Number(right, "U64")) == expected {
+    42i32
+  } else {
+    0i32
+  }
+}
+
 pub fn main(which: U32) -> I32 {
   match which {
     0u32 => read_case(Present((7i32, 35i64)))
@@ -147,6 +187,16 @@ pub fn main(which: U32) -> I32 {
     14u32 => read_empty(())
     15u32 => read_guard_once((1i32, 42i64))
     16u32 => product_i32(read_generic(Some((7i32, 42i64))))
+    17u32 => check_wide_operation(0u32, 4294967296u64, 42u64, 4294967338u64)
+    18u32 => check_wide_operation(1u32, 4294967338u64, 42u64, 4294967296u64)
+    19u32 => check_wide_operation(2u32, 4294967296u64, 2u64, 8589934592u64)
+    20u32 => check_wide_operation(3u32, 4294967338u64, 4294967295u64, 42u64)
+    21u32 => check_wide_operation(4u32, 4294967296u64, 42u64, 4294967338u64)
+    22u32 => check_wide_operation(5u32, 4294967338u64, 42u64, 4294967296u64)
+    23u32 => check_wide_operation(6u32, 4294967296u64, 0u64, 0u64)
+    24u32 => check_wide_operation(7u32, 9223372036854775808u64, 1u64, 0u64)
+    25u32 => check_wide_operation(8u32, 18446744073709551615u64, 4294967296u64, 4294967295u64)
+    26u32 => check_wide_operation(9u32, 18446744073709551615u64, 4294967296u64, 4294967295u64)
     _ => -1i32
   }
 }

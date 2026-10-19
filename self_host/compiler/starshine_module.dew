@@ -10984,65 +10984,14 @@ fn self_host_emit_linked_i32_expression(
                     )
                   }
                 }
-                let left_shape = if left < module_.expressions.length() {
-                  match module_.expressions[left].kind {
-                    PlannedLocalGet(local) => match self_host_linked_loop_binding_shape(
-                      link,
-                      module_,
-                      body,
-                      caller_specialization,
-                      local,
-                    ) {
-                      Some(shape) => self_host_linked_source_or_inferred_item_shape(
-                        Some(shape),
-                        inferred_left_shape,
-                      )
-                      None => match self_host_linked_match_binding_shape(
-                        link,
-                        module_,
-                        body,
-                        caller_specialization,
-                        local,
-                      ) {
-                        Some(shape) => self_host_linked_source_or_inferred_item_shape(
-                          Some(shape),
-                          inferred_left_shape,
-                        )
-                        None => match self_host_linked_local_declared_shape(
-                          module_,
-                          body,
-                          local,
-                        ) {
-                          Some(shape) => self_host_linked_source_or_inferred_item_shape(
-                            Some(shape),
-                            inferred_left_shape,
-                          )
-                          None => match self_host_linked_local_parameter_shape(
-                            link,
-                            module_,
-                            body,
-                            caller_specialization,
-                            local,
-                          ) {
-                            Some(shape) => self_host_linked_source_or_inferred_item_shape(
-                              Some(shape),
-                              inferred_left_shape,
-                            )
-                            None => inferred_left_shape
-                          }
-                        }
-                      }
-                    }
-                    _ => inferred_left_shape
-                  }
-                } else {
-                  inferred_left_shape
-                }
+                // Operand width comes from the frozen expression carriers.
+                // Source pattern hints cannot replace that physical evidence.
+                // The integer sign proof below retains signedness separately.
                 // Equality can retain a broad reference shape on one generic
                 // operand after the other operand proves the scalar carrier.
                 // Prefer that concrete scalar proof before selecting ref.eq.
                 let binary_shape = self_host_linked_binary_operand_shape(
-                  left_shape,
+                  inferred_left_shape,
                   inferred_right_shape,
                 )
                 match self_host_physical_scalar_shape(binary_shape) {
@@ -11452,7 +11401,7 @@ fn self_host_emit_linked_i32_expression(
                     caller_specialization,
                     left,
                     right,
-                    self_host_linked_i32_unsigned_shape(left_shape),
+                    self_host_linked_i32_unsigned_shape(inferred_left_shape),
                   ) {
                     Ok(unsigned_) => tasks.push(
                       EmitLinkedI32Binary(

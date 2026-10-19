@@ -8,6 +8,16 @@ fn self_host_product_pattern_test_inference(source: Bytes) -> SelfHostBasicInfer
   self_host_infer_basic_module_bodies(collected, resolved, names).bodies[0u32]
 }
 
+test "nested numeric product bindings retain their frozen operator width" {
+  let fragments = self_host_physical_test_fragments(b"enum Numeric {\n Value(U64)\n Empty\n}\npub fn main(left: Numeric, right: Numeric) -> U64 {\n match (left, right) {\n (Value(a), Value(b)) => a + b\n _ => 0u64\n }\n}\n")
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Ok(bytes) => assert(bytes.byte_length() >= 8u32, "nested U64 addition emits valid Wasm")
+    Err(error) => assert(false, error)
+  }
+}
+
 test "short unit constructors retain exact selection during lowering" {
   let lowering = self_host_physical_test_lowering(b"enum Choice {\n Missing\n}\npub fn run() -> Choice {\n Missing\n}\n")
   let module_ = lowering.modules[0u32]
