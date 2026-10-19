@@ -1,0 +1,53 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+fn guard_break() -> I32 {
+  while false {
+    _ if if true {
+      break 42i32
+    } else {
+      false
+    } => break 0i32
+    false => break 1i32
+    true => break 2i32
+  }
+}
+
+fn guard_continue() -> I32 {
+  while false {
+    state if if !state {
+      continue true
+    } else {
+      true
+    } => break 42i32
+    false => break 0i32
+    true => break 1i32
+  }
+}
+
+fn initial_break() -> I32 {
+  while 0i32 {
+    _ => {
+      let _ = while if true {
+        break 42i32
+      } else {
+        0i32
+      } {
+        _ => break 0i32
+      }
+      break 1i32
+    }
+  }
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(if guard_break() == 42i32 && guard_continue() == 42i32 && initial_break() == 42i32 {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#replace
+pub fn main() -> I32 {
+  0i32
+}

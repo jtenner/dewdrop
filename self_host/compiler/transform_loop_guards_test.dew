@@ -1,0 +1,50 @@
+test "checked loop control guard-break" {
+  let manifest = SelfHostProgramManifest::{modules: [{path: "example.app"
+    files: [{path: "loop-control.dew"
+      source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  while false {\n    _ if if true {\n      break 42i32\n    } else {\n      false\n    } => break 0i32\n    false => break 1i32\n    true => break 2i32\n  }\n}\n\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+      test_only: false
+    }]
+  }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked loop control guard-continue" {
+  let manifest = SelfHostProgramManifest::{modules: [{path: "example.app"
+    files: [{path: "loop-control.dew"
+      source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  while false {\n    state if if !state {\n      continue true\n    } else {\n      true\n    } => break 42i32\n    false => break 0i32\n    true => break 1i32\n  }\n}\n\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+      test_only: false
+    }]
+  }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked loop control initial-outer-break" {
+  let manifest = SelfHostProgramManifest::{modules: [{path: "example.app"
+    files: [{path: "loop-control.dew"
+      source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  while 0i32 {\n    _ => {\n      let _ = while if true {\n        break 42i32\n      } else {\n        0i32\n      } {\n        _ => break 0i32\n      }\n      break 1i32\n    }\n  }\n}\n\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+      test_only: false
+    }]
+  }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}

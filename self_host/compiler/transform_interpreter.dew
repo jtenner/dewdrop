@@ -725,6 +725,9 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
 
 fn ct_match(machine: CtMachine, mi: U32, expression: SelfHostExpr, arms: Array<SelfHostPatternArm>, env: CtEnvironment, loop_: Bool) -> CtValue {
   let mut value = ct_eval(machine, mi, expression, env)
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return value
+  }
   let _ = while 0u32 {
     _ => {
       if !ct_charge(machine, 0u32) || machine.flow != 0u32 {
@@ -739,7 +742,21 @@ fn ct_match(machine: CtMachine, mi: U32, expression: SelfHostExpr, arms: Array<S
               Some(guard_) => ct_truth(machine, ct_eval(machine, mi, guard_, scope))
               None => true
             }
-            if allowed {
+            if machine.error.byte_length() != 0u32 {
+              return CtValue::Empty
+            }
+            if machine.flow != 0u32 {
+              if !loop_ || machine.flow == 1u32 {
+                return machine.result
+              }
+              if machine.flow == 2u32 {
+                machine.flow = 0u32
+                return machine.result
+              }
+              value = machine.result
+              machine.flow = 0u32
+              matched = true
+            } else if allowed {
               matched = true
               let result = ct_eval(machine, mi, arm.body, scope)
               if !loop_ {
@@ -757,6 +774,9 @@ fn ct_match(machine: CtMachine, mi: U32, expression: SelfHostExpr, arms: Array<S
               }
             }
           }
+        }
+        if matched {
+          break ()
         }
       }
       if !matched {

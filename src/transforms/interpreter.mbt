@@ -748,15 +748,18 @@ fn Machine::eval_inner(
         for arm in arms {
           let scope = self.scope(env)
           if self.pattern(mi, arm.pattern, value, scope) {
-            if arm.guard_condition is Some(guard_) &&
-              !truth(self.eval(mi, guard_, scope)) {
-              continue
-            }
-            matched = true
             try {
+              if arm.guard_condition is Some(guard_) &&
+                !truth(self.eval(mi, guard_, scope)) {
+                continue
+              }
+              matched = true
               let _ = self.eval(mi, arm.body, scope)
             } catch {
-              Continued(next) => value = next
+              Continued(next) => {
+                value = next
+                matched = true
+              }
               Broken(result) => return result
               error => raise error
             }

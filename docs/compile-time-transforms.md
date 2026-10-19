@@ -533,3 +533,10 @@ Unsafe casts and raw `struct.get` calls that return a tuple need checked tuple
 layout data. The interpreter currently rejects these operations, including a
 single-leaf tuple whose Wasm ABI is otherwise valid. Ordinary tuple construction,
 source calls, destructuring, and unit-only defaults are supported.
+
+## Loop transfers in guards
+
+A `break` or `continue` in a functional loop guard targets that loop. The
+first value of a nested loop is evaluated in the outer loop's control scope.
+Both interpreters keep these checked targets. See
+`examples/transforms/loop_guards.dew`.
