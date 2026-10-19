@@ -13,10 +13,19 @@ pub fn required_standard_library_source_paths(
   for path in required {
     seen[path] = true
   }
+  let explicit_modules : Map[String, Bool] = Map([])
+  for module_ in manifest.modules {
+    explicit_modules[module_.path] = true
+  }
   let mut cursor = 0
   while cursor < required.length() {
     let path = required[cursor]
     cursor += 1
+    if explicit_modules.contains(
+        @standard_sources.standard_source_module_name(path),
+      ) {
+      continue
+    }
     let file = match sources {
       Some(provider) => provider.file(path)
       None =>
@@ -44,7 +53,9 @@ fn standard_dependency_selection_files(
   sources : StandardLibrarySources,
 ) -> Array[ProgramFile] {
   let files : Array[ProgramFile] = []
+  let explicit_modules : Map[String, Bool] = Map([])
   for module_ in manifest.modules {
+    explicit_modules[module_.path] = true
     for file in module_.files {
       files.push(ProgramFile::from_manifest(0UL, file))
     }
@@ -57,7 +68,11 @@ fn standard_dependency_selection_files(
       true,
       sources=Some(sources),
     ) {
-    files.push(ProgramFile::from_manifest(0UL, sources.file(path)))
+    if !explicit_modules.contains(
+        @standard_sources.standard_source_module_name(path),
+      ) {
+      files.push(ProgramFile::from_manifest(0UL, sources.file(path)))
+    }
   }
   files
 }

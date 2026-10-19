@@ -126,3 +126,25 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     }
   }
 }
+
+///|
+/// Module metadata for a path from `standard_source_paths`.
+pub fn standard_source_module_name(path : String) -> String {
+  if path == "std/string_fixed_array.dew" {
+    return "dew.std.string"
+  }
+  if path.has_prefix("std/preamble/") {
+    return "dew.std.preamble"
+  }
+  let parts = path.split("/").map(part => part.to_owned()).to_array()
+  let mut output = "dew.std"
+  for index in 1..<parts.length() {
+    let part = if index == parts.length() - 1 {
+      parts[index].replace_all(old=".dew", new="")
+    } else {
+      parts[index]
+    }
+    output += "." + part
+  }
+  output
+}

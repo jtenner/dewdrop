@@ -6,7 +6,7 @@ pub fn ast_source() -> Bytes
 
 pub fn contains_transform_syntax(Bytes) -> Bool
 
-pub fn prepare(Array[SourceModule]) -> Result[Plan, String]
+pub fn prepare(Array[SourceModule], trusted_library_indices? : Array[Int]) -> Result[Plan, String]
 
 pub fn transform_library_sources() -> Array[SourceModule]
 
@@ -49,7 +49,7 @@ pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
 pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes) -> Unit
 pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
-pub fn Plan::expand(Self, output_module_count? : Int) -> Result[Array[SourceModule], String]
+pub fn Plan::expand(Self, output_module_count? : Int, retain_transform_declarations? : Bool) -> Result[Array[SourceModule], String]
 pub fn Plan::validation_sources(Self) -> Array[SourceModule]
 
 type RawStorage

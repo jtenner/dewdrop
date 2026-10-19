@@ -381,6 +381,7 @@ fn Machine::apply(
 pub fn Plan::expand(
   self : Plan,
   output_module_count~ : Int32 = -1,
+  retain_transform_declarations~ : Bool = false,
 ) -> Result[Array[SourceModule], String] {
   if !self.active {
     return Ok(self.modules)
@@ -405,7 +406,11 @@ pub fn Plan::expand(
       let out = @buffer.new()
       let mut cursor = 0
       for function in file.functions {
-        if function.transform {
+        if function.transform && retain_transform_declarations {
+          // Keep entries callable by later source-pool modules.
+          out.write_bytes(file.file.source[cursor:function.end])
+          cursor = function.end
+        } else if function.transform {
           out.write_bytes(file.clean[cursor:function.start])
           let removed = file.clean[function.start:function.end]
             .to_owned()

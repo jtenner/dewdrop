@@ -12,7 +12,7 @@ import {
 // Values
 pub fn compile_manifest(@semantic.ProgramManifest, @standard_loader.StandardLibraryLoad, CompilerPipelineOptions, prior_parse_event_cache_status? : @standard_loader.ParseEventCacheStatus, pack? : @standard_loader.CompilationCachePack?) -> Result[CompilerCompilation, CompilerCompilationError]
 
-pub fn compile_manifest_uncached(@semantic.ProgramManifest, @semantic.StandardLibrarySources, CompilerPipelineOptions) -> Result[CompilerCompilation, CompilerCompilationError]
+pub fn compile_manifest_uncached(@semantic.ProgramManifest, @semantic.StandardLibrarySources, CompilerPipelineOptions, source_pool? : @semantic.ProgramManifest) -> Result[CompilerCompilation, CompilerCompilationError]
 
 pub fn load_compilation_standard_sources(String, @semantic.ProgramManifest, Bool) -> Result[@standard_loader.StandardLibraryLoad, String]
 

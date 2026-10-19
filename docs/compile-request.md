@@ -20,7 +20,8 @@ output path in the request. Check responses return status and diagnostics only.
 ## Version policy
 
 The request version is **1**. Until Dewdrop is released, incompatible changes
-replace version 1 in place. No legacy pre-release reader is retained.
+replace version 1 in place. A version 1 request that ends after the compiler
+fingerprint has an empty source pool.
 
 ## Scalar encoding
 
@@ -67,10 +68,21 @@ use default preamble           bool-as-u32
 cache policy                   u32 (0 all persistent caches disabled)
 report cache status            bool-as-u32
 compiler fingerprint           bytes
+optional source pool           array {
+  module name                  string
+  files                        array {
+    logical path               string
+    exact source               bytes
+  }
+}
 ```
 
 Check requests must use Wasm output kind and status-only response mode. Build
 requests must use output-file response mode.
+
+New writers always emit the source-pool count, including zero. A reader also
+accepts EOF directly after the compiler fingerprint as an empty pool. Other
+trailing bytes are invalid.
 
 The embedded standard-library identity is BLAKE3 over a domain separator, the
 ordered standard source path registry, and each exact source payload. A mismatch
@@ -87,7 +99,7 @@ caches.
 | Item | Limit |
 |---|---:|
 | Complete request | 256 MiB |
-| Modules | 1,024 |
+| Modules, active and pooled together | 1,024 |
 | Files per module | 4,096 |
 | Files in the request | 65,536 |
 | One source payload | 16 MiB |
@@ -98,15 +110,37 @@ caches.
 | Logical/output paths | 4,096 bytes |
 | Compiler fingerprint | 4,096 bytes |
 
-Every module must contain at least one file. Module names, file paths, dependency
-modules, and provider names must be unique in their local collection. Logical
+Every module must contain at least one file. Module names must be unique across
+the active modules and the source pool. The root must be an active module.
+File paths, dependency modules, and provider names must be unique in their local
+collection. Logical
 source paths must be relative and normalized. Source and provider payloads may
 contain any bytes, including invalid UTF-8.
 
 ## Order and ownership
 
 Module, file, dependency, and static-provider order is semantic input and is
-preserved exactly.
+preserved exactly. Pool modules join the active list only when an import selects
+them. The initial active module order does not change.
+
+The compiler follows imports from active modules and then from selected pool
+modules. It repeats selection before transform checks and after expansion. If
+a late module has transforms, another expansion round handles that new source.
+Earlier target annotations have already been removed, so their transforms do
+not run again. The pool module count bounds the number of rounds.
+
+Unused pool source is not parsed or checked. Both user and standard modules use
+the same Dew selection rules. Import selection uses only request bytes; it does
+not read source files from the host. Missing modules produce a source diagnostic.
+The native request path also keeps selected standard records as explicit
+manifest modules. Their exact file paths, source bytes, and file order remain
+intact. The collector uses their canonical standard IDs and does not add a
+fallback copy. This includes sources first needed by a generated import.
+
+The compiler reserves `dewdrop.ast` and `dewdrop.transform`. A source pool cannot
+supply these modules. Later expansion rounds accept a compiler API module only
+at its recorded module position and with its exact canonical file paths and
+source bytes.
 
 The launcher owns:
 
@@ -132,6 +166,11 @@ The shared MoonBit model and codec are in `src/compile_request`. The current
 MoonBit compiler consumes the decoded manifest directly through
 `ManifestFile(logical_path, source)`. It does not materialize source or provider
 payloads as temporary files.
+
+The bootstrap fixture preserves its core manifest list and packs every remaining
+registered standard module into the pool. Its `--standard-root ROOT` option
+selects bytes from `ROOT/std/...` before the request is written.
+`--pool-module NAME SOURCE...` adds user source for later import selection.
 
 `CompilerPipelineOptions` has an uncached entry point used by this request path.
 Ambient cache environment variables are ignored. `tools/check-compile-request.sh`

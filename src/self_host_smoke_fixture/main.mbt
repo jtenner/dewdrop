@@ -19,24 +19,6 @@ fn self_host_smoke_fs_error_message(error : @fs.IOError) -> String {
 }
 
 ///|
-fn self_host_smoke_standard_module_name(path : String) -> String {
-  if path.has_prefix("std/preamble/") {
-    return "dew.std.preamble"
-  }
-  let parts = path.split("/").map(part => part.to_owned()).to_array()
-  let mut output = "dew.std"
-  for index in 1..<parts.length() {
-    let part = if index == parts.length() - 1 {
-      parts[index].replace_all(old=".dew", new="")
-    } else {
-      parts[index]
-    }
-    output += "." + part
-  }
-  output
-}
-
-///|
 fn self_host_smoke_standard_module_required(name : String) -> Bool {
   match name {
     "dew.std.array"
@@ -93,7 +75,7 @@ fn self_host_smoke_append_standard_modules(
   modules : Array[@compile_request.CompilerRequestModule],
 ) -> Unit {
   for path in @standard_sources.standard_source_paths() {
-    let name = self_host_smoke_standard_module_name(path)
+    let name = @standard_sources.standard_source_module_name(path)
     if self_host_smoke_standard_module_required(name) {
       let source = match @standard_sources.bootstrap_standard_source(path) {
         Some(value) => value
@@ -147,6 +129,7 @@ fn main {
         ],
       },
     ],
+    source_pool: [],
     dependency_interfaces: [],
     static_providers: [{ name: "starshine", wasm: provider, }],
     standard_library: @compile_request.CompilerBootstrapStandard(

@@ -501,9 +501,9 @@ fn standard_library_program_files(
 }
 
 ///|
-/// Collects modules and files in exact manifest order. Module IDs are the
-/// caller-supplied base plus manifest index; file IDs use per-module manifest
-/// order through `make_program_file_id`.
+/// Collects modules and files in exact manifest order. Registered standard
+/// module paths retain their canonical IDs. Other module IDs are the caller's
+/// base plus manifest index. File IDs use each module's exact manifest order.
 pub fn collect_program_manifest_with_standard_sources(
   module_id_base : ModuleId,
   manifest : ProgramManifest,
@@ -562,7 +562,9 @@ pub fn collect_program_manifest_with_standard_sources(
           )
         None => first_file[file.path] = file_index
       }
-      let module_id = manifest_module_id(module_id_base, module_index)
+      let module_id = canonical_standard_module_id(module_.path).unwrap_or(
+        manifest_module_id(module_id_base, module_index),
+      )
       files.push(
         ProgramFile::from_manifest(
           make_program_file_id(module_id, file_index),
@@ -572,46 +574,54 @@ pub fn collect_program_manifest_with_standard_sources(
     }
     modules.push(
       collect_program_files_with_frozen_standard_imports(
-        manifest_module_id(module_id_base, module_index),
+        canonical_standard_module_id(module_.path).unwrap_or(
+          manifest_module_id(module_id_base, module_index),
+        ),
         files,
       ),
     )
   }
-  let preamble_module_id = standard_library_module_id(0)
-  let preamble_module_index = modules.length()
-  first_module["dew.std.preamble"] = preamble_module_index
-  module_paths.push("dew.std.preamble")
-  modules.push(
-    collect_program_files_with_frozen_standard_imports(
-      preamble_module_id,
-      standard_preamble_program_files(preamble_module_id, standard_sources),
-    ),
-  )
-  let option_module_id = standard_library_module_id(2)
-  let option_module_index = modules.length()
-  first_module["dew.std.option"] = option_module_index
-  module_paths.push("dew.std.option")
-  modules.push(
-    collect_program_files_with_frozen_standard_imports(
-      option_module_id,
-      standard_library_program_files(
-        option_module_id, "std/option.dew", standard_sources, false, false,
+  if !first_module.contains("dew.std.preamble") {
+    let preamble_module_id = standard_library_module_id(0)
+    let preamble_module_index = modules.length()
+    first_module["dew.std.preamble"] = preamble_module_index
+    module_paths.push("dew.std.preamble")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        preamble_module_id,
+        standard_preamble_program_files(preamble_module_id, standard_sources),
       ),
-    ),
-  )
-  let result_module_id = standard_library_module_id(8)
-  let result_module_index = modules.length()
-  first_module["dew.std.result"] = result_module_index
-  module_paths.push("dew.std.result")
-  modules.push(
-    collect_program_files_with_frozen_standard_imports(
-      result_module_id,
-      standard_library_program_files(
-        result_module_id, "std/result.dew", standard_sources, false, false,
+    )
+  }
+  if !first_module.contains("dew.std.option") {
+    let option_module_id = standard_library_module_id(2)
+    let option_module_index = modules.length()
+    first_module["dew.std.option"] = option_module_index
+    module_paths.push("dew.std.option")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        option_module_id,
+        standard_library_program_files(
+          option_module_id, "std/option.dew", standard_sources, false, false,
+        ),
       ),
-    ),
-  )
-  if selected_fixed_array {
+    )
+  }
+  if !first_module.contains("dew.std.result") {
+    let result_module_id = standard_library_module_id(8)
+    let result_module_index = modules.length()
+    first_module["dew.std.result"] = result_module_index
+    module_paths.push("dew.std.result")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        result_module_id,
+        standard_library_program_files(
+          result_module_id, "std/result.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if selected_fixed_array && !first_module.contains("dew.std.fixed_array") {
     let module_id = standard_library_module_id(10)
     let module_index = modules.length()
     first_module["dew.std.fixed_array"] = module_index
@@ -625,7 +635,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_map {
+  if selected_map && !first_module.contains("dew.std.map") {
     let module_id = standard_library_module_id(11)
     let module_index = modules.length()
     first_module["dew.std.map"] = module_index
@@ -639,7 +649,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_array {
+  if selected_array && !first_module.contains("dew.std.array") {
     let module_id = standard_library_module_id(13)
     let module_index = modules.length()
     first_module["dew.std.array"] = module_index
@@ -653,7 +663,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_set {
+  if selected_set && !first_module.contains("dew.std.set") {
     let module_id = standard_library_module_id(12)
     let module_index = modules.length()
     first_module["dew.std.set"] = module_index
@@ -667,7 +677,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 1) != 0 {
+  if (selected_collection_mask & 1) != 0 &&
+    !first_module.contains("dew.std.collections.stack") {
     let module_id = standard_library_module_id(14)
     let module_index = modules.length()
     first_module["dew.std.collections.stack"] = module_index
@@ -681,7 +692,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 2) != 0 {
+  if (selected_collection_mask & 2) != 0 &&
+    !first_module.contains("dew.std.queue") {
     let module_id = standard_library_module_id(15)
     let module_index = modules.length()
     first_module["dew.std.queue"] = module_index
@@ -695,7 +707,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 4) != 0 {
+  if (selected_collection_mask & 4) != 0 &&
+    !first_module.contains("dew.std.collections.circular_buffer") {
     let module_id = standard_library_module_id(36)
     let module_index = modules.length()
     first_module["dew.std.collections.circular_buffer"] = module_index
@@ -710,7 +723,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 8) != 0 {
+  if (selected_collection_mask & 8) != 0 &&
+    !first_module.contains("dew.std.collections.deque") {
     let module_id = standard_library_module_id(37)
     let module_index = modules.length()
     first_module["dew.std.collections.deque"] = module_index
@@ -724,7 +738,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 16) != 0 {
+  if (selected_collection_mask & 16) != 0 &&
+    !first_module.contains("dew.std.ordering") {
     let module_id = standard_library_module_id(38)
     let module_index = modules.length()
     first_module["dew.std.ordering"] = module_index
@@ -738,7 +753,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 32) != 0 {
+  if (selected_collection_mask & 32) != 0 &&
+    !first_module.contains("dew.std.collections.binary_heap") {
     let module_id = standard_library_module_id(39)
     let module_index = modules.length()
     first_module["dew.std.collections.binary_heap"] = module_index
@@ -753,7 +769,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 64) != 0 {
+  if (selected_collection_mask & 64) != 0 &&
+    !first_module.contains("dew.std.collections.priority_queue") {
     let module_id = standard_library_module_id(40)
     let module_index = modules.length()
     first_module["dew.std.collections.priority_queue"] = module_index
@@ -768,7 +785,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 128) != 0 {
+  if (selected_collection_mask & 128) != 0 &&
+    !first_module.contains("dew.std.collections.red_black_tree") {
     let module_id = standard_library_module_id(41)
     let module_index = modules.length()
     first_module["dew.std.collections.red_black_tree"] = module_index
@@ -783,7 +801,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 256) != 0 {
+  if (selected_collection_mask & 256) != 0 &&
+    !first_module.contains("dew.std.collections.ordered_map") {
     let module_id = standard_library_module_id(42)
     let module_index = modules.length()
     first_module["dew.std.collections.ordered_map"] = module_index
@@ -798,7 +817,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 512) != 0 {
+  if (selected_collection_mask & 512) != 0 &&
+    !first_module.contains("dew.std.collections.ordered_set") {
     let module_id = standard_library_module_id(43)
     let module_index = modules.length()
     first_module["dew.std.collections.ordered_set"] = module_index
@@ -813,7 +833,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 1024) != 0 {
+  if (selected_collection_mask & 1024) != 0 &&
+    !first_module.contains("dew.std.iter") {
     let module_id = standard_library_module_id(47)
     let module_index = modules.length()
     first_module["dew.std.iter"] = module_index
@@ -827,7 +848,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_math {
+  if selected_math && !first_module.contains("dew.std.math") {
     let module_id = standard_library_module_id(48)
     let module_index = modules.length()
     first_module["dew.std.math"] = module_index
@@ -841,7 +862,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_io {
+  if selected_io && !first_module.contains("dew.std.io") {
     let module_id = standard_library_module_id(49)
     let module_index = modules.length()
     first_module["dew.std.io"] = module_index
@@ -855,7 +876,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_testing {
+  if selected_testing && !first_module.contains("dew.std.testing") {
     let module_id = standard_library_module_id(50)
     let module_index = modules.length()
     first_module["dew.std.testing"] = module_index
@@ -869,7 +890,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 4096) != 0 {
+  if (selected_collection_mask & 4096) != 0 &&
+    !first_module.contains("dew.std.bloom_filter") {
     let module_id = standard_library_module_id(52)
     let module_index = modules.length()
     first_module["dew.std.bloom_filter"] = module_index
@@ -883,7 +905,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 8192) != 0 {
+  if (selected_collection_mask & 8192) != 0 &&
+    !first_module.contains("dew.std.blake3") {
     let module_id = standard_library_module_id(53)
     let module_index = modules.length()
     first_module["dew.std.blake3"] = module_index
@@ -897,7 +920,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 32768) != 0 {
+  if (selected_collection_mask & 32768) != 0 &&
+    !first_module.contains("dew.std.integrity.sha256") {
     let module_id = standard_library_module_id(55)
     let module_index = modules.length()
     first_module["dew.std.integrity.sha256"] = module_index
@@ -911,7 +935,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 65536) != 0 {
+  if (selected_collection_mask & 65536) != 0 &&
+    !first_module.contains("dew.std.path") {
     let module_id = standard_library_module_id(56)
     let module_index = modules.length()
     first_module["dew.std.path"] = module_index
@@ -925,7 +950,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 131072) != 0 {
+  if (selected_collection_mask & 131072) != 0 &&
+    !first_module.contains("dew.std.fs") {
     let module_id = standard_library_module_id(57)
     let module_index = modules.length()
     first_module["dew.std.fs"] = module_index
@@ -939,7 +965,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 262144) != 0 {
+  if (selected_collection_mask & 262144) != 0 &&
+    !first_module.contains("dew.std.process") {
     let module_id = standard_library_module_id(58)
     let module_index = modules.length()
     first_module["dew.std.process"] = module_index
@@ -953,7 +980,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 524288) != 0 {
+  if (selected_collection_mask & 524288) != 0 &&
+    !first_module.contains("dew.std.fs.wasi") {
     let module_id = standard_library_module_id(59)
     let module_index = modules.length()
     first_module["dew.std.fs.wasi"] = module_index
@@ -967,7 +995,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 2097152) != 0 {
+  if (selected_collection_mask & 2097152) != 0 &&
+    !first_module.contains("dew.std.process.wasi") {
     let module_id = standard_library_module_id(61)
     let module_index = modules.length()
     first_module["dew.std.process.wasi"] = module_index
@@ -992,7 +1021,8 @@ pub fn collect_program_manifest_with_standard_sources(
     "dew.std.facet.net",
   ]
   for index, source_path in facet_source_paths {
-    if (selected_facet_mask & (1 << index)) != 0 {
+    if (selected_facet_mask & (1 << index)) != 0 &&
+      !first_module.contains(facet_module_paths[index]) {
       let module_id = standard_library_module_id(70 + index)
       let module_index = modules.length()
       first_module[facet_module_paths[index]] = module_index
@@ -1007,7 +1037,8 @@ pub fn collect_program_manifest_with_standard_sources(
       )
     }
   }
-  if (selected_collection_mask & 2048) != 0 {
+  if (selected_collection_mask & 2048) != 0 &&
+    !first_module.contains("dew.std.json") {
     let module_id = standard_library_module_id(51)
     let module_index = modules.length()
     first_module["dew.std.json"] = module_index
@@ -1021,7 +1052,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 134217728) != 0 {
+  if (selected_collection_mask & 134217728) != 0 &&
+    !first_module.contains("dew.std.encode") {
     let module_id = standard_library_module_id(67)
     let module_index = modules.length()
     first_module["dew.std.encode"] = module_index
@@ -1035,7 +1067,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 268435456) != 0 {
+  if (selected_collection_mask & 268435456) != 0 &&
+    !first_module.contains("dew.std.decode") {
     let module_id = standard_library_module_id(68)
     let module_index = modules.length()
     first_module["dew.std.decode"] = module_index
@@ -1049,7 +1082,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 8388608) != 0 {
+  if (selected_collection_mask & 8388608) != 0 &&
+    !first_module.contains("dew.std.format") {
     let module_id = standard_library_module_id(63)
     let module_index = modules.length()
     first_module["dew.std.format"] = module_index
@@ -1063,7 +1097,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 16777216) != 0 {
+  if (selected_collection_mask & 16777216) != 0 &&
+    !first_module.contains("dew.std.semver") {
     let module_id = standard_library_module_id(64)
     let module_index = modules.length()
     first_module["dew.std.semver"] = module_index
@@ -1077,7 +1112,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 33554432) != 0 {
+  if (selected_collection_mask & 33554432) != 0 &&
+    !first_module.contains("dew.std.package") {
     let module_id = standard_library_module_id(65)
     let module_index = modules.length()
     first_module["dew.std.package"] = module_index
@@ -1091,7 +1127,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 67108864) != 0 {
+  if (selected_collection_mask & 67108864) != 0 &&
+    !first_module.contains("dew.std.package.artifact") {
     let module_id = standard_library_module_id(66)
     let module_index = modules.length()
     first_module["dew.std.package.artifact"] = module_index
@@ -1106,18 +1143,20 @@ pub fn collect_program_manifest_with_standard_sources(
     )
   }
   if selected_text_mask != 0 {
-    let module_id = standard_library_module_id(1)
-    let module_index = modules.length()
-    first_module["dew.std.text_runtime"] = module_index
-    module_paths.push("dew.std.text_runtime")
-    modules.push(
-      collect_program_files_with_frozen_standard_imports(
-        module_id,
-        standard_library_program_files(
-          module_id, "std/text_runtime.dew", standard_sources, false, false,
+    if !first_module.contains("dew.std.text_runtime") {
+      let module_id = standard_library_module_id(1)
+      let module_index = modules.length()
+      first_module["dew.std.text_runtime"] = module_index
+      module_paths.push("dew.std.text_runtime")
+      modules.push(
+        collect_program_files_with_frozen_standard_imports(
+          module_id,
+          standard_library_program_files(
+            module_id, "std/text_runtime.dew", standard_sources, false, false,
+          ),
         ),
-      ),
-    )
+      )
+    }
     let text_paths = [
       "dew.std.string", "dew.std.string_builder", "dew.std.bytes_builder", "dew.std.bytes",
     ]
@@ -1128,33 +1167,35 @@ pub fn collect_program_manifest_with_standard_sources(
       if (selected_text_mask & (1 << (source_index - 1))) == 0 {
         continue
       }
-      let module_id = standard_library_module_id(source_index + 2)
-      let module_index = modules.length()
-      first_module[text_paths[source_index - 1]] = module_index
-      module_paths.push(text_paths[source_index - 1])
-      let text_module_files = standard_library_program_files(
-        module_id,
-        text_files[source_index - 1],
-        standard_sources,
-        true,
-        source_index == 1 || source_index == 4,
-      )
-      if source_index == 1 {
-        text_module_files.push(
-          ProgramFile::from_manifest(
-            make_program_file_id(module_id, text_module_files.length()),
-            standard_sources.file("std/string_fixed_array.dew"),
+      if !first_module.contains(text_paths[source_index - 1]) {
+        let module_id = standard_library_module_id(source_index + 2)
+        let module_index = modules.length()
+        first_module[text_paths[source_index - 1]] = module_index
+        module_paths.push(text_paths[source_index - 1])
+        let text_module_files = standard_library_program_files(
+          module_id,
+          text_files[source_index - 1],
+          standard_sources,
+          true,
+          source_index == 1 || source_index == 4,
+        )
+        if source_index == 1 {
+          text_module_files.push(
+            ProgramFile::from_manifest(
+              make_program_file_id(module_id, text_module_files.length()),
+              standard_sources.file("std/string_fixed_array.dew"),
+            ),
+          )
+        }
+        modules.push(
+          collect_program_files_with_frozen_standard_imports(
+            module_id, text_module_files,
           ),
         )
       }
-      modules.push(
-        collect_program_files_with_frozen_standard_imports(
-          module_id, text_module_files,
-        ),
-      )
     }
   }
-  if (selected_text_mask & 16) != 0 {
+  if (selected_text_mask & 16) != 0 && !first_module.contains("dew.std.text") {
     let module_id = standard_library_module_id(46)
     let module_index = modules.length()
     first_module["dew.std.text"] = module_index
@@ -1168,7 +1209,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_text_mask & 32) != 0 {
+  if (selected_text_mask & 32) != 0 &&
+    !first_module.contains("dew.std.encoding.utf8") {
     let module_id = standard_library_module_id(69)
     let module_index = modules.length()
     first_module["dew.std.encoding.utf8"] = module_index
@@ -1182,7 +1224,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_show {
+  if selected_show && !first_module.contains("dew.std.show") {
     let module_id = standard_library_module_id(44)
     let module_index = modules.length()
     first_module["dew.std.show"] = module_index
@@ -1196,7 +1238,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_disposable {
+  if selected_disposable && !first_module.contains("dew.std.disposable") {
     let module_id = standard_library_module_id(45)
     let module_index = modules.length()
     first_module["dew.std.disposable"] = module_index
@@ -1210,7 +1252,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & (16384 | 524288 | 2097152)) != 0 {
+  if (selected_collection_mask & (16384 | 524288 | 2097152)) != 0 &&
+    !first_module.contains("dew.std.wasm.wasi") {
     let module_id = standard_library_module_id(54)
     let module_index = modules.length()
     first_module["dew.std.wasm.wasi"] = module_index
@@ -1224,7 +1267,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_wasi {
+  if selected_wasi && !first_module.contains("dew.std.wasi") {
     let module_id = standard_library_module_id(7)
     let module_index = modules.length()
     first_module["dew.std.wasi"] = module_index
@@ -1238,7 +1281,8 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if selected_wasm_intrinsics {
+  if selected_wasm_intrinsics &&
+    !first_module.contains("dew.std.wasm.intrinsics") {
     let module_id = standard_library_module_id(9)
     let module_index = modules.length()
     first_module["dew.std.wasm.intrinsics"] = module_index
@@ -1258,23 +1302,25 @@ pub fn collect_program_manifest_with_standard_sources(
     }
     let module_id = standard_library_module_id(16 + lane_index)
     let path = standard_lane_module_path(lane_index)
-    let module_index = modules.length()
-    first_module[path] = module_index
-    module_paths.push(path)
-    modules.push(
-      collect_program_files_with_frozen_standard_imports(
-        module_id,
-        standard_library_program_files(
+    if !first_module.contains(path) {
+      let module_index = modules.length()
+      first_module[path] = module_index
+      module_paths.push(path)
+      modules.push(
+        collect_program_files_with_frozen_standard_imports(
           module_id,
-          "std/" + path[8:].to_owned() + ".dew",
-          standard_sources,
-          false,
-          false,
+          standard_library_program_files(
+            module_id,
+            "std/" + path[8:].to_owned() + ".dew",
+            standard_sources,
+            false,
+            false,
+          ),
         ),
-      ),
-    )
+      )
+    }
   }
-  if selected_types {
+  if selected_types && !first_module.contains("dew.std.types") {
     let module_id = standard_library_module_id(79)
     first_module["dew.std.types"] = modules.length()
     module_paths.push("dew.std.types")
@@ -2508,7 +2554,9 @@ fn frozen_body_type_to_resolved_uncached(
       result
     }
     BodyAppliedType(base, arguments) => {
-      let resolved_base = frozen_body_type_to_resolved(resolved, inferred, base, memo)
+      let resolved_base = frozen_body_type_to_resolved(
+        resolved, inferred, base, memo,
+      )
       let resolved_arguments : Array[ResolvedTypeId] = []
       for index in 0..<arguments.length {
         resolved_arguments.push(

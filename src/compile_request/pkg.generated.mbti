@@ -1,0 +1,119 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/compile_request"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn bootstrap_standard_library_identity() -> Bytes
+
+pub fn bytes_equal(Bytes, Bytes) -> Bool
+
+pub fn decode(Bytes) -> Result[CompilerRequest, String]
+
+pub fn max_compiler_fingerprint_bytes() -> Int
+
+pub fn max_dependency_count() -> Int
+
+pub fn max_files_per_module() -> Int
+
+pub fn max_module_count() -> Int
+
+pub fn max_name_bytes() -> Int
+
+pub fn max_path_bytes() -> Int
+
+pub fn max_provider_bytes() -> Int
+
+pub fn max_provider_count() -> Int
+
+pub fn max_request_bytes() -> Int
+
+pub fn max_source_bytes() -> Int
+
+pub fn max_total_files() -> Int
+
+// Errors
+
+// Types and methods
+pub(all) enum CompilerCachePolicy {
+  CompilerCachesDisabled
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CompilerDiagnosticsMode {
+  CompilerTextDiagnostics
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CompilerOptimizationMode {
+  CompilerOptimized
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerRequest {
+  command : CompilerRequestCommand
+  output_kind : CompilerRequestOutputKind
+  response : CompilerRequestResponseMode
+  root_module : String
+  modules : Array[CompilerRequestModule]
+  source_pool : Array[CompilerRequestModule]
+  dependency_interfaces : Array[CompilerRequestDependencyInterface]
+  static_providers : Array[CompilerRequestStaticProvider]
+  standard_library : CompilerRequestStandardLibrary
+  config : CompilerSessionConfig
+  compiler_fingerprint : Bytes
+} derive(Eq, @debug.Debug)
+pub fn CompilerRequest::encode(Self) -> Result[Bytes, String]
+pub fn CompilerRequest::validate(Self) -> Result[Unit, String]
+
+pub(all) enum CompilerRequestCommand {
+  CompilerCheck
+  CompilerBuild
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerRequestDependencyInterface {
+  module_name : String
+  fingerprint : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerRequestFile {
+  logical_path : String
+  source : Bytes
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerRequestModule {
+  name : String
+  files : Array[CompilerRequestFile]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CompilerRequestOutputKind {
+  CompilerWasmOutput
+  CompilerHirOutput
+  CompilerLoweringOutput
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CompilerRequestResponseMode {
+  CompilerStatusOnly
+  CompilerOutputFile(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CompilerRequestStandardLibrary {
+  CompilerBootstrapStandard(Bytes)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerRequestStaticProvider {
+  name : String
+  wasm : Bytes
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerSessionConfig {
+  optimization : CompilerOptimizationMode
+  diagnostics : CompilerDiagnosticsMode
+  test_mode : Bool
+  default_preamble : Bool
+  cache_policy : CompilerCachePolicy
+  cache_report : Bool
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

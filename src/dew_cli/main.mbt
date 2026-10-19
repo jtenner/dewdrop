@@ -161,18 +161,49 @@ fn compile_request_root_index(
 }
 
 ///|
-fn compile_request_manifest(
-  request : @compile_request.CompilerRequest,
+fn compile_request_modules_manifest(
+  request_modules : Array[@compile_request.CompilerRequestModule],
 ) -> @semantic.ProgramManifest {
-  let modules : Array[@semantic.ManifestModule] = []
-  for module_ in request.modules {
-    let files : Array[@semantic.ManifestFile] = []
-    for file in module_.files {
-      files.push(@semantic.ManifestFile::new(file.logical_path, file.source))
+  @semantic.ProgramManifest::new(
+    request_modules.map(fn(module_) {
+      @semantic.ManifestModule::new(
+        module_.name,
+        module_.files.map(fn(file) {
+          @semantic.ManifestFile::new(file.logical_path, file.source)
+        }),
+      )
+    }),
+  )
+}
+
+///|
+fn compile_request_standard_sources(
+  request : @compile_request.CompilerRequest,
+) -> @semantic.StandardLibrarySources {
+  let selected : Map[String, Bytes] = Map::default()
+  for
+    module_index in 0..<(request.modules.length() + request.source_pool.length()) {
+    let module_ = if module_index < request.modules.length() {
+      request.modules[module_index]
+    } else {
+      request.source_pool[module_index - request.modules.length()]
     }
-    modules.push(@semantic.ManifestModule::new(module_.name, files))
+    for file in module_.files {
+      if module_.name ==
+        @standard_sources.standard_source_module_name(file.logical_path) {
+        selected[file.logical_path] = file.source
+      }
+    }
   }
-  @semantic.ProgramManifest::new(modules)
+  let files : Array[@semantic.ManifestFile] = []
+  for path in @standard_sources.standard_source_paths() {
+    let source = match selected.get(path) {
+      Some(value) => value
+      None => @standard_sources.bootstrap_standard_source(path).unwrap()
+    }
+    files.push(@semantic.ManifestFile::new(path, source))
+  }
+  @semantic.StandardLibrarySources::new(files)
 }
 
 ///|
@@ -186,7 +217,8 @@ fn run_source_compile_request(
   if !@compile_request.bytes_equal(expected_standard, actual_standard) {
     cli_fail("compile request bootstrap standard identity mismatch")
   }
-  let manifest = compile_request_manifest(request)
+  let manifest = compile_request_modules_manifest(request.modules)
+  let source_pool = compile_request_modules_manifest(request.source_pool)
   let root_module_index = compile_request_root_index(request)
   let options = if request.config.test_mode {
     @compiler_driver.CompilerPipelineOptions::test_mode(
@@ -204,8 +236,9 @@ fn run_source_compile_request(
   let compiled = match
     @compiler_driver.compile_manifest_uncached(
       manifest,
-      @semantic.StandardLibrarySources::bootstrap(),
+      compile_request_standard_sources(request),
       options,
+      source_pool~,
     ) {
     Ok(compiled) => compiled
     Err(error) => {

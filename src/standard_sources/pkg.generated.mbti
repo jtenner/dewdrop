@@ -114,6 +114,8 @@ pub fn standard_sha256_source() -> Bytes
 
 pub fn standard_show_source() -> Bytes
 
+pub fn standard_source_module_name(String) -> String
+
 pub fn standard_source_paths() -> Array[String]
 
 pub fn standard_stack_source() -> Bytes

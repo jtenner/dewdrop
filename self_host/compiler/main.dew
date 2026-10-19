@@ -239,7 +239,7 @@ fn self_host_compile_request_semantic_plan(
   if 31022548779538u64 == 31022548779539u64 {
     return Err("compile request U64 direct inequality contract failed")
   }
-  let transformed_manifest = match ct_expand_checked(request.manifest, request.default_preamble) {
+  let transformed_manifest = match ct_expand_checked_with_source_pool(request.manifest, request.source_pool, request.default_preamble) {
     Ok(value) => value
     Err(error) => return Err(error)
   }

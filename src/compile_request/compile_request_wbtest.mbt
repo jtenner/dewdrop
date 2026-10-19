@@ -29,6 +29,7 @@ fn compile_request_test_request() -> CompilerRequest {
         ],
       },
     ],
+    source_pool: [],
     dependency_interfaces: [
       {
         module_name: "dep.value",
@@ -190,4 +191,85 @@ test "bootstrap standard identity is exact and stable within one compiler" {
   assert_eq(first.length(), 32)
   assert_true(bytes_equal(first, second))
   assert_eq(first, second)
+}
+
+///|
+test "compiler request source pools round trip opaque bytes and reject duplicate names" {
+  let request = {
+    ..compile_request_test_request(),
+    source_pool: [
+      {
+        name: "unused.invalid",
+        files: [{ logical_path: "unused.dew", source: b"\xffinvalid syntax", }],
+      },
+    ],
+  }
+  let encoded = request.encode().unwrap()
+  let decoded = decode(encoded).unwrap()
+  assert_eq(decoded, request)
+  assert_eq(decoded.encode().unwrap(), encoded)
+  let duplicate = { ..request, source_pool: [request.modules[0]], }
+  assert_true(duplicate.encode() is Err(_))
+  let missing_root = { ..request, modules: [request.modules[0]], }
+  assert_eq(
+    missing_root.encode().unwrap_err(),
+    "compile request root module is not present",
+  )
+}
+
+///|
+test "compiler requests without an optional pool decode with an empty pool" {
+  let encoded = compile_request_test_request().encode().unwrap()
+  let legacy = Buffer(size_hint=encoded.length() - 4)
+  for index in 0..<(encoded.length() - 4) {
+    legacy.write_byte(encoded[index])
+  }
+  let request = decode(legacy.to_bytes()).unwrap()
+  assert_eq(request.source_pool.length(), 0)
+}
+
+///|
+test "request pool count uses the remaining combined module bound" {
+  let request = compile_request_test_request()
+  let encoded = request.encode().unwrap()
+  let malformed = Buffer(size_hint=encoded.length())
+  for index in 0..<(encoded.length() - 4) {
+    malformed.write_byte(encoded[index])
+  }
+  compiler_request_write_u32(
+    malformed,
+    (max_module_count() - request.modules.length() + 1).reinterpret_as_uint(),
+  )
+  assert_eq(
+    decode(malformed.to_bytes()).unwrap_err(),
+    "invalid source pool module count in compile request",
+  )
+}
+
+///|
+test "request module reader rejects total file overflow before file data" {
+  let reader : CompilerRequestReader = {
+    bytes: b"\x04\x00\x00\x00test\x02\x00\x00\x00unread file data",
+    offset: 0,
+    error: None,
+    total_files: max_total_files() - 1,
+  }
+  let modules = reader.read_modules(1)
+  assert_eq(reader.error, Some("invalid total file count in compile request"))
+  assert_eq(modules.length(), 0)
+  assert_eq(reader.offset, 12)
+  assert_eq(reader.total_files, max_total_files() - 1)
+}
+
+///|
+test "request module reader stops before adding truncated file records" {
+  let reader : CompilerRequestReader = {
+    bytes: b"\x04\x00\x00\x00test\x02\x00\x00\x00",
+    offset: 0,
+    error: None,
+    total_files: 0,
+  }
+  assert_eq(reader.read_modules(1).length(), 0)
+  assert_eq(reader.error, Some("truncated compile request"))
+  assert_eq(reader.offset, 12)
 }

@@ -295,7 +295,10 @@ pub fn transform_library_sources() -> Array[SourceModule] {
 }
 
 ///|
-pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
+pub fn prepare(
+  modules : Array[SourceModule],
+  trusted_library_indices~ : Array[Int32] = [],
+) -> Result[Plan, String] {
   // Avoid parsing the ordinary build twice. Tokens keep strings/comments inert.
   let active = modules.any(fn(module_) {
     module_.files.any(fn(file) { contains_transform_syntax(file.source) })
@@ -317,15 +320,32 @@ pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
     })
   }
   let modules = modules.copy()
-  for module_ in modules {
-    if module_.path == "dewdrop.ast" || module_.path == "dewdrop.transform" {
-      return Err(
-        "dewdrop.ast and dewdrop.transform are supplied by the compiler",
-      )
+  let libraries = transform_library_sources()
+  for mi, module_ in modules {
+    for library in libraries {
+      if module_.path == library.path {
+        let mut trusted = trusted_library_indices.contains(mi) &&
+          module_.files.length() == library.files.length()
+        if trusted {
+          for fi, file in module_.files {
+            if file.path != library.files[fi].path ||
+              file.source != library.files[fi].source {
+              trusted = false
+            }
+          }
+        }
+        guard trusted else {
+          return Err(
+            "dewdrop.ast and dewdrop.transform are supplied by the compiler",
+          )
+        }
+      }
     }
   }
-  for library in transform_library_sources() {
-    modules.push(library)
+  for library in libraries {
+    if !modules.any(module_ => module_.path == library.path) {
+      modules.push(library)
+    }
   }
   let files : Array[Array[ParsedFile]] = []
   for mi, module_ in modules {

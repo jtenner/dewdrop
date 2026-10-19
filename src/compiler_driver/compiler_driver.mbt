@@ -107,9 +107,12 @@ pub fn compile_manifest_uncached(
   manifest : @semantic.ProgramManifest,
   standard_sources : @semantic.StandardLibrarySources,
   options : CompilerPipelineOptions,
+  source_pool~ : @semantic.ProgramManifest = @semantic.ProgramManifest::new([]),
 ) -> Result[CompilerCompilation, CompilerCompilationError] {
   let manifest = match
-    compiler_expand_transforms(manifest, standard_sources, options) {
+    compiler_expand_transform_import_closure(
+      manifest, source_pool, standard_sources, options,
+    ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }

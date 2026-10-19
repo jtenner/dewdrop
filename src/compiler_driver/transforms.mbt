@@ -40,6 +40,9 @@ fn compiler_expand_transforms(
   manifest : @semantic.ProgramManifest,
   sources : @semantic.StandardLibrarySources,
   options : CompilerPipelineOptions,
+  trusted_library_indices~ : Array[Int32] = [],
+  retain_transform_declarations~ : Bool = false,
+  source_pool~ : @semantic.ProgramManifest = @semantic.ProgramManifest::new([]),
 ) -> Result[@semantic.ProgramManifest, CompilerCompilationError] {
   let modules : Array[@transforms.SourceModule] = manifest.modules.map(fn(
     module_,
@@ -51,12 +54,47 @@ fn compiler_expand_transforms(
       }),
     }
   })
-  let plan = match @transforms.prepare(modules) {
+  let plan = match @transforms.prepare(modules, trusted_library_indices~) {
     Ok(value) => value
     Err(message) => return Err(CompilerSourceError(message, []))
   }
   if !plan.active {
     return Ok(manifest)
+  }
+  // Compiler API imports use the same pool resolver as source imports. This
+  // happens before checking, so fallback library bytes cannot replace a caller
+  // module whose logical file paths differ from the standard registry.
+  let selected = compiler_manifest_import_closure(
+    transform_manifest(plan.modules),
+    source_pool,
+  )
+  let plan = if selected.modules.length() == plan.modules.length() {
+    plan
+  } else {
+    let trusted = trusted_library_indices.copy()
+    if trusted.is_empty() {
+      for
+        index in manifest.modules.length()..<(manifest.modules.length() +
+        @transforms.transform_library_sources().length()) {
+        trusted.push(index)
+      }
+    }
+    let selected_sources : Array[@transforms.SourceModule] = selected.modules.map(fn(
+        module_,
+      ) {
+        {
+          path: module_.path,
+          files: module_.files.map(fn(file) {
+            { path: file.path, source: file.source, }
+          }),
+        }
+      },
+    )
+    match
+      @transforms.prepare(selected_sources, trusted_library_indices=trusted) {
+      Ok(value) => value
+      Err(message) => return Err(CompilerSourceError(message, []))
+    }
   }
   // Check ordinary Dew code before running it. Target bodies are checked after expansion.
   let program = @semantic.collect_program_manifest_with_standard_sources(
@@ -143,7 +181,7 @@ fn compiler_expand_transforms(
       )
     }
   }
-  match plan.expand(output_module_count~) {
+  match plan.expand(output_module_count~, retain_transform_declarations~) {
     Ok(modules) => Ok(transform_manifest(modules))
     Err(message) => Err(CompilerSourceError(message, []))
   }

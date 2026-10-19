@@ -219,6 +219,10 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
 }
 
 fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
+  ct_prepare_with_trusted_libraries(manifest, [])
+}
+
+fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_library_indices: Array<U32>) -> CtPlan {
   let modules = array_new::<SelfHostManifestModule>()
   let mut active = false
   for module_ in manifest.modules {
@@ -249,19 +253,8 @@ fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
   if !active {
     return plan
   }
-  for module_ in modules {
-    if module_.path == "dewdrop.ast" || module_.path == "dewdrop.transform" {
-      plan.error = "dewdrop.ast and dewdrop.transform are supplied by the compiler"
-      return plan
-    }
-    for file in module_.files {
-      if !file.source.is_valid_utf8() {
-        plan.error = file.path.concat(": error: compile-time transform sources must be valid UTF-8")
-        return plan
-      }
-    }
-  }
-  modules.push({
+  let libraries = array_new::<SelfHostManifestModule>()
+  libraries.push({
       path: "dewdrop.ast"
       files: [{
           path: "lib/dewdrop/ast.dew"
@@ -269,7 +262,7 @@ fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
           test_only: false
       }]
   })
-  modules.push({
+  libraries.push({
       path: "dewdrop.transform"
       files: [{
           path: "lib/dewdrop/transform.dew"
@@ -277,6 +270,55 @@ fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
           test_only: false
       }]
   })
+  let mut mi = 0u32
+  for module_ in modules {
+    for library in libraries {
+      if module_.path == library.path {
+        let mut trusted_index = false
+        for index in trusted_library_indices {
+          if index == mi {
+            trusted_index = true
+          }
+        }
+        let mut trusted = trusted_index && module_.files.length() == library.files.length()
+        if trusted {
+          let _ = while 0u32 {
+            fi if fi < module_.files.length() => {
+              let file = module_.files[fi]
+              let expected = library.files[fi]
+              if file.path != expected.path || file.source != expected.source || file.test_only != expected.test_only {
+                trusted = false
+              }
+              continue fi + 1u32
+            }
+            _ => break ()
+          }
+        }
+        if !trusted {
+          plan.error = "dewdrop.ast and dewdrop.transform are supplied by the compiler"
+          return plan
+        }
+      }
+    }
+    for file in module_.files {
+      if !file.source.is_valid_utf8() {
+        plan.error = file.path.concat(": error: compile-time transform sources must be valid UTF-8")
+        return plan
+      }
+    }
+    mi = mi + 1u32
+  }
+  for library in libraries {
+    let mut present = false
+    for module_ in modules {
+      if module_.path == library.path {
+        present = true
+      }
+    }
+    if !present {
+      modules.push(library)
+    }
+  }
   let _ = while 0u32 {
     _ => {
       let mut collision = false
@@ -294,16 +336,16 @@ fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
       continue 0u32
     }
   }
-  let mut mi = 0u32
+  let mut scan_module_index = 0u32
   for module_ in modules {
     for file in module_.files {
-      plan.files.push(ct_scan(plan, mi, file))
+      plan.files.push(ct_scan(plan, scan_module_index, file))
       if plan.error.byte_length() != 0u32 {
         plan.error = file.path.concat(": error: ").concat(plan.error)
         return plan
       }
     }
-    mi = mi + 1u32
+    scan_module_index = scan_module_index + 1u32
   }
   plan
 }

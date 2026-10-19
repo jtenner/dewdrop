@@ -472,6 +472,10 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
 }
 
 fn ct_expand(plan: CtPlan) -> Result<SelfHostProgramManifest, String> {
+  ct_expand_retaining_declarations(plan, false)
+}
+
+fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations: Bool) -> Result<SelfHostProgramManifest, String> {
   if plan.error.byte_length() != 0u32 {
     return Err(plan.error)
   }
@@ -489,7 +493,10 @@ fn ct_expand(plan: CtPlan) -> Result<SelfHostProgramManifest, String> {
         let out = BytesBuilder::new()
         let mut cursor = 0u32
         for function in file.functions {
-          if function.transform_ {
+          if function.transform_ && retain_transform_declarations {
+            out.append(file.original.source.slice(cursor, function.end))
+            cursor = function.end
+          } else if function.transform_ {
             out.append(file.clean.slice(cursor, function.start))
             out.append(ct_blank(file.clean, function.start, function.end))
             cursor = function.end

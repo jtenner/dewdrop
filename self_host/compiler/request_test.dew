@@ -1,0 +1,162 @@
+open dew.std.result
+open dew.std.testing
+
+test "request module reader rejects total file overflow before file data" {
+  let reader = SelfHostRequestReader::{
+    bytes: b"\x04\x00\x00\x00test\x02\x00\x00\x00unread file data"
+    offset: 0u32
+    error: None
+    total_files: 65535u32
+  }
+  let modules = self_host_reader_modules(reader, 1u32)
+  assert(reader.error is Some(_), "file overflow must produce a diagnostic")
+  assert(modules.length() == 0u32, "file overflow must not add a module")
+  assert(reader.offset == 12u32, "file overflow must not read file data")
+  assert(reader.total_files == 65535u32, "rejected file count must not change the total")
+}
+
+test "request module reader stops before adding truncated file records" {
+  let reader = SelfHostRequestReader::{
+    bytes: b"\x04\x00\x00\x00test\x02\x00\x00\x00"
+    offset: 0u32
+    error: None
+    total_files: 0u32
+  }
+  let modules = self_host_reader_modules(reader, 1u32)
+  assert(reader.error is Some(_), "truncated file metadata must produce a diagnostic")
+  assert(modules.length() == 0u32, "truncated files must not add a module")
+  assert(reader.offset == 12u32, "truncated records must not advance past EOF")
+}
+
+fn self_host_request_test_module(path: String, source: Bytes) -> SelfHostManifestModule {
+  {
+    path: path
+    files: [{
+      path: path
+      source: source
+      test_only: false
+    }]
+  }
+}
+
+test "request source pool selects the transitive import closure and retains bytes" {
+  let first_source = b"open dep.second\npub let selected_marker = 42i32\n"
+  let root = self_host_request_test_module("app", b"import dep.first as @first\npub fn main() -> I32 {\n @first.selected_marker\n}\n")
+  let pool = {
+    modules: [
+      self_host_request_test_module("unused.invalid", b"\xff invalid source"),
+      self_host_request_test_module("dep.second", b"pub let second = 7i32\n"),
+      self_host_request_test_module("dep.first", first_source),
+    ]
+  }
+  match self_host_manifest_import_closure({
+    modules: [root]
+  }, pool) {
+    Ok(selected) => {
+      assert(selected.modules.length() == 3u32, "only imported pool modules are selected")
+      assert(selected.modules[0u32].path == "app", "root identity is retained")
+      assert(selected.modules[1u32].path == "dep.first", "direct imports come first")
+      assert(selected.modules[2u32].path == "dep.second", "transitive imports are selected")
+      assert(selected.modules[1u32].files[0u32].source == first_source, "selected bytes are retained")
+      assert(pool.modules.length() == 3u32, "the pool is not changed")
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "request source pool reports missing imports and permits only deferred APIs" {
+  let manifest = {
+    modules: [self_host_request_test_module("app", b"open dep.missing\n")]
+  }
+  match self_host_manifest_import_closure(manifest, {
+    modules: []
+  }) {
+    Err(error) => assert(error == "missing imported module dep.missing in app", "missing module names its source")
+    Ok(_) => assert(false, "missing import must fail")
+  }
+  let api_manifest = {
+    modules: [self_host_request_test_module("app", b"import dewdrop.ast as @ast\n")]
+  }
+  match self_host_manifest_import_closure_deferred(api_manifest, {
+    modules: []
+  }, ["dewdrop.ast"]) {
+    Ok(selected) => assert(selected.modules.length() == 1u32, "deferred APIs are not fabricated")
+    Err(error) => assert(false, error)
+  }
+  match self_host_manifest_import_closure(api_manifest, {
+    modules: []
+  }) {
+    Err(_) => {}
+    Ok(_) => assert(false, "strict selection must require deferred APIs")
+  }
+}
+
+test "request source pool wildcard imports follow ordinary descendant rules" {
+  let manifest = {
+    modules: [self_host_request_test_module("app", b"open dep.*\n")]
+  }
+  let pool = {
+    modules: [
+      self_host_request_test_module("dep.first", b""),
+      self_host_request_test_module("dep.nested.second", b""),
+      self_host_request_test_module("other.invalid", b"\xff invalid"),
+    ]
+  }
+  match self_host_manifest_import_closure(manifest, pool) {
+    Ok(selected) => assert(selected.modules.length() == 3u32, "wildcard loads every matching descendant")
+    Err(error) => assert(false, error)
+  }
+}
+
+test "request source pool defers only matching compiler API wildcards" {
+  let manifest = {
+    modules: [self_host_request_test_module("app", b"open dewdrop.*\n")]
+  }
+  let pool = {
+    modules: [self_host_request_test_module("unused.invalid", b"\xff unused")]
+  }
+  match self_host_manifest_import_closure_deferred(manifest, pool, ["dewdrop.ast", "dewdrop.transform"]) {
+    Ok(selected) => assert(selected.modules.length() == 1u32, "deferred wildcard must not fabricate API modules")
+    Err(error) => assert(false, error)
+  }
+  match self_host_manifest_import_closure(manifest, pool) {
+    Err(error) => assert(error.contains("missing imported module dewdrop.*"), error)
+    Ok(_) => assert(false, "strict wildcard selection must require actual API modules")
+  }
+  let unknown = {
+    modules: [self_host_request_test_module("app", b"open unknown.*\n")]
+  }
+  match self_host_manifest_import_closure_deferred(unknown, pool, ["dewdrop.ast", "dewdrop.transform"]) {
+    Err(error) => assert(error.contains("missing imported module unknown.*"), error)
+    Ok(_) => assert(false, "unmatched wildcards must not be deferred")
+  }
+}
+
+test "repeated request preparation requires exact tracked compiler API bytes" {
+  let api = {
+    path: "dewdrop.ast"
+    files: [{
+      path: "lib/dewdrop/ast.dew"
+      source: ct_ast_source()
+      test_only: false
+    }]
+  }
+  let active = self_host_request_test_module("app", b"transform fn mark() -> I32 {\n 0i32\n}\n")
+  let manifest = {
+    modules: [api, active]
+  }
+  assert(ct_prepare(manifest).error.byte_length() != 0u32, "caller APIs remain reserved")
+  assert(ct_prepare_with_trusted_libraries(manifest, [1u32]).error.byte_length() != 0u32, "the module position must match")
+  assert(ct_prepare_with_trusted_libraries(manifest, [0u32]).error.byte_length() == 0u32, "tracked canonical API source is accepted")
+  let changed = {
+    modules: [{
+      path: "dewdrop.ast"
+      files: [{
+        path: "lib/dewdrop/ast.dew"
+        source: b""
+        test_only: false
+      }]
+    }, active]
+  }
+  assert(ct_prepare_with_trusted_libraries(changed, [0u32]).error.byte_length() != 0u32, "tracked module bytes must still match")
+}

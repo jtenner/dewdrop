@@ -139,6 +139,7 @@ pub(all) struct CompilerRequest {
   response : CompilerRequestResponseMode
   root_module : String
   modules : Array[CompilerRequestModule]
+  source_pool : Array[CompilerRequestModule]
   dependency_interfaces : Array[CompilerRequestDependencyInterface]
   static_providers : Array[CompilerRequestStaticProvider]
   standard_library : CompilerRequestStandardLibrary
@@ -151,6 +152,7 @@ priv struct CompilerRequestReader {
   bytes : Bytes
   mut offset : Int32
   mut error : String?
+  mut total_files : Int32
 }
 
 ///|
@@ -264,6 +266,46 @@ fn CompilerRequestReader::read_string(
 }
 
 ///|
+fn CompilerRequestReader::read_modules(
+  self : CompilerRequestReader,
+  module_count : Int32,
+) -> Array[CompilerRequestModule] {
+  let modules : Array[CompilerRequestModule] = []
+  if self.error is Some(_) {
+    return modules
+  }
+  for _ in 0..<module_count {
+    let name = self.read_string("module name", max_name_bytes())
+    if self.error is Some(_) {
+      return modules
+    }
+    let file_count = self.read_count("module file", max_files_per_module())
+    if self.error is Some(_) {
+      return modules
+    }
+    if file_count == 0 || self.total_files > max_total_files() - file_count {
+      self.fail("invalid total file count in compile request")
+      return modules
+    }
+    self.total_files += file_count
+    let files : Array[CompilerRequestFile] = []
+    for _ in 0..<file_count {
+      let logical_path = self.read_string("logical path", max_path_bytes())
+      if self.error is Some(_) {
+        return modules
+      }
+      let source = self.read_bytes("source", max_source_bytes())
+      if self.error is Some(_) {
+        return modules
+      }
+      files.push({ logical_path, source, })
+    }
+    modules.push({ name, files, })
+  }
+  modules
+}
+
+///|
 fn compiler_request_write_u32(output : Buffer, value : UInt32) -> Unit {
   output.write_byte((value & 0xffU).to_byte())
   output.write_byte(((value >> 8) & 0xffU).to_byte())
@@ -355,7 +397,7 @@ fn compiler_request_bounded_size_add(total : Int32, size : Int32) -> Int32 {
 
 ///|
 fn compiler_request_encoded_size(request : CompilerRequest) -> Int32 {
-  let mut total = 104
+  let mut total = 108
   match request.response {
     CompilerStatusOnly => ()
     CompilerOutputFile(path) =>
@@ -368,7 +410,13 @@ fn compiler_request_encoded_size(request : CompilerRequest) -> Int32 {
     total,
     @utf8.encode(request.root_module).length(),
   )
-  for module_ in request.modules {
+  for
+    module_index in 0..<(request.modules.length() + request.source_pool.length()) {
+    let module_ = if module_index < request.modules.length() {
+      request.modules[module_index]
+    } else {
+      request.source_pool[module_index - request.modules.length()]
+    }
     total = compiler_request_bounded_size_add(
       total,
       8 + @utf8.encode(module_.name).length(),
@@ -445,10 +493,18 @@ pub fn CompilerRequest::validate(
   if self.modules.length() == 0 || self.modules.length() > max_module_count() {
     return Err("compile request module count is outside its bound")
   }
+  if self.source_pool.length() > max_module_count() - self.modules.length() {
+    return Err("compile request source pool module count exceeds its bound")
+  }
   let module_names : Map[String, Bool] = Map::default()
   let mut total_files = 0
   let mut total_payload = 0
-  for module_ in self.modules {
+  for module_index in 0..<(self.modules.length() + self.source_pool.length()) {
+    let module_ = if module_index < self.modules.length() {
+      self.modules[module_index]
+    } else {
+      self.source_pool[module_index - self.modules.length()]
+    }
     match
       compiler_request_string_size(
         module_.name,
@@ -508,7 +564,7 @@ pub fn CompilerRequest::validate(
       }
     }
   }
-  if !module_names.contains(self.root_module) {
+  if !self.modules.any(module_ => module_.name == self.root_module) {
     return Err("compile request root module is not present")
   }
   if self.dependency_interfaces.length() > max_dependency_count() {
@@ -723,6 +779,21 @@ pub fn CompilerRequest::encode(self : CompilerRequest) -> Result[Bytes, String] 
     },
   )
   compiler_request_write_bytes(output, self.compiler_fingerprint)
+  compiler_request_write_u32(
+    output,
+    self.source_pool.length().reinterpret_as_uint(),
+  )
+  for module_ in self.source_pool {
+    compiler_request_write_string(output, module_.name)
+    compiler_request_write_u32(
+      output,
+      module_.files.length().reinterpret_as_uint(),
+    )
+    for file in module_.files {
+      compiler_request_write_string(output, file.logical_path)
+      compiler_request_write_bytes(output, file.source)
+    }
+  }
   let bytes = output.to_bytes()
   if bytes.length() > max_request_bytes() {
     Err("compile request exceeds total request byte bound")
@@ -736,7 +807,12 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
   if bytes.length() > max_request_bytes() {
     return Err("compile request exceeds total request byte bound")
   }
-  let reader : CompilerRequestReader = { bytes, offset: 0, error: None, }
+  let reader : CompilerRequestReader = {
+    bytes,
+    offset: 0,
+    error: None,
+    total_files: 0,
+  }
   if reader.read_u32() != COMPILER_REQUEST_MAGIC {
     return Err("invalid compile request magic")
   }
@@ -757,25 +833,10 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
     _ => CompilerOutputFile(reader.read_string("output path", max_path_bytes()))
   }
   let root_module = reader.read_string("root module", max_name_bytes())
-  let modules : Array[CompilerRequestModule] = []
   let module_count = reader.read_count("module", max_module_count())
-  let mut total_files = 0
-  for _ in 0..<module_count {
-    let name = reader.read_string("module name", max_name_bytes())
-    let files : Array[CompilerRequestFile] = []
-    let file_count = reader.read_count("module file", max_files_per_module())
-    if total_files > max_total_files() - file_count {
-      reader.fail("invalid total file count in compile request")
-    } else {
-      total_files += file_count
-    }
-    for _ in 0..<file_count {
-      files.push({
-        logical_path: reader.read_string("logical path", max_path_bytes()),
-        source: reader.read_bytes("source", max_source_bytes()),
-      })
-    }
-    modules.push({ name, files, })
+  let modules = reader.read_modules(module_count)
+  if reader.error is Some(error) {
+    return Err(error)
   }
   let dependency_interfaces : Array[CompilerRequestDependencyInterface] = []
   let dependency_count = reader.read_count(
@@ -821,6 +882,20 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
     "compiler fingerprint",
     max_compiler_fingerprint_bytes(),
   )
+  // Version 1 requests written before source pools end at the fingerprint.
+  let source_pool = if reader.offset < bytes.length() && reader.error is None {
+    let pool_count = reader.read_count(
+      "source pool module",
+      max_module_count() - module_count,
+    )
+    let modules = reader.read_modules(pool_count)
+    if reader.error is Some(error) {
+      return Err(error)
+    }
+    modules
+  } else {
+    []
+  }
   if reader.offset != bytes.length() {
     reader.fail("trailing bytes in compile request")
   }
@@ -833,6 +908,7 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
         response,
         root_module,
         modules,
+        source_pool,
         dependency_interfaces,
         static_providers,
         standard_library,

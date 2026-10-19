@@ -19,24 +19,6 @@ fn bootstrap_fingerprint(prefix : Bytes, provider : Bytes) -> Bytes {
 }
 
 ///|
-fn standard_module_name(path : String) -> String {
-  if path.has_prefix("std/preamble/") {
-    return "dew.std.preamble"
-  }
-  let parts = path.split("/").map(part => part.to_owned()).to_array()
-  let mut output = "dew.std"
-  for index in 1..<parts.length() {
-    let part = if index == parts.length() - 1 {
-      parts[index].replace_all(old=".dew", new="")
-    } else {
-      parts[index]
-    }
-    output += "." + part
-  }
-  output
-}
-
-///|
 fn bootstrap_module_required(name : String) -> Bool {
   match name {
     "dew.std.array"
@@ -114,7 +96,7 @@ fn main {
   let args = @sys.get_cli_args()
   if args.length() < 7 {
     println(
-      "usage: self_host_bootstrap_fixture REQUEST PROVIDER FINGERPRINT_PREFIX OUTPUT ROOT_MODULE SOURCE... [--module NAME SOURCE...]",
+      "usage: self_host_bootstrap_fixture REQUEST PROVIDER FINGERPRINT_PREFIX OUTPUT ROOT_MODULE SOURCE... [--module NAME SOURCE...] [--pool-module NAME SOURCE...] [--standard-root ROOT]",
     )
     @sys.exit(2)
   }
@@ -137,26 +119,65 @@ fn main {
     }
   }
   let modules : Array[@compile_request.CompilerRequestModule] = []
-  for path in @standard_sources.standard_source_paths() {
-    let name = standard_module_name(path)
-    if bootstrap_module_required(name) {
-      let source = match @standard_sources.bootstrap_standard_source(path) {
-        Some(value) => value
-        None => abort("bootstrap standard source registry is incomplete")
+  let source_pool : Array[@compile_request.CompilerRequestModule] = []
+  // Explicit source selection is read by the packer, never by interpretation.
+  let mut standard_root : String? = None
+  for argument in 6..<args.length() {
+    if args[argument] == "--standard-root" {
+      if argument + 1 >= args.length() {
+        println("--standard-root requires a package root")
+        @sys.exit(2)
       }
-      append_standard_module(modules, name, path, source)
+      standard_root = Some(args[argument + 1])
     }
+  }
+  for path in @standard_sources.standard_source_paths() {
+    let name = @standard_sources.standard_source_module_name(path)
+    let source = match standard_root {
+      Some(root) =>
+        @fs.read_file_to_bytes(root + "/" + path) catch {
+          error => {
+            println(
+              "cannot read standard source \{path}: \{bootstrap_io_error_message(error)}",
+            )
+            @sys.exit(2)
+            b""
+          }
+        }
+      None =>
+        match @standard_sources.bootstrap_standard_source(path) {
+          Some(value) => value
+          None => abort("bootstrap standard source registry is incomplete")
+        }
+    }
+    append_standard_module(
+      if bootstrap_module_required(name) {
+        modules
+      } else {
+        source_pool
+      },
+      name,
+      path,
+      source,
+    )
   }
   let mut root_files : Array[@compile_request.CompilerRequestFile] = []
   let mut current_module = args[5]
+  let mut current_is_pool = false
   let mut index = 6
   while index < args.length() {
-    if args[index] == "--module" {
+    if args[index] == "--standard-root" {
+      index += 2
+      continue
+    }
+    if args[index] == "--module" || args[index] == "--pool-module" {
       if index + 2 >= args.length() {
-        println("--module requires a name and at least one source file")
+        println("module option requires a name and at least one source file")
         @sys.exit(2)
       }
-      modules.push({ name: current_module, files: root_files, })
+      let destination = if current_is_pool { source_pool } else { modules }
+      destination.push({ name: current_module, files: root_files, })
+      current_is_pool = args[index] == "--pool-module"
       current_module = args[index + 1]
       root_files = []
       index += 2
@@ -175,13 +196,15 @@ fn main {
     root_files.push({ logical_path: path, source, })
     index += 1
   }
-  modules.push({ name: current_module, files: root_files, })
+  let destination = if current_is_pool { source_pool } else { modules }
+  destination.push({ name: current_module, files: root_files, })
   let request : @compile_request.CompilerRequest = {
     command: @compile_request.CompilerBuild,
     output_kind: @compile_request.CompilerWasmOutput,
     response: @compile_request.CompilerOutputFile(args[4]),
     root_module: args[5],
     modules,
+    source_pool,
     dependency_interfaces: [],
     static_providers: [{ name: "starshine", wasm: provider, }],
     standard_library: @compile_request.CompilerBootstrapStandard(

@@ -21,12 +21,14 @@ struct SelfHostRequestReader {
   bytes: Bytes
   mut offset: U32
   mut error: Option<String>
+  mut total_files: U32
 }
 
 pub struct SelfHostCompileRequest {
   output_path: String
   root_module: String
   manifest: SelfHostProgramManifest
+  source_pool: SelfHostProgramManifest
   starshine_provider: Bytes
   compiler_fingerprint: Bytes
   test_mode: Bool
@@ -235,6 +237,60 @@ fn self_host_read_providers(reader: SelfHostRequestReader) -> Option<Bytes> {
   }
 }
 
+fn self_host_reader_modules(
+  reader: SelfHostRequestReader,
+  module_count: U32,
+) -> Array<SelfHostManifestModule> {
+  let manifest_modules = array_new::<SelfHostManifestModule>()
+  if reader.error is Some(_) {
+    return manifest_modules
+  }
+  while 0u32 {
+    module_index if module_index < module_count => {
+      let module_name = self_host_reader_string(reader, 255u32, "module name")
+      if reader.error is Some(_) {
+        return manifest_modules
+      }
+      let file_count = self_host_reader_count(reader, 4096u32, "file count")
+      if reader.error is Some(_) {
+        return manifest_modules
+      }
+      if file_count == 0u32 || reader.total_files > 65536u32 - file_count {
+        self_host_reader_fail(reader, "compile request file count is outside its bound")
+        return manifest_modules
+      }
+      reader.total_files = reader.total_files + file_count
+      let manifest_files = array_new::<SelfHostManifestFile>()
+      while 0u32 {
+        file_index if file_index < file_count => {
+          let logical_path = self_host_reader_string(reader, 4096u32, "logical path")
+          if reader.error is Some(_) {
+            return manifest_modules
+          }
+          let source = self_host_reader_bytes(reader, 16777216u32, "source")
+          if reader.error is Some(_) {
+            return manifest_modules
+          }
+          manifest_files.push({
+            path: logical_path
+            source: source
+            test_only: false
+          })
+          continue file_index + 1u32
+        }
+        _ => break self_host_unit()
+      }
+      manifest_modules.push({
+        path: module_name
+        files: manifest_files
+      })
+      continue module_index + 1u32
+    }
+    _ => break self_host_unit()
+  }
+  manifest_modules
+}
+
 pub fn decode_self_host_compile_request(
   bytes: Bytes,
 ) -> Result<SelfHostCompileRequest, String> {
@@ -246,6 +302,7 @@ pub fn decode_self_host_compile_request(
     bytes: bytes
     offset: 0u32
     error: None
+    total_files: 0u32
   }
   self_host_reader_expect(reader, 1146569554u32, "compile request magic")
   self_host_reader_expect(reader, 1u32, "compile request version")
@@ -263,38 +320,9 @@ pub fn decode_self_host_compile_request(
     self_host_reader_fail(reader, "compile request has no modules")
   } else {
   }
-  let mut total_files = 0u32
-  let manifest_modules = []
-  while 0u32 {
-    module_index if module_index < module_count => {
-      let module_name = self_host_reader_string(reader, 255u32, "module name")
-      let file_count = self_host_reader_count(reader, 4096u32, "file count")
-      let manifest_files = []
-      if file_count == 0u32 || total_files > 65536u32 - file_count {
-        self_host_reader_fail(reader, "compile request file count is outside its bound")
-      } else {
-        total_files = total_files + file_count
-      }
-      while 0u32 {
-        file_index if file_index < file_count => {
-          let logical_path = self_host_reader_string(reader, 4096u32, "logical path")
-          let source = self_host_reader_bytes(reader, 16777216u32, "source")
-          manifest_files.push({
-            path: logical_path
-            source: source
-            test_only: false
-          })
-          continue file_index + 1u32
-        }
-        _ => break self_host_unit()
-      }
-      manifest_modules.push({
-        path: module_name
-        files: manifest_files
-      })
-      continue module_index + 1u32
-    }
-    _ => break self_host_unit()
+  let manifest_modules = self_host_reader_modules(reader, module_count)
+  if reader.error is Some(error) {
+    return Err(error)
   }
   self_host_skip_dependencies(reader)
   let starshine = self_host_read_providers(reader)
@@ -315,6 +343,27 @@ pub fn decode_self_host_compile_request(
     4096u32,
     "compiler fingerprint",
   )
+  let pool_modules = array_new::<SelfHostManifestModule>()
+  if reader.offset < reader.bytes.byte_length() && reader.error is None {
+    let pool_count = self_host_reader_count(reader, 1024u32 - module_count, "source pool module count")
+    let decoded_pool = self_host_reader_modules(reader, pool_count)
+    if reader.error is Some(error) {
+      return Err(error)
+    }
+    for module_ in decoded_pool {
+      for existing in manifest_modules {
+        if existing.path.equals(module_.path) {
+          self_host_reader_fail(reader, "duplicate source pool module ".concat(module_.path))
+        }
+      }
+      for existing in pool_modules {
+        if existing.path.equals(module_.path) {
+          self_host_reader_fail(reader, "duplicate source pool module ".concat(module_.path))
+        }
+      }
+      pool_modules.push(module_)
+    }
+  }
   if compiler_fingerprint.byte_length() == 0u32 {
     self_host_reader_fail(reader, "compiler fingerprint must not be empty")
   } else if reader.offset != reader.bytes.byte_length() {
@@ -331,6 +380,9 @@ pub fn decode_self_host_compile_request(
           root_module: root_module
           manifest: {
             modules: manifest_modules
+          }
+          source_pool: {
+            modules: pool_modules
           }
           starshine_provider: provider
           compiler_fingerprint: compiler_fingerprint
@@ -353,4 +405,109 @@ pub fn decode_self_host_compile_request(
       }
     }
   }
+}
+
+// Only selected modules are parsed. The pool is immutable source data.
+fn self_host_manifest_has_module(
+  modules: Array<SelfHostManifestModule>,
+  path: String,
+) -> Bool {
+  for module_ in modules {
+    if module_.path.equals(path) {
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_manifest_import_closure(
+  manifest: SelfHostProgramManifest,
+  source_pool: SelfHostProgramManifest,
+) -> Result<SelfHostProgramManifest, String> {
+  self_host_manifest_import_closure_deferred(manifest, source_pool, [])
+}
+
+fn self_host_manifest_import_closure_deferred(
+  manifest: SelfHostProgramManifest,
+  source_pool: SelfHostProgramManifest,
+  deferred: Array<String>,
+) -> Result<SelfHostProgramManifest, String> {
+  let modules = array_new::<SelfHostManifestModule>()
+  for module_ in manifest.modules {
+    modules.push(module_)
+  }
+  let _ = while 0u32 {
+    index if index < modules.length() => {
+    let module_ = modules[index]
+    for file in module_.files {
+      let parser = self_host_parser_new(file.source)
+      let _ = while 0u32 {
+        _ if parser.index < parser.tokens.length() => {
+        self_host_parser_skip_newlines(parser)
+        if self_host_next_declaration_kind(parser) != 0u32 {
+          break ()
+        }
+        match self_host_parse_declaration(parser) {
+          Some(Import(import_)) => {
+            let path = import_.joined_path
+            let mut found = false
+            for candidate in modules {
+              let matches = if import_.wildcard {
+                self_host_wildcard_import_matches(path, candidate.path)
+              } else {
+                candidate.path.equals(path)
+              }
+              if candidate.path != module_.path && matches {
+                found = true
+              }
+            }
+            // Exact self imports use the ordinary module lookup rules.
+            if !import_.wildcard && module_.path.equals(path) {
+              found = true
+            }
+            for candidate in source_pool.modules {
+              let matches = if import_.wildcard {
+                self_host_wildcard_import_matches(path, candidate.path)
+              } else {
+                candidate.path.equals(path)
+              }
+              if matches {
+                found = true
+                if !self_host_manifest_has_module(modules, candidate.path) {
+                  modules.push(candidate)
+                }
+              }
+            }
+            for deferred_path in deferred {
+              let matches = if import_.wildcard {
+                self_host_wildcard_import_matches(path, deferred_path)
+              } else {
+                deferred_path.equals(path)
+              }
+              if matches {
+                found = true
+              }
+            }
+            if !found {
+              return Err("missing imported module ".concat(path).concat(if import_.wildcard {
+                ".*"
+              } else {
+                ""
+              }).concat(" in ").concat(file.path))
+            }
+          }
+          _ => return Err("invalid import in ".concat(file.path))
+        }
+        continue 0u32
+        }
+        _ => break ()
+      }
+    }
+    continue index + 1u32
+    }
+    _ => break ()
+  }
+  Ok({
+    modules: modules
+  })
 }
