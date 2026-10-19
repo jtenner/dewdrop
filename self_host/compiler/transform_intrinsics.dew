@@ -137,7 +137,10 @@ fn ct_intrinsic_values(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration,
   if opcode == "ref.eq" && args.length() == 2u32 {
     return ct_reference_equal(machine, args[0u32], args[1u32])
   }
-  if opcode.starts_with("i8x16.") || opcode.starts_with("i64x2.") || opcode == "v128.bitselect" || opcode == "v128.or" || opcode == "v128.and" || opcode == "v128.xor" {
+  if ct_scalar_bit_opcode(opcode) {
+    return ct_scalar_bit_intrinsic(machine, opcode, args)
+  }
+  if ct_vector_opcode(opcode) {
     return ct_vector_intrinsic(machine, opcode, args)
   }
   match ct_raw_immediate(opcode, "struct.get ") {

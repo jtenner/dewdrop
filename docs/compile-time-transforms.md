@@ -216,7 +216,7 @@ Wasm GC array operations and selected integer Wasm operations. It keeps checked
 scalar result types, including inferred casts and zero/false array defaults.
 Checked types also apply when reading local values and record fields. Tuple
 values use normal destructuring, such as `let (value, flag) = pair`. Unsupported
-floating-point values cannot enter integer execution through a generic record
+floating-point carriers cannot enter integer execution through a generic record
 or optional value. Array copies preserve overlap behavior. These operations add no host calls.
 
 Immutable module bindings can run their checked initializers on first use.
@@ -229,7 +229,7 @@ escaped control flow, and host calls produce errors.
 
 Unsupported operations produce errors when reached. These include host calls,
 mutable module bindings, unresolved generic trait dispatch, and vector instructions
-outside the supported subset. Scalar floats and standard text methods execute
+that access linear memory. Scalar floats and standard text methods execute
 through checked Wasm operations and ordinary Dew source. Generic source helpers work
 when execution needs no missing type or trait evidence. All branches must pass
 the normal source checks, including branches that execution does not reach.
@@ -453,3 +453,25 @@ proved by normal type checking. Name arrays are fresh values, so changing one
 result does not change the next result. See
 `examples/transforms/type_queries.dew`. Queries that need a helper's unresolved
 generic type arguments still need interpreter type-instance support.
+
+
+## Byte literals and vectors
+
+Byte literals keep their exact bytes during interpretation. This includes invalid
+UTF-8. Standard Bytes length, index, views, equality, concat, and text conversion
+use the normal Dew library. `@ast.bytes(value)` builds a byte literal without
+changing its data. See `examples/transforms/bytes.dew`.
+
+Both interpreters execute the pure vector operations in the current compiler
+instruction catalog. These include lane access, integer and float arithmetic,
+comparisons, shifts, narrowing, widening, dot products, bit masks, shuffle,
+swizzle, rounding, and numeric conversion. Vector memory operations remain
+unsupported. Arithmetic float NaNs use canonical bits; moves, sign operations,
+and pseudo-min/max preserve their selected operand bits. See
+`examples/transforms/vectors.dew`.
+
+Integer bit counts, rotations, and I64 sign extension also execute at compile
+time. Named nongeneric function references keep their checked singleton identity.
+Fresh closures and bound methods keep separate instance identities. Equality of
+separate generic references still requires a checked ABI identity and reports
+that limit if reached.

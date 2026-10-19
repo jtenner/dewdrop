@@ -22,6 +22,8 @@ pub fn Plan::add_call_proof(
   reference~ : Bool = false,
   result_kind~ : String = "",
   constructor_key~ : String = "",
+  function_declaration~ : UInt64? = None,
+  generic_function~ : Bool = false,
 ) -> Unit {
   if mi < 0 || mi >= self.files.length() {
     return
@@ -35,9 +37,12 @@ pub fn Plan::add_call_proof(
       self.scalar_types[site] = result_kind
       return
     }
-    let sites = if reference { self.references } else { self.calls }
+    let identity = match function_declaration {
+      Some(value) => if generic_function { GenericFunctionSingleton(value) } else { FunctionSingleton(value) }
+      None => FunctionInstance
+    }
     if target_module < 0 {
-      sites[site] = if target_module == -2 {
+      let target = if target_module == -2 {
         FunctionValue(result_kind)
       } else if target_module == -3 {
         Constructor(constructor_key)
@@ -46,12 +51,14 @@ pub fn Plan::add_call_proof(
       } else {
         Unsupported
       }
+      self.save_call_proof(site, reference, target, identity)
       return
     }
-    sites[site] = Unsupported
     if target_module >= self.files.length() {
+      self.save_call_proof(site, reference, Unsupported, identity)
       return
     }
+    let mut selected = Unsupported
     for ti, target in self.files[target_module] {
       if target.file.path != target_path {
         continue
@@ -59,21 +66,37 @@ pub fn Plan::add_call_proof(
       for declaration in target.declarations {
         match declaration {
           @parser.Function(f) if f.offset == target_offset =>
-            sites[site] = Source(target_module, ti, f, result_kind)
+            selected = Source(target_module, ti, f, result_kind)
           @parser.Impl(impl_) =>
             for f in impl_.methods {
               if f.offset == target_offset {
-                sites[site] = Source(target_module, ti, f, result_kind)
+                selected = Source(target_module, ti, f, result_kind)
               }
             }
           @parser.Let(value) if value.offset == target_offset =>
-            sites[site] = Global(target_module, ti, value)
+            selected = Global(target_module, ti, value)
           @parser.Builtin(b) if b.offset == target_offset =>
-            sites[site] = Intrinsic(b, result_kind)
+            selected = Intrinsic(b, result_kind)
           _ => ()
         }
       }
     }
+    self.save_call_proof(site, reference, selected, identity)
+  }
+}
+
+///|
+fn Plan::save_call_proof(
+  self : Plan,
+  site : (Int32, Int32, Int32),
+  reference : Bool,
+  target : CallTarget,
+  identity : FunctionIdentity,
+) -> Unit {
+  if reference {
+    self.references[site] = { target, identity, }
+  } else {
+    self.calls[site] = target
   }
 }
 
@@ -203,7 +226,7 @@ fn Machine::closure_call(
   closure : Value,
   args : Array[Value],
 ) -> Value raise EvalError {
-  if closure is Function(target, bound) {
+  if closure is Function(target, bound, _) {
     let values = bound.copy()
     for arg in args {
       values.push(arg)
@@ -276,9 +299,10 @@ fn Machine::function_reference(
   guard self.plan.references.get(
       (mi, self.file_index, expression.offset().to_int()),
     )
-    is Some(target) else {
+    is Some(proof) else {
     return eval_fail("global value has no checked function reference")
   }
+  let target = proof.target
   if target is Global(mi, fi, declaration) {
     return self.global_value(mi, fi, declaration)
   }
@@ -291,5 +315,5 @@ fn Machine::function_reference(
     expression is @parser.FieldExpr(owner, _, _) {
     bound.push(self.eval(mi, owner, env))
   }
-  Function(target, bound)
+  Function(target, bound, if bound.is_empty() { proof.identity } else { FunctionInstance })
 }

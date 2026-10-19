@@ -451,6 +451,10 @@ fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtB
 
 fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
   match expression {
+    BytesExpr(value, _) => {
+      let _ = ct_charge(machine, value.byte_length())
+      CtValue::ByteText(value)
+    }
     F32Expr(value, _) => CtValue::Floating(u32_into_u64(wasm_f32_to_bits(value)), "F32")
     F64Expr(value, _) => CtValue::Floating(wasm_f64_to_bits(value), "F64")
     I8Expr(value, _) => ct_number(value, "I8")

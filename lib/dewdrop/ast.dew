@@ -10,6 +10,7 @@ pub enum ExprNode {
   Unsigned64(U64)
   Boolean(Bool)
   Text(String)
+  Bytes(Bytes)
   Name(String)
   Path(String)
   Field(ExprNode, String)
@@ -42,6 +43,10 @@ pub fn with_body(node: FnNode, body: ExprNode) -> FnNode {
 
 pub fn integer(value: I32) -> ExprNode {
   ExprNode::Integer(value)
+}
+
+pub fn bytes(value: Bytes) -> ExprNode {
+  ExprNode::Bytes(value)
 }
 
 pub fn source(value: String) -> ExprNode {

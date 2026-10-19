@@ -1,0 +1,67 @@
+fn ct_bytes_value(machine: CtMachine, value: CtValue) -> Bytes {
+  let value = ct_reference_base(value)
+  match value {
+    ByteText(content) => return content
+    _ => {}
+  }
+  let backing = ct_raw_struct_get(machine, value, 0u32)
+  let start = ct_raw_bits(machine, ct_raw_struct_get(machine, value, 1u32))
+  let length = ct_raw_bits(machine, ct_raw_struct_get(machine, value, 2u32))
+  let capacity = ct_raw_array_length(machine, backing) * 16u64
+  if start > capacity || length > capacity - start || length > 4194304u64 {
+    let _ = ct_fail(machine, "Bytes reference range is out of bounds")
+    return b""
+  }
+  if !ct_charge(machine, u64_into_u32(length)) {
+    return b""
+  }
+  let output = BytesBuilder::with_capacity(u64_into_u32(length))
+  let mut chunk = CtValue::Vector(0u64, 0u64)
+  let _ = while 0u64 {
+    index if index < length => {
+      if !ct_charge(machine, 0u32) {
+        return b""
+      }
+      let absolute = start + index
+      if index == 0u64 || (absolute & 15u64) == 0u64 {
+        chunk = ct_raw_array_get(machine, backing, absolute >> 4u64)
+      }
+      output.append_byte(u64_into_u8(ct_vector_byte(machine, chunk, u64_into_u32(absolute & 15u64))))
+      continue index + 1u64
+    }
+    _ => break ()
+  }
+  output.finish()
+}
+
+fn ct_render_bytes(machine: CtMachine, value: CtValue) -> String {
+  let content = ct_bytes_value(machine, value)
+  if machine.error.byte_length() != 0u32 {
+    return ""
+  }
+  if content.byte_length() > (1048576u32 - 3u32) / 4u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  if !ct_charge(machine, content.byte_length() * 4u32 + 3u32) {
+    return ""
+  }
+  let output = BytesBuilder::new()
+  output.append(b"b\"")
+  let digits = b"0123456789abcdef"
+  let _ = while 0u32 {
+    index if index < content.byte_length() => {
+      if !ct_charge(machine, 0u32) {
+        return ""
+      }
+      let byte = u8_into_u32(content.byte_at(index))
+      output.append(b"\\x")
+      output.append_byte(digits.byte_at(byte >> 4u32))
+      output.append_byte(digits.byte_at(byte & 15u32))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  output.append_byte(34u8)
+  output.finish().to_string()
+}

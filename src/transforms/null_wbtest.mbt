@@ -71,6 +71,6 @@ test "null tests require a proved reference for tuple values" {
     Failed(message) => assert_true(message.contains("checked reference carrier"))
     _ => fail("unexpected tuple null-test error")
   }
-  assert_false(reference_null_test(Function(Unsupported, [])))
+  assert_false(reference_null_test(Function(Unsupported, [], FunctionInstance)))
   assert_true(reference_null_test(NullValue))
 }

@@ -19,10 +19,11 @@ pub enum CtValue {
   Number(U64, String)
   Boolean(Bool)
   Text(String)
+  ByteText(Bytes)
   Sequence(Array<CtValue>)
   Record(String, Array<CtBinding>)
   Variant(String, Array<CtValue>)
-  Function(CtCallTarget, Array<CtValue>)
+  Function(CtCallTarget, Array<CtValue>, CtFunctionIdentity)
   Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, Array<CtBinding>)
 }
 
@@ -65,7 +66,7 @@ pub struct CtPlan {
   mut validation_stop: String
   scalar_proofs: Map<String, Bytes>
   pattern_proofs: Map<String, String>
-  references: Map<String, CtCallTarget>
+  references: Map<String, CtFunctionReferenceProof>
   calls: Map<String, CtCallTarget>
   scalar_types: Map<String, String>
   array_literals: Map<String, CtArrayLayout>

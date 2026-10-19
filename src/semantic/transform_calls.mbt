@@ -2,6 +2,7 @@
 pub struct CompileTimeCall {
   reference : Bool
   constant : CompileTimeTransformConstant?
+  function_identity : CompileTimeFunctionIdentity?
   module_index : Int32
   file : FileId
   offset : UInt64
@@ -58,6 +59,7 @@ pub fn compile_time_calls(
           result.push({
             reference: false,
             constant,
+            function_identity: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -77,6 +79,7 @@ pub fn compile_time_calls(
           result.push({
             reference: true,
             constant: None,
+            function_identity: transform_function_identity(lowering.modules[target_module], selected),
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -95,6 +98,7 @@ pub fn compile_time_calls(
           result.push({
             reference: true,
             constant: None,
+            function_identity: transform_function_identity(lowering.modules[target_module], selected),
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -118,6 +122,7 @@ pub fn compile_time_calls(
           result.push({
             reference: true,
             constant: None,
+            function_identity: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -136,6 +141,7 @@ pub fn compile_time_calls(
           result.push({
             reference: false,
             constant: None,
+            function_identity: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -164,6 +170,7 @@ pub fn compile_time_calls(
           result.push({
             reference: false,
             constant: None,
+            function_identity: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -203,6 +210,7 @@ pub fn compile_time_calls(
           result.push({
             reference: false,
             constant: None,
+            function_identity: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),

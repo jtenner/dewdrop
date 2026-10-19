@@ -52,6 +52,11 @@ claims about the current interpreter.
 - [x] Unsigned integer literals.
 - [x] Boolean literals.
 - [x] UTF-8 string literals.
+- [x] Raw byte literals, including invalid UTF-8.
+- [x] Byte literal AST builder.
+- [x] Integer bit counts, rotations, and I64 sign extension.
+- [x] Pure vector operations in the current compiler catalog.
+- [x] Named nongeneric function singleton identity.
 - [x] Array literals.
 - [x] Tuple literals and tuple destructuring.
 - [x] Integer arithmetic with selected primitive proofs.

@@ -1,0 +1,41 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.bytes
+open dew.std.string
+
+transform fn inspect_bytes(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let raw = b"\xff\x00A\x80"
+  let text = b"Hello world, from a source transform"
+  let part = text.view(6u32, 5u32)
+  let valid = raw.byte_length() == 4u32 && raw.byte_at(0u32) == 255u8 && raw.byte_at(1u32) == 0u8 && !raw.is_valid_utf8() && part == b"world" && part.concat(b"!").to_string() == "world!" && match text.find(b"source") {
+    Some(20u32) => true
+    _ => false
+  }
+  node.with_body(@ast.integer(if valid {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#inspect_bytes
+fn answer() -> I32 {
+  0i32
+}
+
+transform fn emit_bytes(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.bytes(b"\x00\xff\x22\x5c"))
+}
+
+#emit_bytes
+fn data() -> Bytes {
+  b""
+}
+
+pub fn main() -> I32 {
+  if data() == b"\x00\xff\x22\x5c" {
+    answer()
+  } else {
+    0i32
+  }
+}

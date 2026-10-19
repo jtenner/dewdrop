@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 echo "== generated sources =="
 python3 tools/generate_preamble_sources.py --check
 python3 tools/generate_transform_sources.py --check
+python3 tools/generate_transform_vectors.py --check
 python3 tools/generate_option_result_std.py --check
 python3 tools/generate_types_std.py --check
 python3 tools/generate_standard_module_identities.py --check

@@ -209,7 +209,16 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
                 for file in plan.files {
                   if file.module_index == mi && file.original.path == source.file_paths[fi] {
                     match ct_scalar_original_offset(file, expression.offset(), 0u32) {
-                      Some(offset) => plan.references.set(ct_call_key(mi, file.original.path, offset), target)
+                      Some(offset) => {
+                        let identity = match lowering.modules[mi].expressions[ei].kind {
+                          PlannedModuleValueGet(selected), PlannedFunctionReference(selected) => ct_checked_function_identity(lowering, selected)
+                          _ => CtFunctionIdentity::FunctionInstance
+                        }
+                        plan.references.set(ct_call_key(mi, file.original.path, offset), CtFunctionReferenceProof::{
+                          target: target
+                          identity: identity
+                        })
+                      }
                       None => {
                       }
                     }
@@ -309,7 +318,7 @@ fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -
     return CtValue::Empty
   }
   match closure {
-    Function(target, bound) => {
+    Function(target, bound, _) => {
       let values = array_new::<CtValue>()
       for value in bound {
         values.push(value)
@@ -378,7 +387,8 @@ fn ct_unit_variant(machine: CtMachine, key: String) -> CtValue {
 
 fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
   match machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) {
-    Some(target) => {
+    Some(proof) => {
+      let target = proof.target
       match target {
         Global(mi, path, declaration) => return ct_global_value(machine, mi, path, declaration)
         _ => {
@@ -395,7 +405,11 @@ fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, 
         _ => {
         }
       }
-      CtValue::Function(target, bound)
+      CtValue::Function(target, bound, if bound.length() == 0u32 {
+        proof.identity
+      } else {
+        CtFunctionIdentity::FunctionInstance
+      })
     }
     None => ct_fail(machine, "global value has no checked function reference")
   }

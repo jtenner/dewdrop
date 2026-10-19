@@ -23,7 +23,7 @@ fn reference_base(value : Value) -> Value {
 ///|
 fn Machine::raw_storage(self : Machine, value : Value) -> Array[String] raise EvalError {
   match reference_base(value) {
-    Text(_) => ["array:v128", "i32", "i32"]
+    Text(_) | ByteText(_) => ["array:v128", "i32", "i32"]
     Record(key, _) => match self.plan.raw_layouts.get(key) {
       Some(layout) => layout.storage
       None => raise Failed("reference has no checked raw layout")
@@ -65,6 +65,12 @@ fn Machine::reference_cast(self : Machine, value : Value, kind : String) -> Valu
 ///|
 fn Machine::raw_struct_get(self : Machine, value : Value, index : Int) -> Value raise EvalError {
   match reference_base(value) {
+    ByteText(content) as original => match index {
+      0 => TextChunks(original, content)
+      1 => Number(0UL, "U32")
+      2 => Number(content.length().to_uint64(), "U32")
+      _ => eval_fail("Wasm struct field out of bounds at compile time")
+    }
     Text(content) as original => match index {
       0 => {
         self.charge(content.length())
@@ -143,9 +149,11 @@ fn reference_equal(left : Value, right : Value) -> Bool raise EvalError {
     (RawArray(a), RawArray(b)) => physical_equal(a, b)
     (TextChunks(a, _), TextChunks(b, _)) => physical_equal(a, b)
     (Record(_, a), Record(_, b)) => physical_equal(a, b)
-    (Text(_), Text(_)) => physical_equal(left, right)
+    (Text(_), Text(_)) | (ByteText(_), ByteText(_)) => physical_equal(left, right)
     (Variant(_, a), Variant(_, b)) | (Sequence(a), Sequence(b)) => physical_equal(a, b)
-    (Function(_, _), Function(_, _)) | (Closure(_, _, _, _, _), Closure(_, _, _, _, _)) =>
+    (Function(_, _, a), Function(_, _, b)) =>
+      physical_equal(left, right) || function_identity_equal(a, b)
+    (Closure(_, _, _, _, _), Closure(_, _, _, _, _)) =>
       physical_equal(left, right)
     (Floating(_, _), _) | (_, Floating(_, _)) | (Number(_, _), _) | (_, Number(_, _)) | (Boolean(_), _) | (_, Boolean(_)) | (Vector(_, _), _) | (_, Vector(_, _)) =>
       raise Failed("Wasm reference identity requires references")

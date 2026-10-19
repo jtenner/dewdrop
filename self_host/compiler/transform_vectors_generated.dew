@@ -1,0 +1,2436 @@
+open dew.std.array
+open dew.std.string
+// Generated from tools/wasm_simd_intrinsics.py. Do not edit.
+fn ct_vector_canonical_float_word(word: U64, width: U32) -> U64 {
+  if width == 64u32 {
+    if (word & 9218868437227405312u64) == 9218868437227405312u64 && (word & 4503599627370495u64) != 0u64 {
+      9221120237041090560u64
+    } else {
+      word
+    }
+  } else {
+    let mut result = word
+    let _ = while 0u64 {
+      part if part < 2u64 => {
+        let shift = part * 32u64
+        let bits = (word >> shift) & 4294967295u64
+        if (bits & 2139095040u64) == 2139095040u64 && (bits & 8388607u64) != 0u64 {
+          result = (result & ((4294967295u64 << shift) ^ 18446744073709551615u64)) | (2143289344u64 << shift)
+        }
+        continue part + 1u64
+      }
+      _ => break ()
+    }
+    result
+  }
+}
+fn ct_vector_canonical_float(value: V128, width: U32) -> CtValue {
+  CtValue::Vector(ct_vector_canonical_float_word(ct_vector_host_low_bits(value), width), ct_vector_canonical_float_word(ct_vector_host_high_bits(value), width))
+}
+builtin ct_vector_host_splat(value: U64) -> V128 = "i64x2.splat"
+builtin ct_vector_host_high(value: V128, high: U64) -> V128 = "i64x2.replace_lane 1"
+builtin ct_vector_host_low_bits(value: V128) -> U64 = "i64x2.extract_lane 0"
+builtin ct_vector_host_high_bits(value: V128) -> U64 = "i64x2.extract_lane 1"
+fn ct_vector_host_value(machine: CtMachine, value: CtValue) -> V128 {
+  match value {
+    Vector(low, high) => ct_vector_host_high(ct_vector_host_splat(low), high)
+    _ => {
+      let _ = ct_fail(machine, "Wasm vector instruction requires a 128-bit vector")
+      ct_vector_host_splat(0u64)
+    }
+  }
+}
+fn ct_vector_host_result(value: V128) -> CtValue {
+  CtValue::Vector(ct_vector_host_low_bits(value), ct_vector_host_high_bits(value))
+}
+builtin ct_vector_host_0(v0: V128) -> V128 = "v128.not"
+builtin ct_vector_host_1(v0: V128, v1: V128) -> V128 = "v128.andnot"
+builtin ct_vector_host_2(v0: V128, v1: V128, v2: V128) -> V128 = "v128.bitselect"
+builtin ct_vector_host_3(v0: V128) -> I32 = "v128.any_true"
+builtin ct_vector_host_4(v0: I32) -> V128 = "i8x16.splat"
+builtin ct_vector_host_5(v0: I32) -> V128 = "i16x8.splat"
+builtin ct_vector_host_6(v0: I32) -> V128 = "i32x4.splat"
+builtin ct_vector_host_7(v0: I64) -> V128 = "i64x2.splat"
+builtin ct_vector_host_8(v0: F32) -> V128 = "f32x4.splat"
+builtin ct_vector_host_9(v0: F64) -> V128 = "f64x2.splat"
+builtin ct_vector_host_10(v0: V128, v1: V128) -> V128 = "i8x16.add"
+builtin ct_vector_host_11(v0: V128, v1: V128) -> V128 = "i8x16.sub"
+builtin ct_vector_host_12(v0: V128, v1: V128) -> V128 = "i8x16.min_s"
+builtin ct_vector_host_13(v0: V128, v1: V128) -> V128 = "i8x16.min_u"
+builtin ct_vector_host_14(v0: V128, v1: V128) -> V128 = "i8x16.max_s"
+builtin ct_vector_host_15(v0: V128, v1: V128) -> V128 = "i8x16.max_u"
+builtin ct_vector_host_16(v0: V128, v1: V128) -> V128 = "i8x16.avgr_u"
+builtin ct_vector_host_17(v0: V128, v1: V128) -> V128 = "i8x16.add_sat_s"
+builtin ct_vector_host_18(v0: V128, v1: V128) -> V128 = "i8x16.add_sat_u"
+builtin ct_vector_host_19(v0: V128, v1: V128) -> V128 = "i8x16.sub_sat_s"
+builtin ct_vector_host_20(v0: V128, v1: V128) -> V128 = "i8x16.sub_sat_u"
+builtin ct_vector_host_21(v0: V128, v1: V128) -> V128 = "i8x16.eq"
+builtin ct_vector_host_22(v0: V128, v1: V128) -> V128 = "i8x16.ne"
+builtin ct_vector_host_23(v0: V128, v1: V128) -> V128 = "i8x16.lt_s"
+builtin ct_vector_host_24(v0: V128, v1: V128) -> V128 = "i8x16.lt_u"
+builtin ct_vector_host_25(v0: V128, v1: V128) -> V128 = "i8x16.le_s"
+builtin ct_vector_host_26(v0: V128, v1: V128) -> V128 = "i8x16.le_u"
+builtin ct_vector_host_27(v0: V128, v1: V128) -> V128 = "i8x16.gt_s"
+builtin ct_vector_host_28(v0: V128, v1: V128) -> V128 = "i8x16.gt_u"
+builtin ct_vector_host_29(v0: V128, v1: V128) -> V128 = "i8x16.ge_s"
+builtin ct_vector_host_30(v0: V128, v1: V128) -> V128 = "i8x16.ge_u"
+builtin ct_vector_host_31(v0: V128) -> V128 = "i8x16.abs"
+builtin ct_vector_host_32(v0: V128) -> V128 = "i8x16.neg"
+builtin ct_vector_host_33(v0: V128) -> V128 = "i8x16.popcnt"
+builtin ct_vector_host_34(v0: V128) -> I32 = "i8x16.all_true"
+builtin ct_vector_host_35(v0: V128) -> I32 = "i8x16.bitmask"
+builtin ct_vector_host_36(v0: V128, v1: I32) -> V128 = "i8x16.shl"
+builtin ct_vector_host_37(v0: V128, v1: I32) -> V128 = "i8x16.shr_s"
+builtin ct_vector_host_38(v0: V128, v1: I32) -> V128 = "i8x16.shr_u"
+builtin ct_vector_host_39(v0: V128, v1: V128) -> V128 = "i16x8.add"
+builtin ct_vector_host_40(v0: V128, v1: V128) -> V128 = "i16x8.sub"
+builtin ct_vector_host_41(v0: V128, v1: V128) -> V128 = "i16x8.mul"
+builtin ct_vector_host_42(v0: V128, v1: V128) -> V128 = "i16x8.min_s"
+builtin ct_vector_host_43(v0: V128, v1: V128) -> V128 = "i16x8.min_u"
+builtin ct_vector_host_44(v0: V128, v1: V128) -> V128 = "i16x8.max_s"
+builtin ct_vector_host_45(v0: V128, v1: V128) -> V128 = "i16x8.max_u"
+builtin ct_vector_host_46(v0: V128, v1: V128) -> V128 = "i16x8.avgr_u"
+builtin ct_vector_host_47(v0: V128, v1: V128) -> V128 = "i16x8.add_sat_s"
+builtin ct_vector_host_48(v0: V128, v1: V128) -> V128 = "i16x8.add_sat_u"
+builtin ct_vector_host_49(v0: V128, v1: V128) -> V128 = "i16x8.sub_sat_s"
+builtin ct_vector_host_50(v0: V128, v1: V128) -> V128 = "i16x8.sub_sat_u"
+builtin ct_vector_host_51(v0: V128, v1: V128) -> V128 = "i16x8.eq"
+builtin ct_vector_host_52(v0: V128, v1: V128) -> V128 = "i16x8.ne"
+builtin ct_vector_host_53(v0: V128, v1: V128) -> V128 = "i16x8.lt_s"
+builtin ct_vector_host_54(v0: V128, v1: V128) -> V128 = "i16x8.lt_u"
+builtin ct_vector_host_55(v0: V128, v1: V128) -> V128 = "i16x8.le_s"
+builtin ct_vector_host_56(v0: V128, v1: V128) -> V128 = "i16x8.le_u"
+builtin ct_vector_host_57(v0: V128, v1: V128) -> V128 = "i16x8.gt_s"
+builtin ct_vector_host_58(v0: V128, v1: V128) -> V128 = "i16x8.gt_u"
+builtin ct_vector_host_59(v0: V128, v1: V128) -> V128 = "i16x8.ge_s"
+builtin ct_vector_host_60(v0: V128, v1: V128) -> V128 = "i16x8.ge_u"
+builtin ct_vector_host_61(v0: V128) -> V128 = "i16x8.abs"
+builtin ct_vector_host_62(v0: V128) -> V128 = "i16x8.neg"
+builtin ct_vector_host_63(v0: V128) -> I32 = "i16x8.all_true"
+builtin ct_vector_host_64(v0: V128) -> I32 = "i16x8.bitmask"
+builtin ct_vector_host_65(v0: V128, v1: I32) -> V128 = "i16x8.shl"
+builtin ct_vector_host_66(v0: V128, v1: I32) -> V128 = "i16x8.shr_s"
+builtin ct_vector_host_67(v0: V128, v1: I32) -> V128 = "i16x8.shr_u"
+builtin ct_vector_host_68(v0: V128, v1: V128) -> V128 = "i32x4.add"
+builtin ct_vector_host_69(v0: V128, v1: V128) -> V128 = "i32x4.sub"
+builtin ct_vector_host_70(v0: V128, v1: V128) -> V128 = "i32x4.mul"
+builtin ct_vector_host_71(v0: V128, v1: V128) -> V128 = "i32x4.min_s"
+builtin ct_vector_host_72(v0: V128, v1: V128) -> V128 = "i32x4.min_u"
+builtin ct_vector_host_73(v0: V128, v1: V128) -> V128 = "i32x4.max_s"
+builtin ct_vector_host_74(v0: V128, v1: V128) -> V128 = "i32x4.max_u"
+builtin ct_vector_host_75(v0: V128, v1: V128) -> V128 = "i32x4.eq"
+builtin ct_vector_host_76(v0: V128, v1: V128) -> V128 = "i32x4.ne"
+builtin ct_vector_host_77(v0: V128, v1: V128) -> V128 = "i32x4.lt_s"
+builtin ct_vector_host_78(v0: V128, v1: V128) -> V128 = "i32x4.lt_u"
+builtin ct_vector_host_79(v0: V128, v1: V128) -> V128 = "i32x4.le_s"
+builtin ct_vector_host_80(v0: V128, v1: V128) -> V128 = "i32x4.le_u"
+builtin ct_vector_host_81(v0: V128, v1: V128) -> V128 = "i32x4.gt_s"
+builtin ct_vector_host_82(v0: V128, v1: V128) -> V128 = "i32x4.gt_u"
+builtin ct_vector_host_83(v0: V128, v1: V128) -> V128 = "i32x4.ge_s"
+builtin ct_vector_host_84(v0: V128, v1: V128) -> V128 = "i32x4.ge_u"
+builtin ct_vector_host_85(v0: V128) -> V128 = "i32x4.abs"
+builtin ct_vector_host_86(v0: V128) -> V128 = "i32x4.neg"
+builtin ct_vector_host_87(v0: V128) -> I32 = "i32x4.all_true"
+builtin ct_vector_host_88(v0: V128) -> I32 = "i32x4.bitmask"
+builtin ct_vector_host_89(v0: V128, v1: I32) -> V128 = "i32x4.shl"
+builtin ct_vector_host_90(v0: V128, v1: I32) -> V128 = "i32x4.shr_s"
+builtin ct_vector_host_91(v0: V128, v1: I32) -> V128 = "i32x4.shr_u"
+builtin ct_vector_host_92(v0: V128, v1: V128) -> V128 = "i64x2.add"
+builtin ct_vector_host_93(v0: V128, v1: V128) -> V128 = "i64x2.sub"
+builtin ct_vector_host_94(v0: V128, v1: V128) -> V128 = "i64x2.mul"
+builtin ct_vector_host_95(v0: V128, v1: V128) -> V128 = "i64x2.eq"
+builtin ct_vector_host_96(v0: V128, v1: V128) -> V128 = "i64x2.ne"
+builtin ct_vector_host_97(v0: V128, v1: V128) -> V128 = "i64x2.lt_s"
+builtin ct_vector_host_98(v0: V128, v1: V128) -> V128 = "i64x2.le_s"
+builtin ct_vector_host_99(v0: V128, v1: V128) -> V128 = "i64x2.gt_s"
+builtin ct_vector_host_100(v0: V128, v1: V128) -> V128 = "i64x2.ge_s"
+builtin ct_vector_host_101(v0: V128) -> V128 = "i64x2.abs"
+builtin ct_vector_host_102(v0: V128) -> V128 = "i64x2.neg"
+builtin ct_vector_host_103(v0: V128) -> I32 = "i64x2.all_true"
+builtin ct_vector_host_104(v0: V128) -> I32 = "i64x2.bitmask"
+builtin ct_vector_host_105(v0: V128, v1: I32) -> V128 = "i64x2.shl"
+builtin ct_vector_host_106(v0: V128, v1: I32) -> V128 = "i64x2.shr_s"
+builtin ct_vector_host_107(v0: V128, v1: I32) -> V128 = "i64x2.shr_u"
+builtin ct_vector_host_108(v0: V128, v1: V128) -> V128 = "f32x4.add"
+builtin ct_vector_host_109(v0: V128, v1: V128) -> V128 = "f32x4.sub"
+builtin ct_vector_host_110(v0: V128, v1: V128) -> V128 = "f32x4.mul"
+builtin ct_vector_host_111(v0: V128, v1: V128) -> V128 = "f32x4.div"
+builtin ct_vector_host_112(v0: V128, v1: V128) -> V128 = "f32x4.min"
+builtin ct_vector_host_113(v0: V128, v1: V128) -> V128 = "f32x4.max"
+builtin ct_vector_host_114(v0: V128, v1: V128) -> V128 = "f32x4.pmin"
+builtin ct_vector_host_115(v0: V128, v1: V128) -> V128 = "f32x4.pmax"
+builtin ct_vector_host_116(v0: V128, v1: V128) -> V128 = "f32x4.eq"
+builtin ct_vector_host_117(v0: V128, v1: V128) -> V128 = "f32x4.ne"
+builtin ct_vector_host_118(v0: V128, v1: V128) -> V128 = "f32x4.lt"
+builtin ct_vector_host_119(v0: V128, v1: V128) -> V128 = "f32x4.le"
+builtin ct_vector_host_120(v0: V128, v1: V128) -> V128 = "f32x4.gt"
+builtin ct_vector_host_121(v0: V128, v1: V128) -> V128 = "f32x4.ge"
+builtin ct_vector_host_122(v0: V128) -> V128 = "f32x4.abs"
+builtin ct_vector_host_123(v0: V128) -> V128 = "f32x4.neg"
+builtin ct_vector_host_124(v0: V128) -> V128 = "f32x4.sqrt"
+builtin ct_vector_host_125(v0: V128) -> V128 = "f32x4.ceil"
+builtin ct_vector_host_126(v0: V128) -> V128 = "f32x4.floor"
+builtin ct_vector_host_127(v0: V128) -> V128 = "f32x4.trunc"
+builtin ct_vector_host_128(v0: V128) -> V128 = "f32x4.nearest"
+builtin ct_vector_host_129(v0: V128, v1: V128) -> V128 = "f64x2.add"
+builtin ct_vector_host_130(v0: V128, v1: V128) -> V128 = "f64x2.sub"
+builtin ct_vector_host_131(v0: V128, v1: V128) -> V128 = "f64x2.mul"
+builtin ct_vector_host_132(v0: V128, v1: V128) -> V128 = "f64x2.div"
+builtin ct_vector_host_133(v0: V128, v1: V128) -> V128 = "f64x2.min"
+builtin ct_vector_host_134(v0: V128, v1: V128) -> V128 = "f64x2.max"
+builtin ct_vector_host_135(v0: V128, v1: V128) -> V128 = "f64x2.pmin"
+builtin ct_vector_host_136(v0: V128, v1: V128) -> V128 = "f64x2.pmax"
+builtin ct_vector_host_137(v0: V128, v1: V128) -> V128 = "f64x2.eq"
+builtin ct_vector_host_138(v0: V128, v1: V128) -> V128 = "f64x2.ne"
+builtin ct_vector_host_139(v0: V128, v1: V128) -> V128 = "f64x2.lt"
+builtin ct_vector_host_140(v0: V128, v1: V128) -> V128 = "f64x2.le"
+builtin ct_vector_host_141(v0: V128, v1: V128) -> V128 = "f64x2.gt"
+builtin ct_vector_host_142(v0: V128, v1: V128) -> V128 = "f64x2.ge"
+builtin ct_vector_host_143(v0: V128) -> V128 = "f64x2.abs"
+builtin ct_vector_host_144(v0: V128) -> V128 = "f64x2.neg"
+builtin ct_vector_host_145(v0: V128) -> V128 = "f64x2.sqrt"
+builtin ct_vector_host_146(v0: V128) -> V128 = "f64x2.ceil"
+builtin ct_vector_host_147(v0: V128) -> V128 = "f64x2.floor"
+builtin ct_vector_host_148(v0: V128) -> V128 = "f64x2.trunc"
+builtin ct_vector_host_149(v0: V128) -> V128 = "f64x2.nearest"
+builtin ct_vector_host_150(v0: V128, v1: V128) -> V128 = "i8x16.narrow_i16x8_s"
+builtin ct_vector_host_151(v0: V128, v1: V128) -> V128 = "i8x16.narrow_i16x8_u"
+builtin ct_vector_host_152(v0: V128, v1: V128) -> V128 = "i8x16.swizzle"
+builtin ct_vector_host_153(v0: V128, v1: V128) -> V128 = "i16x8.narrow_i32x4_s"
+builtin ct_vector_host_154(v0: V128, v1: V128) -> V128 = "i16x8.narrow_i32x4_u"
+builtin ct_vector_host_155(v0: V128) -> V128 = "i16x8.extend_low_i8x16_s"
+builtin ct_vector_host_156(v0: V128) -> V128 = "i16x8.extend_high_i8x16_s"
+builtin ct_vector_host_157(v0: V128) -> V128 = "i16x8.extend_low_i8x16_u"
+builtin ct_vector_host_158(v0: V128) -> V128 = "i16x8.extend_high_i8x16_u"
+builtin ct_vector_host_159(v0: V128) -> V128 = "i16x8.extadd_pairwise_i8x16_s"
+builtin ct_vector_host_160(v0: V128) -> V128 = "i16x8.extadd_pairwise_i8x16_u"
+builtin ct_vector_host_161(v0: V128, v1: V128) -> V128 = "i16x8.extmul_low_i8x16_s"
+builtin ct_vector_host_162(v0: V128, v1: V128) -> V128 = "i16x8.extmul_high_i8x16_s"
+builtin ct_vector_host_163(v0: V128, v1: V128) -> V128 = "i16x8.extmul_low_i8x16_u"
+builtin ct_vector_host_164(v0: V128, v1: V128) -> V128 = "i16x8.extmul_high_i8x16_u"
+builtin ct_vector_host_165(v0: V128) -> V128 = "i32x4.extend_low_i16x8_s"
+builtin ct_vector_host_166(v0: V128) -> V128 = "i32x4.extend_high_i16x8_s"
+builtin ct_vector_host_167(v0: V128) -> V128 = "i32x4.extend_low_i16x8_u"
+builtin ct_vector_host_168(v0: V128) -> V128 = "i32x4.extend_high_i16x8_u"
+builtin ct_vector_host_169(v0: V128) -> V128 = "i32x4.extadd_pairwise_i16x8_s"
+builtin ct_vector_host_170(v0: V128) -> V128 = "i32x4.extadd_pairwise_i16x8_u"
+builtin ct_vector_host_171(v0: V128, v1: V128) -> V128 = "i32x4.extmul_low_i16x8_s"
+builtin ct_vector_host_172(v0: V128, v1: V128) -> V128 = "i32x4.extmul_high_i16x8_s"
+builtin ct_vector_host_173(v0: V128, v1: V128) -> V128 = "i32x4.extmul_low_i16x8_u"
+builtin ct_vector_host_174(v0: V128, v1: V128) -> V128 = "i32x4.extmul_high_i16x8_u"
+builtin ct_vector_host_175(v0: V128, v1: V128) -> V128 = "i32x4.dot_i16x8_s"
+builtin ct_vector_host_176(v0: V128) -> V128 = "i64x2.extend_low_i32x4_s"
+builtin ct_vector_host_177(v0: V128) -> V128 = "i64x2.extend_high_i32x4_s"
+builtin ct_vector_host_178(v0: V128) -> V128 = "i64x2.extend_low_i32x4_u"
+builtin ct_vector_host_179(v0: V128) -> V128 = "i64x2.extend_high_i32x4_u"
+builtin ct_vector_host_180(v0: V128, v1: V128) -> V128 = "i64x2.extmul_low_i32x4_s"
+builtin ct_vector_host_181(v0: V128, v1: V128) -> V128 = "i64x2.extmul_high_i32x4_s"
+builtin ct_vector_host_182(v0: V128, v1: V128) -> V128 = "i64x2.extmul_low_i32x4_u"
+builtin ct_vector_host_183(v0: V128, v1: V128) -> V128 = "i64x2.extmul_high_i32x4_u"
+builtin ct_vector_host_184(v0: V128) -> V128 = "f32x4.convert_i32x4_s"
+builtin ct_vector_host_185(v0: V128) -> V128 = "f32x4.convert_i32x4_u"
+builtin ct_vector_host_186(v0: V128) -> V128 = "f32x4.demote_f64x2_zero"
+builtin ct_vector_host_187(v0: V128) -> V128 = "f64x2.convert_low_i32x4_s"
+builtin ct_vector_host_188(v0: V128) -> V128 = "f64x2.convert_low_i32x4_u"
+builtin ct_vector_host_189(v0: V128) -> V128 = "f64x2.promote_low_f32x4"
+builtin ct_vector_host_190(v0: V128) -> V128 = "i32x4.trunc_sat_f32x4_s"
+builtin ct_vector_host_191(v0: V128) -> V128 = "i32x4.trunc_sat_f32x4_u"
+builtin ct_vector_host_192(v0: V128) -> V128 = "i32x4.trunc_sat_f64x2_s_zero"
+builtin ct_vector_host_193(v0: V128) -> V128 = "i32x4.trunc_sat_f64x2_u_zero"
+builtin ct_vector_host_194(v0: V128) -> I32 = "i8x16.extract_lane_s 0"
+builtin ct_vector_host_195(v0: V128) -> I32 = "i8x16.extract_lane_u 0"
+builtin ct_vector_host_196(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 0"
+builtin ct_vector_host_197(v0: V128) -> I32 = "i8x16.extract_lane_s 1"
+builtin ct_vector_host_198(v0: V128) -> I32 = "i8x16.extract_lane_u 1"
+builtin ct_vector_host_199(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 1"
+builtin ct_vector_host_200(v0: V128) -> I32 = "i8x16.extract_lane_s 2"
+builtin ct_vector_host_201(v0: V128) -> I32 = "i8x16.extract_lane_u 2"
+builtin ct_vector_host_202(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 2"
+builtin ct_vector_host_203(v0: V128) -> I32 = "i8x16.extract_lane_s 3"
+builtin ct_vector_host_204(v0: V128) -> I32 = "i8x16.extract_lane_u 3"
+builtin ct_vector_host_205(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 3"
+builtin ct_vector_host_206(v0: V128) -> I32 = "i8x16.extract_lane_s 4"
+builtin ct_vector_host_207(v0: V128) -> I32 = "i8x16.extract_lane_u 4"
+builtin ct_vector_host_208(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 4"
+builtin ct_vector_host_209(v0: V128) -> I32 = "i8x16.extract_lane_s 5"
+builtin ct_vector_host_210(v0: V128) -> I32 = "i8x16.extract_lane_u 5"
+builtin ct_vector_host_211(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 5"
+builtin ct_vector_host_212(v0: V128) -> I32 = "i8x16.extract_lane_s 6"
+builtin ct_vector_host_213(v0: V128) -> I32 = "i8x16.extract_lane_u 6"
+builtin ct_vector_host_214(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 6"
+builtin ct_vector_host_215(v0: V128) -> I32 = "i8x16.extract_lane_s 7"
+builtin ct_vector_host_216(v0: V128) -> I32 = "i8x16.extract_lane_u 7"
+builtin ct_vector_host_217(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 7"
+builtin ct_vector_host_218(v0: V128) -> I32 = "i8x16.extract_lane_s 8"
+builtin ct_vector_host_219(v0: V128) -> I32 = "i8x16.extract_lane_u 8"
+builtin ct_vector_host_220(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 8"
+builtin ct_vector_host_221(v0: V128) -> I32 = "i8x16.extract_lane_s 9"
+builtin ct_vector_host_222(v0: V128) -> I32 = "i8x16.extract_lane_u 9"
+builtin ct_vector_host_223(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 9"
+builtin ct_vector_host_224(v0: V128) -> I32 = "i8x16.extract_lane_s 10"
+builtin ct_vector_host_225(v0: V128) -> I32 = "i8x16.extract_lane_u 10"
+builtin ct_vector_host_226(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 10"
+builtin ct_vector_host_227(v0: V128) -> I32 = "i8x16.extract_lane_s 11"
+builtin ct_vector_host_228(v0: V128) -> I32 = "i8x16.extract_lane_u 11"
+builtin ct_vector_host_229(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 11"
+builtin ct_vector_host_230(v0: V128) -> I32 = "i8x16.extract_lane_s 12"
+builtin ct_vector_host_231(v0: V128) -> I32 = "i8x16.extract_lane_u 12"
+builtin ct_vector_host_232(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 12"
+builtin ct_vector_host_233(v0: V128) -> I32 = "i8x16.extract_lane_s 13"
+builtin ct_vector_host_234(v0: V128) -> I32 = "i8x16.extract_lane_u 13"
+builtin ct_vector_host_235(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 13"
+builtin ct_vector_host_236(v0: V128) -> I32 = "i8x16.extract_lane_s 14"
+builtin ct_vector_host_237(v0: V128) -> I32 = "i8x16.extract_lane_u 14"
+builtin ct_vector_host_238(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 14"
+builtin ct_vector_host_239(v0: V128) -> I32 = "i8x16.extract_lane_s 15"
+builtin ct_vector_host_240(v0: V128) -> I32 = "i8x16.extract_lane_u 15"
+builtin ct_vector_host_241(v0: V128, v1: I32) -> V128 = "i8x16.replace_lane 15"
+builtin ct_vector_host_242(v0: V128) -> I32 = "i16x8.extract_lane_s 0"
+builtin ct_vector_host_243(v0: V128) -> I32 = "i16x8.extract_lane_u 0"
+builtin ct_vector_host_244(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 0"
+builtin ct_vector_host_245(v0: V128) -> I32 = "i16x8.extract_lane_s 1"
+builtin ct_vector_host_246(v0: V128) -> I32 = "i16x8.extract_lane_u 1"
+builtin ct_vector_host_247(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 1"
+builtin ct_vector_host_248(v0: V128) -> I32 = "i16x8.extract_lane_s 2"
+builtin ct_vector_host_249(v0: V128) -> I32 = "i16x8.extract_lane_u 2"
+builtin ct_vector_host_250(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 2"
+builtin ct_vector_host_251(v0: V128) -> I32 = "i16x8.extract_lane_s 3"
+builtin ct_vector_host_252(v0: V128) -> I32 = "i16x8.extract_lane_u 3"
+builtin ct_vector_host_253(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 3"
+builtin ct_vector_host_254(v0: V128) -> I32 = "i16x8.extract_lane_s 4"
+builtin ct_vector_host_255(v0: V128) -> I32 = "i16x8.extract_lane_u 4"
+builtin ct_vector_host_256(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 4"
+builtin ct_vector_host_257(v0: V128) -> I32 = "i16x8.extract_lane_s 5"
+builtin ct_vector_host_258(v0: V128) -> I32 = "i16x8.extract_lane_u 5"
+builtin ct_vector_host_259(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 5"
+builtin ct_vector_host_260(v0: V128) -> I32 = "i16x8.extract_lane_s 6"
+builtin ct_vector_host_261(v0: V128) -> I32 = "i16x8.extract_lane_u 6"
+builtin ct_vector_host_262(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 6"
+builtin ct_vector_host_263(v0: V128) -> I32 = "i16x8.extract_lane_s 7"
+builtin ct_vector_host_264(v0: V128) -> I32 = "i16x8.extract_lane_u 7"
+builtin ct_vector_host_265(v0: V128, v1: I32) -> V128 = "i16x8.replace_lane 7"
+builtin ct_vector_host_266(v0: V128) -> I32 = "i32x4.extract_lane 0"
+builtin ct_vector_host_267(v0: V128, v1: I32) -> V128 = "i32x4.replace_lane 0"
+builtin ct_vector_host_268(v0: V128) -> I32 = "i32x4.extract_lane 1"
+builtin ct_vector_host_269(v0: V128, v1: I32) -> V128 = "i32x4.replace_lane 1"
+builtin ct_vector_host_270(v0: V128) -> I32 = "i32x4.extract_lane 2"
+builtin ct_vector_host_271(v0: V128, v1: I32) -> V128 = "i32x4.replace_lane 2"
+builtin ct_vector_host_272(v0: V128) -> I32 = "i32x4.extract_lane 3"
+builtin ct_vector_host_273(v0: V128, v1: I32) -> V128 = "i32x4.replace_lane 3"
+builtin ct_vector_host_274(v0: V128) -> I64 = "i64x2.extract_lane 0"
+builtin ct_vector_host_275(v0: V128, v1: I64) -> V128 = "i64x2.replace_lane 0"
+builtin ct_vector_host_276(v0: V128) -> I64 = "i64x2.extract_lane 1"
+builtin ct_vector_host_277(v0: V128, v1: I64) -> V128 = "i64x2.replace_lane 1"
+builtin ct_vector_host_278(v0: V128) -> F32 = "f32x4.extract_lane 0"
+builtin ct_vector_host_279(v0: V128, v1: F32) -> V128 = "f32x4.replace_lane 0"
+builtin ct_vector_host_280(v0: V128) -> F32 = "f32x4.extract_lane 1"
+builtin ct_vector_host_281(v0: V128, v1: F32) -> V128 = "f32x4.replace_lane 1"
+builtin ct_vector_host_282(v0: V128) -> F32 = "f32x4.extract_lane 2"
+builtin ct_vector_host_283(v0: V128, v1: F32) -> V128 = "f32x4.replace_lane 2"
+builtin ct_vector_host_284(v0: V128) -> F32 = "f32x4.extract_lane 3"
+builtin ct_vector_host_285(v0: V128, v1: F32) -> V128 = "f32x4.replace_lane 3"
+builtin ct_vector_host_286(v0: V128) -> F64 = "f64x2.extract_lane 0"
+builtin ct_vector_host_287(v0: V128, v1: F64) -> V128 = "f64x2.replace_lane 0"
+builtin ct_vector_host_288(v0: V128) -> F64 = "f64x2.extract_lane 1"
+builtin ct_vector_host_289(v0: V128, v1: F64) -> V128 = "f64x2.replace_lane 1"
+builtin ct_vector_host_290(v0: V128, v1: V128) -> V128 = "v128.and"
+builtin ct_vector_host_291(v0: V128, v1: V128) -> V128 = "v128.or"
+builtin ct_vector_host_292(v0: V128, v1: V128) -> V128 = "v128.xor"
+fn ct_vector_opcode(opcode: String) -> Bool {
+  opcode.starts_with("v128.") || opcode.starts_with("i8x16.") || opcode.starts_with("i16x8.") || opcode.starts_with("i32x4.") || opcode.starts_with("i64x2.") || opcode.starts_with("f32x4.") || opcode.starts_with("f64x2.")
+}
+fn ct_vector_intrinsic(machine: CtMachine, opcode: String, args: Array<CtValue>) -> CtValue {
+  match opcode {
+    "v128.not" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_0(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "v128.andnot" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_1(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "v128.bitselect" => {
+      if args.length() != 3u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_2(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]), ct_vector_host_value(machine, args[2u32]))
+      ct_vector_host_result(result)
+    }
+    "v128.any_true" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_3(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.splat" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_4(u64_into_i32(ct_raw_bits(machine, args[0u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.splat" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_5(u64_into_i32(ct_raw_bits(machine, args[0u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.splat" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_6(u64_into_i32(ct_raw_bits(machine, args[0u32])))
+      ct_vector_host_result(result)
+    }
+    "i64x2.splat" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_7(u64_into_i64(ct_raw_bits(machine, args[0u32])))
+      ct_vector_host_result(result)
+    }
+    "f32x4.splat" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_8(ct_float_f32(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.splat" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_9(ct_float_f64(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.add" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_10(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.sub" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_11(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.min_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_12(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.min_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_13(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.max_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_14(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.max_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_15(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.avgr_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_16(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.add_sat_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_17(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.add_sat_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_18(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.sub_sat_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_19(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.sub_sat_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_20(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.eq" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_21(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.ne" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_22(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.lt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_23(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.lt_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_24(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.le_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_25(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.le_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_26(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.gt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_27(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.gt_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_28(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.ge_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_29(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.ge_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_30(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.abs" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_31(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.neg" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_32(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.popcnt" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_33(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.all_true" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_34(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.bitmask" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_35(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.shl" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_36(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.shr_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_37(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.shr_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_38(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.add" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_39(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.sub" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_40(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.mul" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_41(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.min_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_42(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.min_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_43(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.max_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_44(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.max_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_45(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.avgr_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_46(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.add_sat_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_47(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.add_sat_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_48(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.sub_sat_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_49(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.sub_sat_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_50(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.eq" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_51(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.ne" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_52(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.lt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_53(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.lt_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_54(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.le_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_55(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.le_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_56(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.gt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_57(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.gt_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_58(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.ge_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_59(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.ge_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_60(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.abs" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_61(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.neg" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_62(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.all_true" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_63(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.bitmask" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_64(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.shl" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_65(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.shr_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_66(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.shr_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_67(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.add" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_68(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.sub" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_69(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.mul" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_70(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.min_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_71(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.min_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_72(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.max_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_73(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.max_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_74(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.eq" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_75(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.ne" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_76(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.lt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_77(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.lt_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_78(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.le_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_79(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.le_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_80(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.gt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_81(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.gt_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_82(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.ge_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_83(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.ge_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_84(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.abs" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_85(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.neg" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_86(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.all_true" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_87(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i32x4.bitmask" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_88(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i32x4.shl" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_89(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.shr_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_90(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.shr_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_91(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i64x2.add" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_92(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.sub" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_93(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.mul" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_94(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.eq" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_95(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.ne" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_96(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.lt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_97(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.le_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_98(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.gt_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_99(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.ge_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_100(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.abs" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_101(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.neg" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_102(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.all_true" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_103(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i64x2.bitmask" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_104(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i64x2.shl" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_105(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i64x2.shr_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_106(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i64x2.shr_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_107(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "f32x4.add" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_108(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.sub" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_109(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.mul" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_110(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.div" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_111(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.min" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_112(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.max" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_113(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.pmin" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_114(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.pmax" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_115(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.eq" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_116(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.ne" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_117(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.lt" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_118(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.le" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_119(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.gt" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_120(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.ge" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_121(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.abs" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_122(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.neg" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_123(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.sqrt" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_124(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.ceil" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_125(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.floor" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_126(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.trunc" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_127(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.nearest" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_128(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f64x2.add" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_129(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.sub" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_130(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.mul" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_131(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.div" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_132(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.min" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_133(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.max" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_134(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.pmin" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_135(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.pmax" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_136(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.eq" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_137(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.ne" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_138(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.lt" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_139(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.le" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_140(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.gt" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_141(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.ge" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_142(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.abs" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_143(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.neg" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_144(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.sqrt" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_145(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.ceil" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_146(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.floor" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_147(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.trunc" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_148(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.nearest" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_149(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "i8x16.narrow_i16x8_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_150(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.narrow_i16x8_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_151(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.swizzle" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_152(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.narrow_i32x4_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_153(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.narrow_i32x4_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_154(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extend_low_i8x16_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_155(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extend_high_i8x16_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_156(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extend_low_i8x16_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_157(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extend_high_i8x16_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_158(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extadd_pairwise_i8x16_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_159(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extadd_pairwise_i8x16_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_160(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extmul_low_i8x16_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_161(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extmul_high_i8x16_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_162(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extmul_low_i8x16_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_163(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extmul_high_i8x16_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_164(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extend_low_i16x8_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_165(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extend_high_i16x8_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_166(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extend_low_i16x8_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_167(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extend_high_i16x8_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_168(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extadd_pairwise_i16x8_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_169(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extadd_pairwise_i16x8_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_170(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extmul_low_i16x8_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_171(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extmul_high_i16x8_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_172(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extmul_low_i16x8_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_173(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extmul_high_i16x8_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_174(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.dot_i16x8_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_175(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extend_low_i32x4_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_176(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extend_high_i32x4_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_177(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extend_low_i32x4_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_178(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extend_high_i32x4_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_179(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extmul_low_i32x4_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_180(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extmul_high_i32x4_s" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_181(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extmul_low_i32x4_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_182(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extmul_high_i32x4_u" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_183(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.convert_i32x4_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_184(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.convert_i32x4_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_185(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f32x4.demote_f64x2_zero" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_186(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 32u32)
+    }
+    "f64x2.convert_low_i32x4_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_187(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.convert_low_i32x4_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_188(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "f64x2.promote_low_f32x4" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_189(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_canonical_float(result, 64u32)
+    }
+    "i32x4.trunc_sat_f32x4_s" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_190(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.trunc_sat_f32x4_u" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_191(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.trunc_sat_f64x2_s_zero" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_192(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i32x4.trunc_sat_f64x2_u_zero" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_193(ct_vector_host_value(machine, args[0u32]))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_194(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_195(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 0" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_196(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_197(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_198(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 1" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_199(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 2" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_200(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 2" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_201(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 2" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_202(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 3" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_203(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 3" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_204(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 3" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_205(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 4" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_206(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 4" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_207(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 4" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_208(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 5" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_209(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 5" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_210(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 5" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_211(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 6" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_212(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 6" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_213(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 6" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_214(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 7" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_215(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 7" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_216(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 7" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_217(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 8" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_218(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 8" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_219(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 8" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_220(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 9" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_221(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 9" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_222(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 9" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_223(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 10" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_224(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 10" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_225(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 10" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_226(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 11" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_227(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 11" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_228(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 11" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_229(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 12" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_230(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 12" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_231(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 12" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_232(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 13" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_233(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 13" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_234(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 13" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_235(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 14" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_236(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 14" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_237(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 14" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_238(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i8x16.extract_lane_s 15" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_239(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.extract_lane_u 15" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_240(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i8x16.replace_lane 15" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_241(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_242(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_243(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 0" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_244(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_245(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_246(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 1" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_247(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 2" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_248(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 2" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_249(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 2" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_250(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 3" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_251(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 3" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_252(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 3" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_253(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 4" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_254(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 4" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_255(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 4" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_256(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 5" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_257(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 5" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_258(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 5" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_259(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 6" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_260(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 6" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_261(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 6" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_262(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i16x8.extract_lane_s 7" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_263(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.extract_lane_u 7" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_264(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i16x8.replace_lane 7" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_265(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extract_lane 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_266(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i32x4.replace_lane 0" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_267(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extract_lane 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_268(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i32x4.replace_lane 1" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_269(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extract_lane 2" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_270(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i32x4.replace_lane 2" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_271(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i32x4.extract_lane 3" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_272(ct_vector_host_value(machine, args[0u32]))
+      ct_number(u32_into_u64(i32_into_u32(result)), "I32")
+    }
+    "i32x4.replace_lane 3" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_273(ct_vector_host_value(machine, args[0u32]), u64_into_i32(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extract_lane 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_274(ct_vector_host_value(machine, args[0u32]))
+      ct_number(i64_into_u64(result), "I64")
+    }
+    "i64x2.replace_lane 0" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_275(ct_vector_host_value(machine, args[0u32]), u64_into_i64(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "i64x2.extract_lane 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_276(ct_vector_host_value(machine, args[0u32]))
+      ct_number(i64_into_u64(result), "I64")
+    }
+    "i64x2.replace_lane 1" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_277(ct_vector_host_value(machine, args[0u32]), u64_into_i64(ct_raw_bits(machine, args[1u32])))
+      ct_vector_host_result(result)
+    }
+    "f32x4.extract_lane 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_278(ct_vector_host_value(machine, args[0u32]))
+      CtValue::Floating(u32_into_u64(wasm_f32_to_bits(result)), "F32")
+    }
+    "f32x4.replace_lane 0" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_279(ct_vector_host_value(machine, args[0u32]), ct_float_f32(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.extract_lane 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_280(ct_vector_host_value(machine, args[0u32]))
+      CtValue::Floating(u32_into_u64(wasm_f32_to_bits(result)), "F32")
+    }
+    "f32x4.replace_lane 1" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_281(ct_vector_host_value(machine, args[0u32]), ct_float_f32(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.extract_lane 2" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_282(ct_vector_host_value(machine, args[0u32]))
+      CtValue::Floating(u32_into_u64(wasm_f32_to_bits(result)), "F32")
+    }
+    "f32x4.replace_lane 2" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_283(ct_vector_host_value(machine, args[0u32]), ct_float_f32(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f32x4.extract_lane 3" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_284(ct_vector_host_value(machine, args[0u32]))
+      CtValue::Floating(u32_into_u64(wasm_f32_to_bits(result)), "F32")
+    }
+    "f32x4.replace_lane 3" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_285(ct_vector_host_value(machine, args[0u32]), ct_float_f32(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.extract_lane 0" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_286(ct_vector_host_value(machine, args[0u32]))
+      CtValue::Floating(wasm_f64_to_bits(result), "F64")
+    }
+    "f64x2.replace_lane 0" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_287(ct_vector_host_value(machine, args[0u32]), ct_float_f64(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "f64x2.extract_lane 1" => {
+      if args.length() != 1u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_288(ct_vector_host_value(machine, args[0u32]))
+      CtValue::Floating(wasm_f64_to_bits(result), "F64")
+    }
+    "f64x2.replace_lane 1" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_289(ct_vector_host_value(machine, args[0u32]), ct_float_f64(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "v128.and" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_290(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "v128.or" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_291(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    "v128.xor" => {
+      if args.length() != 2u32 {
+        return ct_fail(machine, "Wasm vector intrinsic argument count mismatch")
+      }
+      let result = ct_vector_host_292(ct_vector_host_value(machine, args[0u32]), ct_vector_host_value(machine, args[1u32]))
+      ct_vector_host_result(result)
+    }
+    _ => {
+      if opcode.starts_with("i8x16.shuffle ") && args.length() == 2u32 {
+        let lanes = array_new::<String>()
+        let mut start = 14u32
+        let _ = while start {
+          index if index <= opcode.byte_length() => {
+            if index == opcode.byte_length() || opcode.byte_at(index) == 32u8 {
+              lanes.push(opcode.slice(start, index))
+              start = index + 1u32
+            }
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+        if lanes.length() != 16u32 {
+          return ct_fail(machine, "invalid Wasm vector shuffle")
+        }
+        let mut result = CtValue::Vector(0u64, 0u64)
+        let _ = while 0u32 {
+          lane if lane < 16u32 => {
+            match ct_raw_immediate("lane ".concat(lanes[lane]), "lane ") {
+              Some(selected) if selected < 32u32 => {
+                let source = if selected < 16u32 {
+                  args[0u32]
+                } else {
+                  args[1u32]
+                }
+                result = ct_vector_replace(machine, result, lane, ct_vector_byte(machine, source, selected % 16u32))
+              }
+              _ => return ct_fail(machine, "invalid Wasm vector shuffle lane")
+            }
+            continue lane + 1u32
+          }
+          _ => break ()
+        }
+        result
+      } else {
+        ct_fail(machine, "unsupported Wasm vector intrinsic or linear memory access: ".concat(opcode))
+      }
+    }
+  }
+}

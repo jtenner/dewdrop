@@ -53,7 +53,7 @@ builtin ct_host_i64_trunc_f64_u(v0: F64) -> I64 = "i64.trunc_f64_u"
 builtin ct_host_f32_demote_f64(v0: F64) -> F32 = "f32.demote_f64"
 builtin ct_host_f64_promote_f32(v0: F32) -> F64 = "f64.promote_f32"
 fn ct_float_opcode(opcode: String) -> Bool {
-  opcode.starts_with("f32.") || opcode.starts_with("f64.") || opcode.contains(".trunc_f") || opcode.contains(".trunc_sat_f") || opcode == "i32.reinterpret_f32" || opcode == "i64.reinterpret_f64"
+  opcode.starts_with("f32.") || opcode.starts_with("f64.") || ((opcode.starts_with("i32.") || opcode.starts_with("i64.")) && (opcode.contains(".trunc_f") || opcode.contains(".trunc_sat_f"))) || opcode == "i32.reinterpret_f32" || opcode == "i64.reinterpret_f64"
 }
 fn ct_float_f32(machine: CtMachine, value: CtValue) -> F32 {
   match value {

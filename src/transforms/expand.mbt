@@ -44,13 +44,14 @@ fn Machine::render(
   guard value is Variant(key, args) && key.has_prefix("dewdrop.ast::ExprNode::") else {
     raise Failed("transform returned an invalid ExprNode")
   }
-  let args = if args.any(fn(value) { value is TextReference(_) }) {
+  let args = if key != "dewdrop.ast::ExprNode::Bytes" && args.any(fn(value) { value is TextReference(_) }) {
     args.map(fn(value) { if value is TextReference(_) { Text(self.string(value)) } else { value } })
   } else {
     args
   }
   let rendered = match (key, args[:]) {
     ("dewdrop.ast::ExprNode::Source", [Text(source)]) => source
+    ("dewdrop.ast::ExprNode::Bytes", [value]) => self.render_bytes(value)
     ("dewdrop.ast::ExprNode::Quote", [parts, splices]) =>
       self.render_quote(parts, splices, depth)
     ("dewdrop.ast::ExprNode::Unit", []) => "()"

@@ -72,6 +72,9 @@ fn ct_render_list(machine: CtMachine, values: Array<CtValue>, separator: String,
 fn ct_render_inner(machine: CtMachine, value: CtValue, depth: U32) -> String {
   match value {
     Variant(key, args) => {
+      if key == "dewdrop.ast::ExprNode::Bytes" && args.length() == 1u32 {
+        return ct_render_bytes(machine, args[0u32])
+      }
       if key == "dewdrop.ast::ExprNode::Unit" && args.length() == 0u32 {
         return "()"
       }

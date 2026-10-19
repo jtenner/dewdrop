@@ -260,7 +260,7 @@ fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_
     pattern_proofs: map_empty::<String, String>()
     calls: map_empty::<String, CtCallTarget>()
     scalar_types: map_empty::<String, String>()
-    references: map_empty::<String, CtCallTarget>()
+    references: map_empty::<String, CtFunctionReferenceProof>()
     array_literals: map_empty::<String, CtArrayLayout>()
     array_layouts: map_empty::<String, CtArrayLayout>()
     reports: []

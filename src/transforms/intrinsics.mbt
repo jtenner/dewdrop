@@ -76,9 +76,10 @@ fn Machine::intrinsic(
   if float_opcode(opcode) {
     return float_intrinsic(opcode, args)
   }
-  if opcode.has_prefix("i8x16.") ||
-    opcode.has_prefix("i64x2.") ||
-    ["v128.bitselect", "v128.or", "v128.and", "v128.xor"].contains(opcode) {
+  if scalar_bit_opcode(opcode) {
+    return scalar_bit_intrinsic(opcode, args)
+  }
+  if vector_opcode(opcode) {
     return vector_intrinsic(opcode, args)
   }
   if raw_immediate(opcode, "struct.get ") is Some(index) && args.length() == 1 {

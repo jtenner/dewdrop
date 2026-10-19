@@ -18,10 +18,11 @@ fn ct_reference_equal(machine: CtMachine, left: CtValue, right: CtValue) -> CtVa
     (RawArray(left), RawArray(right)) => CtValue::Boolean(ct_raw_storage_identity(left, right))
     (TextChunks(left, _), TextChunks(right, _)) => CtValue::Boolean(ct_reference_identity(left, right))
     (Record(_, left), Record(_, right)) => CtValue::Boolean(ct_binding_storage_identity(left, right))
-    (Text(_), Text(_)) => CtValue::Boolean(ct_reference_identity(left, right))
+    (Text(_), Text(_)), (ByteText(_), ByteText(_)) => CtValue::Boolean(ct_reference_identity(left, right))
     (Variant(_, left), Variant(_, right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
     (Sequence(left), Sequence(right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
-    (Function(_, _), Function(_, _)), (Closure(_, _, _, _, _), Closure(_, _, _, _, _)) => CtValue::Boolean(ct_reference_identity(left, right))
+    (Function(_, _, left_identity), Function(_, _, right_identity)) => CtValue::Boolean(ct_reference_identity(left, right) || ct_function_identity_equal(machine, left_identity, right_identity))
+    (Closure(_, _, _, _, _), Closure(_, _, _, _, _)) => CtValue::Boolean(ct_reference_identity(left, right))
     (Floating(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")
     (_, Floating(_, _)) => ct_fail(machine, "Wasm reference identity requires references")
     (Number(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")
@@ -115,7 +116,7 @@ fn ct_reference_base(value: CtValue) -> CtValue {
 
 fn ct_reference_storage(machine: CtMachine, value: CtValue) -> Array<String> {
   match ct_reference_base(value) {
-    Text(_) => ["array:v128", "i32", "i32"]
+    Text(_), ByteText(_) => ["array:v128", "i32", "i32"]
     Record(key, _) => match machine.plan.raw_layouts.get(key) {
       Some(layout) => layout.storage
       None => {
@@ -185,6 +186,12 @@ fn ct_reference_cast(machine: CtMachine, value: CtValue, kind: String) -> CtValu
 fn ct_raw_struct_get(machine: CtMachine, value: CtValue, index: U32) -> CtValue {
   let original = ct_reference_base(value)
   match original {
+    ByteText(content) => match index {
+      0u32 => CtValue::TextChunks(original, content)
+      1u32 => ct_number(0u64, "U32")
+      2u32 => ct_number(u32_into_u64(content.byte_length()), "U32")
+      _ => ct_fail(machine, "Wasm struct field out of bounds at compile time")
+    }
     Text(content) => match index {
       0u32 => CtValue::TextChunks(original, content.as_bytes())
       1u32 => ct_number(0u64, "U32")

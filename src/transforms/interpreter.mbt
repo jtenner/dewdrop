@@ -12,10 +12,11 @@ enum Value {
   Number(UInt64, String)
   Boolean(Bool)
   Text(String)
+  ByteText(Bytes)
   Sequence(Array[Value])
   Record(String, Map[String, Value])
   Variant(String, Array[Value])
-  Function(CallTarget, Array[Value])
+  Function(CallTarget, Array[Value], FunctionIdentity)
   Closure(
     Int32,
     Int32,
@@ -584,6 +585,10 @@ fn Machine::eval_inner(
           )
       }
       Text(decoded)
+    }
+    @parser.BytesExpr(value, _) => {
+      self.charge(value.length())
+      ByteText(value)
     }
     @parser.NameExpr(name, _) =>
       match env.get(name) {

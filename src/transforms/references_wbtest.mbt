@@ -73,9 +73,9 @@ test "text backing lookup keeps linear work and tuple identity" {
 
 ///|
 test "function and closure reference identity uses the stored instance" {
-  let function = Function(Unsupported, [])
+  let function = Function(Unsupported, [], FunctionInstance)
   assert_true(reference_equal(function, function))
-  assert_false(reference_equal(function, Function(Unsupported, [])))
+  assert_false(reference_equal(function, Function(Unsupported, [], FunctionInstance)))
   let body = syntax_test_body("0i32")
   let closure = Closure(0, 0, [], body, {})
   assert_true(reference_equal(closure, closure))
@@ -83,4 +83,21 @@ test "function and closure reference identity uses the stored instance" {
   assert_false(reference_equal(function, closure))
   assert_false(reference_is_null(function))
   assert_false(reference_is_null(closure))
+}
+
+///|
+test "checked named functions use declaration singletons and defer generic ABI identity" {
+  let first = Function(Unsupported, [], FunctionSingleton(123UL))
+  let second = Function(Unsupported, [], FunctionSingleton(123UL))
+  assert_true(reference_equal(first, second))
+  assert_false(reference_equal(first, Function(Unsupported, [], FunctionSingleton(124UL))))
+  let generic = Function(Unsupported, [], GenericFunctionSingleton(125UL))
+  assert_true(reference_equal(generic, generic))
+  try {
+    let _ = reference_equal(generic, Function(Unsupported, [], GenericFunctionSingleton(125UL)))
+    fail("different generic reference expressions need exact ABI identity")
+  } catch {
+    Failed(message) => assert_true(message.contains("checked ABI identity"))
+    _ => fail("unexpected generic function identity error")
+  }
 }

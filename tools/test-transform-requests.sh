@@ -6,7 +6,8 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants repeated_imports generated_imports quotes nested_quotes syntax_tree arguments floats strings overloads nulls type_queries typed_reflection typed_repair typed_generics; do
+read -r -a examples <<< "${DEW_TRANSFORM_EXAMPLES-local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants repeated_imports generated_imports quotes nested_quotes syntax_tree arguments floats strings overloads nulls type_queries typed_reflection typed_repair typed_generics bytes vectors}"
+for kind in "${examples[@]}"; do
   args=("examples/transforms/$kind.dew")
   if [[ "$kind" == imported || "$kind" == imported_methods || "$kind" == repeated_imports || "$kind" == generated_imports ]]; then
     args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)
@@ -286,7 +287,8 @@ pub fn main() -> I32 {
 }
 DEW
 
-for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias mutable-global foo-u32 foo-handle bad-is-null-result bad-is-null-unit generic-hidden-result; do
+read -r -a rejections <<< "${DEW_TRANSFORM_REJECTIONS-bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias mutable-global foo-u32 foo-handle bad-is-null-result bad-is-null-unit generic-hidden-result}"
+for kind in "${rejections[@]}"; do
   expected='invalid transform signature'
   if [[ "$kind" == foo-u32 || "$kind" == foo-handle ]]; then
     expected='null reference'

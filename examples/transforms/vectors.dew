@@ -1,0 +1,32 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+builtin lanes(value: I32) -> V128 = "i32x4.splat"
+builtin add(left: V128, right: V128) -> V128 = "i32x4.add"
+builtin first(value: V128) -> I32 = "i32x4.extract_lane 0"
+builtin narrow(low: V128, high: V128) -> V128 = "i16x8.narrow_i32x4_s"
+builtin first_short(value: V128) -> I32 = "i16x8.extract_lane_s 0"
+builtin convert(value: V128) -> V128 = "f64x2.convert_low_i32x4_s"
+builtin first_float(value: V128) -> F64 = "f64x2.extract_lane 0"
+builtin truncate(value: V128) -> V128 = "i32x4.trunc_sat_f64x2_s_zero"
+builtin leading_zeros(value: I32) -> I32 = "i32.clz"
+builtin rotate(value: I32, count: I32) -> I32 = "i32.rotl"
+
+fn twice(value: V128) -> V128 {
+  add(value, value)
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let answer = first(twice(lanes(21i32)))
+  let valid = first_short(narrow(lanes(40000i32), lanes(0i32))) == 32767i32 && first_float(convert(lanes(answer))) == 42.0f64 && first(truncate(convert(lanes(answer)))) == 42i32 && leading_zeros(0i32) == 32i32 && rotate(1i32, 42i32) == 1024i32
+  node.with_body(@ast.integer(if valid {
+    answer
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

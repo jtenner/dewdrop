@@ -2,8 +2,8 @@
 fn float_opcode(opcode : String) -> Bool {
   opcode.has_prefix("f32.") ||
   opcode.has_prefix("f64.") ||
-  opcode.contains(".trunc_f") ||
-  opcode.contains(".trunc_sat_f") ||
+  ((opcode.has_prefix("i32.") || opcode.has_prefix("i64.")) &&
+    (opcode.contains(".trunc_f") || opcode.contains(".trunc_sat_f"))) ||
   opcode == "i32.reinterpret_f32" ||
   opcode == "i64.reinterpret_f64"
 }

@@ -1,0 +1,38 @@
+pub enum CtFunctionIdentity {
+  FunctionInstance
+  FunctionSingleton(U64)
+  GenericFunctionSingleton(U64)
+}
+
+pub struct CtFunctionReferenceProof {
+  target: CtCallTarget
+  identity: CtFunctionIdentity
+}
+
+fn ct_function_identity_equal(machine: CtMachine, left: CtFunctionIdentity, right: CtFunctionIdentity) -> Bool {
+  match (left, right) {
+    (FunctionSingleton(left), FunctionSingleton(right)) => left == right
+    (GenericFunctionSingleton(left), GenericFunctionSingleton(right)) => {
+      if left == right {
+        let _ = ct_fail(machine, "generic function reference identity needs a checked ABI identity")
+      }
+      false
+    }
+    _ => false
+  }
+}
+
+fn ct_checked_function_identity(lowering: SelfHostPlannedProgramLowering, selected: U64) -> CtFunctionIdentity {
+  match self_host_program_specialization_program_callable(lowering, selected) {
+    Some(callable) => {
+      if callable.has_receiver {
+        return CtFunctionIdentity::FunctionInstance
+      }
+      if callable.generic_parameters.length != 0u32 || callable.owner_generic_parameters.length != 0u32 {
+        return CtFunctionIdentity::GenericFunctionSingleton(selected)
+      }
+      CtFunctionIdentity::FunctionSingleton(selected)
+    }
+    None => CtFunctionIdentity::FunctionInstance
+  }
+}

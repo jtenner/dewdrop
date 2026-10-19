@@ -92,9 +92,9 @@ test "tuple references retain storage identity" {
 
 test "function and closure reference identity uses the stored instance" {
   let machine = ct_machine(ct_test_plan(b""))
-  let function = CtValue::Function(CtCallTarget::Unsupported, [])
+  let function = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionInstance)
   assert(ct_truth(machine, ct_reference_equal(machine, function, function)), "stored function aliases have one identity")
-  assert(!ct_truth(machine, ct_reference_equal(machine, function, CtValue::Function(CtCallTarget::Unsupported, []))), "separate function instances have separate identities")
+  assert(!ct_truth(machine, ct_reference_equal(machine, function, CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionInstance))), "separate function instances have separate identities")
   let body = SelfHostBlock::{
     items: []
     offset: 0u32
@@ -105,6 +105,19 @@ test "function and closure reference identity uses the stored instance" {
   assert(!ct_truth(machine, ct_reference_equal(machine, function, closure)), "different function kinds have separate identities")
   assert(!ct_reference_null_test(machine, function), "function reference is non-null")
   assert(machine.error.byte_length() == 0u32, "valid function checks have no error")
+}
+
+test "checked named functions use declaration singletons and defer generic ABI identity" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let first = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSingleton(123u64))
+  let second = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSingleton(123u64))
+  assert(ct_truth(machine, ct_reference_equal(machine, first, second)), "same checked declaration has one singleton")
+  assert(!ct_truth(machine, ct_reference_equal(machine, first, CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSingleton(124u64)))), "different declarations have different singletons")
+  let generic = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::GenericFunctionSingleton(125u64))
+  assert(ct_truth(machine, ct_reference_equal(machine, generic, generic)), "physical alias succeeds before generic deferral")
+  assert(machine.error.byte_length() == 0u32, "alias checks remain supported")
+  let _ = ct_reference_equal(machine, generic, CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::GenericFunctionSingleton(125u64)))
+  assert(machine.error.contains("checked ABI identity"), "generic identity does not guess specialization equality")
 }
 
 test "null tests require a proved reference for tuple values" {

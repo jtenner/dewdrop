@@ -21,7 +21,7 @@ The existing Dew emission generator checks that the two Native tables match this
 
 The generated runtime fixture calls every instruction directly and through a function value. It tests concrete results. Saturating signed conversions use the exact upper bound and require the signed maximum; unsigned cases clamp a negative value to zero. The runtime source and test source are separate so the same runtime source is valid in a public non-test request.
 
-Thirteen integer operations still lack compile-time interpreter support: clz/ctz/popcnt in both widths, rotl/rotr in both widths, and the three I64 sign extensions. Those paths keep visible unsupported-instruction errors. This backend fix does not change the VM. Float min/max/copysign and saturating conversion execution already existed in the VM; they now have complete backend contracts and emission.
+At this backend checkpoint, thirteen integer operations still lacked interpreter support. The later byte/vector checkpoint adds clz/ctz/popcnt in both widths, rotl/rotr in both widths, and the three I64 sign extensions to both VMs. See `transform-byte-vector-execution-2026-10-19.md` for its tests. Float min/max/copysign and saturating conversion execution already existed in the VM; they now have complete backend contracts and emission.
 
 ## Reproduce
 

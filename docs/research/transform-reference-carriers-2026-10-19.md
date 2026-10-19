@@ -18,7 +18,7 @@ An executed null test on a Sequence value without a checked reference wrapper fa
 
 The intrinsic entry helper expands explicit Product parameter syntax in field order. It recurses for nested products. Generic and reference parameter types keep their original values. Calls without a Product parameter return the original argument array, with no new array allocation. Product expansion needs one output array and linear work in its fields. This change does not add resolved shape metadata for aliases or generic arguments; those remain subject to the existing visible unsupported-operation checks.
 
-Function and Closure identity use the stored VM object's identity. A stored alias compares true. Separate VM instances compare false, even when their targets or captures have equal data. The change does not compare function names or source text.
+Stored function and closure aliases compare true. Follow-up runtime controls found that two expressions for one named function also share a runtime singleton. Checked non-generic named functions now carry their semantic declaration identity; see `transform-function-identity-2026-10-19.md`. Fresh closures retain instance identity. Function names and source text do not establish identity.
 
 ## Validation
 

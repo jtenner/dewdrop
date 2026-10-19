@@ -48,7 +48,7 @@ pub struct Plan {
   scalar_proofs : Map[(Int32, Int32, Int32), Bytes]
   pattern_proofs : Map[(Int32, Int32, Int32), String]
   type_names : Map[(Int32, String), String]
-  references : Map[(Int32, Int32, Int32), CallTarget]
+  references : Map[(Int32, Int32, Int32), FunctionReferenceProof]
   calls : Map[(Int32, Int32, Int32), CallTarget]
   scalar_types : Map[(Int32, Int32, Int32), String]
   array_literals : Map[(Int32, Int32, Int32), (String, Array[String])]

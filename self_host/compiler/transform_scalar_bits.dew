@@ -1,0 +1,77 @@
+fn ct_scalar_bit_opcode(opcode: String) -> Bool {
+  opcode == "i32.clz" || opcode == "i64.clz" || opcode == "i32.ctz" || opcode == "i64.ctz" || opcode == "i32.popcnt" || opcode == "i64.popcnt" || opcode == "i32.rotl" || opcode == "i64.rotl" || opcode == "i32.rotr" || opcode == "i64.rotr" || opcode == "i64.extend8_s" || opcode == "i64.extend16_s" || opcode == "i64.extend32_s"
+}
+fn ct_scalar_bit_intrinsic(machine: CtMachine, opcode: String, args: Array<CtValue>) -> CtValue {
+  let width = if opcode.starts_with("i32.") {
+    32u64
+  } else {
+    64u64
+  }
+  let kind = if width == 32u64 {
+    "I32"
+  } else {
+    "I64"
+  }
+  let rotate = opcode.ends_with(".rotl") || opcode.ends_with(".rotr")
+  let count = if rotate {
+    2u32
+  } else {
+    1u32
+  }
+  if args.length() != count {
+    return ct_fail(machine, "Wasm integer intrinsic argument count mismatch")
+  }
+  let mask = if width == 32u64 {
+    4294967295u64
+  } else {
+    18446744073709551615u64
+  }
+  let bits = ct_raw_bits(machine, args[0u32]) & mask
+  if opcode.starts_with("i64.extend") {
+    let shift = if opcode == "i64.extend8_s" {
+      56u64
+    } else if opcode == "i64.extend16_s" {
+      48u64
+    } else {
+      32u64
+    }
+    return ct_number(i64_into_u64((u64_into_i64(bits) << u64_into_i64(shift)) >> u64_into_i64(shift)), kind)
+  }
+  if rotate {
+    let shift = ct_raw_bits(machine, args[1u32]) & (width - 1u64)
+    if shift == 0u64 {
+      return ct_number(bits, kind)
+    }
+    let result = if opcode.ends_with(".rotl") {
+      (bits << shift) | (bits >> (width - shift))
+    } else {
+      (bits >> shift) | (bits << (width - shift))
+    }
+    return ct_number(result & mask, kind)
+  }
+  if bits == 0u64 {
+    return ct_number(if opcode.ends_with(".popcnt") {
+      0u64
+    } else {
+      width
+    }, kind)
+  }
+  let count = if opcode.ends_with(".popcnt") {
+    while (bits, 0u64) {
+      (remaining, count) if remaining != 0u64 => continue (remaining & (remaining - 1u64), count + 1u64)
+      (_, count) => break count
+    }
+  } else if opcode.ends_with(".ctz") {
+    while (bits, 0u64) {
+      (remaining, count) if (remaining & 1u64) == 0u64 => continue (remaining >> 1u64, count + 1u64)
+      (_, count) => break count
+    }
+  } else {
+    let top = 1u64 << (width - 1u64)
+    while (bits, 0u64) {
+      (remaining, count) if (remaining & top) == 0u64 => continue (remaining << 1u64, count + 1u64)
+      (_, count) => break count
+    }
+  }
+  ct_number(count, kind)
+}

@@ -853,6 +853,7 @@ type CompileTimeBindingKey derive(Eq, Hash, @debug.Debug)
 pub struct CompileTimeCall {
   reference : Bool
   constant : CompileTimeTransformConstant?
+  function_identity : CompileTimeFunctionIdentity?
   module_index : Int
   file : UInt64
   offset : UInt64
@@ -876,6 +877,11 @@ pub struct CompileTimeExpressionType {
   kind : String
   type_ : CompileTimeReflectedType
 } derive(Eq, @debug.Debug)
+
+pub struct CompileTimeFunctionIdentity {
+  declaration : UInt64
+  generic_function : Bool
+}
 
 pub struct CompileTimeLambdaLayout {
   closure_types : Array[Int]
