@@ -140,6 +140,8 @@ work. Runnable examples are in `examples/transforms/`:
 | `generics.dew` | Generic helper results and typed default values |
 | `defaults.dew` | Deferred zero values inside generic enum payloads |
 | `scalar_values.dew` | Checked values in generic records, options, and tuples |
+| `signature_info.dew` | Structured parameter names and source types |
+| `type_info.dew` | Generic bounds, tuple types, function types, applied types |
 
 ## Context
 
@@ -153,6 +155,18 @@ work. Runnable examples are in `examples/transforms/`:
 Generated bodies have their own logical source files, named from their original
 file and function. Original source line numbers remain stable. A diagnostic in
 generated code shows that generated source and its own line number.
+
+`ctx.parameters` contains `ParameterNode` values with `name` and `type_`.
+`ctx.type_parameters` contains names and structured bounds. `ctx.return_type`
+contains the declared result type. These are source types; aliases retain their
+source names.
+
+A `TypeNode` has `kind`, `name`, and `arguments`. The kinds are `named`,
+`qualified`, `tuple`, `applied`, `function`, and `computed`. Applied types put the
+base first, then type arguments. Function types put the result last. Computed
+types retain their expression text in `name` and their base in `arguments`.
+Type trees have a depth limit of 128. Import `dew.std.array` to index their
+arrays and `dew.std.string` to match their names against string literals.
 
 ## Execution and safety
 
@@ -219,7 +233,6 @@ mise exec wasm-tools@1.262.0 -- tools/test-transform-requests.sh \
 ```
 
 Use `wago` in place of `node-facet` to run the same requests in Wago.
-The test checks local transforms, imported transforms, enum patterns, and direct
-syntax-record construction. It runs all four outputs and checks that each returns `42`.
-It also checks that invalid signatures, extra declarations, and host calls fail
-with a diagnostic and produce no output file.
+The test checks every public example and requires each exported `main` to
+return `42`. It also checks that invalid signatures, extra declarations, unsafe
+operations, and host calls fail with a diagnostic and produce no output file.

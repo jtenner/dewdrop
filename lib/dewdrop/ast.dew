@@ -1,4 +1,5 @@
 open dew.std.array
+open dew.std.wasm.intrinsics
 
 pub enum ExprNode {
   Source(String)
@@ -146,4 +147,38 @@ pub fn block(values: Array<ExprNode>) -> ExprNode {
 
 pub fn prefix(operator: String, value: ExprNode) -> ExprNode {
   ExprNode::Prefix(operator, value)
+}
+
+// Structured source types. Computed types retain their original expression.
+pub struct TypeNode {
+  kind: String
+  name: String
+  arguments: Array<TypeNode>
+}
+
+pub struct ParameterNode {
+  name: String
+  type_: TypeNode
+}
+
+pub struct TypeParameterNode {
+  name: String
+  bounds: Array<TypeNode>
+}
+
+pub fn named_type(name: String) -> TypeNode {
+  TypeNode::{
+    kind: "named"
+    name: name
+    arguments: []
+  }
+}
+
+// The compiler supplies storage through this ordinary library constructor.
+pub fn syntax_array<t>(values: WasmArray<t>, count: U32) -> Array<t> {
+  Array::{
+    backing: values
+    count: count
+    limit: count
+  }
 }

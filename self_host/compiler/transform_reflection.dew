@@ -1,0 +1,101 @@
+fn ct_syntax_values(machine: CtMachine, values: Array<CtValue>) -> CtValue {
+  if !ct_charge(machine, values.length() * 16u32) {
+    return CtValue::Empty
+  }
+  if machine.plan.array_layouts.length() == 0u32 {
+    return CtValue::Sequence(values)
+  }
+  ct_call(machine, "dewdrop.ast::syntax_array", [
+    CtValue::RawArray(CtRawStorage::{
+      values: values
+      default_kind: ""
+    }),
+    CtValue::Number(u32_into_u64(values.length()), "U32"),
+  ])
+}
+
+fn ct_type_node(machine: CtMachine, type_: SelfHostTypeExpr) -> CtValue {
+  ct_type_node_at_depth(machine, type_, 0u32)
+}
+
+fn ct_type_node_at_depth(machine: CtMachine, type_: SelfHostTypeExpr, depth: U32) -> CtValue {
+  if depth >= 128u32 {
+    return ct_fail(machine, "syntax type depth limit exceeded")
+  }
+  if !ct_charge(machine, 64u32) {
+    return CtValue::Empty
+  }
+  let arguments = array_new::<SelfHostTypeExpr>()
+  let mut kind = ""
+  let mut name = ""
+  match type_ {
+    NamedType(value, _) => {
+      kind = "named"
+      name = value
+    }
+    QualifiedType(alias, value, _, _) => {
+      kind = "qualified"
+      name = "@".concat(alias).concat(".").concat(value)
+    }
+    ProductType(values, _) => {
+      kind = "tuple"
+      for value in values {
+        arguments.push(value)
+      }
+    }
+    AppliedType(base, values, _) => {
+      kind = "applied"
+      arguments.push(base)
+      for value in values {
+        arguments.push(value)
+      }
+    }
+    FunctionType(values, result, _) => {
+      kind = "function"
+      for value in values {
+        arguments.push(value)
+      }
+      arguments.push(result)
+    }
+    ComputedType(base, code, _) => {
+      kind = "computed"
+      name = code.to_string()
+      arguments.push(base)
+    }
+  }
+  let children = array_new::<CtValue>()
+  for argument in arguments {
+    children.push(ct_type_node_at_depth(machine, argument, depth + 1u32))
+  }
+  CtValue::Record("dewdrop.ast::TypeNode", [
+    ct_binding("kind", CtValue::Text(kind)),
+    ct_binding("name", CtValue::Text(name)),
+    ct_binding("arguments", ct_syntax_values(machine, children)),
+  ])
+}
+
+fn ct_parameter_nodes(machine: CtMachine, parameters: Array<SelfHostFnParameter>) -> CtValue {
+  let values = array_new::<CtValue>()
+  for parameter in parameters {
+    values.push(CtValue::Record("dewdrop.ast::ParameterNode", [
+      ct_binding("name", CtValue::Text(parameter.name)),
+      ct_binding("type_", ct_type_node(machine, parameter.type_)),
+    ]))
+  }
+  ct_syntax_values(machine, values)
+}
+
+fn ct_type_parameter_nodes(machine: CtMachine, parameters: Array<SelfHostTypeParameter>) -> CtValue {
+  let values = array_new::<CtValue>()
+  for parameter in parameters {
+    let bounds = array_new::<CtValue>()
+    for bound in parameter.bounds {
+      bounds.push(ct_type_node(machine, bound))
+    }
+    values.push(CtValue::Record("dewdrop.ast::TypeParameterNode", [
+      ct_binding("name", CtValue::Text(parameter.name)),
+      ct_binding("bounds", ct_syntax_values(machine, bounds)),
+    ]))
+  }
+  ct_syntax_values(machine, values)
+}

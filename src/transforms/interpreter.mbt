@@ -788,8 +788,6 @@ fn Machine::pattern_inner(
         value is Variant(key, values) && key == constructor && values.is_empty()
       }
     }
-    @parser.LiteralPattern(@parser.StringExpr(_, _), _) =>
-      raise Failed("string patterns are not supported at compile time")
     @parser.LiteralPattern(expr, _) => equal(self.eval(mi, expr, env), value)
     @parser.ProductPattern(patterns, _) => {
       if patterns.is_empty() && (value is Unit || value is DefaultValue) {

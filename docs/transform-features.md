@@ -112,6 +112,10 @@ claims about the current interpreter.
 - [x] Fresh local name supplied by the context.
 - [x] Original file, line, column, function, and module context.
 - [x] Parameter and result source text in the context.
+- [x] Structured parameter nodes.
+- [x] Structured type nodes.
+- [x] Structured generic parameter names and bounds.
+- [x] UTF-8 string literal patterns.
 
 ## Safety, tools, and checks
 
@@ -143,8 +147,6 @@ These need a further language or execution design. They remain open.
 
 - [ ] Parsed expression trees for every original function body.
 - [ ] Typed expression reflection.
-- [ ] Structured parameter nodes.
-- [ ] Structured type nodes.
 - [ ] Signature changes and call-site repair.
 - [ ] New function and type declarations from transforms.
 - [ ] Syntax quotation and splicing.

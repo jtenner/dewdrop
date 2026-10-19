@@ -1,3 +1,6 @@
+import dewdrop.ast as @ast
+open dew.std.array
+
 pub struct SourceLocation {
   file_name: String
   line_no: U32
@@ -8,6 +11,9 @@ pub struct TransformContext {
   location: SourceLocation
   fn_name: String
   module_name: String
+  parameters: Array<@ast.ParameterNode>
+  type_parameters: Array<@ast.TypeParameterNode>
+  return_type: @ast.TypeNode
   parameters_source: String
   return_type_source: String
   fresh_name: String

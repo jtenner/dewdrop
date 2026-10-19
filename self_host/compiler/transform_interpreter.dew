@@ -607,6 +607,7 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
       }
     }
     LiteralPattern(expression, _) => match (ct_eval(machine, mi, expression, env), value) {
+      (Text(a), Text(b)) => a == b
       (Number(number, _), DefaultValue) => number == 0u64
       (Boolean(flag), DefaultValue) => !flag
       (Number(a, kind), other) => match ct_intrinsic_result(machine, other, kind) {

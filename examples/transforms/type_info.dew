@@ -1,0 +1,31 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.string
+open dew.std.array
+
+transform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> Result<@ast.FnNode, @transform.TransformError> {
+  let pair = ctx.parameters[1u32].type_
+  let callback = ctx.parameters[2u32].type_
+  let generic = ctx.type_parameters[0u32]
+  let result = ctx.return_type
+  match (ctx.parameters.length(), generic.name, generic.bounds[0u32].name, pair.kind, callback.kind, result.kind, result.arguments[0u32].name) {
+    (3u32, "t", "Eq", "tuple", "function", "applied", "Option") => Result::Ok(node)
+    _ => Result::Err(@transform.error("wrong structured signature"))
+  }
+}
+
+#inspect
+fn shape<t: Eq>(value: t, pair: (I32, Bool), callback: fn(I32) -> I32) -> Option<I32> {
+  Some(callback(match pair {
+    (number, _) => number
+  }))
+}
+
+pub fn main() -> I32 {
+  match shape(1i32, (42i32, true), fn(value: I32) -> I32 {
+    value
+  }) {
+    Some(value) => value
+    None => 0i32
+  }
+}

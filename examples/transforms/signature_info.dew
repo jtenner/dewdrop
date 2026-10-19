@@ -1,0 +1,22 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.string
+open dew.std.array
+
+transform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let first = ctx.parameters[0u32]
+  let answer = match (first.name, first.type_.kind, first.type_.name, ctx.return_type.name) {
+    ("value", "named", "I32", "I32") => 42i32
+    _ => 0i32
+  }
+  node.with_body(@ast.integer(answer))
+}
+
+#inspect
+pub fn reflected(value: I32) -> I32 {
+  value
+}
+
+pub fn main() -> I32 {
+  reflected(0i32)
+}
