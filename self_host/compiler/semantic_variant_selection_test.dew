@@ -158,6 +158,7 @@ test "variant selection resolves tuple and unit constructors" {
     NoBasicExpressionSelection => assert(false, "tuple variant no selection")
     ErrorBasicExpressionSelection => assert(false, "tuple variant error selection")
     DeferredBasicExpressionSelection => assert(false, "tuple variant deferred selection")
+    ImportedModuleValueBasicExpressionSelection(_) => assert(false, "tuple variant imported value selection")
     FieldBasicExpressionSelection(_, _, _) => assert(false, "tuple variant field selection")
     StructConstructionBasicExpressionSelection(_, _) => assert(false, "tuple variant struct selection")
   }

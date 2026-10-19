@@ -727,12 +727,111 @@ fn self_host_frozen_callable_exported(
   }
 }
 
+fn self_host_frozen_module_requires_value_inference(
+  collected: SelfHostCollectedModule,
+) -> Bool {
+  for declaration in collected.declarations {
+    if declaration.kind is LetDecl && declaration.visibility is Public &&
+      !collected.declaration_is_test_only(declaration.id) {
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_frozen_body_type_to_resolved(
+  importer: SelfHostInterfaceTypeImporter,
+  values: SelfHostInferredModuleValues,
+  type_: I32,
+) -> U32 {
+  match values.type_term(type_) {
+    BodyResolvedType(resolved_type) => resolved_type
+    BodyErrorType => importer.resolved.error_type
+    BodyVariableType(_) => importer.resolved.error_type
+    BodyMemberTypeProjection(owner, operation, selector) => {
+      let owner = self_host_frozen_body_type_to_resolved(importer, values, owner)
+      let result = importer.resolved.types.length()
+      importer.resolved.types.push(MemberTypeProjection(owner, operation, selector))
+      result
+    }
+    term => {
+      let span = match term {
+        BodyProductType(fields) => fields
+        BodyAppliedType(_, arguments) => arguments
+        BodyFunctionType(parameters, _) => parameters
+        _ => {
+          let _ = self_host_assert_compiler_invariant(false, "interface value type must be compound")
+          return importer.resolved.error_type
+        }
+      }
+      let arguments = []
+      let _ = while 0u32 {
+        index => if index < span.length {
+          arguments.push(self_host_frozen_body_type_to_resolved(
+            importer,
+            values,
+            values.type_arguments[span.start + index],
+          ))
+          continue index + 1u32
+        } else {
+          break ()
+        }
+      }
+      match term {
+        BodyProductType(_) => importer.intern_product(arguments)
+        BodyAppliedType(base, _) => importer.intern_applied(
+          self_host_frozen_body_type_to_resolved(importer, values, base),
+          arguments,
+        )
+        BodyFunctionType(_, result) => importer.intern_function(
+          arguments,
+          self_host_frozen_body_type_to_resolved(importer, values, result),
+        )
+        _ => importer.resolved.error_type
+      }
+    }
+  }
+}
+
 fn self_host_freeze_module_signature_interface(
   path: String,
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
 ) -> SelfHostFrozenModuleInterface {
+  let values = if self_host_frozen_module_requires_value_inference(collected) {
+    Some(self_host_infer_module_values(collected, resolved, self_host_resolve_module_names(collected)))
+  } else {
+    None
+  }
+  self_host_freeze_module_signature_interface_with_values(path, collected, resolved, values)
+}
+
+fn self_host_freeze_module_signature_interface_with_values(
+  path: String,
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  values: Option<SelfHostInferredModuleValues>,
+) -> SelfHostFrozenModuleInterface {
   let declarations = []
+  let value_types = self_host_empty_u64_u32_map()
+  match values {
+    Some(inferred) => {
+      let importer = SelfHostInterfaceTypeImporter::new(resolved, SelfHostFrozenInterfaceList::new())
+      let _ = while 0u32 {
+        index => if index < inferred.let_declarations.length() {
+          value_types.set(inferred.let_declarations[index], self_host_frozen_body_type_to_resolved(
+            importer,
+            inferred,
+            inferred.let_types[index],
+          ))
+          continue index + 1u32
+        } else {
+          break ()
+        }
+      }
+    }
+    None => {}
+  }
   let constructor_wrappers = collected.public_constructor_wrappers()
   let exported_declarations = self_host_empty_u64_bool_map()
   let mut declaration_index = 0u32
@@ -749,7 +848,10 @@ fn self_host_freeze_module_signature_interface(
           let semantic_type = if declaration.kind is TypeAliasDecl {
             self_host_alias_semantic_type(collected, resolved, declaration.id)
           } else {
-            resolved.declaration_type(declaration.id)
+            match value_types.get(declaration.id) {
+              Some(type_) => type_
+              None => resolved.declaration_type(declaration.id)
+            }
           }
           exported_declarations.set(declaration.id, true)
           declarations.push({

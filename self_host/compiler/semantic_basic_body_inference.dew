@@ -162,6 +162,7 @@ pub enum SelfHostBasicExpressionSelection {
   NoBasicExpressionSelection
   ErrorBasicExpressionSelection
   DeferredBasicExpressionSelection
+  ImportedModuleValueBasicExpressionSelection(U64)
   FieldBasicExpressionSelection(U64, Bool, U64)
   StructConstructionBasicExpressionSelection(U64, SelfHostHirSpan)
   VariantConstructionBasicExpressionSelection(U64, U32, SelfHostHirSpan)
@@ -6334,6 +6335,50 @@ impl SelfHostBasicBodyInferencer {
     true
   }
 
+  fn select_qualified_module_value(
+    self,
+    expression: U32,
+    base: U32,
+    name: U32,
+    offset: U32,
+  ) -> Bool {
+    if !(self.collected.expressions[base] is ImportAliasExpr(_, _)) {
+      return false
+    }
+    let interface_index = match self.names.expression_references[base] {
+      ImportedModuleNameReference(index) => index
+      _ => return false
+    }
+    let scope = match self.imported.scope {
+      Some(value) => value
+      None => return false
+    }
+    let binding = match scope.lookup_module_value(
+      interface_index,
+      self.collected.name(name),
+    ) {
+      Some(value) => value
+      None => return false
+    }
+    let type_ = match self.imported.module_value_types.get(binding.declaration) {
+      Some(value) => value
+      None => return false
+    }
+    self.constrain(
+      self.expression_type(expression),
+      self.solver.resolved_type(type_),
+      self_host_expression_type_origin(expression, offset),
+    )
+    self_host_store_basic_expression_selection(
+      self.expression_selections,
+      self.expression_index(expression),
+      ImportedModuleValueBasicExpressionSelection(binding.declaration),
+    )
+    self.consumed_member_roots[self.expression_index(base)] = true
+    self.consume_unsupported_root(base)
+    true
+  }
+
   fn constrain_ready_field(self, expression: U32) -> Unit {
     if !self.consumed_member_roots[self.expression_index(expression)] {
       match self.expression_selections[self.expression_index(expression)] {
@@ -7689,7 +7734,13 @@ impl SelfHostBasicBodyInferencer {
             self.pending_constructions.push(current)
           }
           FieldExpr(_, _, _) => self.pending_fields.push(current)
-          QualifiedExpr(_, _, _) => if !self_host_u32_equal(
+          QualifiedExpr(base, name, _) => if self.select_qualified_module_value(
+            current,
+            base,
+            name,
+            offset,
+          ) {
+          } else if !self_host_u32_equal(
             self.local_variant_target(current, self.expression_type(current), current),
             4294967295u32,
           ) {

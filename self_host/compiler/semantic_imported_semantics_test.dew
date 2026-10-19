@@ -7,6 +7,77 @@ pub struct SelfHostImportedSemanticsFixture {
   imports: SelfHostResolvedModuleImports
 }
 
+test "qualified imported constants retain types and declaration reads" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @constants\nlet multiplier = 7i32\nlet answer = @constants.factor * multiplier\npub fn run() -> I32 {\n  answer + @constants.factor\n}\n",
+    b"pub let factor = 6i32\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "constant import diagnostics")
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let values = self_host_infer_program_module_values(collected, imports, names)
+  assert(values.diagnostics.length() == 0u32, "constant initializer diagnostics")
+  for type_ in values.let_types {
+    match values.type_term(type_) {
+      BodyResolvedType(resolved_type) => assert(
+        resolved_type == imports.resolved.primitive(I32Type),
+        "constant initializer is I32",
+      )
+      _ => assert(false, "constant initializer has a resolved type")
+    }
+  }
+  let inferred = self_host_infer_program_module_bodies(collected, imports, names)
+  for body in inferred.bodies {
+    assert(body.diagnostics.length() == 0u32, "qualified constant body diagnostics")
+  }
+  let library = fixture.frozen.collected.modules.at(1u32)
+  let declaration = library.lets[0u32].declaration
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_lowering(lowering) is None, "qualified constant lowering")
+  let mut reads = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      PlannedModuleValueGet(target) => if target == declaration {
+        reads = reads + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(reads == 2u32, "initializer and function read the imported declaration")
+}
+
+test "imported compound values retain public initializer types" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @constants\npub let carried = @constants.pair\npub let callback = @constants.callback\npub fn run() -> (I32, I64) {\n  carried\n}\n",
+    b"pub let pair = (6i32, 7i64)\npub let callback = identity\npub fn identity(value: I32) -> I32 {\n  value\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "compound import diagnostics")
+  let interface_ = fixture.frozen.interfaces.at(0u32)
+  let mut products = 0u32
+  let mut functions = 0u32
+  for declaration in interface_.declarations {
+    if declaration.source_kind is LetDecl {
+      match interface_.resolved_types.types[declaration.semantic_type] {
+        ProductType(fields) => {
+          assert(fields.length == 2u32, "exported product fields")
+          products = products + 1u32
+        }
+        FunctionType(parameters, result) => {
+          assert(parameters.length == 1u32, "exported callback parameters")
+          assert(result == interface_.resolved_types.primitive(I32Type), "exported callback result")
+          functions = functions + 1u32
+        }
+        _ => assert(false, "exported initializer has a compound type")
+      }
+    }
+  }
+  assert(products == 1u32, "one public imported product")
+  assert(functions == 1u32, "one public imported callback")
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_lowering(lowering) is None, "compound value lowering")
+}
+
 test "concrete imported binary operators select declaration evidence" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\npub fn run(left: Item, right: Item) -> Bool {\n  left == right\n}\n",

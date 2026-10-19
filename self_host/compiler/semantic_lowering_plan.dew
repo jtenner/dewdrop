@@ -600,6 +600,7 @@ fn self_host_lowering_expression_kind(
       _ => PlannedUnresolvedField(base, name)
     }
     QualifiedExpr(base, _, _) => match selection {
+      ImportedModuleValueBasicExpressionSelection(declaration) => PlannedModuleValueGet(declaration)
       VariantConstructionBasicExpressionSelection(
         _,
         _,

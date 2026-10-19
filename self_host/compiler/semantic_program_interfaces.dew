@@ -485,10 +485,18 @@ fn self_host_freeze_program_signature_interfaces(
                 collected,
                 scope,
               )
-              let interface_ = self_host_freeze_module_signature_interface(
+              let values = if self_host_frozen_module_requires_value_inference(collected) {
+                let imports = self_host_resolve_module_imports(resolved, scope)
+                let names = self_host_resolve_module_names_with_imports(collected, scope)
+                Some(self_host_infer_program_module_values(collected, imports, names))
+              } else {
+                None
+              }
+              let interface_ = self_host_freeze_module_signature_interface_with_values(
                 program.module_paths[current_module],
                 collected,
                 resolved,
+                values,
               )
               scopes.set(current_module, scope)
               interfaces.set(current_module, interface_)
