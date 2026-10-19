@@ -132,6 +132,8 @@
     "Instruction::call_ref",
     "Instruction::ref_func",
     "Instruction::ref_null",
+    "Instruction::ref_is_null",
+    "Instruction::ref_as_non_null",
     "AbsHeapType::func",
     "BlockType::val_type",
     "ffi_bridge::instruction_if",

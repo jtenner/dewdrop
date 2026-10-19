@@ -54,4 +54,32 @@ and raw samples are in `.tmp/raw-array-default-results/identity.json` and
 `samples.json`; wrapper logs are
 `.tmp/transforms-v3/{followup-js-build,raw-default-runtime}.log`. The native
 backend results match the controls described above. No comparative speed or
-allocation gain is claimed. A current Dew runtime control is still pending.
+allocation gain is claimed.
+
+Fresh Dew compiler A (`1b59e1d1ea6762157d2bd0da2da304d6c55eb69524a8060b48fa82eb9523f6aa`)
+was then tested with the same ten raw-default sources. Nine compiled, passed
+pinned `wasm-tools 1.262.0` validation, and ran. The nullable null-test source
+failed visibly with `self-host smoke: ref_is_null`; it produced no Wasm file.
+The missing Dew runtime instruction mapping is tracked separately in
+`dew-null-runtime-emission-2026-10-19.md`.
+
+The Unit, Unit-only product, function, trait, and raw-array discard controls
+returned 42. The Unit out-of-bounds control trapped. Those six results match
+Native. Discarded record, product, and nested-product reads returned 42 in Dew;
+Native traps in those three cases. Dew retains the boxed nullable `eqref` until
+an operation narrows or unpacks it. Five extra valid runtime boundary controls
+confirmed this: named record and product bindings whose values were unused
+returned 42; a record field read, a scalar tuple destructure/use, and a nested
+tuple destructure/use all trapped with `illegal cast`. All five emitted
+programs passed validation. A sixth boundary control used explicit
+`wasm_ref_as_non_null` and failed visibly with `self-host smoke: ref_as_non_null`.
+These source controls establish the current carrier behavior. No extra cast
+was added to discarded reference results.
+
+The ten fresh-A compiles took 1.3182–1.4998 seconds each (14.2666 seconds total),
+with peak compiler-host RSS of 353,652–365,776 KiB. The six boundary compiles
+took 1.3861–1.4653 seconds each. These are single Node-host samples. Raw request,
+compile, validation, and runtime logs plus exact compiler/fixture identities
+are in `.tmp/transforms-v3/raw-defaults-fresh-a/` and
+`.tmp/transforms-v3/raw-default-boundaries/`. The preparation and run scripts
+are `.tmp/transforms-v3/{raw-defaults-fresh-a,raw-default-boundaries}.py`.
