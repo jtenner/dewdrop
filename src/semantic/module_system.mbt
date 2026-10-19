@@ -2430,10 +2430,30 @@ fn frozen_body_type_to_resolved(
   resolved : ResolvedModuleTypes,
   inferred : InferredModuleValues,
   root : BodyTypeId,
+  memo : Map[BodyTypeId, ResolvedTypeId],
+) -> ResolvedTypeId {
+  match memo.get(root) {
+    Some(type_) => type_
+    None => {
+      let type_ = frozen_body_type_to_resolved_uncached(
+        resolved, inferred, root, memo,
+      )
+      memo[root] = type_
+      type_
+    }
+  }
+}
+
+///|
+fn frozen_body_type_to_resolved_uncached(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleValues,
+  root : BodyTypeId,
+  memo : Map[BodyTypeId, ResolvedTypeId],
 ) -> ResolvedTypeId {
   match inferred.type_term(root) {
     BodyMemberTypeProjection(owner, operation, selector) => {
-      let owner = frozen_body_type_to_resolved(resolved, inferred, owner)
+      let owner = frozen_body_type_to_resolved(resolved, inferred, owner, memo)
       let projected = MemberTypeProjection(owner, operation, selector)
       for index, candidate in resolved.types {
         if candidate == projected {
@@ -2454,6 +2474,7 @@ fn frozen_body_type_to_resolved(
             resolved,
             inferred,
             inferred.type_arguments[fields.start + index],
+            memo,
           ),
         )
       }
@@ -2487,7 +2508,7 @@ fn frozen_body_type_to_resolved(
       result
     }
     BodyAppliedType(base, arguments) => {
-      let resolved_base = frozen_body_type_to_resolved(resolved, inferred, base)
+      let resolved_base = frozen_body_type_to_resolved(resolved, inferred, base, memo)
       let resolved_arguments : Array[ResolvedTypeId] = []
       for index in 0..<arguments.length {
         resolved_arguments.push(
@@ -2495,6 +2516,7 @@ fn frozen_body_type_to_resolved(
             resolved,
             inferred,
             inferred.type_arguments[arguments.start + index],
+            memo,
           ),
         )
       }
@@ -2540,11 +2562,12 @@ fn frozen_body_type_to_resolved(
             resolved,
             inferred,
             inferred.type_arguments[parameters.start + index],
+            memo,
           ),
         )
       }
       let resolved_result = frozen_body_type_to_resolved(
-        resolved, inferred, body_result,
+        resolved, inferred, body_result, memo,
       )
       for index, existing in resolved.types {
         match existing {
@@ -2589,6 +2612,7 @@ fn frozen_declaration_semantic_type(
   resolved : ResolvedModuleTypes,
   declaration : CollectedDeclaration,
   module_values : InferredModuleValues?,
+  value_type_memo : Map[BodyTypeId, ResolvedTypeId],
 ) -> ResolvedTypeId {
   if declaration.kind == LetDecl {
     match module_values {
@@ -2599,6 +2623,7 @@ fn frozen_declaration_semantic_type(
               resolved,
               values,
               values.let_types[let_index],
+              value_type_memo,
             )
           }
         }
@@ -2788,6 +2813,7 @@ fn freeze_module_interface(
     collected.module_id == functions.module_id else {
     abort("module interface inputs belong to different modules")
   }
+  let value_type_memo : Map[BodyTypeId, ResolvedTypeId] = {}
   let declarations : Array[FrozenInterfaceDeclaration] = []
   let constructor_wrappers = collected.public_constructor_wrappers()
   let exported_declarations : Map[DeclId, Bool] = Map::default()
@@ -2810,7 +2836,7 @@ fn freeze_module_interface(
         generic_parameter_count: collected.generic_parameters_of(declaration.id).length,
         generic_parameters: collected.generic_parameters_of(declaration.id),
         semantic_type: frozen_declaration_semantic_type(
-          collected, resolved, declaration, module_values,
+          collected, resolved, declaration, module_values, value_type_memo,
         ),
         location: collected.declaration_location(declaration.id).unwrap(),
       })

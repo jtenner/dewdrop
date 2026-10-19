@@ -56,3 +56,58 @@ correct behavior; they do not establish a performance gain or memory bound.
 No Moon build command was needed, so these checks had no Moon lock delay. The
 separate final bootstrap and real transform request checks cover the complete
 self-hosted compiler build.
+
+## Shared type graph follow-up
+
+Independent review found repeated work in the first conversion code. A type such
+as `Pair<T, T>` has two edges to the same child type. Recursion without a cache
+converted that child twice at each level. The native converter had the same
+fault for public values. The first Dew change also converted private values
+when the module had an unrelated public scalar.
+
+Both converters now use one body-type-ID to resolved-type-ID map for each freeze
+pass. All recursive edges use that map. All public value roots in the pass share
+it. The Dew converter runs inside the public, non-test declaration export check.
+It no longer converts each private initializer type into the interface arena.
+Inference still checks private initializers and their dependencies.
+
+New native and Dew tests use tuple and record type graphs at depth 20. They check
+the resulting compound type, cache size bounds tied to the graph depth, reuse
+for a repeated type ID, and no extra resolved types for a second public root.
+A private tuple graph plus a public scalar must add no resolved types or type
+arguments during freezing.
+
+The final related Dew set passed all 59 tests: generation 5.335 seconds, linking
+1.236 seconds, execution 0.166 seconds. The command
+`DEW_NATIVE_TEST_PACKAGES=semantic tools/test-native.sh --filter 'frozen *'`
+passed all four selected native tests in 9.031 seconds. There was no Moon lock
+delay. Logs are in `.tmp/imported-constant-regression/memo-final.log` and
+`.tmp/imported-constant-regression/native-memo-final.log`.
+
+The independent timing harness freezes a private graph plus a public scalar ten
+times per test. It uses three fresh Node processes for each case. Median
+whole-process elapsed times in seconds were:
+
+| Graph | Depth | Before | After |
+| --- | ---: | ---: | ---: |
+| Tuple | 8 | 0.069798 | 0.064185 |
+| Tuple | 12 | 0.088510 | 0.066485 |
+| Tuple | 16 | 0.376074 | 0.066963 |
+| Pair<a,b> | 8 | 0.072391 | 0.069489 |
+| Pair<a,b> | 12 | 0.085899 | 0.071730 |
+| Pair<a,b> | 16 | 0.240923 | 0.081132 |
+
+All 18 before runs and all 18 after runs passed. The same native generator and
+linker binaries built both Wasm artifacts. The baseline converter is pinned to
+commit `45e7f30335`. The harness, raw samples, exact source and binary hashes,
+and Linux x86_64 / Node v24.21.0 environment record are under
+`.tmp/imported-value-review/`. The independent review report is
+`.tmp/transforms-v3/imported-value-review.md`.
+
+These times include Node startup, Wasm compilation, parsing, inference, freezing,
+and checks. Startup is a large part of the shorter runs. These are native-host
+Node/Wasm measurements, not native Dew converter timings. No heap or production
+code-size gain was measured. The cache adds one map entry per visited body type;
+the tests check graph-size bounds, not a measured heap bound. Recursion still
+uses stack space tied to graph depth. Existing type interning and other compiler
+work can still add costs outside the cached traversal.

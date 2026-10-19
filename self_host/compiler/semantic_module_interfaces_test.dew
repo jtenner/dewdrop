@@ -1,5 +1,92 @@
 open dew.std.option
+open dew.std.map
+open dew.std.string_builder
 open dew.std.testing
+
+fn self_host_frozen_value_dag_source(depth: U32, record: Bool, public_dag: Bool) -> Bytes {
+  let source = StringBuilder::new()
+  if record {
+    source.append("struct Pair<a, b> {\n  left: a\n  right: b\n}\n")
+  }
+  source.append("let node0 = 1i32\n")
+  let _ = while 1u32 {
+    index if index <= depth => {
+      source.append("let node")
+      source.append_u32(index)
+      if record {
+        source.append(" = Pair::{\n  left: node")
+      } else {
+        source.append(" = (node")
+      }
+      source.append_u32(index - 1u32)
+      if record {
+        source.append("\n  right: node")
+      } else {
+        source.append(", node")
+      }
+      source.append_u32(index - 1u32)
+      if record {
+        source.append("\n}\n")
+      } else {
+        source.append(")\n")
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  if public_dag {
+    source.append("pub let exported = node")
+    source.append_u32(depth)
+    source.append("\npub let same = node")
+    source.append_u32(depth)
+    source.append("\n")
+  } else {
+    source.append("pub let exported = 42i32\n")
+  }
+  source.finish().as_bytes()
+}
+
+test "frozen public value type DAGs share one conversion memo" {
+  let depth = 20u32
+  for record in [false, true] {
+    let collected = self_host_collect_bytes(28430u64, self_host_frozen_value_dag_source(depth, record, true))
+    assert(collected.diagnostics.length() == 0u32, "DAG collection diagnostics")
+    let resolved = self_host_resolve_module_types(collected)
+    assert(resolved.diagnostics.length() == 0u32, "DAG type diagnostics")
+    let values = self_host_infer_module_values(collected, resolved, self_host_resolve_module_names(collected))
+    assert(values.diagnostics.length() == 0u32, "DAG inference diagnostics")
+    let importer = SelfHostInterfaceTypeImporter::new(resolved, SelfHostFrozenInterfaceList::new())
+    let memo = self_host_frozen_value_type_memo()
+    let first = self_host_frozen_body_type_to_resolved(importer, values, values.let_types[depth + 1u32], memo)
+    let count = memo.length()
+    let type_count = resolved.types.length()
+    let second = self_host_frozen_body_type_to_resolved(importer, values, values.let_types[depth + 2u32], memo)
+    assert(first == second, "shared public roots resolve to one type")
+    assert(resolved.types.length() == type_count, "second public root adds no types")
+    assert(count >= depth + 1u32, "type cache contains each DAG level")
+    assert(count <= depth * 2u32 + 4u32, "type cache grows with DAG nodes")
+    let total = memo.length()
+    assert(total <= depth * 4u32 + 8u32, "public root cache grows with DAG nodes")
+    assert(self_host_frozen_body_type_to_resolved(importer, values, values.let_types[depth + 1u32], memo) == first, "cached public root keeps its type")
+    assert(memo.length() == total, "repeated public root reuses the type cache")
+    assert(resolved.types[first] is ProductType(_) || resolved.types[first] is AppliedType(_, _), "DAG keeps its compound type")
+  }
+}
+
+test "frozen scalar exports do not convert private value type DAGs" {
+  let collected = self_host_collect_bytes(28431u64, self_host_frozen_value_dag_source(16u32, false, false))
+  assert(collected.diagnostics.length() == 0u32, "private DAG collection diagnostics")
+  let resolved = self_host_resolve_module_types(collected)
+  let values = self_host_infer_module_values(collected, resolved, self_host_resolve_module_names(collected))
+  assert(values.diagnostics.length() == 0u32, "private DAG inference diagnostics")
+  let type_count = resolved.types.length()
+  let argument_count = resolved.type_arguments.length()
+  let interface_ = self_host_freeze_module_signature_interface_with_values("app.values", collected, resolved, Some(values))
+  assert(interface_.declaration_count() == 1u32, "only the scalar is public")
+  assert(interface_.declaration_named("exported", FrozenValueDeclaration) is Some(_), "scalar export is present")
+  assert(resolved.types.length() == type_count, "private DAG adds no interface types")
+  assert(resolved.type_arguments.length() == argument_count, "private DAG adds no interface arguments")
+}
 
 fn self_host_test_freeze_interface(
   module_id: U64,

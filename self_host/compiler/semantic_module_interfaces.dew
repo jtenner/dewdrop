@@ -739,17 +739,38 @@ fn self_host_frozen_module_requires_value_inference(
   false
 }
 
+fn self_host_frozen_value_type_memo() -> Map<I32, U32> {
+  empty()
+}
+
 fn self_host_frozen_body_type_to_resolved(
   importer: SelfHostInterfaceTypeImporter,
   values: SelfHostInferredModuleValues,
   type_: I32,
+  memo: Map<I32, U32>,
+) -> U32 {
+  match memo.get(type_) {
+    Some(resolved_type) => resolved_type
+    None => {
+      let resolved_type = self_host_frozen_body_type_to_resolved_uncached(importer, values, type_, memo)
+      memo.set(type_, resolved_type)
+      resolved_type
+    }
+  }
+}
+
+fn self_host_frozen_body_type_to_resolved_uncached(
+  importer: SelfHostInterfaceTypeImporter,
+  values: SelfHostInferredModuleValues,
+  type_: I32,
+  memo: Map<I32, U32>,
 ) -> U32 {
   match values.type_term(type_) {
     BodyResolvedType(resolved_type) => resolved_type
     BodyErrorType => importer.resolved.error_type
     BodyVariableType(_) => importer.resolved.error_type
     BodyMemberTypeProjection(owner, operation, selector) => {
-      let owner = self_host_frozen_body_type_to_resolved(importer, values, owner)
+      let owner = self_host_frozen_body_type_to_resolved(importer, values, owner, memo)
       let result = importer.resolved.types.length()
       importer.resolved.types.push(MemberTypeProjection(owner, operation, selector))
       result
@@ -771,6 +792,7 @@ fn self_host_frozen_body_type_to_resolved(
             importer,
             values,
             values.type_arguments[span.start + index],
+            memo,
           ))
           continue index + 1u32
         } else {
@@ -780,12 +802,12 @@ fn self_host_frozen_body_type_to_resolved(
       match term {
         BodyProductType(_) => importer.intern_product(arguments)
         BodyAppliedType(base, _) => importer.intern_applied(
-          self_host_frozen_body_type_to_resolved(importer, values, base),
+          self_host_frozen_body_type_to_resolved(importer, values, base, memo),
           arguments,
         )
         BodyFunctionType(_, result) => importer.intern_function(
           arguments,
-          self_host_frozen_body_type_to_resolved(importer, values, result),
+          self_host_frozen_body_type_to_resolved(importer, values, result, memo),
         )
         _ => importer.resolved.error_type
       }
@@ -813,24 +835,10 @@ fn self_host_freeze_module_signature_interface_with_values(
   values: Option<SelfHostInferredModuleValues>,
 ) -> SelfHostFrozenModuleInterface {
   let declarations = []
-  let value_types = self_host_empty_u64_u32_map()
-  match values {
-    Some(inferred) => {
-      let importer = SelfHostInterfaceTypeImporter::new(resolved, SelfHostFrozenInterfaceList::new())
-      let _ = while 0u32 {
-        index => if index < inferred.let_declarations.length() {
-          value_types.set(inferred.let_declarations[index], self_host_frozen_body_type_to_resolved(
-            importer,
-            inferred,
-            inferred.let_types[index],
-          ))
-          continue index + 1u32
-        } else {
-          break ()
-        }
-      }
-    }
-    None => {}
+  let value_type_memo = self_host_frozen_value_type_memo()
+  let value_importer = match values {
+    Some(_) => Some(SelfHostInterfaceTypeImporter::new(resolved, SelfHostFrozenInterfaceList::new()))
+    None => None
   }
   let constructor_wrappers = collected.public_constructor_wrappers()
   let exported_declarations = self_host_empty_u64_bool_map()
@@ -848,9 +856,12 @@ fn self_host_freeze_module_signature_interface_with_values(
           let semantic_type = if declaration.kind is TypeAliasDecl {
             self_host_alias_semantic_type(collected, resolved, declaration.id)
           } else {
-            match value_types.get(declaration.id) {
-              Some(type_) => type_
-              None => resolved.declaration_type(declaration.id)
+            match (values, value_importer) {
+              (Some(inferred), Some(importer)) if declaration.kind is LetDecl => match self_host_module_value_let_index(collected, declaration.id) {
+                Some(index) => self_host_frozen_body_type_to_resolved(importer, inferred, inferred.let_types[index], value_type_memo)
+                None => resolved.declaration_type(declaration.id)
+              }
+              _ => resolved.declaration_type(declaration.id)
             }
           }
           exported_declarations.set(declaration.id, true)
