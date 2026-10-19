@@ -5176,17 +5176,23 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn consume_variant_target(self, target: U32, expression: U32) -> Unit {
-    if !self_host_u32_equal(target, expression) {
-      self.consumed_member_roots[self.expression_index(target)] = true
-      self.solver.poison_type(self.expression_type(target))
-    }
-    match self.collected.expressions[target] {
-      QualifiedExpr(base, _, _) => {
-        self.consumed_member_roots[self.expression_index(base)] = true
-        self.solver.poison_type(self.expression_type(base))
+  fn consume_constructor_target(self, target: U32, expression: U32) -> Unit {
+    // Exact constructor selection proves that every qualifier is a namespace,
+    // including both @alias and @alias.Enum in an imported constructor path.
+    // Clear only these provisional value errors; keep the constructed value.
+    let _ = while target {
+      current => {
+        if !self_host_u32_equal(current, expression) {
+          let index = self.expression_index(current)
+          self.consumed_member_roots[index] = true
+          self.unsupported_expressions[index] = false
+          self.solver.poison_type(self.expression_type(current))
+        }
+        match self.collected.expressions[current] {
+          QualifiedExpr(base, _, _) => continue base
+          _ => break ()
+        }
       }
-      _ => {}
     }
   }
 
@@ -5276,7 +5282,7 @@ impl SelfHostBasicBodyInferencer {
       self_host_expression_type_origin(expression, offset),
     )
     let _ = self.record_imported_variant_selection(expression, variant, 2u32)
-    self.consume_variant_target(expression, expression)
+    self.consume_constructor_target(expression, expression)
   }
 
   fn select_imported_tuple_variant_call(
@@ -5362,7 +5368,7 @@ impl SelfHostBasicBodyInferencer {
       ),
       2u32,
     )
-    self.consume_variant_target(target, expression)
+    self.consume_constructor_target(target, expression)
   }
 
   fn select_unit_variant_value(
@@ -5393,7 +5399,7 @@ impl SelfHostBasicBodyInferencer {
       self_host_expression_type_origin(expression, offset),
     )
     let _ = self.record_variant_selection(expression, variant_index, 2u32)
-    self.consume_variant_target(expression, expression)
+    self.consume_constructor_target(expression, expression)
   }
 
   fn select_tuple_variant_call(
@@ -5481,7 +5487,7 @@ impl SelfHostBasicBodyInferencer {
       ),
       2u32,
     )
-    self.consume_variant_target(target, expression)
+    self.consume_constructor_target(target, expression)
   }
 
   fn constrain_pending_variant_calls(self) -> Unit {
@@ -5611,25 +5617,15 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn imported_declaration_is_struct(self, declaration: U64) -> Bool {
-    if self.imported.type_declaration_types.get(declaration) is None {
-      return false
-    }
-    let mut variant_index = 0u32
-    let _ = while variant_index {
-      current => if current < self.imported.variants.length() {
-        let variant = self_host_resolved_imported_variant_at(
-          self.imported.variants,
-          current,
-        )
-        if self_host_u64_equal(variant.declaration, declaration) {
-          return false
-        }
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
+    // A resolved type without variants can also be an empty enum, alias, or
+    // foreign type. Only the frozen source declaration proves a struct owner.
+    match self.imported.scope {
+      Some(scope) => match scope.binding_for_declaration(declaration) {
+        Some(binding) => binding.source_kind is StructDecl
+        None => false
       }
+      None => false
     }
-    true
   }
 
   fn declaration_is_struct(self, declaration: U64) -> Bool {
@@ -5781,11 +5777,7 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    if variant_id is Some(_) {
-      self.consume_variant_target(target, expression)
-    } else {
-      self.solver.poison_type(self.expression_type(target))
-    }
+    self.consume_constructor_target(target, expression)
     if failed {
       self.fail_construction(expression)
     } else {
@@ -5925,12 +5917,7 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    match variant_id {
-      Some(_) => self.consume_variant_target(target, expression)
-      None => if target != expression {
-        self.solver.poison_type(self.expression_type(target))
-      }
-    }
+    self.consume_constructor_target(target, expression)
     if failed {
       self.fail_construction(expression)
     } else {
@@ -8312,6 +8299,7 @@ fn self_host_basic_imported_inputs(
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,

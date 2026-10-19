@@ -43,6 +43,140 @@ test "short inference exact imports use short constructors and patterns" {
   )
 }
 
+test "short inference qualified imported constructors consume their full namespace path" {
+  self_host_short_inference_check(
+    b"import app.library as @lib\nfn make() -> @lib.Reply<I32> {\n  @lib.Reply::Ok(7i32)\n}\nfn empty() -> @lib.Reply<I32> {\n  @lib.Reply::Empty\n}\n",
+    b"pub enum Reply<t> {\n  Ok(t)\n  Empty\n}\n",
+  )
+}
+
+test "short inference qualified imported constructors still check payload types" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn make() -> @lib.Reply {\n  @lib.Reply::Ok(true)\n}\n",
+    b"pub enum Reply {\n  Ok(I32)\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_inference(lowering) is Some(_), "invalid constructor payload must fail")
+}
+
+test "short inference imported namespaces still fail when used as values" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn make() -> I32 {\n  @lib.Reply\n}\n",
+    b"pub enum Reply {\n  Ok(I32)\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_inference(lowering) is Some(_), "namespace value must fail")
+}
+
+test "short inference qualified imported records consume their namespace path" {
+  self_host_short_inference_check(
+    b"import app.library as @lib\nfn make() -> @lib.Pair<I32> {\n  @lib.Pair::{\n    first: 7i32\n    second: true\n  }\n}\nfn contextual() -> @lib.Pair<I32> {\n  {\n    first: 8i32\n    second: false\n  }\n}\n",
+    b"pub struct Pair<t> {\n  first: t\n  second: Bool\n}\n",
+  )
+}
+
+test "short inference qualified imported records keep field type errors" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn make() -> @lib.Pair {\n  @lib.Pair::{\n    first: true\n  }\n}\n",
+    b"pub struct Pair {\n  first: I32\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  let mut found = false
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    if diagnostic is BodyConstraintDiagnostic(_) {
+      found = true
+    }
+  }
+  assert(found, "invalid record field type must keep its constraint error")
+}
+
+test "short inference qualified imported records keep missing field errors" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn make() -> @lib.Pair {\n  @lib.Pair::{}\n}\n",
+    b"pub struct Pair {\n  first: I32\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  let mut found = false
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    if diagnostic is MissingImportedConstructionField(_, _, _, _) {
+      found = true
+    }
+  }
+  assert(found, "missing record field must keep its field error")
+}
+
+test "short inference imported record namespaces still fail as values" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn make() -> I32 {\n  @lib.Pair\n}\n",
+    b"pub struct Pair {\n  first: I32\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  let mut found = false
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    if diagnostic is UnsupportedExpressionInference(_, _) {
+      found = true
+    }
+  }
+  assert(found, "record namespace value must keep its expression error")
+}
+
+test "short inference qualified imported empty structs remain constructible" {
+  self_host_short_inference_check(
+    b"import app.library as @lib\nlet value = @lib.Empty::{}\nfn make() -> @lib.Empty {\n  @lib.Empty::{}\n}\nfn read() -> @lib.Empty {\n  value\n}\n",
+    b"pub struct Empty {}\n",
+  )
+}
+
+fn self_host_short_inference_invalid_imported_record(source: Bytes, library: Bytes) -> Unit {
+  let fixture = self_host_imported_semantics_fixture(source, library)
+  for module_ in fixture.frozen.collected.modules.values {
+    assert(module_.diagnostics.length() == 0u32, "record kind collection")
+  }
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "record kind imports")
+  assert(fixture.imports.resolved.diagnostics.length() == 0u32, "record kind type resolution")
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  let mut found = false
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    if diagnostic is InvalidConstructionTarget(_, _) {
+      found = true
+    }
+  }
+  assert(found, "non-struct record target must keep its invalid construction error")
+}
+
+test "short inference imported foreign types reject record construction" {
+  self_host_short_inference_invalid_imported_record(
+    b"import app.library as @lib\nfn make() -> @lib.Handle {\n  @lib.Handle::{}\n}\n",
+    b"pub foreign type Handle\n",
+  )
+  self_host_short_inference_invalid_imported_record(
+    b"import app.library as @lib\nlet value = @lib.Handle::{}\n",
+    b"pub foreign type Handle\n",
+  )
+}
+
+test "short inference imported empty enums reject record construction" {
+  self_host_short_inference_invalid_imported_record(
+    b"import app.library as @lib\nfn make() -> @lib.Empty {\n  @lib.Empty::{}\n}\n",
+    b"pub enum Empty {}\n",
+  )
+  self_host_short_inference_invalid_imported_record(
+    b"import app.library as @lib\nlet value = @lib.Empty::{}\n",
+    b"pub enum Empty {}\n",
+  )
+}
+
+test "short inference imported primitive aliases reject record construction" {
+  self_host_short_inference_invalid_imported_record(
+    b"import app.library as @lib\nfn make() -> @lib.Count {\n  @lib.Count::{}\n}\n",
+    b"pub type Count = I32\n",
+  )
+  self_host_short_inference_invalid_imported_record(
+    b"import app.library as @lib\nlet value = @lib.Count::{}\n",
+    b"pub type Count = I32\n",
+  )
+}
+
 test "short inference struct literals receive nested field context" {
   self_host_short_inference_check(
     b"enum Small {\n  Item(I32)\n}\nenum Wide {\n  Item(I64)\n}\nenum Box<t> {\n  Wrap(t)\n}\nstruct Holder {\n  value: Box<Small>\n}\nfn make() -> Holder {\n  {\n    value: Wrap(Item(7i32))\n  }\n}\n",

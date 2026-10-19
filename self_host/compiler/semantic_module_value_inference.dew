@@ -279,6 +279,7 @@ fn self_host_infer_module_values_with_imports(
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
   names: SelfHostResolvedModuleNames,
+  scope: SelfHostModuleImportScope,
   callables: Array<SelfHostResolvedImportedCallable>,
   generic_parameter_ids: Array<U64>,
   parameter_types: Array<U32>,
@@ -300,7 +301,7 @@ fn self_host_infer_module_values_with_imports(
       guard_targets: self_host_guard_builtin_target_map(collected, callables)
       local_initializer_sources: self_host_query_local_sources(collected, names)
       resolved_imports: None
-      scope: None
+      scope: Some(scope)
       callables: callables
       generic_parameter_ids: generic_parameter_ids
       parameter_types: parameter_types

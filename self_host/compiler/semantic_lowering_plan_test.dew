@@ -456,6 +456,7 @@ fn self_host_lowering_imported_test_plan(
     collected,
     resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,
