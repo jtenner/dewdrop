@@ -64,6 +64,7 @@ pub struct CtPlan {
   active: Bool
   mut error: String
   mut validation_stop: String
+  mut raw_array_declarations: Map<U64, Bool>
   scalar_proofs: Map<String, Bytes>
   pattern_proofs: Map<String, String>
   references: Map<String, CtFunctionReferenceProof>

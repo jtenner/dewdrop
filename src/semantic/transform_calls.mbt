@@ -53,7 +53,8 @@ pub fn compile_time_calls(
         }
         let constant = match saved {
           Some(_) => saved
-          None => transform_folded_constant(lowering.modules[mi].expressions[ei].kind)
+          None =>
+            transform_folded_constant(lowering.modules[mi].expressions[ei].kind)
         }
         if constant is Some(_) {
           result.push({
@@ -79,7 +80,10 @@ pub fn compile_time_calls(
           result.push({
             reference: true,
             constant: None,
-            function_identity: transform_function_identity(lowering.modules[target_module], selected),
+            function_identity: transform_function_identity(
+              lowering.modules[target_module],
+              selected,
+            ),
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -98,7 +102,10 @@ pub fn compile_time_calls(
           result.push({
             reference: true,
             constant: None,
-            function_identity: transform_function_identity(lowering.modules[target_module], selected),
+            function_identity: transform_function_identity(
+              lowering.modules[target_module],
+              selected,
+            ),
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -112,6 +119,7 @@ pub fn compile_time_calls(
               inferred,
               inferred.expression_types[ei],
               true,
+              raw_arrays=lowering.modules[mi].raw_array_declarations,
             ),
           })
         }
@@ -165,6 +173,7 @@ pub fn compile_time_calls(
           inferred,
           inferred.expression_types[ei],
           false,
+          raw_arrays=lowering.modules[mi].raw_array_declarations,
         )
         if kind != "" && !kind.has_prefix("array:") {
           result.push({
@@ -228,6 +237,7 @@ pub fn compile_time_calls(
               inferred,
               inferred.expression_types[ei],
               false,
+              raw_arrays=lowering.modules[mi].raw_array_declarations,
             ),
           })
         }
@@ -238,13 +248,60 @@ pub fn compile_time_calls(
 }
 
 ///|
+struct TransformKindBudget {
+  mut remaining : Int32
+}
+
+///|
+fn transform_product_kind(kinds : Array[String]) -> String {
+  let result = StringBuilder::new()
+  result.write_string("(")
+  for kind in kinds {
+    if kind.has_prefix("unsupported:") { return kind }
+  }
+  for kind in kinds {
+    if kind == "Unit" {
+      result.write_string("u")
+    } else if kind.has_prefix("unit-product:") {
+      result.write_string(kind.substring(start=13).to_string())
+    } else {
+      return if kind.has_prefix("unsupported:") { kind } else { "product" }
+    }
+  }
+  result.write_string(")")
+  "unit-product:" + result.to_string()
+}
+
+///|
 fn transform_scalar_kind(
   resolved : Array[ResolvedType],
   resolved_arguments : Array[ResolvedTypeId],
   inferred : InferredModuleBodies,
   root : BodyTypeId,
   reference : Bool,
+  raw_arrays~ : Map[DeclId, Bool] = {},
+  budget~ : TransformKindBudget = { remaining: 65536 },
+  depth~ : Int32 = 0,
 ) -> String {
+  if budget.remaining <= 0 || depth >= 128 {
+    return "unsupported:type metadata limit exceeded"
+  }
+  budget.remaining -= 1
+  let nested = fn(type_) {
+    transform_scalar_kind(
+      resolved, resolved_arguments, inferred, type_, false,
+      raw_arrays~, budget~, depth=depth + 1,
+    )
+  }
+  let nominal = fn(declaration, arguments : Array[BodyTypeId]) {
+    if declaration == standard_nullable_ref_type_declaration() && arguments.length() == 1 {
+      "nullable"
+    } else if raw_arrays.contains(declaration) && arguments.length() == 1 {
+      "array:" + nested(arguments[0])
+    } else {
+      "record:" + declaration.to_string()
+    }
+  }
   let mut current = root
   let mut unwrap_function = reference
   while true {
@@ -253,17 +310,26 @@ fn transform_scalar_kind(
         unwrap_function = false
         current = result
       }
-      BodyAppliedType(base, arguments) if arguments.length == 1 && !unwrap_function => {
-        if inferred.type_term(base) is BodyResolvedType(id) &&
-          resolved[id] is NominalType(declaration) && declaration == standard_nullable_ref_type_declaration() { return "nullable" }
-        let kind = transform_scalar_kind(
-          resolved,
-          resolved_arguments,
-          inferred,
-          inferred.type_arguments[arguments.start],
-          false,
-        )
-        return if kind == "" { "" } else { "array:" + kind }
+      BodyFunctionType(_, _) => return "function"
+      BodyProductType(arguments) => {
+        let kinds = []
+        for offset in 0..<arguments.length {
+          kinds.push(nested(inferred.type_arguments[arguments.start + offset]))
+        }
+        return transform_product_kind(kinds)
+      }
+      BodyAppliedType(base, arguments) if !unwrap_function => {
+        let arguments = Array::makei(arguments.length, fn(index) {
+          inferred.type_arguments[arguments.start + index]
+        })
+        return match inferred.type_term(base) {
+          BodyResolvedType(id) => match resolved[id] {
+            NominalType(declaration) => nominal(declaration, arguments)
+            TraitType(declaration) => "trait:" + declaration.to_string()
+            _ => ""
+          }
+          _ => ""
+        }
       }
       BodyResolvedType(type_) => {
         let mut resolved_type = type_
@@ -273,17 +339,23 @@ fn transform_scalar_kind(
               unwrap_function = false
               resolved_type = result
             }
-            AppliedType(base, arguments) if arguments.length == 1 &&
-              !unwrap_function => {
-              if resolved[base] is NominalType(declaration) && declaration == standard_nullable_ref_type_declaration() { return "nullable" }
-              let kind = transform_scalar_kind(
-                resolved,
-                resolved_arguments,
-                inferred,
-                -resolved_arguments[arguments.start] - 2,
-                false,
-              )
-              return if kind == "" { "" } else { "array:" + kind }
+            FunctionType(_, _) => return "function"
+            ProductType(arguments) => {
+              let kinds = []
+              for offset in 0..<arguments.length {
+                kinds.push(nested(-resolved_arguments[arguments.start + offset] - 2))
+              }
+              return transform_product_kind(kinds)
+            }
+            AppliedType(base, arguments) if !unwrap_function => {
+              let arguments = Array::makei(arguments.length, fn(index) {
+                -resolved_arguments[arguments.start + index] - 2
+              })
+              return match resolved[base] {
+                NominalType(declaration) => nominal(declaration, arguments)
+                TraitType(declaration) => "trait:" + declaration.to_string()
+                _ => ""
+              }
             }
             PrimitiveType(primitive) =>
               return match primitive {
@@ -318,8 +390,8 @@ fn transform_scalar_kind(
                 | F64x2Type => "V128"
                 _ => ""
               }
-            NominalType(declaration) =>
-              return "record:" + declaration.to_string()
+            NominalType(declaration) => return nominal(declaration, [])
+            TraitType(declaration) => return "trait:" + declaration.to_string()
             _ => return ""
           }
         }

@@ -132,6 +132,12 @@ fn ct_reference_storage(machine: CtMachine, value: CtValue) -> Array<String> {
 }
 
 fn ct_reference_cast(machine: CtMachine, value: CtValue, kind: String) -> CtValue {
+  if value is NullValue || value is DefaultValue {
+    if kind == "nullable" {
+      return CtValue::NullValue
+    }
+    return ct_fail(machine, "null reference cast trap at compile time")
+  }
   let source = ct_reference_storage(machine, value)
   let fields = array_new::<String>()
   let target = array_new::<String>()

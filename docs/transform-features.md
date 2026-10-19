@@ -155,7 +155,7 @@ claims about the current interpreter.
 
 ## Larger language and tool work
 
-These need a further language or execution design. They remain open.
+Unchecked items need further implementation. Checked items have code and tests.
 
 - [x] Parsed expression trees for every original function body.
 - [x] Typed expression reflection through `ctx.type_of`, with original check errors.
@@ -163,13 +163,13 @@ These need a further language or execution design. They remain open.
 - [x] Syntax quotation and expression splicing.
 - [x] Automatic name hygiene for quote-local `$name` bindings.
 - [x] Parsed syntax arguments on annotations.
-- [ ] Complete default/null reference behavior for raw arrays.
-- [ ] Generic trait evidence during interpretation.
+- [x] Complete default/null reference behavior for raw arrays.
+- [x] Generic trait evidence during interpretation.
 - [ ] Dynamic trait objects.
 - [x] First-class overloaded builtin references with a checked target.
 - [x] Scalar floating-point execution with Wasm rounding and traps.
 - [ ] Full text and SIMD execution.
-- [ ] Full compile-time type-query API.
+- [x] Full compile-time type-query API.
 - [x] Stable declaration ranges and original function sites for generated source.
 - [x] Expanded-source JSON for editor views.
 - [x] Per-transform work and allocation reports.

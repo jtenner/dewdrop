@@ -1,0 +1,122 @@
+test "reference and unit product defaults" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "default-0.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\n\nforeign type FirstHandle\nforeign type SecondHandle\nbuiltin cast_nullable(value: NullableRef<FirstHandle>) -> NullableRef<SecondHandle> = \"ref.cast\"\n\ntrait Answer {\n  fn answer(self) -> I32\n}\nbuiltin reference_is_null<t>(value: t) -> Bool = \"ref_is_null\"\nfn default_slot<t>() -> t {\n  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let units = match default_slot::<(Unit, (Unit, Unit))>() {\n    ((), ((), ())) => true\n    _ => false\n  }\n  let missing = cast_nullable(wasm_ref_null::<FirstHandle>())\n  let valid = wasm_ref_is_null(missing) && units && reference_is_null(default_slot::<fn() -> I32>()) && reference_is_null(default_slot::<Answer>()) && reference_is_null(default_slot::<WasmArray<I32>>())\n  node.with_body(@ast.integer(if valid {\n    42i32\n  } else {\n    0i32\n  }))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "two argument records reject null defaults" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "default-1.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\nstruct Pair<t, u> {\n  left: t\n  right: u\n}\nfn default_slot<t>() -> t {\n  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let _ = default_slot::<Pair<I32, I64>>()\n  node.with_body(@ast.integer(42i32))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "null non-null value must not execute")
+    Err(error) => assert(error.contains("null reference"), error)
+  }
+}
+
+test "one argument records retain record identity" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "default-2.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\nstruct Pair<t> {\n  left: t\n}\nfn default_slot<t>() -> t {\n  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let _ = default_slot::<Pair<I32>>()\n  node.with_body(@ast.integer(42i32))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "null non-null value must not execute")
+    Err(error) => assert(error.contains("null reference"), error)
+  }
+}
+
+test "nonunit product defaults trap during unboxing" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "default-3.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\nstruct Pair<t, u> {\n  left: t\n  right: u\n}\nfn default_slot<t>() -> t {\n  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let _ = default_slot::<(I32, I64)>()\n  node.with_body(@ast.integer(42i32))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "null non-null value must not execute")
+    Err(error) => assert(error.contains("null reference"), error)
+  }
+}
+
+
+test "unit product defaults charge before construction" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let value = ct_intrinsic_result(machine, CtValue::DefaultValue, "unit-product:(u(uu))")
+  match value {
+    Sequence(values) => {
+      assert(values.length() == 2u32, "outer product count")
+      assert(values[0u32] is Empty, "outer unit")
+      match values[1u32] {
+        Sequence(inner) => assert(inner.length() == 2u32 && inner[0u32] is Empty && inner[1u32] is Empty, "inner units")
+        _ => assert(false, "nested unit product")
+      }
+    }
+    _ => assert(false, "unit product default shape")
+  }
+  assert(machine.allocated == 112u32, "seven shape bytes charged at sixteen each")
+  machine.allocated = 4194304u32
+  let _ = ct_intrinsic_result(machine, CtValue::DefaultValue, "unit-product:(uu)")
+  assert(machine.error.contains("allocation limit"), machine.error)
+}
+
+test "invalid checked default product shapes fail" {
+  for shape in ["u", "(x)", "(u", "(u))", "(u)(u)"] {
+    let machine = ct_machine(ct_test_plan(b""))
+    let _ = ct_unit_product_default(machine, shape)
+    assert(machine.error.contains("checked default product"), machine.error)
+  }
+}
+
+
+test "checked null casts retain nullable targets" {
+  let machine = ct_machine(ct_test_plan(b""))
+  assert(ct_reference_cast(machine, CtValue::NullValue, "nullable") is NullValue, "nullable null cast")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  let _ = ct_reference_cast(machine, CtValue::NullValue, "record:1")
+  assert(machine.error.contains("null reference cast trap"), machine.error)
+  let other = ct_machine(ct_test_plan(b""))
+  let _ = ct_intrinsic_result(other, CtValue::DefaultValue, "Never")
+  assert(other.error.contains("uninhabited type"), other.error)
+}
+
+
+test "checked products cannot retain a scalar value" {
+  let good = ct_machine(ct_test_plan(b""))
+  let value = ct_intrinsic_result(good, CtValue::Sequence([ct_number(42u64, "I32"), CtValue::Empty]), "product")
+  assert(value is Sequence(_), "checked tuple retained")
+  assert(good.error.byte_length() == 0u32, good.error)
+  let bad = ct_machine(ct_test_plan(b""))
+  let _ = ct_intrinsic_result(bad, ct_number(42u64, "I32"), "product")
+  assert(bad.error.contains("product value"), bad.error)
+}

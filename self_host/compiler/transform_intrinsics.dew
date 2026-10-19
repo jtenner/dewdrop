@@ -22,14 +22,22 @@ fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtVa
   if kind.starts_with("unsupported:") {
     return ct_fail(machine, "unsupported scalar type at compile time: ".concat(kind.slice(12u32, kind.byte_length())))
   }
-  if kind == "nullable" {
+  if kind == "Never" {
+    return ct_fail(machine, "uninhabited type has no compile-time value")
+  }
+  if value is DefaultValue && kind == "Unit" {
+    return CtValue::Empty
+  }
+  if value is DefaultValue && kind.starts_with("unit-product:") {
+    return ct_unit_product_default(machine, kind.slice(13u32, kind.byte_length()))
+  }
+  if kind == "nullable" || kind == "function" || kind.starts_with("trait:") || kind.starts_with("array:") {
     if value is DefaultValue {
       return CtValue::NullValue
     }
     let _ = ct_reference_is_null(machine, value)
-    return value
   }
-  if (value is DefaultValue || value is NullValue) && (kind.starts_with("record:") || kind.starts_with("array:") || kind == "String" || kind == "Bytes" || kind == "StringView" || kind == "StringBuilder" || kind == "BytesBuilder") {
+  if (value is DefaultValue || value is NullValue) && (kind.starts_with("record:") || kind == "product" || kind == "String" || kind == "Bytes" || kind == "StringView" || kind == "StringBuilder" || kind == "BytesBuilder") {
     return ct_fail(machine, "null reference read requires a non-null value at compile time")
   }
   match value {
@@ -38,6 +46,12 @@ fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtVa
       return value
     }
     _ => {
+    }
+  }
+  if kind == "product" || kind.starts_with("unit-product:") {
+    match value {
+      Sequence(_) => return value
+      _ => return ct_fail(machine, "product value has an incompatible checked carrier")
     }
   }
   if kind == "F32" || kind == "F64" {

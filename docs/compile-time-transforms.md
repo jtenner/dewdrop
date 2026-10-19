@@ -437,14 +437,26 @@ The Dew API `ct_expand_checked_with_reports` returns the expanded manifest and
 reports without adding host calls. Failed annotations retain their normal
 error diagnostics. A report is emitted only for a completed annotation.
 
-## Nullable raw-array slots
+## Raw-array defaults and null
 
-The interpreter handles `wasm_ref_null`, `wasm_ref_is_null`, and
-`wasm_ref_as_non_null` through the checked builtin opcodes. A default
-`NullableRef<Handle>` slot contains null. A non-null foreign reference read
-from an uninitialized slot fails before use. Null is separate from integer
-zero, floating-point zero, and generic defaults. See
-`examples/transforms/nulls.dew`.
+Integer, Boolean, float, vector, and unit slots have their typed zero value.
+A tuple whose leaves are all unit values keeps its nested tuple shape. It does
+not require a boxed value. A default tuple with runtime leaves traps when read,
+because its box is null. Unit-only tuple construction debits allocation work
+before it creates the value.
+
+A `NullableRef<Handle>` slot contains null. A cast from null to another checked
+nullable reference preserves null. A cast to a non-null reference traps.
+Record, enum, string, and non-null foreign reference reads require a non-null
+value. This also applies to records with one or more type arguments. Raw-array
+identity comes from the normal checked builtin contracts, not the number of
+type arguments on a user type.
+
+Function, trait, and raw-array slots use nullable carriers. Their default null
+can be read; a later call, method dispatch, or array operation can trap. Reading
+a zero-length unit array still fails bounds checking. `Never` has no default
+value. These rules match the normal Wasm path. See `nulls.dew` and
+`default_references.dew` in `examples/transforms/`.
 
 ## Checked type queries
 
@@ -496,8 +508,16 @@ methods and primitive operators use the checked instance proofs. See
 `generic_traits.dew`, `generic_closures.dew`, `generic_selected_methods.dew`, and
 `generic_selected_operators.dew` in `examples/transforms/`.
 
-Transform planning allows at most 128 logical instances and charges copied
+Transform planning follows checked helpers and the module-value initializers
+they read. Runtime-only bodies and unread initializers do not use its instance
+budget. Transform planning allows at most 128 logical instances and charges copied
 module-arena entries against a separate 1,048,576-entry budget. Rechecks charge
 another copy bundle. A type-tree walk also has a 65,536-node limit. These are
 work bounds; they do not state peak heap use. Normal parsing, type checking,
 and fresh inferred arenas remain compiler work outside the VM allocation ledger.
+
+
+Unsafe casts and raw `struct.get` calls that return a tuple need checked tuple
+layout data. The interpreter currently rejects these operations, including a
+single-leaf tuple whose Wasm ABI is otherwise valid. Ordinary tuple construction,
+source calls, destructuring, and unit-only defaults are supported.

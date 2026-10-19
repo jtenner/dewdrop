@@ -205,6 +205,7 @@ fn ct_checked_source_target(plan: CtPlan, collected: SelfHostCollectedProgram, s
 }
 
 fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
+  plan.raw_array_declarations = lowering.raw_arrays.declarations
   let mut mi = 0u32
   for source in collected.modules.values {
     let expressions = array_new::<U32>()
@@ -463,7 +464,52 @@ fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, 
   }
 }
 
+struct CtKindBudget {
+  mut remaining: U32
+}
+
+fn ct_product_kind(kinds: Array<String>) -> String {
+  let out = StringBuilder::new()
+  out.append("(")
+  for kind in kinds {
+    if kind.starts_with("unsupported:") {
+      return kind
+    }
+  }
+  for kind in kinds {
+    if kind == "Unit" {
+      out.append("u")
+    } else if kind.starts_with("unit-product:") {
+      out.append(kind.slice(13u32, kind.byte_length()))
+    } else {
+      return "product"
+    }
+  }
+  out.append(")")
+  "unit-product:".concat(out.finish())
+}
+
+fn ct_nominal_kind(plan: CtPlan, module_: SelfHostPlannedModuleLowering, declaration: U64, arguments: Array<I32>, budget: CtKindBudget, depth: U32) -> String {
+  if declaration == self_host_standard_nullable_ref_type_declaration() && arguments.length() == 1u32 {
+    return "nullable"
+  }
+  if plan.raw_array_declarations.contains_key(declaration) && arguments.length() == 1u32 {
+    return "array:".concat(ct_checked_kind_depth(plan, module_, arguments[0u32], false, budget, depth + 1u32))
+  }
+  "record:".concat(ct_raw_declaration_key(declaration))
+}
+
 fn ct_checked_scalar_kind(plan: CtPlan, module_: SelfHostPlannedModuleLowering, root: I32, reference: Bool) -> String {
+  ct_checked_kind_depth(plan, module_, root, reference, CtKindBudget::{
+    remaining: 65536u32
+  }, 0u32)
+}
+
+fn ct_checked_kind_depth(plan: CtPlan, module_: SelfHostPlannedModuleLowering, root: I32, reference: Bool, budget: CtKindBudget, depth: U32) -> String {
+  if budget.remaining == 0u32 || depth >= 128u32 {
+    return "unsupported:type metadata limit exceeded"
+  }
+  budget.remaining = budget.remaining - 1u32
   let mut current = root
   let mut unwrap_function = reference
   let mut resolved_type = -1i32
@@ -479,15 +525,41 @@ fn ct_checked_scalar_kind(plan: CtPlan, module_: SelfHostPlannedModuleLowering, 
           unwrap_function = false
           continue result
         }
-        BodyAppliedType(base, arguments) if arguments.length == 1u32 && !unwrap_function => {
-          if ct_nullable_base(module_, base) {
-            return "nullable"
+        BodyFunctionType(_, _) => return "function"
+        BodyProductType(arguments) => {
+          let kinds = array_new::<String>()
+          let _ = while 0u32 {
+            i if i < arguments.length => {
+              kinds.push(ct_checked_kind_depth(plan, module_, module_.inferred.type_arguments[arguments.start + i], false, budget, depth + 1u32))
+              continue i + 1u32
+            }
+            _ => break ()
           }
-          let kind = ct_checked_scalar_kind(plan, module_, module_.inferred.type_arguments[arguments.start], false)
-          return if kind.byte_length() == 0u32 {
-            ""
+          return ct_product_kind(kinds)
+        }
+        BodyAppliedType(base, arguments) if !unwrap_function => {
+          let resolved_base = if base < -1i32 {
+            self_host_body_i32_to_u32(-base - 2i32)
+          } else if base >= 0i32 {
+            match module_.inferred.types[self_host_body_i32_to_u32(base)] {
+              BodyResolvedType(id) => id
+              _ => return ""
+            }
           } else {
-            "array:".concat(kind)
+            return ""
+          }
+          let args = array_new::<I32>()
+          let _ = while 0u32 {
+            i if i < arguments.length => {
+              args.push(module_.inferred.type_arguments[arguments.start + i])
+              continue i + 1u32
+            }
+            _ => break ()
+          }
+          return match module_.resolved_types.types[resolved_base] {
+            NominalType(declaration) => ct_nominal_kind(plan, module_, declaration, args, budget, depth)
+            TraitType(declaration) => "trait:".concat(ct_raw_declaration_key(declaration))
+            _ => ""
           }
         }
         BodyResolvedType(id) => {
@@ -507,15 +579,31 @@ fn ct_checked_scalar_kind(plan: CtPlan, module_: SelfHostPlannedModuleLowering, 
         unwrap_function = false
         continue result
       }
-      AppliedType(base, arguments) if arguments.length == 1u32 && !unwrap_function => {
-        if ct_nullable_base(module_, -self_host_body_u32_to_i32(base) - 2i32) {
-          return "nullable"
+      FunctionType(_, _) => return "function"
+      ProductType(arguments) => {
+        let kinds = array_new::<String>()
+        let _ = while 0u32 {
+          i if i < arguments.length => {
+            kinds.push(ct_checked_kind_depth(plan, module_, -self_host_body_u32_to_i32(module_.resolved_types.type_arguments[arguments.start + i]) - 2i32, false, budget, depth + 1u32))
+            continue i + 1u32
+          }
+          _ => break ()
         }
-        let kind = ct_checked_scalar_kind(plan, module_, -self_host_body_u32_to_i32(module_.resolved_types.type_arguments[arguments.start]) - 2i32, false)
-        return if kind.byte_length() == 0u32 {
-          ""
-        } else {
-          "array:".concat(kind)
+        return ct_product_kind(kinds)
+      }
+      AppliedType(base, arguments) if !unwrap_function => {
+        let args = array_new::<I32>()
+        let _ = while 0u32 {
+          i if i < arguments.length => {
+            args.push(-self_host_body_u32_to_i32(module_.resolved_types.type_arguments[arguments.start + i]) - 2i32)
+            continue i + 1u32
+          }
+          _ => break ()
+        }
+        return match module_.resolved_types.types[base] {
+          NominalType(declaration) => ct_nominal_kind(plan, module_, declaration, args, budget, depth)
+          TraitType(declaration) => "trait:".concat(ct_raw_declaration_key(declaration))
+          _ => ""
         }
       }
       PrimitiveType(primitive) => return match primitive {
@@ -540,7 +628,8 @@ fn ct_checked_scalar_kind(plan: CtPlan, module_: SelfHostPlannedModuleLowering, 
         V128Type, I8x16Type, U8x16Type, I16x8Type, U16x8Type, I32x4Type, U32x4Type, I64x2Type, U64x2Type, F32x4Type, F64x2Type => "V128"
         _ => ""
       }
-      NominalType(declaration) => return "record:".concat(ct_raw_declaration_key(declaration))
+      NominalType(declaration) => return ct_nominal_kind(plan, module_, declaration, [], budget, depth)
+      TraitType(declaration) => return "trait:".concat(ct_raw_declaration_key(declaration))
       _ => return ""
     }
   }

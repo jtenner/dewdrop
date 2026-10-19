@@ -11,6 +11,9 @@ fn ct_contract_carrier(carrier: SelfHostWasmBodyCarrier) -> String {
   }
 }
 fn ct_contract_kind_carrier(kind: String) -> String {
+  if kind == "product" || kind.starts_with("unit-product:") {
+    return "product"
+  }
   if kind == "Bool" || kind == "I8" || kind == "U8" || kind == "I16" ||
     kind == "U16" || kind == "I32" || kind == "U32" {
     return "i32"
@@ -30,7 +33,7 @@ fn ct_contract_kind_carrier(kind: String) -> String {
   if kind == "Unit" || kind == "Never" {
     return "unit"
   }
-  if kind == "nullable" || kind.starts_with("record:") || kind.starts_with("array:") ||
+  if kind == "function" || kind == "nullable" || kind.starts_with("record:") || kind.starts_with("trait:") || kind.starts_with("array:") ||
   kind == "String" || kind == "Bytes" || kind == "StringView" ||
   kind == "StringBuilder" || kind == "BytesBuilder" {
     return "ref"
@@ -48,6 +51,9 @@ fn ct_contract_value_carrier(value: CtValue) -> String {
   }
 }
 fn ct_contract_kind_storage(kind: String) -> String {
+  if kind == "product" || kind.starts_with("unit-product:") {
+    return ""
+  }
   if kind == "I8" || kind == "U8" {
     return "i8"
   }
@@ -122,6 +128,10 @@ fn ct_check_intrinsic_contract(machine: CtMachine, opcode: String, args: Array<C
     }
   }
   if opcode == "unsafe.bitcast" && args.length() == 1u32 {
+    if result == "product" || args[0u32] is Sequence(_) {
+      let _ = ct_fail(machine, "unsafe product cast needs a checked tuple layout at compile time")
+      return false
+    }
     let input = ct_contract_value_carrier(args[0u32])
     if input == "ref" || result == "ref" ||
     (input.byte_length() != 0u32 && result.byte_length() != 0u32 && input != result) {
@@ -131,6 +141,10 @@ fn ct_check_intrinsic_contract(machine: CtMachine, opcode: String, args: Array<C
   }
   match ct_raw_immediate(opcode, "struct.get ") {
     Some(index) if args.length() == 1u32 => {
+      if result == "product" {
+        let _ = ct_fail(machine, "Wasm struct.get product result needs a checked tuple layout")
+        return false
+      }
       let storage = ct_reference_storage(machine, args[0u32])
       if index >= storage.length() {
         let _ = ct_fail(machine, "Wasm struct field has no checked layout")

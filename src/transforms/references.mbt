@@ -50,6 +50,11 @@ fn Machine::reference_cast(
   value : Value,
   kind : String,
 ) -> Value raise EvalError {
+  if value is NullValue || value is DefaultValue {
+    return if kind == "nullable" { NullValue } else {
+      eval_fail("null reference cast trap at compile time")
+    }
+  }
   let source = self.raw_storage(value)
   let (fields, target) = if kind == "String" ||
     kind == "Bytes" ||
@@ -227,7 +232,7 @@ fn Machine::raw_array_get(
   }
   match value {
     RawArray(storage) =>
-      intrinsic_kind(storage.values[index.to_int()], storage.default_kind)
+      self.typed_value(storage.values[index.to_int()], storage.default_kind)
     TextChunks(_, backing) => {
       let mut result = Vector(0UL, 0UL)
       for lane in 0..<16 {

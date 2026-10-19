@@ -25,6 +25,7 @@ fn transform_frame_kind(
     inferred,
     type_,
     reference,
+    raw_arrays=module_.raw_array_declarations,
   )
 }
 

@@ -204,7 +204,7 @@ fn Machine::checked_call(
       for arg in args {
         values.push(self.eval(mi, arg, env))
       }
-      intrinsic_kind(
+      self.typed_value(
         self.source_call(target_mi, target_fi, function, values, frame~),
         kind,
       )
@@ -215,14 +215,14 @@ fn Machine::checked_call(
         args.map(fn(arg) { self.eval(mi, arg, env) }),
         result_kind=kind,
       )
-      intrinsic_kind(result, kind)
+      self.typed_value(result, kind)
     }
     Some(Constructor(key)) =>
       Variant(key, args.map(fn(arg) { self.eval(mi, arg, env) }))
     Some(FunctionValue(kind)) => {
       let closure = self.eval(mi, callee, env)
       let values = args.map(fn(arg) { self.eval(mi, arg, env) })
-      intrinsic_kind(self.closure_call(closure, values), kind)
+      self.typed_value(self.closure_call(closure, values), kind)
     }
     Some(_) =>
       eval_fail("checked call requires unsupported compile-time dispatch")
@@ -246,7 +246,7 @@ fn Machine::selected_operator(
   )
   match selected {
     Some(Source(target_mi, target_fi, function, kind)) =>
-      intrinsic_kind(
+      self.typed_value(
         self.source_call(target_mi, target_fi, function, values, frame~),
         kind,
       )
@@ -269,9 +269,9 @@ fn Machine::closure_call(
     let (selected, frame) = unframe_call(Some(target))
     return match selected {
       Some(Source(mi, fi, function, kind)) =>
-        intrinsic_kind(self.source_call(mi, fi, function, values, frame~), kind)
+        self.typed_value(self.source_call(mi, fi, function, values, frame~), kind)
       Some(Intrinsic(builtin, kind)) =>
-        intrinsic_kind(self.intrinsic(builtin, values, result_kind=kind), kind)
+        self.typed_value(self.intrinsic(builtin, values, result_kind=kind), kind)
       Some(Constructor(key)) => Variant(key, values)
       _ => eval_fail("unsupported checked function reference")
     }

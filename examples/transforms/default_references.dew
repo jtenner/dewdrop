@@ -1,0 +1,32 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+foreign type FirstHandle
+foreign type SecondHandle
+builtin cast_nullable(value: NullableRef<FirstHandle>) -> NullableRef<SecondHandle> = "ref.cast"
+
+trait Answer {
+  fn answer(self) -> I32
+}
+builtin reference_is_null<t>(value: t) -> Bool = "ref_is_null"
+fn default_slot<t>() -> t {
+  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)
+}
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let units = match default_slot::<(Unit, (Unit, Unit))>() {
+    ((), ((), ())) => true
+    _ => false
+  }
+  let missing = cast_nullable(wasm_ref_null::<FirstHandle>())
+  let valid = wasm_ref_is_null(missing) && units && reference_is_null(default_slot::<fn() -> I32>()) && reference_is_null(default_slot::<Answer>()) && reference_is_null(default_slot::<WasmArray<I32>>())
+  node.with_body(@ast.integer(if valid {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#replace
+pub fn main() -> I32 {
+  0i32
+}

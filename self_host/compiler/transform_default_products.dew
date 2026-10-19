@@ -1,0 +1,48 @@
+fn ct_unit_product_default(machine: CtMachine, shape: String) -> CtValue {
+  if shape.byte_length() > 65536u32 {
+    return ct_fail(machine, "transform default product shape limit exceeded")
+  }
+  if !ct_charge(machine, shape.byte_length() * 16u32) {
+    return CtValue::Empty
+  }
+  let stack = array_new::<Array<CtValue>>()
+  let mut result = None
+  let _ = while 0u32 {
+    i if i < shape.byte_length() => {
+      let byte = shape.as_bytes().byte_at(i)
+      if byte == 40u8 {
+        if stack.length() >= 128u32 || result is Some(_) {
+          return ct_fail(machine, "invalid checked default product shape")
+        }
+        stack.push(array_new::<CtValue>())
+      } else if byte == 117u8 {
+        if stack.length() == 0u32 {
+          return ct_fail(machine, "invalid checked default product shape")
+        }
+        stack[stack.length() - 1u32].push(CtValue::Empty)
+      } else if byte == 41u8 {
+        let values = match stack.pop() {
+          Some(values) => values
+          None => return ct_fail(machine, "invalid checked default product shape")
+        }
+        let value = CtValue::Sequence(values)
+        if stack.length() == 0u32 {
+          result = Some(value)
+        } else {
+          stack[stack.length() - 1u32].push(value)
+        }
+      } else {
+        return ct_fail(machine, "invalid checked default product shape")
+      }
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  if stack.length() != 0u32 {
+    return ct_fail(machine, "invalid checked default product shape")
+  }
+  match result {
+    Some(value) => value
+    None => ct_fail(machine, "invalid checked default product shape")
+  }
+}

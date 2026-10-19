@@ -18,17 +18,25 @@ fn intrinsic_kind(value : Value, kind : String) -> Value raise EvalError {
       kind.substring(start=12).to_string(),
     )
   }
-  if kind == "nullable" {
+  if kind == "Never" {
+    return eval_fail("uninhabited type has no compile-time value")
+  }
+  if value is DefaultValue && kind == "Unit" {
+    return Unit
+  }
+  if value is DefaultValue && kind.has_prefix("unit-product:") {
+    return unit_product_default(kind.substring(start=13).to_string())
+  }
+  if kind == "nullable" || kind == "function" || kind.has_prefix("trait:") || kind.has_prefix("array:") {
     if value is DefaultValue {
       return NullValue
     }
     let _ = reference_is_null(value)
-    return value
   }
   if (value is DefaultValue || value is NullValue) &&
     (
       kind.has_prefix("record:") ||
-      kind.has_prefix("array:") ||
+      kind == "product" ||
       ["String", "Bytes", "StringView", "StringBuilder", "BytesBuilder"].contains(
         kind,
       )
@@ -36,6 +44,12 @@ fn intrinsic_kind(value : Value, kind : String) -> Value raise EvalError {
     return eval_fail(
       "null reference read requires a non-null value at compile time",
     )
+  }
+  if kind == "product" || kind.has_prefix("unit-product:") {
+    guard value is Sequence(_) else {
+      return eval_fail("product value has an incompatible checked carrier")
+    }
+    return value
   }
   if kind == "F32" || kind == "F64" {
     return match value {

@@ -551,7 +551,7 @@ fn Machine::eval(
     @parser.NameExpr(_, _) | @parser.FieldExpr(_, _, _) =>
       match
         self.scalar_type_proof((mi, self.file_index, expr.offset().to_int())) {
-        Some(kind) => intrinsic_kind(result, kind)
+        Some(kind) => self.typed_value(result, kind)
         _ => result
       }
     _ => result
@@ -698,7 +698,7 @@ fn Machine::eval_inner(
               "prefix operation needs concrete scalar type evidence at compile time",
             )
           }
-          intrinsic_kind(value, kind)
+          self.typed_value(value, kind)
         }
         _ => value
       }

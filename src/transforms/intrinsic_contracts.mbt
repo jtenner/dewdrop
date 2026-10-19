@@ -16,6 +16,7 @@ pub fn Plan::add_intrinsic_contract(
 
 ///|
 fn intrinsic_kind_carrier(kind : String) -> String {
+  if kind == "product" || kind.has_prefix("unit-product:") { return "product" }
   match kind {
     "Bool" | "I8" | "U8" | "I16" | "U16" | "I32" | "U32" => "i32"
     "I64" | "U64" => "i64"
@@ -23,8 +24,8 @@ fn intrinsic_kind_carrier(kind : String) -> String {
     "F64" => "f64"
     "V128" => "v128"
     "Unit" | "Never" => "unit"
-    "nullable" | "String" | "Bytes" | "StringView" | "StringBuilder" | "BytesBuilder" => "ref"
-    _ => if kind.has_prefix("record:") || kind.has_prefix("array:") { "ref" } else { "" }
+    "function" | "nullable" | "String" | "Bytes" | "StringView" | "StringBuilder" | "BytesBuilder" => "ref"
+    _ => if kind.has_prefix("record:") || kind.has_prefix("trait:") || kind.has_prefix("array:") { "ref" } else { "" }
   }
 }
 
@@ -42,6 +43,7 @@ fn intrinsic_value_carrier(value : Value) -> String {
 
 ///|
 fn intrinsic_kind_storage(kind : String) -> String {
+  if kind == "product" || kind.has_prefix("unit-product:") { return "" }
   if kind == "I8" || kind == "U8" { "i8"
   } else if kind == "I16" || kind == "U16" { "i16"
   } else if kind.has_prefix("array:") {
@@ -90,6 +92,9 @@ fn Machine::check_intrinsic_contract(
     }
   }
   if opcode == "unsafe.bitcast" && args.length() == 1 {
+    if result == "product" || args[0] is Sequence(_) {
+      raise Failed("unsafe product cast needs a checked tuple layout at compile time")
+    }
     let input = intrinsic_value_carrier(args[0])
     guard (input == "" || result == "" || input == result) &&
       input != "ref" && result != "ref" else {
@@ -97,6 +102,9 @@ fn Machine::check_intrinsic_contract(
     }
   }
   if raw_immediate(opcode, "struct.get ") is Some(index) && args.length() == 1 {
+    if result == "product" {
+      raise Failed("Wasm struct.get product result needs a checked tuple layout")
+    }
     let storage = self.raw_storage(args[0])
     guard index >= 0 && index < storage.length() else {
       raise Failed("Wasm struct field has no checked layout")

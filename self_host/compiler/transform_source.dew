@@ -267,6 +267,7 @@ fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_
     reports: []
     expression_types: map_empty::<String, Array<CtExpressionType>>()
     reflection_errors: []
+    raw_array_declarations: map_empty::<U64, Bool>()
     raw_layouts: map_empty::<String, CtRawLayout>()
     annotated_functions: map_empty::<String, Bool>()
     type_names: []

@@ -2842,6 +2842,8 @@ pub fn StandardLibrarySources::bootstrap() -> Self
 pub fn StandardLibrarySources::new(Array[ManifestFile]) -> Self
 pub fn StandardLibrarySources::with_parse_events(Self, Array[Array[@parser.ParseEvent]?]) -> Self
 
+type TransformKindBudget
+
 pub struct TypeConstraintOrigin {
   kind : TypeConstraintOriginKind
   source : Int
