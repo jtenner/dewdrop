@@ -1744,6 +1744,25 @@ fn starshine_append_precise_nominal_local_cast(
   if !(planned_local.shape is @semantic.RefPlannedValueShape) {
     return
   }
+  // Raw reference arrays and generic calls return erased eqref values. A
+  // defaultable exact reference local still needs its nullable heap cast.
+  match
+    starshine_body_value_type(
+      lowering, planned, program, planned_local.type_, planned_local.shape,
+    ) {
+    Some(
+      @lib.RefTypeValType(@lib.HeapTypeRefType(true, false, heap)),
+    ) if heap is @lib.HeapType(_) => {
+      if source_expression >= 0 &&
+        source_expression < lowering.expressions.length() &&
+        lowering.expressions[source_expression].kind is @semantic.PlannedWasmRefNull {
+        return
+      }
+      output.push(@lib.Instruction::ref_cast(true, heap))
+      return
+    }
+    _ => ()
+  }
   match
     starshine_precise_nominal_local_type_index(
       lowering, planned, program, planned_local,

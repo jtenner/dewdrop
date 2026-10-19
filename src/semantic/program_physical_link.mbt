@@ -1133,7 +1133,10 @@ pub fn link_program_wasmgc_fragments(
               )
             _ => ()
           }
-        PlannedArrayLiteral(_, _, shape) =>
+        PlannedArrayLiteral(_, _, shape)
+        | PlannedFixedArrayMake(_, _, shape)
+        | PlannedFixedArrayGetUnchecked(_, _, shape)
+        | PlannedFixedArraySetUnchecked(_, _, _, shape) =>
           match shape {
             ProductPlannedValueShape(_) =>
               program_mark_product_erased_boxes(shape, erased_box_used)
