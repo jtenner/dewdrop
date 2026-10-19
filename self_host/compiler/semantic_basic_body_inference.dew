@@ -1680,6 +1680,19 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn consume_unsupported_root(self, expression: U32) -> Unit {
+    let _ = while expression {
+      current => {
+        self.unsupported_expressions[self.expression_index(current)] = false
+        match self.collected.expressions[current] {
+          QualifiedExpr(base, _, _) => continue base
+          FieldExpr(base, _, _) => continue base
+          _ => break ()
+        }
+      }
+    }
+  }
+
   fn constrain_static_call(
     self,
     expression: U32,
@@ -1797,10 +1810,9 @@ impl SelfHostBasicBodyInferencer {
           self_host_resolved_imported_callable_at(self.imported.callables, selected),
         )
       }
-      // These nodes are now proven namespace/member selectors, not runtime
-      // values. Retire their provisional unsupported-expression markers.
-      self.unsupported_expressions[self.expression_index(target)] = false
-      self.unsupported_expressions[self.expression_index(base)] = false
+      // Exact selection proves the full namespace path, including an import
+      // alias before the type. Keep the selected callable's type unchanged.
+      self.consume_unsupported_root(target)
     } else {
       self.store_call_target(expression, ErrorBasicCallTarget, 1u32)
       self.solver.poison_type(self.expression_type(expression))
