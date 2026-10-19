@@ -67,6 +67,57 @@ impl SelfHostBasicBodyInferencer {
     self.imported.guard_targets
   }
 
+  fn guard_unique_imported_callee(self, declaration: U64) -> Option<U64> {
+    if !self.imported.guard_targets.contains_key(declaration) {
+      return None
+    }
+    let selected = match self.imported_callable(declaration) {
+      Some(value) => value
+      None => return None
+    }
+    for candidate in self.imported.callables {
+      let top_level = match candidate.kind {
+        FrozenFunctionCallable, FrozenBuiltinCallable(_) => true
+        _ => false
+      }
+      if top_level && candidate.declaration != declaration && self_host_semantic_id_module(candidate.declaration) == self_host_semantic_id_module(declaration) && candidate.name == selected.name {
+        return None
+      }
+    }
+    Some(declaration)
+  }
+
+  // Use the normal qualified import lookup before expression call selection.
+  fn guard_callee_declaration(self, target: U32) -> Option<U64> {
+    self_host_assert_array_index(target, self.names.expression_references.length(), "ARN-104 query guard callee")
+    match self.collected.expressions[target] {
+      QualifiedExpr(base, property, _) => if self.collected.expressions[base] is ImportAliasExpr(_, _) {
+        let interface_index = match self.names.expression_references[base] {
+          ImportedModuleNameReference(index) => index
+          _ => return None
+        }
+        let scope = match self.imported.scope {
+          Some(value) => value
+          None => return None
+        }
+        let binding = match scope.lookup_module_value(interface_index, self.collected.name(property)) {
+          Some(value) => value
+          None => return None
+        }
+        return self.guard_unique_imported_callee(binding.declaration)
+      }
+      _ => {}
+    }
+    match self.names.expression_references[target] {
+      ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
+        Some(index) => Some(self.collected.callables[index].declaration)
+        None => None
+      }
+      ImportedModuleValueNameReference(declaration) => self.guard_unique_imported_callee(declaration)
+      _ => None
+    }
+  }
+
   fn guard_condition_facts(self, expression: U32, truth: Bool, targets: Map<U64, Bytes>) -> Array<SelfHostCompileTimeGuardFact> {
     let facts = self_host_empty_guard_facts()
     let work = [SelfHostCompileTimeGuardCondition::{
@@ -95,13 +146,9 @@ impl SelfHostBasicBodyInferencer {
               })
             }
             CallExpr(target, arguments, _) => if item.truth && arguments.length == 0u32 {
-              let declaration = match self.names.expression_references[target] {
-                ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
-                  Some(index) => self.collected.callables[index].declaration
-                  None => 18446744073709551615u64
-                }
-                ImportedModuleValueNameReference(declaration) => declaration
-                _ => 18446744073709551615u64
+              let declaration = match self.guard_callee_declaration(target) {
+                Some(value) => value
+                None => continue work.length()
               }
               if targets.contains_key(declaration) {
                 let name = match targets.get(declaration) {

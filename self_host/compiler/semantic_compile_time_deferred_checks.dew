@@ -94,14 +94,7 @@ impl SelfHostBasicBodyInferencer {
             }
             CallExpr(target, arguments, _) => {
               self_host_assert_array_index(target, self.names.expression_references.length(), "ARN-104 deferred query target")
-              let declaration = match self.names.expression_references[target] {
-                ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
-                  Some(index) => self.collected.callables[index].declaration
-                  None => 18446744073709551615u64
-                }
-                ImportedModuleValueNameReference(declaration) => declaration
-                _ => 18446744073709551615u64
-              }
+              let declaration = self.guard_callee_declaration(target)
               work.push(target)
               self_host_assert_array_span(arguments.start, arguments.length, self.collected.expression_children.length(), "ARN-101 deferred query operands")
               let _ = while 0u32 {
@@ -112,7 +105,7 @@ impl SelfHostBasicBodyInferencer {
                   break self_host_semantic_unit()
                 }
               }
-              if targets.contains_key(declaration) {
+              if declaration is Some(selected) && targets.contains_key(selected) {
                 let span = self.collected.explicit_call_type_argument_spans[expression]
                 self_host_assert_array_span(span.start, span.length, self.resolved.explicit_call_type_arguments.length(), "ARN-101 deferred guard type arguments")
                 let _ = while 0u32 {

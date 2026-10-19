@@ -9,7 +9,7 @@ mapfile -t compiler_sources < <(rg --files self_host/compiler -g '*.dew' -g '!**
 test_args=("$work/tests.raw.wasm" self_host.compiler
   self_host.compiler ffi.dew self_host/starshine/ffi.dew
   self_host.compiler ffi_smoke.dew self_host/starshine/smoke.dew)
-for source in "${compiler_sources[@]}" self_host/compiler/transform_test.dew self_host/compiler/transform_reference_test.dew self_host/compiler/transform_intrinsic_contracts_test.dew self_host/compiler/transform_intrinsic_arguments_test.dew self_host/compiler/transform_vector_test.dew self_host/compiler/transform_scalar_bits_test.dew self_host/compiler/transform_vector_contracts_test.dew self_host/compiler/transform_expression_types_test.dew self_host/compiler/semantic_function_value_overloads_test.dew self_host/compiler/request_test.dew; do
+for source in "${compiler_sources[@]}" self_host/compiler/transform_test.dew self_host/compiler/transform_reference_test.dew self_host/compiler/transform_intrinsic_contracts_test.dew self_host/compiler/transform_intrinsic_arguments_test.dew self_host/compiler/transform_vector_test.dew self_host/compiler/transform_scalar_bits_test.dew self_host/compiler/transform_vector_contracts_test.dew self_host/compiler/semantic_compile_time_qualified_guards_test.dew self_host/compiler/transform_expression_types_test.dew self_host/compiler/semantic_function_value_overloads_test.dew self_host/compiler/request_test.dew; do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")
 done
 self_host_measure 'transform native generator build' moon build --target native --release src/dew_test_gen

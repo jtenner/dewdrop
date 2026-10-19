@@ -1,0 +1,66 @@
+fn self_host_qualified_guard_fixture(source: Bytes) -> SelfHostPlannedProgramLowering {
+  let collected = self_host_collect_program_manifest(24970u64, {
+    modules: [
+      {
+        path: "app.main"
+        files: [{
+          path: "main.dew"
+          source: source
+          test_only: false
+        }]
+      },
+      {
+        path: "app.queries"
+        files: [{
+          path: "queries.dew"
+          source: b"pub builtin test_unit<t>() -> Bool = \"types.is_unit\"\npub builtin test_integer<t>() -> Bool = \"types.is_integer\"\npub builtin test_implements<t, bound>() -> Bool = \"types.implements\"\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+  assert(collected.diagnostics.length() == 0u32, "qualified guard manifest")
+  let frozen = self_host_freeze_program_signature_interfaces(collected)
+  assert(frozen.import_diagnostics.length() == 0u32, "qualified guard imports")
+  let lowering = self_host_plan_program_lowering(frozen)
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => assert(false, error)
+    None => {}
+  }
+  lowering
+}
+
+test "qualified Unit guard refines a fixed call argument" {
+  let selected = self_host_plan_program_specialization(self_host_qualified_guard_fixture(b"import app.queries as @queries\nfn accept(value: Unit) -> I32 {\n  42i32\n}\nfn read<t>(value: t) -> I32 {\n  if @queries.test_unit::<t>() {\n    accept(value)\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  read(()) + read(7i64)\n}\n"), false)
+  for error in selected.lowering.compile_time.diagnostics {
+    assert(false, error)
+  }
+  assert(selected.requests.length() > 0u32, "qualified guard selects concrete instances")
+}
+
+test "qualified integer guard defers selected method checks" {
+  let selected = self_host_plan_program_specialization(self_host_qualified_guard_fixture(b"import app.queries as @queries\nimpl I32 {\n  fn answer(self) -> I32 {\n    self\n  }\n}\nfn read<t>(value: t) -> I32 {\n  if @queries.test_integer::<t>() {\n    value.answer()\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  read(()) + read(42i32)\n}\n"), false)
+  for error in selected.lowering.compile_time.diagnostics {
+    assert(false, error)
+  }
+  assert(selected.requests.length() > 0u32, "qualified guard selects concrete instances")
+}
+
+test "qualified trait guard supplies selected evidence" {
+  let selected = self_host_plan_program_specialization(self_host_qualified_guard_fixture(b"import app.queries as @queries\ntrait Read {\n  fn answer(self) -> I32\n}\nimpl Read for I32 {\n  fn answer(self) -> I32 {\n    self\n  }\n}\nfn read<t>(value: t) -> I32 {\n  if @queries.test_implements::<t, Read>() {\n    value.answer()\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  read(7i64) + read(42i32)\n}\n"), false)
+  for error in selected.lowering.compile_time.diagnostics {
+    assert(false, error)
+  }
+  assert(selected.requests.length() > 0u32, "qualified guard selects concrete instances")
+}
+
+test "qualified Unit guard does not enter its false branch" {
+  let selected = self_host_plan_program_specialization(self_host_qualified_guard_fixture(b"import app.queries as @queries\nfn accept(value: Unit) -> I32 {\n  42i32\n}\nfn read<t>(value: t) -> I32 {\n  if @queries.test_unit::<t>() {\n    accept(value)\n  } else {\n    accept(value)\n  }\n}\npub fn main() -> I32 {\n  read(7i64)\n}\n"), false)
+  let mut found = false
+  for error in selected.lowering.compile_time.diagnostics {
+    if error.starts_with("CT-041") {
+      found = true
+    }
+  }
+  assert(found, "false branch must keep its selected source error")
+}

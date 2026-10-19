@@ -46,27 +46,7 @@ fn BasicBodyInferencer::guard_condition_dependent(
         guard target >= 0 && target < self.names.expression_references.length() else {
           abort("ARN-104 query guard dependency target")
         }
-        let declaration = match self.names.expression_references[target] {
-          ModuleValueNameReference(name) => {
-            let binding = self.collected.value_bindings[name]
-            let candidate = self.collected.value_binding_candidates[binding.head]
-            if candidate.next >= 0 {
-              0UL
-            } else {
-              candidate.declaration
-            }
-          }
-          ImportedValueNameReference(index) => {
-            let imports = self.imports.unwrap()
-            if imports.scope.callable_references[index].next >= 0 {
-              0UL
-            } else {
-              imports.callables[index].declaration
-            }
-          }
-          _ => 0UL
-        }
-        if targets.contains(declaration) {
+        if self.guard_callee_declaration(target) is Some(declaration) && targets.contains(declaration) {
           let span = self.explicit_call_type_arguments(expression)
           guard program_specialization_span_is_valid(
             span,

@@ -90,6 +90,53 @@ fn BasicBodyInferencer::guard_builtin_targets(
 }
 
 ///|
+// Guard preparation runs before call selection. Resolve the same unique
+// declaration as the ordinary direct-call import lookup.
+fn BasicBodyInferencer::guard_callee_declaration(
+  self : BasicBodyInferencer,
+  target : ExprId,
+) -> DeclId? {
+  guard target >= 0 && target < self.names.expression_references.length() else {
+    abort("ARN-104 query guard callee")
+  }
+  match self.collected.expressions[target] {
+    HirQualifiedExpr(base, property, _) if self.collected.expressions[base] is HirImportAliasExpr(_, _) => {
+      let interface_index = match self.names.expression_references[base] {
+        ImportedModuleNameReference(index) => index
+        _ => return None
+      }
+      let imports = match self.imports { Some(value) => value; None => return None }
+      let head = match imports.scope.lookup_module_callable(interface_index, self.collected.name(property)) {
+        Some(value) => value
+        None => return None
+      }
+      if imports.scope.callable_references[head].next >= 0 {
+        None
+      } else {
+        Some(imports.callables[head].declaration)
+      }
+    }
+    _ => match self.names.expression_references[target] {
+      ModuleValueNameReference(name) => {
+        let binding = self.collected.value_bindings[name]
+        let candidate = self.collected.value_binding_candidates[binding.head]
+        if candidate.next >= 0 { None } else { Some(candidate.declaration) }
+      }
+      ImportedValueNameReference(index) => {
+        let imports = self.imports.unwrap()
+        if imports.scope.callable_references[index].next >= 0 {
+          None
+        } else {
+          Some(imports.callables[index].declaration)
+        }
+      }
+      ImportedModuleValueNameReference(declaration) => Some(declaration)
+      _ => None
+    }
+  }
+}
+
+///|
 fn BasicBodyInferencer::guard_condition_facts(
   self : BasicBodyInferencer,
   expression : ExprId,
@@ -117,23 +164,9 @@ fn BasicBodyInferencer::guard_condition_facts(
         work.push((right, false))
       }
       HirCallExpr(target, arguments, _) if arguments.length == 0 => {
-        let declaration = match self.names.expression_references[target] {
-          ModuleValueNameReference(name) => {
-            let binding = self.collected.value_bindings[name]
-            let candidate = self.collected.value_binding_candidates[binding.head]
-            if candidate.next >= 0 {
-              continue
-            }
-            candidate.declaration
-          }
-          ImportedValueNameReference(index) => {
-            let imports = self.imports.unwrap()
-            if imports.scope.callable_references[index].next >= 0 {
-              continue
-            }
-            imports.callables[index].declaration
-          }
-          _ => continue
+        let declaration = match self.guard_callee_declaration(target) {
+          Some(value) => value
+          None => continue
         }
         let name = match targets.get(declaration) {
           Some(value) => value
