@@ -2,6 +2,7 @@ open dew.std.map
 
 pub enum CtCallTarget {
   Constant(CtCheckedConstant)
+  Framed(CtCallTarget, String)
   Source(U32, String, SelfHostFunctionDeclaration, String)
   Global(U32, String, SelfHostLetDeclaration)
   Intrinsic(SelfHostBuiltinDeclaration, String)
@@ -26,17 +27,33 @@ fn ct_lookup_call(machine: CtMachine, mi: U32, offset: U32) -> Option<CtCallTarg
   if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
     return None
   }
-  machine.plan.calls.get(ct_call_key(mi, machine.file_path, offset))
+  let key = ct_call_key(mi, machine.file_path, offset)
+  match machine.plan.frames.get(machine.frame) {
+    Some(frame) => match frame.calls.get(key) {
+      Some(value) => return Some(value)
+      None => {}
+    }
+    None => {}
+  }
+  machine.plan.calls.get(key)
 }
 
 fn ct_lookup_scalar_type(machine: CtMachine, mi: U32, offset: U32) -> Option<String> {
   if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
     return None
   }
-  machine.plan.scalar_types.get(ct_call_key(mi, machine.file_path, offset))
+  let key = ct_call_key(mi, machine.file_path, offset)
+  match machine.plan.frames.get(machine.frame) {
+    Some(frame) => match frame.scalar_types.get(key) {
+      Some(value) => return Some(value)
+      None => {}
+    }
+    None => {}
+  }
+  machine.plan.scalar_types.get(key)
 }
 
-fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
+fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: SelfHostFunctionDeclaration, args: Array<CtValue>, frame: String) -> CtValue {
   if !ct_charge(machine, 32u32 + args.length() * 16u32) || machine.flow != 0u32 {
     return CtValue::Empty
   }
@@ -63,9 +80,12 @@ fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostF
     i = i + 1u32
   }
   let previous = machine.file_path
+  let previous_frame = machine.frame
+  machine.frame = frame
   machine.file_path = path
   let value = ct_block(machine, mi, function.body, env)
   machine.file_path = previous
+  machine.frame = previous_frame
   if machine.flow == 1u32 {
     machine.flow = 0u32
     return machine.result
@@ -78,7 +98,8 @@ fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostF
 
 fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExpr, args: Array<SelfHostExpr>, env: Array<CtBinding>, types: Array<SelfHostTypeExpr>) -> CtValue {
   let _ = types
-  match ct_lookup_call(machine, mi, offset) {
+  let selected = ct_unframe_option(ct_lookup_call(machine, mi, offset))
+  match selected.target {
     Some(Constant(value)) => ct_checked_constant(machine, value)
     Some(Source(target_mi, path, function, kind)) => {
       let values = array_new::<CtValue>()
@@ -94,7 +115,7 @@ fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExp
         }
         values.push(ct_eval(machine, mi, argument, env))
       }
-      ct_intrinsic_result(machine, ct_source_call(machine, target_mi, path, function, values), kind)
+      ct_intrinsic_result(machine, ct_source_call_frame(machine, target_mi, path, function, values, selected.frame), kind)
     }
     Some(Intrinsic(builtin_, kind)) => {
       let result = ct_typed_intrinsic(machine, builtin_, ct_eval_values(machine, mi, args, env), kind)
@@ -112,8 +133,9 @@ fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExp
 }
 
 fn ct_selected_operator(machine: CtMachine, mi: U32, offset: U32, values: Array<CtValue>) -> CtValue {
-  match ct_lookup_call(machine, mi, offset) {
-    Some(Source(target_mi, path, function, kind)) => ct_intrinsic_result(machine, ct_source_call(machine, target_mi, path, function, values), kind)
+  let selected = ct_unframe_option(ct_lookup_call(machine, mi, offset))
+  match selected.target {
+    Some(Source(target_mi, path, function, kind)) => ct_intrinsic_result(machine, ct_source_call_frame(machine, target_mi, path, function, values, selected.frame), kind)
     _ => ct_fail(machine, "selected operator has no supported compile-time source body")
   }
 }
@@ -185,15 +207,30 @@ fn ct_checked_source_target(plan: CtPlan, collected: SelfHostCollectedProgram, s
 fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
   let mut mi = 0u32
   for source in collected.modules.values {
-    let calls = ct_source_call_targets(source, lowering.modules[mi])
-    let operators = ct_scalar_source_targets(source, lowering.modules[mi])
-    let mut ei = 0u32
-    for expression in source.expressions {
-      if ei < lowering.modules[mi].expressions.length() {
-        let reference = match lowering.modules[mi].expressions[ei].kind {
+    let expressions = array_new::<U32>()
+    let _ = while 0u32 {
+      ei if ei < source.expressions.length() => {
+        expressions.push(ei)
+        continue ei + 1u32
+      }
+      _ => break ()
+    }
+    ct_collect_module_calls(plan, collected, lowering, mi, lowering.modules[mi], expressions, ct_base_frame(plan), 4294967295u32)
+    mi = mi + 1u32
+  }
+}
+
+fn ct_collect_module_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering, mi: U32, module_: SelfHostPlannedModuleLowering, expressions: Array<U32>, proofs: CtExecutionFrame, specialization: U32) -> Unit {
+  let source = collected.modules.at(mi)
+    let calls = ct_source_call_targets(source, module_)
+    let operators = ct_scalar_source_targets(source, module_)
+    for ei in expressions {
+      let expression = source.expressions[ei]
+      if ei < module_.expressions.length() {
+        let reference = match module_.expressions[ei].kind {
           PlannedModuleValueGet(selected) => Some(ct_checked_source_target(plan, collected, selected, ""))
-          PlannedFunctionReference(selected) => Some(ct_checked_source_target(plan, collected, selected, ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, true)))
-          _ => match lowering.modules[mi].expressions[ei].selection {
+          PlannedFunctionReference(selected) => Some(ct_checked_source_target(plan, collected, selected, ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, true)))
+          _ => match module_.expressions[ei].selection {
             VariantConstructionBasicExpressionSelection(selected, 2u32, _) => match ct_pattern_variant_key(collected, selected) {
               Some(key) => Some(UnitConstructor(key))
               None => None
@@ -210,11 +247,11 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
                   if file.module_index == mi && file.original.path == source.file_paths[fi] {
                     match ct_scalar_original_offset(file, expression.offset(), 0u32) {
                       Some(offset) => {
-                        let identity = match lowering.modules[mi].expressions[ei].kind {
+                        let identity = match module_.expressions[ei].kind {
                           PlannedModuleValueGet(selected), PlannedFunctionReference(selected) => ct_checked_function_identity(lowering, selected)
                           _ => CtFunctionIdentity::FunctionInstance
                         }
-                        plan.references.set(ct_call_key(mi, file.original.path, offset), CtFunctionReferenceProof::{
+                        proofs.references.set(ct_call_key(mi, file.original.path, offset), CtFunctionReferenceProof::{
                           target: target
                           identity: identity
                         })
@@ -241,17 +278,26 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
         Some(NoBasicCallTarget)
       } else {
         match expression {
-          CallExpr(_, _, _) => Some(calls[ei])
+          CallExpr(_, _, _) => Some(match module_.expressions[ei].call_target {
+            SelectedBasicCallTarget(target, arguments) => SelectedBasicCallTarget(target, arguments)
+            _ => calls[ei]
+          })
           PrefixExpr(_, _, _) => Some(NoBasicCallTarget)
-          BinaryExpr(_, _, _, _) => Some(operators[ei])
-          IndexExpr(_, _, _) => Some(operators[ei])
+          BinaryExpr(_, _, _, _) => Some(match module_.expressions[ei].call_target {
+            SelectedBasicCallTarget(target, arguments) => SelectedBasicCallTarget(target, arguments)
+            _ => operators[ei]
+          })
+          IndexExpr(_, _, _) => Some(match module_.expressions[ei].call_target {
+            SelectedBasicCallTarget(target, arguments) => SelectedBasicCallTarget(target, arguments)
+            _ => operators[ei]
+          })
           _ => None
         }
       }
       match selected {
         Some(value) => {
           let target = if scalar_read || (expression is PrefixExpr(_, _, _)) {
-            let kind = ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)
+            let kind = ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, false)
             if scalar_read && (kind.byte_length() == 0u32 || kind.starts_with("array:")) {
               None
             } else {
@@ -259,20 +305,20 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
             }
           } else {
             match value {
-              SelectedBasicCallTarget(declaration, _) => match lowering.modules[mi].expressions[ei].selection {
+              SelectedBasicCallTarget(declaration, _) => match module_.expressions[ei].selection {
                 VariantConstructionBasicExpressionSelection(selected, _, _) => match ct_pattern_variant_key(collected, selected) {
                   Some(key) => Some(Constructor(key))
                   None => Some(Unsupported)
                 }
-                _ => Some(ct_checked_source_target(plan, collected, declaration, ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+                _ => Some(ct_checked_source_target(plan, collected, declaration, ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, false)))
               }
-              FunctionValueBasicCallTarget(_) => Some(FunctionValue(ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+              FunctionValueBasicCallTarget(_) => Some(FunctionValue(ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, false)))
               NoBasicCallTarget => None
               _ => Some(Unsupported)
             }
           }
           let target = if expression is CallExpr(_, _, _) {
-            match ct_query_proof(lowering, source.module_id, ei, lowering.modules[mi].expressions[ei].kind) {
+            match ct_frame_query_proof(lowering, source.module_id, ei, module_.expressions[ei].kind, specialization) {
               Some(value) => Some(Constant(value))
               None => target
             }
@@ -288,8 +334,8 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
                     if file.module_index == mi && file.original.path == source.file_paths[fi] {
                       match ct_scalar_original_offset(file, expression.offset(), 0u32) {
                         Some(offset) => match target {
-                          ScalarResult(kind) => plan.scalar_types.set(ct_call_key(mi, file.original.path, offset), kind)
-                          _ => plan.calls.set(ct_call_key(mi, file.original.path, offset), target)
+                          ScalarResult(kind) => proofs.scalar_types.set(ct_call_key(mi, file.original.path, offset), kind)
+                          _ => proofs.calls.set(ct_call_key(mi, file.original.path, offset), target)
                         }
                         None => {
                         }
@@ -307,10 +353,7 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
         None => {
         }
       }
-      ei = ei + 1u32
     }
-    mi = mi + 1u32
-  }
 }
 
 fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -> CtValue {
@@ -326,14 +369,15 @@ fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -
       for value in args {
         values.push(value)
       }
-      match target {
-        Source(mi, path, function, kind) => ct_intrinsic_result(machine, ct_source_call(machine, mi, path, function, values), kind)
-        Intrinsic(builtin_, kind) => ct_intrinsic_result(machine, ct_typed_intrinsic(machine, builtin_, values, kind), kind)
-        Constructor(key) => CtValue::Variant(key, values)
+      let selected = ct_unframe_call(target)
+      match selected.target {
+        Some(Source(mi, path, function, kind)) => ct_intrinsic_result(machine, ct_source_call_frame(machine, mi, path, function, values, selected.frame), kind)
+        Some(Intrinsic(builtin_, kind)) => ct_intrinsic_result(machine, ct_typed_intrinsic(machine, builtin_, values, kind), kind)
+        Some(Constructor(key)) => CtValue::Variant(key, values)
         _ => ct_fail(machine, "unsupported checked function reference")
       }
     }
-    Closure(mi, path, parameters, body, captured) => {
+    Closure(mi, path, parameters, body, captured, frame) => {
       if parameters.length() != args.length() {
         return ct_fail(machine, "compile-time closure argument count mismatch")
       }
@@ -344,9 +388,12 @@ fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -
         i = i + 1u32
       }
       let previous = machine.file_path
+      let previous_frame = machine.frame
+      machine.frame = frame
       machine.file_path = path
       let value = ct_block(machine, mi, body, env)
       machine.file_path = previous
+      machine.frame = previous_frame
       if machine.flow == 1u32 {
         machine.flow = 0u32
         return machine.result
@@ -386,7 +433,7 @@ fn ct_unit_variant(machine: CtMachine, key: String) -> CtValue {
 }
 
 fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
-  match machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) {
+  match ct_lookup_reference(machine, mi, expression.offset()) {
     Some(proof) => {
       let target = proof.target
       match target {
@@ -398,8 +445,9 @@ fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, 
         return CtValue::Variant(key, [])
       }
       let bound = array_new::<CtValue>()
-      match (target, expression) {
-        (Source(_, _, function, _), FieldExpr(owner, _, _)) => if function.receiver is Some(_) {
+      let selected = ct_unframe_call(target)
+      match (selected.target, expression) {
+        (Some(Source(_, _, function, _)), FieldExpr(owner, _, _)) => if function.receiver is Some(_) {
           bound.push(ct_eval(machine, mi, owner, env))
         }
         _ => {

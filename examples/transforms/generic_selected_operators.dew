@@ -1,0 +1,18 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.types
+fn twice<t>(value: t) -> t {
+  if is_integer::<t>() {
+    value + value
+  } else {
+    value
+  }
+}
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let _ = twice(())
+  node.with_body(@ast.integer(twice(21i32)))
+}
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

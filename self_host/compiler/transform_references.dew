@@ -22,7 +22,7 @@ fn ct_reference_equal(machine: CtMachine, left: CtValue, right: CtValue) -> CtVa
     (Variant(_, left), Variant(_, right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
     (Sequence(left), Sequence(right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
     (Function(_, _, left_identity), Function(_, _, right_identity)) => CtValue::Boolean(ct_reference_identity(left, right) || ct_function_identity_equal(machine, left_identity, right_identity))
-    (Closure(_, _, _, _, _), Closure(_, _, _, _, _)) => CtValue::Boolean(ct_reference_identity(left, right))
+    (Closure(_, _, _, _, _, _), Closure(_, _, _, _, _, _)) => CtValue::Boolean(ct_reference_identity(left, right))
     (Floating(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")
     (_, Floating(_, _)) => ct_fail(machine, "Wasm reference identity requires references")
     (Number(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")

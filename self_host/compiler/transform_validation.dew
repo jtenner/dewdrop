@@ -129,6 +129,10 @@ fn ct_expand_checked_plan_retaining_declarations(plan: CtPlan, default_preamble:
   ct_collect_scalar_proofs(plan, collected, lowering, ct_validation_body(plan))
   ct_collect_pattern_proofs(plan, collected, lowering)
   ct_collect_calls(plan, collected, lowering)
+  ct_collect_frames(plan, collected, lowering)
+  if plan.error.byte_length() != 0u32 {
+    return Err(plan.error)
+  }
   ct_collect_arrays(plan, collected, lowering)
   ct_collect_raw_layouts(plan, collected, lowering)
   ct_collect_expression_types(plan, default_preamble)

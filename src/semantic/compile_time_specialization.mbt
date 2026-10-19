@@ -1,6 +1,7 @@
 ///|
 struct CompileTimeSpecializedBody {
   declaration : DeclId
+  constants : Map[ExprId, CompileTimeTransformConstant]
   module_ : PlannedModuleLowering
   types : Array[CompileTimeType]
   bindings : Map[CompileTimeBindingKey, CompileTimeType]
@@ -12,6 +13,8 @@ struct CompileTimeProgramContext {
   analyzed : AnalyzedProgramSemantics
   modules : Array[PlannedModuleLowering]
   targets : Map[DeclId, Bytes]
+  mut transform_instance_budget : Int32
+  mut transform_instance_exhausted : Bool
   mut operator_intrinsics : Map[DeclId, Bytes]?
   sensitive : Map[DeclId, Bool]
   // Bound calls benefit from exact logical instances but can still use an
@@ -203,6 +206,8 @@ fn compile_time_program_context(
     analyzed,
     modules: lowering.modules,
     targets,
+    transform_instance_budget: -1,
+    transform_instance_exhausted: false,
     operator_intrinsics: None,
     sensitive,
     logical,
@@ -326,6 +331,13 @@ fn compile_time_specialization_key(
     }
     bindings[CtSelfBinding(implementation)] = self_type
   }
+  if context.transform_instance_budget >= 0 && context.instances.length() >= 128 {
+    context.transform_instance_exhausted = true
+    return None
+  }
+  if !charge_transform_instance_copy(context, owner) {
+    return None
+  }
   let instances = [owner]
   prepare_program_optimization_mutation(instances)
   let mut instance = {
@@ -349,6 +361,7 @@ fn compile_time_specialization_key(
     context, owner_index, declaration,
   )
   let conditions = if needs_recheck { Some(Map([])) } else { None }
+  let transform_constants : Map[ExprId, CompileTimeTransformConstant] = {}
   fold_module_compile_time_queries(
     context,
     owner_index,
@@ -356,6 +369,7 @@ fn compile_time_specialization_key(
     bindings,
     Some(declaration),
     selected_conditions=conditions,
+    transform_constants=Some(transform_constants),
   )
   if conditions is Some(conditions) {
     instance = recheck_compile_time_body(
@@ -375,6 +389,7 @@ fn compile_time_specialization_key(
   )
   context.instances[key] = {
     declaration,
+    constants: transform_constants,
     module_: instance,
     types: logical_types.copy(),
     bindings,

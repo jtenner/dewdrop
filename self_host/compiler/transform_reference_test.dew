@@ -99,9 +99,9 @@ test "function and closure reference identity uses the stored instance" {
     items: []
     offset: 0u32
   }
-  let closure = CtValue::Closure(0u32, "fixture.dew", [], body, [])
+  let closure = CtValue::Closure(0u32, "fixture.dew", [], body, [], "")
   assert(ct_truth(machine, ct_reference_equal(machine, closure, closure)), "stored closure aliases have one identity")
-  assert(!ct_truth(machine, ct_reference_equal(machine, closure, CtValue::Closure(0u32, "fixture.dew", [], body, []))), "separate closure instances have separate identities")
+  assert(!ct_truth(machine, ct_reference_equal(machine, closure, CtValue::Closure(0u32, "fixture.dew", [], body, [], ""))), "separate closure instances have separate identities")
   assert(!ct_truth(machine, ct_reference_equal(machine, function, closure)), "different function kinds have separate identities")
   assert(!ct_reference_null_test(machine, function), "function reference is non-null")
   assert(machine.error.byte_length() == 0u32, "valid function checks have no error")

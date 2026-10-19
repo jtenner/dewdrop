@@ -1,0 +1,50 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+trait Answer {
+  fn answer(self) -> I32
+}
+
+struct Left {
+  value: I32
+}
+struct Right {
+  value: I32
+}
+
+impl Answer for Left {
+  fn answer(self) -> I32 {
+    self.value + 1i32
+  }
+}
+impl Answer for Right {
+  fn answer(self) -> I32 {
+    self.value + 2i32
+  }
+}
+
+fn read<t: Answer>(value: t) -> I32 {
+  value.answer()
+}
+fn forward<t: Answer>(value: t) -> I32 {
+  read(value)
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let a = forward(Left::{
+    value: 19i32
+  })
+  let b = forward(Right::{
+    value: 20i32
+  })
+  node.with_body(@ast.integer(if a == 20i32 && b == 22i32 {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

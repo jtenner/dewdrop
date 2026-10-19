@@ -29,6 +29,9 @@ fn recheck_compile_time_body(
   previous : PlannedModuleLowering,
 ) -> PlannedModuleLowering {
   let owner = context.modules[owner_index]
+  if !charge_transform_instance_copy(context, owner) {
+    return previous
+  }
   let analyzed = context.analyzed.modules[owner_index]
   let (collected, mask) = selected_inference_source(
     context.program.modules[owner_index],

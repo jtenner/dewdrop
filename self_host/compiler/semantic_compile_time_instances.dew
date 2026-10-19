@@ -74,6 +74,13 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
       unreachable()
     }
   }
+  if lowering.compile_time.transform_limited && lowering.compile_time.instances.length() >= 128u32 {
+    lowering.compile_time.transform_instance_error = "transform generic instance limit exceeded"
+    return
+  }
+  if !self_host_charge_transform_instance_copy(lowering, lowering.modules[owner]) {
+    return
+  }
   let mut module_ = self_host_clone_compile_time_module(lowering.modules[owner])
   let caller = self_host_program_specialization_callable(module_, request.declaration)
   let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
@@ -131,6 +138,7 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
   }
   lowering.compile_time.instances.set(specialization, {
     declaration: request.declaration
+    constants: map_empty::<U32, SelfHostPlannedExpressionKind>()
     evidence_types: request.evidence_types.copy()
     module_: module_
     guarded_evidence: self_host_empty_guarded_evidence()

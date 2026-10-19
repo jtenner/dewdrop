@@ -408,7 +408,7 @@ fn ct_scalar_binary(machine: CtMachine, mi: U32, offset: U32, op: SelfHostBinary
   if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
     return CtValue::Empty
   }
-  match machine.plan.scalar_proofs.get(ct_call_key(mi, machine.file_path, offset)) {
+  match ct_lookup_scalar_operator(machine, mi, offset) {
     Some(opcode) if opcode.equals(b"primitive") || opcode.equals(ct_scalar_expected_opcode(op, left)) =>
       return ct_binary(machine, op, left, right)
     _ => {}

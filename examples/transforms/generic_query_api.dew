@@ -1,0 +1,54 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import dew.std.types as @types
+open dew.std.array
+open dew.std.string
+
+struct Payload {
+  value: I32
+  flag: Bool
+}
+enum Message<t> {
+  Value(t, I64)
+}
+trait Marker {
+  fn mark(self) -> Bool
+}
+impl Marker for Payload {
+  fn mark(self) -> Bool {
+    true
+  }
+}
+
+fn fields<t>() -> Bool {
+  let names = @types.field_names::<t>()
+  let _ = names.pop()
+  let fresh = @types.field_names::<t>()
+  fresh.length() == 2u32 && fresh[0u32] == "value" && @types.implements::<t, Marker>()
+}
+fn projection<t>() -> Bool {
+  type Item = @types.field_type<t>("value")
+  @types.type_equal::<Item, I32>()
+}
+fn payload<t>() -> Bool {
+  type Parts = @types.variant_payload_types<t>("Value")
+  @types.type_equal::<Parts, (U8, I64)>()
+}
+fn numeric<t>() -> Bool {
+  @types.static_assert(@types.is_integer::<t>(), "expected integer")
+  @types.is_signed_integer::<t>() && @types.bit_width::<t>() == 32u32 && @types.size_of::<(U8, t)>() == 8u32 && @types.align_of::<(U8, t)>() == 4u32 && @types.field_offset::<(U8, t)>(1u32) == 4u32
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let valid = fields::<Payload>() && projection::<Payload>() && payload::<Message<U8>>() && numeric::<I32>()
+  node.with_body(@ast.integer(if valid {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

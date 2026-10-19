@@ -154,6 +154,7 @@ fn fold_module_compile_time_queries(
   bindings : Map[CompileTimeBindingKey, CompileTimeType],
   active : DeclId?,
   selected_conditions~ : Map[ExprId, Bool]? = None,
+  transform_constants~ : Map[ExprId, CompileTimeTransformConstant]? = None,
 ) -> Unit {
   let mut has_queries = context.program.modules[module_index].expressions.any(source => {
     source is HirTypeBindingExpr(_, _)
@@ -219,8 +220,13 @@ fn fold_module_compile_time_queries(
             bindings, evidence,
           ) {
           Ok(Some(replacement)) => {
-            if active is None && transform_folded_constant(replacement.kind) is Some(value) {
+            if active is None &&
+              transform_folded_constant(replacement.kind) is Some(value) {
               context.query_constants[(module_.module_id, index)] = value
+            }
+            if transform_constants is Some(constants) &&
+              transform_folded_constant(replacement.kind) is Some(value) {
+              constants[index] = value
             }
             module_.expressions[index] = replacement
           }
@@ -315,7 +321,12 @@ fn fold_module_compile_time_queries(
                 module_, source, receiver, arguments, type_arguments,
               ) {
               Ok(replacement) => {
-                if active is None { context.query_constants[(module_.module_id, expression)] = TransformUnitConstant }
+                if active is None {
+                  context.query_constants[(module_.module_id, expression)] = TransformUnitConstant
+                }
+                if transform_constants is Some(constants) {
+                  constants[expression] = TransformUnitConstant
+                }
                 module_.expressions[expression] = replacement
                 None
               }

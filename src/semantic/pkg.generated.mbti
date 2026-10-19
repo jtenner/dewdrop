@@ -57,6 +57,8 @@ pub fn compile_time_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedPro
 
 pub fn compile_time_expression_types(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[(Int, String, UInt64, UInt64)]) -> Array[CompileTimeExpressionType]
 
+pub fn compile_time_frame_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Result[Array[CompileTimeFrameCall], String]
+
 pub fn compile_time_imported_type_names(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, String, String)]
 
 pub fn compile_time_intrinsic_contract_error(PlannedProgramLowering) -> String?
@@ -877,6 +879,12 @@ pub struct CompileTimeExpressionType {
   kind : String
   type_ : CompileTimeReflectedType
 } derive(Eq, @debug.Debug)
+
+pub struct CompileTimeFrameCall {
+  frame : String
+  target_frame : String
+  call : CompileTimeCall
+}
 
 pub struct CompileTimeFunctionIdentity {
   declaration : UInt64

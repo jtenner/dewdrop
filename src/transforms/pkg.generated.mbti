@@ -33,6 +33,8 @@ pub(all) enum CheckedConstant {
   CheckedUnit
 }
 
+type ExecutionFrame
+
 type FunctionIdentity
 
 type FunctionReferenceProof
@@ -49,6 +51,7 @@ pub struct Plan {
   modules : Array[SourceModule]
   files : Array[Array[ParsedFile]]
   active : Bool
+  frames : Map[String, ExecutionFrame]
   validation_stop : String
   scalar_proofs : Map[(Int, Int, Int), Bytes]
   pattern_proofs : Map[(Int, Int, Int), String]
@@ -65,14 +68,14 @@ pub struct Plan {
   reflection_errors : Array[String]
 }
 pub fn Plan::add_array_layout(Self, Int, String, UInt64, String, Array[String]) -> Unit
-pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String, function_declaration? : UInt64?, generic_function? : Bool) -> Unit
+pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String, function_declaration? : UInt64?, generic_function? : Bool, frame? : String, target_frame? : String) -> Unit
 pub fn Plan::add_checked_module(Self, SourceModule) -> Result[Unit, String]
-pub fn Plan::add_constant(Self, Int, String, UInt64, CheckedConstant) -> Unit
+pub fn Plan::add_constant(Self, Int, String, UInt64, CheckedConstant, frame? : String) -> Unit
 pub fn Plan::add_expression_type(Self, Int, String, UInt64, String, ReflectedType) -> Unit
 pub fn Plan::add_intrinsic_contract(Self, Bytes, Array[String], String) -> Unit
 pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
 pub fn Plan::add_raw_layout(Self, String, String, Array[String], Array[String]) -> Unit
-pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes) -> Unit
+pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes, frame? : String) -> Unit
 pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
 pub fn Plan::expand(Self, output_module_count? : Int, retain_transform_declarations? : Bool) -> Result[Array[SourceModule], String]

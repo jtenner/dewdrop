@@ -44,8 +44,15 @@ fn Machine::render(
   guard value is Variant(key, args) && key.has_prefix("dewdrop.ast::ExprNode::") else {
     raise Failed("transform returned an invalid ExprNode")
   }
-  let args = if key != "dewdrop.ast::ExprNode::Bytes" && args.any(fn(value) { value is TextReference(_) }) {
-    args.map(fn(value) { if value is TextReference(_) { Text(self.string(value)) } else { value } })
+  let args = if key != "dewdrop.ast::ExprNode::Bytes" &&
+    args.any(fn(value) { value is TextReference(_) }) {
+    args.map(fn(value) {
+      if value is TextReference(_) {
+        Text(self.string(value))
+      } else {
+        value
+      }
+    })
   } else {
     args
   }
@@ -416,6 +423,7 @@ pub fn Plan::expand(
     depth: 0,
     allocated: 0,
     file_index: 0,
+    frame: "",
     functions: {},
     imports: {},
     globals: {},

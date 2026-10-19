@@ -164,3 +164,12 @@ test "compile time type queries reject wrong arity and unknown targets" {
     is Err(_),
   )
 }
+
+///|
+test "shared type trees have a node traversal limit" {
+  let mut type_ = CtPrimitive(I32Type)
+  for _ in 0..<20 {
+    type_ = CtProduct([type_, type_])
+  }
+  assert_eq(compile_time_types_are_concrete([type_]), Err(CtTypeLimitExceeded))
+}

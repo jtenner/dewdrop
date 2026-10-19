@@ -344,9 +344,7 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
             match self_host_fold_compile_time_call(lowering, module_, source, name, bindings, body.declaration) {
               Ok(value) => match value {
                 Some(replacement) => {
-                  if specialization == 4294967295u32 {
-                    self_host_save_query_constant(lowering, module_, index, replacement.kind)
-                  }
+                  self_host_save_frame_query_constant(lowering, module_, index, replacement.kind, specialization)
                   module_.expressions[index] = replacement
                 }
                 None => errors.set(index, "CT-004 type query remains unresolved in a concrete instance")
@@ -451,9 +449,7 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
               Some(name) => if name == b"types.static_assert" {
                 match self_host_fold_compile_time_assertion(module_, source, bindings) {
                   Ok(replacement) => {
-                    if specialization == 4294967295u32 {
-                      self_host_save_query_constant(lowering, module_, index, replacement.kind)
-                    }
+                    self_host_save_frame_query_constant(lowering, module_, index, replacement.kind, specialization)
                     module_.expressions[index] = replacement
                   }
                   Err(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
@@ -550,5 +546,21 @@ fn self_host_normalize_static_assert_callee(lowering: SelfHostPlannedProgramLowe
     PlannedBuiltinCall(name, target, receiver, arguments, types) if self_host_compile_time_static_callee(module_, receiver, target) =>
       self_host_compile_time_replace_kind(source, PlannedBuiltinCall(name, target, 4294967295u32, arguments, types))
     _ => source
+  }
+}
+
+fn self_host_save_frame_query_constant(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, expression: U32, kind: SelfHostPlannedExpressionKind, specialization: U32) -> Unit {
+  if specialization == 4294967295u32 {
+    self_host_save_query_constant(lowering, module_, expression, kind)
+    return
+  }
+  match lowering.compile_time.instances.get(specialization) {
+    Some(instance) => {
+      let constants = instance.constants
+      constants.set(expression, kind)
+    }
+    None => {
+      let _ = self_host_assert_compiler_invariant(false, "selected query proof has no instance")
+    }
   }
 }

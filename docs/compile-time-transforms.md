@@ -230,8 +230,8 @@ escaped control flow, and host calls produce errors.
 Unsupported operations produce errors when reached. These include host calls,
 mutable module bindings, unresolved generic trait dispatch, and vector instructions
 that access linear memory. Scalar floats and standard text methods execute
-through checked Wasm operations and ordinary Dew source. Generic source helpers work
-when execution needs no missing type or trait evidence. All branches must pass
+through checked Wasm operations and ordinary Dew source. Generic source helpers keep selected type instances and checked trait witnesses.
+Unsupported instance or dynamic trait dispatch still produces an error. All branches must pass
 the normal source checks, including branches that execution does not reach.
 
 Each application has a 100,000-step work budget and an estimated allocation
@@ -448,11 +448,12 @@ zero, floating-point zero, and generic defaults. See
 
 ## Checked type queries
 
-Concrete `dew.std.types` queries can run inside a transform. They use results
+`dew.std.types` queries can run inside transforms and selected generic helpers. They use results
 proved by normal type checking. Name arrays are fresh values, so changing one
 result does not change the next result. See
-`examples/transforms/type_queries.dew`. Queries that need a helper's unresolved
-generic type arguments still need interpreter type-instance support.
+`examples/transforms/type_queries.dew`, `generic_queries.dew`, and
+`generic_query_api.dew`. Computed field and payload types stay in type positions.
+They do not become runtime values.
 
 
 ## Byte literals and vectors
@@ -475,3 +476,24 @@ time. Named nongeneric function references keep their checked singleton identity
 Fresh closures and bound methods keep separate instance identities. Equality of
 separate generic references still requires a checked ABI identity and reports
 that limit if reached.
+
+
+## Checked generic frames
+
+Each selected generic helper has a separate execution frame. It keeps its
+checked call targets, result types, local scalar types, primitive operator
+proofs, and folded query results. A returned closure keeps the frame that built
+it. Two instances of one source helper cannot replace each other's proofs.
+Trait-bound calls use the normal compiler's selected implementation.
+
+A generic branch can require another check after its types are known. Transform
+setup rejects errors from that check before it runs source code. Newly selected
+methods and primitive operators use the checked instance proofs. See
+`generic_traits.dew`, `generic_closures.dew`, `generic_selected_methods.dew`, and
+`generic_selected_operators.dew` in `examples/transforms/`.
+
+Transform planning allows at most 128 logical instances and charges copied
+module-arena entries against a separate 1,048,576-entry budget. Rechecks charge
+another copy bundle. A type-tree walk also has a 65,536-node limit. These are
+work bounds; they do not state peak heap use. Normal parsing, type checking,
+and fresh inferred arenas remain compiler work outside the VM allocation ledger.

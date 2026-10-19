@@ -1928,6 +1928,9 @@ fn self_host_program_specialization_scan_request(
   )
   let request = requests[request_index]
   self_host_prepare_compile_time_instance(lowering, request_index, requests)
+  if lowering.compile_time.transform_instance_error.byte_length() != 0u32 {
+    return
+  }
   match lowering.index.declaration_owner(request.declaration) {
     Some(owner) => {
       self_host_assert_array_index(

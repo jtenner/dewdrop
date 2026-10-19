@@ -22,7 +22,8 @@ enum Value {
     Int32,
     Array[@parser.FnParameter],
     @parser.Block,
-    Map[String, Cell]
+    Map[String, Cell],
+    String
   )
 }
 
@@ -51,6 +52,7 @@ struct Machine {
   globals : Map[String, Value]
   initializing : Map[String, Bool]
   mut file_index : Int32
+  mut frame : String
   text_storage : Map[String, Bytes]
 }
 
@@ -414,7 +416,8 @@ fn binary(op : Operation, left : Value, right : Value) -> Value raise EvalError 
         NotEqual => Boolean(a != b)
         _ => eval_fail("unsupported Bool operator at compile time")
       }
-    (Floating(_, kind), Floating(_, other)) if kind == other => float_binary(op, left, right, kind)
+    (Floating(_, kind), Floating(_, other)) if kind == other =>
+      float_binary(op, left, right, kind)
     (Number(a, kind), Number(b, other)) if kind == other ||
       op is ShiftLeft ||
       op is ShiftRight => {
@@ -547,9 +550,7 @@ fn Machine::eval(
   match expr {
     @parser.NameExpr(_, _) | @parser.FieldExpr(_, _, _) =>
       match
-        self.plan.scalar_types.get(
-          (mi, self.file_index, expr.offset().to_int()),
-        ) {
+        self.scalar_type_proof((mi, self.file_index, expr.offset().to_int())) {
         Some(kind) => intrinsic_kind(result, kind)
         _ => result
       }
@@ -573,7 +574,8 @@ fn Machine::eval_inner(
     @parser.U16Expr(n, _) => normalized(n, "U16")
     @parser.U32Expr(n, _) => normalized(n, "U32")
     @parser.U64Expr(n, _) => normalized(n, "U64")
-    @parser.F32Expr(value, _) => Floating(value.reinterpret_as_uint().to_uint64(), "F32")
+    @parser.F32Expr(value, _) =>
+      Floating(value.reinterpret_as_uint().to_uint64(), "F32")
     @parser.F64Expr(value, _) => Floating(value.reinterpret_as_uint64(), "F64")
     @parser.BoolExpr(value, _) => Boolean(value)
     @parser.StringExpr(value, _) => {
@@ -596,7 +598,14 @@ fn Machine::eval_inner(
         None => self.function_reference(mi, expr, env)
       }
     @parser.LambdaExpr(parameters, _, body, _) =>
-      Closure(mi, self.file_index, parameters, body, self.scope(env))
+      Closure(
+        mi,
+        self.file_index,
+        parameters,
+        body,
+        self.scope(env),
+        self.frame,
+      )
     @parser.ArrayExpr(items, offset) =>
       self.array_value(
         mi,
@@ -626,17 +635,13 @@ fn Machine::eval_inner(
       Record(key, values)
     }
     @parser.QualifiedExpr(_, _, _) =>
-      if self.plan.references.contains(
-          (mi, self.file_index, expr.offset().to_int()),
-        ) {
+      if self.has_reference_proof((mi, self.file_index, expr.offset().to_int())) {
         self.function_reference(mi, expr, env)
       } else {
         self.unit_variant(self.path(mi, expr))
       }
     @parser.FieldExpr(owner, name, _) =>
-      if self.plan.references.contains(
-          (mi, self.file_index, expr.offset().to_int()),
-        ) {
+      if self.has_reference_proof((mi, self.file_index, expr.offset().to_int())) {
         self.function_reference(mi, expr, env)
       } else {
         self.read_field(self.eval(mi, owner, env), name)
@@ -686,7 +691,7 @@ fn Machine::eval_inner(
     @parser.PrefixExpr(op, value, offset) => {
       let value = self.eval(mi, value, env)
       let value = match
-        self.plan.scalar_types.get((mi, self.file_index, offset.to_int())) {
+        self.scalar_type_proof((mi, self.file_index, offset.to_int())) {
         Some(kind) => {
           guard kind != "" else {
             return eval_fail(
@@ -701,8 +706,14 @@ fn Machine::eval_inner(
         (@parser.LogicalNot, DefaultValue) => Boolean(true)
         (@parser.LogicalNot, Boolean(v)) => Boolean(!v)
         (@parser.Negative, Number(n, kind)) => normalized(0UL - n, kind)
-        (@parser.Positive, Number(_, _)) | (@parser.Positive, Floating(_, _)) => value
-        (@parser.Negative, Floating(bits, kind)) => Floating(bits ^ (if kind == "F32" { 2147483648UL } else { 9223372036854775808UL }), kind)
+        (@parser.Positive, Number(_, _)) | (@parser.Positive, Floating(_, _)) =>
+          value
+        (@parser.Negative, Floating(bits, kind)) =>
+          Floating(
+            bits ^
+            (if kind == "F32" { 2147483648UL } else { 9223372036854775808UL }),
+            kind,
+          )
         _ => eval_fail("unsupported prefix operator at compile time")
       }
     }
@@ -841,7 +852,12 @@ fn Machine::pattern_inner(
       let expected = self.pattern_key(mi, offset)
       if value is ReferenceView(_, _) {
         for pattern in patterns {
-          if !self.pattern(mi, pattern.pattern, self.read_field(value, pattern.name), env) {
+          if !self.pattern(
+              mi,
+              pattern.pattern,
+              self.read_field(value, pattern.name),
+              env,
+            ) {
             return false
           }
         }

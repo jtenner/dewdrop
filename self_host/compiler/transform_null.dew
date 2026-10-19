@@ -1,7 +1,7 @@
 fn ct_reference_is_null(machine: CtMachine, value: CtValue) -> Bool {
   match value {
     NullValue, DefaultValue => true
-    RawArray(_), Record(_, _), Variant(_, _), Text(_), ByteText(_), TextReference(_), ReferenceView(_, _), TextChunks(_, _), Sequence(_), Function(_, _, _), Closure(_, _, _, _, _) => false
+    RawArray(_), Record(_, _), Variant(_, _), Text(_), ByteText(_), TextReference(_), ReferenceView(_, _), TextChunks(_, _), Sequence(_), Function(_, _, _), Closure(_, _, _, _, _, _) => false
     _ => {
       let _ = ct_fail(machine, "Wasm null test requires a reference")
       false

@@ -24,7 +24,7 @@ pub enum CtValue {
   Record(String, Array<CtBinding>)
   Variant(String, Array<CtValue>)
   Function(CtCallTarget, Array<CtValue>, CtFunctionIdentity)
-  Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, Array<CtBinding>)
+  Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, Array<CtBinding>, String)
 }
 
 pub struct CtBinding {
@@ -67,6 +67,7 @@ pub struct CtPlan {
   scalar_proofs: Map<String, Bytes>
   pattern_proofs: Map<String, String>
   references: Map<String, CtFunctionReferenceProof>
+  frames: Map<String, CtExecutionFrame>
   calls: Map<String, CtCallTarget>
   scalar_types: Map<String, String>
   array_literals: Map<String, CtArrayLayout>
@@ -92,6 +93,7 @@ pub struct CtMachine {
   globals: Map<String, CtValue>
   initializing: Map<String, Bool>
   mut file_path: String
+  mut frame: String
 }
 
 fn ct_empty() -> CtValue {
@@ -112,6 +114,7 @@ fn ct_machine(plan: CtPlan) -> CtMachine {
     globals: map_empty::<String, CtValue>()
     initializing: map_empty::<String, Bool>()
     file_path: ""
+    frame: ""
   }
 }
 

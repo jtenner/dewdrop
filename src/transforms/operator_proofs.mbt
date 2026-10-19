@@ -7,6 +7,7 @@ pub fn Plan::add_scalar_proof(
   file_path : String,
   validation_offset : UInt64,
   opcode : Bytes,
+  frame~ : String = "",
 ) -> Unit {
   if module_index < 0 || module_index >= self.files.length() {
     return
@@ -18,7 +19,11 @@ pub fn Plan::add_scalar_proof(
     let offset = validation_offset.to_int()
     // Appended validation-only declarations must not authorize source code.
     if offset >= 0 && offset < file.clean.length() {
-      self.scalar_proofs[(module_index, fi, offset)] = opcode
+      if frame == "" {
+        self.scalar_proofs[(module_index, fi, offset)] = opcode
+      } else {
+        self.execution_frame(frame).scalar_proofs[(module_index, fi, offset)] = opcode
+      }
     }
     return
   }
@@ -64,9 +69,7 @@ fn Machine::scalar_binary(
   left : Value,
   right : Value,
 ) -> Value raise EvalError {
-  let proof = self.plan.scalar_proofs.get(
-    (mi, self.file_index, offset.to_int()),
-  )
+  let proof = self.scalar_operator_proof((mi, self.file_index, offset.to_int()))
   guard proof is Some(opcode) &&
     (opcode == b"primitive" || opcode == scalar_opcode(op, left)) else {
     return self.selected_operator(mi, offset, [left, right])

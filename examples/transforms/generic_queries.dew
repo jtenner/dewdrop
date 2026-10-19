@@ -1,0 +1,25 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import dew.std.types as @types
+
+fn width<t>() -> U32 {
+  @types.bit_width::<t>()
+}
+
+fn forwarded<t>() -> U32 {
+  width::<t>()
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let valid = width::<I32>() == 32u32 && width::<F64>() == 64u32 && forwarded::<U8>() == 8u32 && forwarded::<I64>() == 64u32
+  node.with_body(@ast.integer(if valid {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

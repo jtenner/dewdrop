@@ -5,6 +5,7 @@ open dew.std.option
 
 pub struct SelfHostCompileTimeInstance {
   declaration: U64
+  constants: Map<U32, SelfHostPlannedExpressionKind>
   evidence_types: Array<SelfHostSpecializationEvidenceType>
   module_: SelfHostPlannedModuleLowering
   guarded_evidence: Map<U32, Array<SelfHostCompileTimeTraitWitness>>
@@ -16,6 +17,9 @@ fn self_host_empty_guarded_evidence() -> Map<U32, Array<SelfHostCompileTimeTrait
 
 pub struct SelfHostCompileTimeProgramContext {
   frozen: SelfHostFrozenSignatureProgram
+  mut transform_limited: Bool
+  mut transform_instance_budget: U32
+  mut transform_instance_error: String
   targets: Map<U64, Bytes>
   sensitive: Map<U64, Bool>
   instances: Map<U32, SelfHostCompileTimeInstance>
@@ -50,6 +54,9 @@ fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowe
   }
   let context = {
     frozen: source.frozen
+    transform_limited: source.transform_limited
+    transform_instance_budget: source.transform_instance_budget
+    transform_instance_error: ""
     targets: source.targets
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()
@@ -158,6 +165,9 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
   self_host_compile_time_mark_callers(callers, sensitive, work)
   {
     frozen: frozen
+    transform_limited: false
+    transform_instance_budget: 1048576u32
+    transform_instance_error: ""
     targets: targets
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()

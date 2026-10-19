@@ -1,0 +1,23 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.types
+
+impl I32 {
+  fn answer(self) -> I32 {
+    self
+  }
+}
+fn read<t>(value: t) -> I32 {
+  if is_unit::<t>() {
+    0i32
+  } else {
+    value.answer()
+  }
+}
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(read(()) + read(42i32)))
+}
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

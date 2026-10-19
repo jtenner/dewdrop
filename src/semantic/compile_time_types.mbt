@@ -71,7 +71,12 @@ fn compile_time_types_are_concrete(
     work.push((argument, 0))
   }
   let mut concrete = true
+  let mut visits = 0
   while work.length() > 0 {
+    visits += 1
+    if visits > 65536 {
+      return Err(CtTypeLimitExceeded)
+    }
     let (type_, depth) = work.pop().unwrap()
     if depth >= 256 {
       return Err(CtTypeLimitExceeded)

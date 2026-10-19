@@ -19,6 +19,9 @@ fn self_host_compile_time_body_needs_recheck(module_: SelfHostPlannedModuleLower
 fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering, owner: U32, declaration: U64, specialization: U32, bindings: SelfHostCompileTimeBindings, conditions: Map<U32, Bool>, previous: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
   let frozen = lowering.compile_time.frozen
   let original = lowering.modules[owner]
+  if !self_host_charge_transform_instance_copy(lowering, original) {
+    return previous
+  }
   let collected = lowering.collected.modules.at(owner)
   let imports = self_host_resolve_module_imports(frozen.interfaces.at(owner).resolved_types, frozen.import_scopes.at(owner))
   let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
@@ -74,6 +77,7 @@ fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering,
   match lowering.compile_time.instances.get(specialization) {
     Some(instance) => lowering.compile_time.instances.set(specialization, {
       declaration: instance.declaration
+      constants: instance.constants
       evidence_types: instance.evidence_types
       module_: selected
       guarded_evidence: self_host_empty_guarded_evidence()

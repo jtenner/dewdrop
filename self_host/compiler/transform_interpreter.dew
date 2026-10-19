@@ -477,7 +477,7 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Arr
       Some(cell) => cell.value
       None => ct_function_reference(machine, mi, expression, env)
     }
-    LambdaExpr(parameters, _, body, _) => CtValue::Closure(mi, machine.file_path, parameters, body, ct_scope(machine, env))
+    LambdaExpr(parameters, _, body, _) => CtValue::Closure(mi, machine.file_path, parameters, body, ct_scope(machine, env), machine.frame)
     ArrayExpr(items, offset) => ct_array_value(machine, mi, offset, ct_eval_values(machine, mi, items, env))
     ProductExpr(items, _) => if items.length() == 0u32 {
       CtValue::Empty
@@ -487,12 +487,12 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Arr
     BlockExpr(block) => ct_block(machine, mi, block, env)
     ObjectExpr(items, _) => CtValue::Record("", ct_eval_fields(machine, mi, items, env))
     ConstructExpr(type_, items, _) => CtValue::Record(ct_path(machine, mi, type_), ct_eval_fields(machine, mi, items, env))
-    QualifiedExpr(_, _, _) => if machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) is Some(_) {
+    QualifiedExpr(_, _, _) => if ct_lookup_reference(machine, mi, expression.offset()) is Some(_) {
       ct_function_reference(machine, mi, expression, env)
     } else {
       ct_unit_variant(machine, ct_path(machine, mi, expression))
     }
-    FieldExpr(owner, name, _) => if machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) is Some(_) {
+    FieldExpr(owner, name, _) => if ct_lookup_reference(machine, mi, expression.offset()) is Some(_) {
       ct_function_reference(machine, mi, expression, env)
     } else {
       ct_field(machine, ct_eval(machine, mi, owner, env), name)

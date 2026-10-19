@@ -1,0 +1,22 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+fn default_slot<t>() -> t {
+  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)
+}
+builtin vector_empty(value: V128) -> I32 = "v128.any_true"
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let valid = default_slot::<F32>() == 0.0f32 && default_slot::<F64>() == 0.0f64 && vector_empty(default_slot::<V128>()) == 0i32
+  node.with_body(@ast.integer(if valid {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

@@ -174,11 +174,32 @@ fn compiler_expand_transforms(
       layout.storage,
     )
   }
-  for call in @semantic.compile_time_calls(program, analyzed, lowering) {
+  let frame_calls = match
+    @semantic.compile_time_frame_calls(program, analyzed, lowering) {
+    Ok(value) => value
+    Err(message) => return Err(CompilerSourceError(message, []))
+  }
+  let calls = @semantic.compile_time_calls(program, analyzed, lowering).map(call => {
+    ("", "", call)
+  })
+  for framed in frame_calls {
+    calls.push((framed.frame, framed.target_frame, framed.call))
+  }
+  for (frame, target_frame, call) in calls {
     if program.source_file(call.file) is Some(source) {
       let target_path = match program.source_file(call.target_file) {
         Some(file) => file.path
         None => ""
+      }
+      if call.target_module == -7 {
+        plan.add_scalar_proof(
+          call.module_index,
+          source.path,
+          call.offset,
+          @utf8.encode(call.result_kind),
+          frame~,
+        )
+        continue
       }
       if call.constant is Some(value) {
         let constant = match value {
@@ -189,7 +210,13 @@ fn compiler_expand_transforms(
             @transforms.CheckedStrings(values)
           @semantic.TransformUnitConstant => @transforms.CheckedUnit
         }
-        plan.add_constant(call.module_index, source.path, call.offset, constant)
+        plan.add_constant(
+          call.module_index,
+          source.path,
+          call.offset,
+          constant,
+          frame~,
+        )
         continue
       }
       plan.add_call_proof(
@@ -199,11 +226,17 @@ fn compiler_expand_transforms(
         call.target_module,
         target_path,
         call.target_offset,
+        frame~,
+        target_frame~,
         reference=call.reference,
         result_kind=call.result_kind,
         constructor_key=call.constructor_key,
-        function_declaration=call.function_identity.map(identity => identity.declaration),
-        generic_function=call.function_identity.map(identity => identity.generic_function).unwrap_or(false),
+        function_declaration=call.function_identity.map(identity => {
+          identity.declaration
+        }),
+        generic_function=call.function_identity
+          .map(identity => identity.generic_function)
+          .unwrap_or(false),
       )
     }
   }

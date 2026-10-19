@@ -1,0 +1,230 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+struct CtExecutionFrame {
+  scalar_proofs: Map<String, Bytes>
+  calls: Map<String, CtCallTarget>
+  references: Map<String, CtFunctionReferenceProof>
+  scalar_types: Map<String, String>
+}
+
+struct CtFrameTarget {
+  target: Option<CtCallTarget>
+  frame: String
+}
+
+fn ct_base_frame(plan: CtPlan) -> CtExecutionFrame {
+  {
+    scalar_proofs: plan.scalar_proofs
+    calls: plan.calls
+    references: plan.references
+    scalar_types: plan.scalar_types
+  }
+}
+
+fn ct_execution_frame(plan: CtPlan, frame: String) -> CtExecutionFrame {
+  if frame == "" {
+    return ct_base_frame(plan)
+  }
+  match plan.frames.get(frame) {
+    Some(value) => value
+    None => {
+      let value = CtExecutionFrame::{
+        scalar_proofs: map_empty::<String, Bytes>()
+        calls: map_empty::<String, CtCallTarget>()
+        references: map_empty::<String, CtFunctionReferenceProof>()
+        scalar_types: map_empty::<String, String>()
+      }
+      plan.frames.set(frame, value)
+      value
+    }
+  }
+}
+
+fn ct_frame_key(specialization: U32) -> String {
+  if specialization == 4294967295u32 {
+    return ""
+  }
+  let out = StringBuilder::new()
+  out.append_u32(specialization)
+  out.finish()
+}
+
+fn ct_unframe_option(value: Option<CtCallTarget>) -> CtFrameTarget {
+  match value {
+    Some(Framed(target, frame)) => CtFrameTarget::{
+      target: Some(target)
+      frame: frame
+    }
+    _ => CtFrameTarget::{
+      target: value
+      frame: ""
+    }
+  }
+}
+
+fn ct_unframe_call(value: CtCallTarget) -> CtFrameTarget {
+  ct_unframe_option(Some(value))
+}
+
+fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
+  ct_source_call_frame(machine, mi, path, function, args, "")
+}
+
+fn ct_lookup_reference(machine: CtMachine, mi: U32, offset: U32) -> Option<CtFunctionReferenceProof> {
+  let key = ct_call_key(mi, machine.file_path, offset)
+  match machine.plan.frames.get(machine.frame) {
+    Some(frame) => match frame.references.get(key) {
+      Some(value) => return Some(value)
+      None => {}
+    }
+    None => {}
+  }
+  machine.plan.references.get(key)
+}
+
+fn ct_frame_query_proof(lowering: SelfHostPlannedProgramLowering, module_id: U64, expression: U32, kind: SelfHostPlannedExpressionKind, specialization: U32) -> Option<CtCheckedConstant> {
+  if specialization != 4294967295u32 {
+    match lowering.compile_time.instances.get(specialization) {
+      Some(instance) => match instance.constants.get(expression) {
+        Some(saved) => return ct_folded_query(saved)
+        None => {}
+      }
+      None => {}
+    }
+    return ct_folded_query(kind)
+  }
+  ct_query_proof(lowering, module_id, expression, kind)
+}
+
+fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original: SelfHostPlannedProgramLowering) -> Unit {
+  for module_ in original.modules {
+    for callable in module_.functions.callables {
+      if self_host_program_specialization_callable_generics(callable).length > 0u32 {
+        original.compile_time.sensitive.set(callable.declaration, true)
+      }
+    }
+  }
+  original.compile_time.transform_limited = true
+  let selected = self_host_plan_program_specialization(original, false)
+  if selected.lowering.compile_time.transform_instance_error.byte_length() != 0u32 {
+    plan.error = selected.lowering.compile_time.transform_instance_error
+    return
+  }
+  let lowering = selected.lowering
+  for error in lowering.compile_time.diagnostics {
+    plan.error = error
+    return
+  }
+  let _ = while 0u32 {
+    index if index < selected.requests.length() => {
+      let request = selected.requests[index]
+      match lowering.index.declaration_owner(request.declaration) {
+        Some(mi) => {
+          let module_ = self_host_program_function_lowering(lowering, mi, index)
+          for body in module_.bodies {
+            if body.declaration == request.declaration {
+              let frame = ct_execution_frame(plan, ct_frame_key(index))
+              let expressions = self_host_compile_time_owned_expressions(module_, body)
+              ct_collect_module_calls(plan, collected, lowering, mi, module_, expressions, frame, index)
+              ct_collect_frame_scalar_proofs(plan, collected, lowering, mi, module_, expressions, frame)
+            }
+          }
+        }
+        None => {}
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  for call in selected.calls {
+    match lowering.index.declaration_owner(call.caller_body) {
+      Some(mi) => {
+        let source = collected.modules.at(mi)
+        let module_ = self_host_program_function_lowering(lowering, mi, call.caller_specialization)
+        let expression = source.expressions[call.expression]
+        let reference = match expression {
+          CallExpr(_, _, _), BinaryExpr(_, _, _, _), IndexExpr(_, _, _) => false
+          _ => true
+        }
+        let kind = ct_checked_scalar_kind(plan, module_, module_.expressions[call.expression].type_, reference)
+        let target = ct_checked_source_target(plan, collected, call.target, kind)
+        let target_frame = ct_frame_key(call.target_specialization)
+        let target = if target_frame == "" {
+          target
+        } else {
+          CtCallTarget::Framed(target, target_frame)
+        }
+        let proofs = ct_execution_frame(plan, ct_frame_key(call.caller_specialization))
+        let mut fi = 0u32
+        for file_id in source.files {
+          if file_id == source.expression_files[call.expression] {
+            for file in plan.files {
+              if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                match ct_scalar_original_offset(file, expression.offset(), 0u32) {
+                  Some(offset) => {
+                    let key = ct_call_key(mi, file.original.path, offset)
+                    if reference {
+                      proofs.references.set(key, {
+                        target: target
+                        identity: ct_checked_function_identity(lowering, call.target)
+                      })
+                    } else {
+                      proofs.calls.set(key, target)
+                    }
+                  }
+                  None => {}
+                }
+              }
+            }
+          }
+          fi = fi + 1u32
+        }
+      }
+      None => {}
+    }
+  }
+}
+
+fn ct_lookup_scalar_operator(machine: CtMachine, mi: U32, offset: U32) -> Option<Bytes> {
+  let key = ct_call_key(mi, machine.file_path, offset)
+  match machine.plan.frames.get(machine.frame) {
+    Some(frame) => match frame.scalar_proofs.get(key) {
+      Some(value) => return Some(value)
+      None => {}
+    }
+    None => {}
+  }
+  machine.plan.scalar_proofs.get(key)
+}
+
+fn ct_collect_frame_scalar_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering, mi: U32, module_: SelfHostPlannedModuleLowering, expressions: Array<U32>, frame: CtExecutionFrame) -> Unit {
+  let source = collected.modules.at(mi)
+  let targets = ct_scalar_source_targets(source, module_)
+  for ei in expressions {
+    if source.expressions[ei] is BinaryExpr(_, _, _, offset) {
+      let opcode = match targets[ei] {
+        NoBasicCallTarget => b"primitive"
+        SelectedBasicCallTarget(target, arguments) if arguments.length == 0u32 => ct_operator_proved_opcode(lowering, target)
+        _ => b""
+      }
+      if opcode.byte_length() != 0u32 {
+        let mut fi = 0u32
+        for file_id in source.files {
+          if file_id == source.expression_files[ei] {
+            for file in plan.files {
+              if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                match ct_scalar_original_offset(file, offset, 0u32) {
+                  Some(original) => frame.scalar_proofs.set(ct_call_key(mi, file.original.path, original), opcode)
+                  None => {}
+                }
+              }
+            }
+          }
+          fi = fi + 1u32
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 ///|
 enum CallTarget {
   Constant(CheckedConstant)
+  Framed(CallTarget, String)
   Source(Int32, Int32, @parser.FunctionDeclaration, String)
   Global(Int32, Int32, @parser.LetDeclaration)
   Intrinsic(@parser.BuiltinDeclaration, String)
@@ -24,6 +25,8 @@ pub fn Plan::add_call_proof(
   constructor_key~ : String = "",
   function_declaration~ : UInt64? = None,
   generic_function~ : Bool = false,
+  frame~ : String = "",
+  target_frame~ : String = "",
 ) -> Unit {
   if mi < 0 || mi >= self.files.length() {
     return
@@ -34,11 +37,20 @@ pub fn Plan::add_call_proof(
     }
     let site = (mi, fi, offset.to_int())
     if target_module == -5 {
-      self.scalar_types[site] = result_kind
+      if frame == "" {
+        self.scalar_types[site] = result_kind
+      } else {
+        self.execution_frame(frame).scalar_types[site] = result_kind
+      }
       return
     }
     let identity = match function_declaration {
-      Some(value) => if generic_function { GenericFunctionSingleton(value) } else { FunctionSingleton(value) }
+      Some(value) =>
+        if generic_function {
+          GenericFunctionSingleton(value)
+        } else {
+          FunctionSingleton(value)
+        }
       None => FunctionInstance
     }
     if target_module < 0 {
@@ -51,11 +63,20 @@ pub fn Plan::add_call_proof(
       } else {
         Unsupported
       }
-      self.save_call_proof(site, reference, target, identity)
+      self.save_frame_call_proof(
+        frame, site, reference, target, identity, target_frame,
+      )
       return
     }
     if target_module >= self.files.length() {
-      self.save_call_proof(site, reference, Unsupported, identity)
+      self.save_frame_call_proof(
+        frame,
+        site,
+        reference,
+        Unsupported,
+        identity,
+        target_frame,
+      )
       return
     }
     let mut selected = Unsupported
@@ -81,7 +102,9 @@ pub fn Plan::add_call_proof(
         }
       }
     }
-    self.save_call_proof(site, reference, selected, identity)
+    self.save_frame_call_proof(
+      frame, site, reference, selected, identity, target_frame,
+    )
   }
 }
 
@@ -107,6 +130,7 @@ fn Machine::source_call(
   fi : Int32,
   function : @parser.FunctionDeclaration,
   args : Array[Value],
+  frame~ : String = "",
 ) -> Value raise EvalError {
   let file = self.plan.files[mi][fi]
   guard !file.annotations.any(fn(a) {
@@ -130,19 +154,24 @@ fn Machine::source_call(
     env[parameter.name] = { value: args[i + receiver_count], mutable_: false, }
   }
   let previous = self.file_index
+  let previous_frame = self.frame
+  self.frame = frame
   self.file_index = fi
   let result = self.block(mi, function.body, env) catch {
     Returned(value) => value
     Broken(_) | Continued(_) => {
       self.file_index = previous
+      self.frame = previous_frame
       return eval_fail("loop control escaped a compile-time function")
     }
     Failed(message) => {
       self.file_index = previous
+      self.frame = previous_frame
       return eval_fail(function.name + ": " + message)
     }
   }
   self.file_index = previous
+  self.frame = previous_frame
   result
 }
 
@@ -157,7 +186,10 @@ fn Machine::checked_call(
   type_arguments~ : Array[@parser.TypeExpr] = [],
 ) -> Value raise EvalError {
   let _ = type_arguments
-  match self.plan.calls.get((mi, self.file_index, offset.to_int())) {
+  let (selected, frame) = unframe_call(
+    self.call_proof((mi, self.file_index, offset.to_int())),
+  )
+  match selected {
     Some(Constant(value)) => self.checked_constant(value)
     Some(Source(target_mi, target_fi, function, kind)) => {
       let values : Array[Value] = []
@@ -173,7 +205,7 @@ fn Machine::checked_call(
         values.push(self.eval(mi, arg, env))
       }
       intrinsic_kind(
-        self.source_call(target_mi, target_fi, function, values),
+        self.source_call(target_mi, target_fi, function, values, frame~),
         kind,
       )
     }
@@ -209,10 +241,13 @@ fn Machine::selected_operator(
   offset : UInt64,
   values : Array[Value],
 ) -> Value raise EvalError {
-  match self.plan.calls.get((mi, self.file_index, offset.to_int())) {
+  let (selected, frame) = unframe_call(
+    self.call_proof((mi, self.file_index, offset.to_int())),
+  )
+  match selected {
     Some(Source(target_mi, target_fi, function, kind)) =>
       intrinsic_kind(
-        self.source_call(target_mi, target_fi, function, values),
+        self.source_call(target_mi, target_fi, function, values, frame~),
         kind,
       )
     _ =>
@@ -231,16 +266,17 @@ fn Machine::closure_call(
     for arg in args {
       values.push(arg)
     }
-    return match target {
-      Source(mi, fi, function, kind) =>
-        intrinsic_kind(self.source_call(mi, fi, function, values), kind)
-      Intrinsic(builtin, kind) =>
+    let (selected, frame) = unframe_call(Some(target))
+    return match selected {
+      Some(Source(mi, fi, function, kind)) =>
+        intrinsic_kind(self.source_call(mi, fi, function, values, frame~), kind)
+      Some(Intrinsic(builtin, kind)) =>
         intrinsic_kind(self.intrinsic(builtin, values, result_kind=kind), kind)
-      Constructor(key) => Variant(key, values)
+      Some(Constructor(key)) => Variant(key, values)
       _ => eval_fail("unsupported checked function reference")
     }
   }
-  guard closure is Closure(mi, fi, parameters, body, captured) else {
+  guard closure is Closure(mi, fi, parameters, body, captured, frame) else {
     return eval_fail(
       "compile-time function value is not an interpreted closure",
     )
@@ -253,19 +289,24 @@ fn Machine::closure_call(
     env[parameter.name] = { value: args[i], mutable_: false, }
   }
   let previous = self.file_index
+  let previous_frame = self.frame
+  self.frame = frame
   self.file_index = fi
   let result = self.block(mi, body, env) catch {
     Returned(value) => value
     Broken(_) | Continued(_) => {
       self.file_index = previous
+      self.frame = previous_frame
       return eval_fail("loop control escaped a compile-time closure")
     }
     error => {
       self.file_index = previous
+      self.frame = previous_frame
       raise error
     }
   }
   self.file_index = previous
+  self.frame = previous_frame
   result
 }
 
@@ -296,7 +337,7 @@ fn Machine::function_reference(
   expression : @parser.Expr,
   env : Map[String, Cell],
 ) -> Value raise EvalError {
-  guard self.plan.references.get(
+  guard self.reference_proof(
       (mi, self.file_index, expression.offset().to_int()),
     )
     is Some(proof) else {
@@ -310,10 +351,19 @@ fn Machine::function_reference(
     return Variant(key, [])
   }
   let bound : Array[Value] = []
-  if target is Source(_, _, function, _) &&
+  let (selected, _) = unframe_call(Some(target))
+  if selected is Some(Source(_, _, function, _)) &&
     function.receiver is Some(_) &&
     expression is @parser.FieldExpr(owner, _, _) {
     bound.push(self.eval(mi, owner, env))
   }
-  Function(target, bound, if bound.is_empty() { proof.identity } else { FunctionInstance })
+  Function(
+    target,
+    bound,
+    if bound.is_empty() {
+      proof.identity
+    } else {
+      FunctionInstance
+    },
+  )
 }

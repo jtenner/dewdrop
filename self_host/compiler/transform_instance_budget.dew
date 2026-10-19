@@ -1,0 +1,42 @@
+open dew.std.array
+
+// This is a copied-entry budget, separate from the interpreter allocation
+// ledger. Shared arrays are excluded. Rechecks debit the bundle a second time.
+fn self_host_charge_transform_instance_copy(lowering: SelfHostPlannedProgramLowering, source: SelfHostPlannedModuleLowering) -> Bool {
+  if !lowering.compile_time.transform_limited {
+    return true
+  }
+  let counts = [source.names.length(), source.name_diagnostics.length(),
+    source.resolved_types.types.length(), source.resolved_types.type_arguments.length(),
+    source.bodies.length(), source.lambdas.length(), source.locals.length(),
+    source.captures.length(), source.expressions.length(), source.blocks.length(),
+    source.block_items.length(), source.object_fields.length(), source.named_fields.length(),
+    source.named_variants.length(), source.patterns.length(), source.pattern_fields.length(),
+    source.pattern_arms.length(), source.expression_children.length(),
+    source.pattern_children.length(), source.arm_children.length(),
+    source.inferred.call_type_arguments.length(), source.evidence.bodies.length(),
+    source.flow_diagnostics.length(), source.functions.callables.length(),
+    source.functions.parameters.length()]
+  for count in counts {
+    if !self_host_charge_transform_entries(lowering, count) {
+      return false
+    }
+  }
+  for body in source.evidence.bodies {
+    for count in [body.expression_evidence.length(), body.evidence.length(), body.prerequisite_indices.length()] {
+      if !self_host_charge_transform_entries(lowering, count) {
+        return false
+      }
+    }
+  }
+  true
+}
+
+fn self_host_charge_transform_entries(lowering: SelfHostPlannedProgramLowering, count: U32) -> Bool {
+  if count > lowering.compile_time.transform_instance_budget {
+    lowering.compile_time.transform_instance_error = "transform generic instance limit exceeded"
+    return false
+  }
+  lowering.compile_time.transform_instance_budget = lowering.compile_time.transform_instance_budget - count
+  true
+}

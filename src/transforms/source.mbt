@@ -44,6 +44,7 @@ pub struct Plan {
   modules : Array[SourceModule]
   files : Array[Array[ParsedFile]]
   active : Bool
+  frames : Map[String, ExecutionFrame]
   validation_stop : String
   scalar_proofs : Map[(Int32, Int32, Int32), Bytes]
   pattern_proofs : Map[(Int32, Int32, Int32), String]
@@ -340,6 +341,7 @@ pub fn prepare(
       array_layouts: {},
       raw_layouts: {},
       intrinsic_contracts: {},
+      frames: {},
       reports: [],
       expression_types: {},
       reflection_errors: [],
@@ -414,6 +416,7 @@ pub fn prepare(
     array_layouts: {},
     raw_layouts: {},
     intrinsic_contracts: {},
+    frames: {},
     reports: [],
     expression_types: {},
     reflection_errors: [],
