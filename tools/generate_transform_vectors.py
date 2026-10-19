@@ -70,35 +70,20 @@ for i,(op,_,inputs,out) in enumerate(rows):
     }}''')
 lines.append('''    _ => {
       if opcode.starts_with("i8x16.shuffle ") && args.length() == 2u32 {
-        let lanes = array_new::<String>()
-        let mut start = 14u32
-        let _ = while start {
-          index if index <= opcode.byte_length() => {
-            if index == opcode.byte_length() || opcode.byte_at(index) == 32u8 {
-              lanes.push(opcode.slice(start, index))
-              start = index + 1u32
-            }
-            continue index + 1u32
-          }
-          _ => break ()
-        }
-        if lanes.length() != 16u32 {
-          return ct_fail(machine, "invalid Wasm vector shuffle")
+        let lanes = match ct_vector_shuffle_lanes(opcode) {
+          Some(lanes) => lanes
+          None => return ct_fail(machine, "invalid Wasm vector shuffle")
         }
         let mut result = CtValue::Vector(0u64, 0u64)
         let _ = while 0u32 {
           lane if lane < 16u32 => {
-            match ct_raw_immediate("lane ".concat(lanes[lane]), "lane ") {
-              Some(selected) if selected < 32u32 => {
-                let source = if selected < 16u32 {
-                  args[0u32]
-                } else {
-                  args[1u32]
-                }
-                result = ct_vector_replace(machine, result, lane, ct_vector_byte(machine, source, selected % 16u32))
-              }
-              _ => return ct_fail(machine, "invalid Wasm vector shuffle lane")
+            let selected = lanes[lane]
+            let source = if selected < 16u32 {
+              args[0u32]
+            } else {
+              args[1u32]
             }
+            result = ct_vector_replace(machine, result, lane, ct_vector_byte(machine, source, selected % 16u32))
             continue lane + 1u32
           }
           _ => break ()
@@ -111,9 +96,19 @@ lines.append('''    _ => {
   }
 }''')
 output = 'open dew.std.array\nopen dew.std.string\n' + '\n'.join(lines) + '\n'
-path = ROOT / 'self_host/compiler/transform_vectors_generated.dew'
-if '--check' in sys.argv:
- if path.read_text() != output:
-  raise SystemExit('transform vector dispatch is stale')
-else:
- path.write_text(output)
+# Keep the hand-written Native evaluator behind the same exact instruction set.
+native = ["// Generated from tools/wasm_simd_intrinsics.py. Do not edit.",
+          "///|", "fn vector_instruction_arity(opcode : String) -> Int32 {", "  match opcode {"]
+for op, _, inputs, _ in rows:
+ native.append(f'    {json.dumps(op)} => {len(inputs)}')
+native += ["    _ => -1", "  }", "}", ""]
+outputs = {
+ ROOT / 'self_host/compiler/transform_vectors_generated.dew': output,
+ ROOT / 'src/transforms/vector_contracts_generated.mbt': '\n'.join(native),
+}
+for path, content in outputs.items():
+ if '--check' in sys.argv:
+  if path.read_text() != content:
+   raise SystemExit(f'{path.relative_to(ROOT)} is stale')
+ else:
+  path.write_text(content)

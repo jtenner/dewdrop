@@ -208,6 +208,27 @@ fn vector_intrinsic(
   opcode : String,
   args : Array[Value],
 ) -> Value raise EvalError {
+  let shuffle = if opcode.has_prefix("i8x16.shuffle ") {
+    match vector_shuffle_lanes(opcode) {
+      Some(lanes) => Some(lanes)
+      None => return eval_fail("invalid Wasm vector shuffle")
+    }
+  } else {
+    None
+  }
+  let arity = if shuffle is Some(_) {
+    2
+  } else {
+    vector_instruction_arity(opcode)
+  }
+  guard arity >= 0 else {
+    return eval_fail(
+      "unsupported Wasm vector intrinsic or linear memory access: " + opcode,
+    )
+  }
+  guard args.length() == arity else {
+    return eval_fail("Wasm vector intrinsic argument count mismatch")
+  }
   if opcode.has_prefix("v128.") {
     guard args.length() > 0 && args[0] is Vector(al, ah) else {
       return eval_fail("Wasm vector instruction requires a 128-bit vector")
@@ -240,17 +261,9 @@ fn vector_intrinsic(
         )
     }
   }
-  if opcode.has_prefix("i8x16.shuffle ") && args.length() == 2 {
-    let lanes = opcode.substring(start=14).split(" ").to_array()
-    guard lanes.length() == 16 else {
-      return eval_fail("invalid Wasm vector shuffle")
-    }
+  if shuffle is Some(lanes) {
     let mut result = Vector(0UL, 0UL)
-    for index, lane in lanes {
-      let selected = raw_immediate("lane " + lane.to_owned(), "lane ")
-      guard selected is Some(selected) && selected < 32 else {
-        return eval_fail("invalid Wasm vector shuffle lane")
-      }
+    for index, selected in lanes {
       result = vector_replace(
         result,
         index,

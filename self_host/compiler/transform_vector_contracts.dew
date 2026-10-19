@@ -1,0 +1,49 @@
+// Keep this decimal lane grammar equal to tools/wasm_simd_intrinsics.py.
+fn ct_vector_shuffle_lanes(opcode: String) -> Option<Array<U32>> {
+  if !opcode.starts_with("i8x16.shuffle ") {
+    return Option::None
+  }
+  let lanes = array_new::<U32>()
+  let mut at = 14u32
+  let _ = while 0u32 {
+    lane if lane < 16u32 => {
+      if at >= opcode.byte_length() {
+        return Option::None
+      }
+      let first = opcode.byte_at(at)
+      if first < 48u8 || first > 57u8 {
+        return Option::None
+      }
+      let mut selected = u8_into_u32(first) - 48u32
+      at = at + 1u32
+      if at < opcode.byte_length() && opcode.byte_at(at) != 32u8 {
+        if first == 48u8 {
+          return Option::None
+        }
+        let second = opcode.byte_at(at)
+        if second < 48u8 || second > 57u8 {
+          return Option::None
+        }
+        selected = selected * 10u32 + u8_into_u32(second) - 48u32
+        at = at + 1u32
+      }
+      if selected >= 32u32 {
+        return Option::None
+      }
+      lanes.push(selected)
+      if lane < 15u32 {
+        if at >= opcode.byte_length() || opcode.byte_at(at) != 32u8 {
+          return Option::None
+        }
+        at = at + 1u32
+      } else {
+        if at != opcode.byte_length() {
+          return Option::None
+        }
+      }
+      continue lane + 1u32
+    }
+    _ => break ()
+  }
+  Option::Some(lanes)
+}
