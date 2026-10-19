@@ -14,6 +14,8 @@ pub fn compile_manifest(@semantic.ProgramManifest, @standard_loader.StandardLibr
 
 pub fn compile_manifest_uncached(@semantic.ProgramManifest, @semantic.StandardLibrarySources, CompilerPipelineOptions, source_pool? : @semantic.ProgramManifest) -> Result[CompilerCompilation, CompilerCompilationError]
 
+pub fn expand_manifest_sources(@semantic.ProgramManifest, @semantic.StandardLibrarySources, CompilerPipelineOptions, source_pool? : @semantic.ProgramManifest) -> Result[@semantic.ProgramManifest, CompilerCompilationError]
+
 pub fn load_compilation_standard_sources(String, @semantic.ProgramManifest, Bool) -> Result[@standard_loader.StandardLibraryLoad, String]
 
 pub fn transform_loading_manifest(@semantic.ProgramManifest) -> @semantic.ProgramManifest

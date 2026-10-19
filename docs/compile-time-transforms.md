@@ -264,3 +264,19 @@ Use `wago` in place of `node-facet` to run the same requests in Wago.
 The test checks every public example and requires each exported `main` to
 return `42`. It also checks that invalid signatures, extra declarations, unsafe
 operations, and host calls fail with a diagnostic and produce no output file.
+
+## Inspect expanded source
+
+```sh
+tools/dew build --emit expanded -o .tmp/expanded.json examples/transforms/declarations.dew
+```
+
+This writes a version 1 JSON document with `modules` and their `files`. Each file
+has a logical `path` and exact `source` text. A generated file also has an `origin`
+with the original file and a stable `function@byte-offset` site. Its `ranges`
+list the byte start and end of each generated declaration. All ranges in one
+file share that origin. This maps multiple generated declarations back to their
+source function; it does not claim a separate origin for every inserted token.
+An editor can show these files directly. The command checks and runs transforms,
+then writes source before generated-code type checks or Wasm emission. This lets
+you inspect generated code that has a type error.

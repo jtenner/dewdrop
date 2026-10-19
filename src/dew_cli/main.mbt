@@ -138,7 +138,7 @@ fn print_usage() -> Unit {
     "  dew check [--root NAME] [--module NAME] [--no-default-preamble] FILE ...",
   )
   println(
-    "  dew build [--root NAME] [--module NAME] [--no-default-preamble] [--emit hir|lowering|wasm] -o OUTPUT FILE ...",
+    "  dew build [--root NAME] [--module NAME] [--no-default-preamble] [--emit hir|lowering|wasm|expanded] -o OUTPUT FILE ...",
   )
   println("  repeat --module NAME to begin another statically linked module")
   println("  repeat --link-wasm PROVIDER FILE to statically link Core Wasm")
@@ -412,8 +412,11 @@ fn main {
         cli_fail("missing value for --emit")
       }
       emit = args[index + 1]
-      if emit != "hir" && emit != "lowering" && emit != "wasm" {
-        cli_fail("--emit must be hir, lowering, or wasm")
+      if emit != "hir" &&
+        emit != "lowering" &&
+        emit != "wasm" &&
+        emit != "expanded" {
+        cli_fail("--emit must be hir, lowering, wasm, or expanded")
       }
       index += 2
     } else if argument == "--std-root" {
@@ -508,6 +511,38 @@ fn main {
     }
   }
   let manifest = @semantic.ProgramManifest::new(modules)
+  if emit == "expanded" {
+    let loaded = if bootstrap_standard_library {
+      @standard_loader.StandardLibraryLoad::bootstrap()
+    } else {
+      match
+        @compiler_driver.load_compilation_standard_sources(
+          standard_root, manifest, default_preamble,
+        ) {
+        Ok(value) => value
+        Err(error) => {
+          cli_fail(error)
+          abort("unreachable")
+        }
+      }
+    }
+    let expanded = match
+      @compiler_driver.expand_manifest_sources(
+        manifest,
+        loaded.sources,
+        @compiler_driver.CompilerPipelineOptions::production(
+          4000UL, root_module_index, default_preamble,
+        ),
+      ) {
+      Ok(value) => value
+      Err(error) => {
+        cli_compilation_error(error)
+        abort("unreachable")
+      }
+    }
+    write_cli_output(output, render_expanded_sources(expanded, manifest))
+    return
+  }
   let cache_pack = match
     @standard_loader.open_compilation_cache_pack(
       manifest, root_module_index, default_preamble, 0,
