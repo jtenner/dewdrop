@@ -54,6 +54,12 @@ pub struct SelfHostRawIntrinsicSignature {
 }
 
 fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
+  if name.equals(b"ref.eq") {
+    return Some({
+      inputs: [EqRefBodyCarrier, EqRefBodyCarrier]
+      result: I32BodyCarrier
+    })
+  }
   if name.equals(b"unreachable") {
     return Some({
       inputs: []

@@ -13,6 +13,11 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_unreachable_(),
     )
+  } else if name.equals(b"ref.eq") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_ref_eq(),
+    )
   } else if name.equals(b"i32.load8_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,

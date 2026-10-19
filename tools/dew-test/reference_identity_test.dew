@@ -1,0 +1,44 @@
+struct IdentityBox {
+  value: I32
+}
+
+enum IdentityValue {
+  Number(I32)
+}
+
+builtin identity_box_same(left: IdentityBox, right: IdentityBox) -> Bool = "ref.eq"
+builtin identity_value_same(left: IdentityValue, right: IdentityValue) -> Bool = "ref.eq"
+
+fn identity_box_callback() -> fn(IdentityBox, IdentityBox) -> Bool {
+  identity_box_same
+}
+
+test "ref.eq checks record identity in direct calls" {
+  let first = IdentityBox::{
+    value: 7i32
+  }
+  let second = IdentityBox::{
+    value: 7i32
+  }
+  assert(identity_box_same(first, first), "one record must equal itself")
+  assert(!identity_box_same(first, second), "equal fields must not make separate records identical")
+}
+
+test "ref.eq checks record identity in outlined calls" {
+  let first = IdentityBox::{
+    value: 7i32
+  }
+  let second = IdentityBox::{
+    value: 7i32
+  }
+  let same = identity_box_callback()
+  assert(same(first, first), "outlined ref.eq must accept the same record")
+  assert(!same(first, second), "outlined ref.eq must reject separate records")
+}
+
+test "ref.eq checks enum identity" {
+  let first = Number(7i32)
+  let second = Number(7i32)
+  assert(identity_value_same(first, first), "one enum value must equal itself")
+  assert(!identity_value_same(first, second), "equal payloads must not make separate enum values identical")
+}

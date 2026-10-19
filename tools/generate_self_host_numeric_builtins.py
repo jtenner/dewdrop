@@ -85,6 +85,7 @@ def main() -> None:
 
     aliases: list[tuple[str, list[str]]] = [
         ("unreachable", ["StarshineFfi.ffi_lib_Instruction_unreachable_()"]),
+        ("ref.eq", ["StarshineFfi.ffi_lib_Instruction_ref_eq()"]),
         ("i32.load8_s", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(0i32)"]),
         ("i32.store8", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(1i32)"]),
         ("i32.load8_u", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(2i32)"]),
