@@ -161,7 +161,7 @@ These need a further language or execution design. They remain open.
 - [ ] Complete default/null reference behavior for raw arrays.
 - [ ] Generic trait evidence during interpretation.
 - [ ] Dynamic trait objects.
-- [ ] First-class overloaded function references.
+- [x] First-class overloaded builtin references with a checked target.
 - [ ] Floating-point execution with Wasm rounding and traps.
 - [ ] Full text and SIMD execution.
 - [ ] Full compile-time type-query API.

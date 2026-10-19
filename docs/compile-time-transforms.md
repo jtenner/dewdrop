@@ -292,3 +292,10 @@ existing Facet bindings. The CI job uses a Linux x64 project runner with the
 `dewdrop` label. Native Wago currently takes about 116 seconds for the small
 request; this is an open host speed issue. See
 `docs/research/native-wago-transform-check-2026-10-19.md` for measured limits.
+
+## Selected function values
+
+A function value uses the target chosen by normal source checking. This also
+works for overloaded builtins when the expected function type selects a target.
+Dew does not permit overloaded ordinary free functions. See
+`examples/transforms/overloads.dew`.

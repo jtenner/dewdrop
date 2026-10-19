@@ -6,7 +6,7 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants; do
+for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants overloads; do
   args=("examples/transforms/$kind.dew")
   if [[ "$kind" == imported || "$kind" == imported_methods ]]; then
     args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)

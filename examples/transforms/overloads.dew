@@ -1,0 +1,28 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+builtin adjust(value: I32) -> I32 = "i32.extend8_s"
+builtin adjust(value: Bool) -> Bool = "i32.eqz"
+
+fn flag_callback() -> fn(Bool) -> Bool {
+  adjust
+}
+
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let callback = flag_callback()
+  let answer = if callback(false) {
+    apply(adjust, 42i32)
+  } else {
+    0i32
+  }
+  node.with_body(@ast.integer(answer))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

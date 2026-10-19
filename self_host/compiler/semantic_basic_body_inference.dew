@@ -1902,6 +1902,99 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  // Body constraints supply the expected type for an overloaded function value.
+  // Check complete signatures under rollback before retaining one declaration.
+  fn constrain_local_function_references(self) -> Unit {
+    let direct_targets = self_host_inference_bool_slots(self.body.expressions.length)
+    let end = self.body.expressions.start + self.body.expressions.length
+    let _ = while self.body.expressions.start {
+      expression if expression < end => {
+        match self.collected.expressions[expression] {
+          CallExpr(target, _, _) if target >= self.body.expressions.start && target < end => {
+            direct_targets[self.expression_index(target)] = true
+          }
+          _ => {}
+        }
+        continue expression + 1u32
+      }
+      _ => break ()
+    }
+    let _ = while self.body.expressions.start {
+      expression if expression < end => {
+        let index = self.expression_index(expression)
+        if !self.live_expression(expression) || direct_targets[index] || self.consumed_member_roots[index] || self.call_targets[index] is SelectedBasicCallTarget(_, _) {
+          continue expression + 1u32
+        }
+        match self.collected.expressions[expression] {
+          NameExpr(name, offset) if self.names.expression_references[expression] is ModuleValueNameReference(_) => {
+            match self.collected.value_binding(name) {
+              Some(binding) if self.collected.value_binding_candidates[binding.head].next is Some(_) => {
+                if self.solver.has_unresolved_variable(self.expression_type(expression)) {
+                  continue expression + 1u32
+                }
+                let mut cursor = binding.head
+                let mut count = 0u32
+                let mut selected = 0u32
+                let mut first = 0u64
+                let mut second = 0u64
+                let origin = self_host_expression_type_origin(expression, offset)
+                let _ = while true {
+                  _ => {
+                    let candidate = self.collected.value_binding_candidates[cursor]
+                    match self.local_callable_index_of_declaration(candidate.declaration) {
+                      Some(callable) => {
+                        let snapshot = self.solver.snapshot()
+                        self.begin_signature_instantiation(candidate.declaration)
+                        let signature = self.instantiate_signature_type(self.resolved.callable_function_types[callable])
+                        let viable = self.solver.unify(self.expression_type(expression), signature, origin)
+                        self.solver.rollback(snapshot)
+                        if viable {
+                          count = count + 1u32
+                          if count == 1u32 {
+                            selected = callable
+                            first = candidate.declaration
+                          } else if count == 2u32 {
+                            second = candidate.declaration
+                          }
+                        }
+                      }
+                      None => {}
+                    }
+                    match candidate.next {
+                      Some(next) => {
+                        cursor = next
+                        continue true
+                      }
+                      None => break ()
+                    }
+                  }
+                }
+                if count == 1u32 {
+                  self.begin_signature_instantiation(first)
+                  let signature = self.instantiate_signature_type(self.resolved.callable_function_types[selected])
+                  assert(self.solver.unify(self.expression_type(expression), signature, origin), "SPC-303 selected function reference changed after rollback")
+                  self.record_function_reference(expression, first)
+                } else {
+                  self.store_call_target(expression, ErrorBasicCallTarget, 0u32)
+                  self.solver.poison_type(self.expression_type(expression))
+                  if count == 0u32 {
+                    self.diagnostics.push(NoMatchingFunctionReference(name, expression, offset))
+                  } else {
+                    self.diagnostics.push(AmbiguousFunctionReference(name, expression, first, second, count, offset))
+                  }
+                }
+              }
+              _ => {}
+            }
+          }
+          _ => {}
+        }
+        continue expression + 1u32
+      }
+      _ => break ()
+    }
+  }
+
   fn body_signature_type(self, source_type: U32) -> I32 {
     let type_ = self.source_resolved_type(source_type)
     match self.resolved.types[type_] {
@@ -8055,6 +8148,7 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_variant_patterns()
     self.constrain_pending_method_calls(true)
     self.constrain_pending_fields()
+    self.constrain_local_function_references()
     let _ = self.constrain_pending_member_equations(true)
   }
 
