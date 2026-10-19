@@ -31,6 +31,7 @@ fn desugar_for_expression(
   body : Block,
   for_offset : UInt64,
 ) -> Expr {
+  // Keep generated call and pattern sites distinct within the for keyword.
   let iterator_name = "$for_iter_\{for_offset}"
   let iterator_value = CallExpr(
     FieldExpr(iterable, "iter", for_offset),
@@ -43,13 +44,13 @@ fn desugar_for_expression(
   }
   some_items.push(
     ExpressionItem(
-      ContinueExpr(for_next_call(iterator_name, for_offset), for_offset),
+      ContinueExpr(for_next_call(iterator_name, for_offset + 1UL), for_offset),
       for_offset,
     ),
   )
   let unit = BlockExpr({ items: [], offset: for_offset, })
   let loop_expression = WhileExpr(
-    for_next_call(iterator_name, for_offset),
+    for_next_call(iterator_name, for_offset + 1UL),
     [
       {
         pattern: for_option_pattern("Some", Some(pattern), for_offset),
@@ -58,7 +59,7 @@ fn desugar_for_expression(
         offset: pattern.offset(),
       },
       {
-        pattern: for_option_pattern("None", None, for_offset),
+        pattern: for_option_pattern("None", None, for_offset + 1UL),
         guard_condition: None,
         body: BreakExpr(unit, for_offset),
         offset: for_offset,

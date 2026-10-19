@@ -9,7 +9,7 @@ test "for desugars to one iterator binding and an Option while" {
               false,
               iterator_name,
               _,
-              CallExpr(FieldExpr(NameExpr("values", _), "iter", _), [], _),
+              CallExpr(FieldExpr(NameExpr("values", _), "iter", _), [], iter_offset),
               _
             ),
             ExpressionItem(WhileExpr(initial, arms, _), _),
@@ -20,8 +20,10 @@ test "for desugars to one iterator binding and an Option while" {
     ) => {
       assert_true(iterator_name.has_prefix("$for_iter_"))
       match initial {
-        CallExpr(FieldExpr(NameExpr(initial_name, _), "next", _), [], _) =>
+        CallExpr(FieldExpr(NameExpr(initial_name, _), "next", _), [], next_offset) => {
           assert_eq(initial_name, iterator_name)
+          assert_eq(next_offset, iter_offset + 1UL)
+        }
         _ => fail("expected iterator next initial state")
       }
       assert_eq(arms.length(), 2)
@@ -55,9 +57,9 @@ test "for desugars to one iterator binding and an Option while" {
       }
       match (arms[1].pattern, arms[1].body) {
         (
-          QualifiedPattern(BindingPattern("Option", _), "None", _),
+          QualifiedPattern(BindingPattern("Option", _), "None", none_offset),
           BreakExpr(BlockExpr({ items: [], .. }), _),
-        ) => ()
+        ) => assert_eq(none_offset, iter_offset + 1UL)
         _ => fail("expected Option::None unit break")
       }
     }

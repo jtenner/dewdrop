@@ -1200,6 +1200,7 @@ fn self_host_parse_for_expression(
       return None
     }
   }
+  // Generated sites use distinct bytes within the for keyword.
   let iterator_name = "$for_iter"
   let iterator_value = CallExpr(
     FieldExpr(iterable, "iter", offset),
@@ -1209,7 +1210,7 @@ fn self_host_parse_for_expression(
   body.items.push(
     self_host_expression_block_item(
       ContinueExpr(
-        self_host_for_next_expression(iterator_name, offset),
+        self_host_for_next_expression(iterator_name, offset + 1u32),
         offset,
       ),
       offset,
@@ -1228,7 +1229,7 @@ fn self_host_parse_for_expression(
   let none_pattern = QualifiedPattern(
     BindingPattern("Option", offset),
     "None",
-    offset,
+    offset + 1u32,
   )
   let while_arms = self_host_empty_pattern_arms()
   while_arms.push({
@@ -1259,7 +1260,7 @@ fn self_host_parse_for_expression(
   outer_items.push(
     self_host_expression_block_item(
       WhileExpr(
-        self_host_for_next_expression(iterator_name, offset),
+        self_host_for_next_expression(iterator_name, offset + 1u32),
         while_arms,
         offset,
       ),
