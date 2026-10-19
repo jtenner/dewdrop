@@ -57,6 +57,7 @@ claims about the current interpreter.
 - [x] Integer bit counts, rotations, and I64 sign extension.
 - [x] Pure vector operations in the current compiler catalog.
 - [x] Named nongeneric function singleton identity.
+- [x] Checked generic function identity with normal specialization rules.
 - [x] Array literals.
 - [x] Tuple literals and tuple destructuring.
 - [x] Integer arithmetic with selected primitive proofs.

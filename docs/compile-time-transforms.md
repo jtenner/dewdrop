@@ -484,10 +484,14 @@ and pseudo-min/max preserve their selected operand bits. See
 `examples/transforms/vectors.dew`.
 
 Integer bit counts, rotations, and I64 sign extension also execute at compile
-time. Named nongeneric function references keep their checked singleton identity.
-Fresh closures and bound methods keep separate instance identities. Equality of
-separate generic references still requires a checked ABI identity and reports
-that limit if reached.
+time. Named function references keep their checked runtime identity, including
+generic references. Ordinary I32 and U32 instances can share that identity.
+Narrow scalar types, type-query-sensitive instances, and distinct checked trait
+evidence keep the distinctions used by the normal compiler. Fresh closures and
+bound methods keep separate instance identities. Missing generic identity proof
+produces a diagnostic. See `generic_function_identity.dew`,
+`generic_identity_nested.dew`, `generic_identity_closures.dew`, and
+`generic_identity_evidence.dew` in `examples/transforms/`.
 
 
 ## Checked generic frames

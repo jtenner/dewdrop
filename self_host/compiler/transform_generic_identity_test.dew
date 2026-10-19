@@ -1,0 +1,79 @@
+test "generic function identity uses the checked runtime specialization" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "identity.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nbuiltin same<a, b>(left: a, right: b) -> Bool = \"ref.eq\"\nfn identity<t>(value: t) -> t {\n  value\n}\nfn signed() -> fn(I32) -> I32 {\n  identity\n}\nfn unsigned() -> fn(U32) -> U32 {\n  identity\n}\nfn narrow() -> fn(I8) -> I8 {\n  identity\n}\nfn type_flag<t>(value: t) -> Bool {\n  let _ = value\n  @types.type_equal::<t, I32>()\n}\nfn signed_flag() -> fn(I32) -> Bool {\n  type_flag\n}\nfn unsigned_flag() -> fn(U32) -> Bool {\n  type_flag\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let a = signed()\n  let b = signed()\n  let c = unsigned()\n  let d = narrow()\n  let e = signed_flag()\n  let f = unsigned_flag()\n  node.with_body(@ast.integer(if same(a, b) && same(a, c) && !same(a, d) && !same(e, f) && e(1i32) && !f(1u32) {\n    42i32\n  } else {\n    0i32\n  }))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked transform generic_identity_nested" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "generic_identity_nested.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nbuiltin same<a, b>(left: a, right: b) -> Bool = \"ref.eq\"\nfn identity<t>(value: t) -> t {\n  value\n}\nfn wrap<t>() -> fn(t) -> t {\n  identity\n}\nfn forward<t>() -> fn(t) -> t {\n  wrap::<t>()\n}\nlet global_callback = forward::<I32>()\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(if same(forward::<I32>(), wrap::<U32>()) && !same(wrap::<I32>(), wrap::<I8>()) && same(global_callback, wrap::<I32>()) && forward::<I32>()(40i32) == 40i32 && wrap::<U32>()(2u32) == 2u32 && wrap::<I8>()(-8i8) == -8i8 {\n    42i32\n  } else {\n    0i32\n  }))\n}\n\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked transform generic_identity_closures" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "generic_identity_closures.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nbuiltin same<a, b>(left: a, right: b) -> Bool = \"ref.eq\"\nfn flag<t>(value: t) -> Bool {\n  let _ = value\n  @types.type_equal::<t, I32>()\n}\nfn direct() -> fn(I32) -> Bool {\n  flag\n}\nfn wrap<t>() -> fn(t) -> Bool {\n  let get = fn() -> fn(t) -> Bool {\n    flag\n  }\n  get()\n}\nfn forward<t>() -> fn(t) -> Bool {\n  wrap::<t>()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(if same(direct(), forward::<I32>()) && !same(forward::<I32>(), wrap::<U32>()) && forward::<I32>()(40i32) && !wrap::<U32>()(2u32) {\n    42i32\n  } else {\n    0i32\n  }))\n}\n\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked transform generic_identity_evidence" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "generic_identity_evidence.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nbuiltin same<a, b>(left: a, right: b) -> Bool = \"ref.eq\"\ntrait Mark {\n  fn mark(self) -> I32\n}\nstruct Left {}\nstruct Right {}\nimpl Mark for Left {\n  fn mark(self) -> I32 {\n    40i32\n  }\n}\nimpl Mark for Right {\n  fn mark(self) -> I32 {\n    2i32\n  }\n}\nfn bounded<t: Mark>(value: t) -> I32 {\n  value.mark()\n}\nfn wrap<t: Mark>() -> fn(t) -> I32 {\n  bounded\n}\nfn forward<t: Mark>() -> fn(t) -> I32 {\n  wrap::<t>()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(if same(wrap::<Left>(), forward::<Left>()) && !same(wrap::<Left>(), wrap::<Right>()) && forward::<Left>()(Left::{}) == 40i32 && wrap::<Right>()(Right::{}) == 2i32 {\n    42i32\n  } else {\n    0i32\n  }))\n}\n\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}

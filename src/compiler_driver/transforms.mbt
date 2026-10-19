@@ -243,6 +243,7 @@ fn compiler_expand_transforms(
         reference=call.reference,
         result_kind=call.result_kind,
         constructor_key=call.constructor_key,
+        function_specialization=call.function_identity.map(identity => identity.specialization).unwrap_or(None),
         function_declaration=call.function_identity.map(identity => {
           identity.declaration
         }),

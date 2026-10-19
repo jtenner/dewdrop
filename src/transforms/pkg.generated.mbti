@@ -68,7 +68,7 @@ pub struct Plan {
   reflection_errors : Array[String]
 }
 pub fn Plan::add_array_layout(Self, Int, String, UInt64, String, Array[String]) -> Unit
-pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String, function_declaration? : UInt64?, generic_function? : Bool, frame? : String, target_frame? : String) -> Unit
+pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String, function_declaration? : UInt64?, generic_function? : Bool, function_specialization? : UInt?, frame? : String, target_frame? : String) -> Unit
 pub fn Plan::add_checked_module(Self, SourceModule) -> Result[Unit, String]
 pub fn Plan::add_constant(Self, Int, String, UInt64, CheckedConstant, frame? : String) -> Unit
 pub fn Plan::add_expression_type(Self, Int, String, UInt64, String, ReflectedType) -> Unit

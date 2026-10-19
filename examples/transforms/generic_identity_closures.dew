@@ -1,0 +1,32 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import dew.std.types as @types
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+fn flag<t>(value: t) -> Bool {
+  let _ = value
+  @types.type_equal::<t, I32>()
+}
+fn direct() -> fn(I32) -> Bool {
+  flag
+}
+fn wrap<t>() -> fn(t) -> Bool {
+  let get = fn() -> fn(t) -> Bool {
+    flag
+  }
+  get()
+}
+fn forward<t>() -> fn(t) -> Bool {
+  wrap::<t>()
+}
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(if same(direct(), forward::<I32>()) && !same(forward::<I32>(), wrap::<U32>()) && forward::<I32>()(40i32) && !wrap::<U32>()(2u32) {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

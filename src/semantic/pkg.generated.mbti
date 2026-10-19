@@ -889,6 +889,7 @@ pub struct CompileTimeFrameCall {
 pub struct CompileTimeFunctionIdentity {
   declaration : UInt64
   generic_function : Bool
+  specialization : UInt?
 }
 
 pub struct CompileTimeLambdaLayout {

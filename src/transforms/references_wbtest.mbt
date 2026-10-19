@@ -132,3 +132,33 @@ test "checked named functions use declaration singletons and defer generic ABI i
     _ => fail("unexpected generic function identity error")
   }
 }
+
+///|
+test "generic function singleton identity includes checked specialization" {
+  let first = Function(Unsupported, [], FunctionSpecialization(123UL, 0U))
+  let same = Function(Unsupported, [], FunctionSpecialization(123UL, 0U))
+  let other = Function(Unsupported, [], FunctionSpecialization(123UL, 1U))
+  assert_true(reference_equal(first, same))
+  assert_false(reference_equal(first, other))
+  assert_false(
+    reference_equal(
+      first,
+      Function(Unsupported, [], FunctionSpecialization(124UL, 0U)),
+    ),
+  )
+  assert_false(
+    reference_equal(first, Function(Unsupported, [], FunctionSingleton(123UL))),
+  )
+}
+
+///|
+test "generic identity with a missing proof remains diagnostic" {
+  let first = Function(Unsupported, [], FunctionSpecialization(123UL, 0U))
+  let missing = Function(Unsupported, [], GenericFunctionSingleton(123UL))
+  try reference_equal(first, missing) catch {
+    Failed(message) => assert_true(message.contains("checked ABI identity"))
+    _ => fail("unexpected generic identity failure")
+  } noraise {
+    _ => fail("missing generic proof must report its limit")
+  }
+}

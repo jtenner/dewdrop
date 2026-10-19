@@ -40,6 +40,8 @@ pub fn compile_time_frame_calls(
     Some(value) => value
     None => return Ok([])
   }
+  let runtime_logical = context.logical
+  let runtime_sensitive = context.sensitive
   let context = {
     ..context,
     logical: context.logical.copy(),
@@ -256,6 +258,7 @@ pub fn compile_time_frame_calls(
       }
     }
   }
+  let function_identities : Map[(DeclId, String), UInt32] = {}
   // These are the exact targets selected by the normal generic/trait planner.
   for call in selected.specialized_calls {
     let mi = lowering.index.module_lookup
@@ -284,9 +287,9 @@ pub fn compile_time_frame_calls(
       call: {
         reference,
         constant: None,
-        function_identity: transform_function_identity(
-          lowering.modules[target_module],
-          call.target,
+        function_identity: transform_specialized_function_identity(
+          lowering, call.target, call.target_specialization_abi_key,
+          runtime_logical, runtime_sensitive, function_identities,
         ),
         module_index: mi,
         file,

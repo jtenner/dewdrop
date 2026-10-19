@@ -25,6 +25,7 @@ pub fn Plan::add_call_proof(
   constructor_key~ : String = "",
   function_declaration~ : UInt64? = None,
   generic_function~ : Bool = false,
+  function_specialization~ : UInt32? = None,
   frame~ : String = "",
   target_frame~ : String = "",
 ) -> Unit {
@@ -47,7 +48,10 @@ pub fn Plan::add_call_proof(
     let identity = match function_declaration {
       Some(value) =>
         if generic_function {
-          GenericFunctionSingleton(value)
+          match function_specialization {
+            Some(key) => FunctionSpecialization(value, key)
+            None => GenericFunctionSingleton(value)
+          }
         } else {
           FunctionSingleton(value)
         }

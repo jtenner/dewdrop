@@ -1,6 +1,7 @@
 pub enum CtFunctionIdentity {
   FunctionInstance
   FunctionSingleton(U64)
+  FunctionSpecialization(U64, U32)
   GenericFunctionSingleton(U64)
 }
 
@@ -12,7 +13,8 @@ pub struct CtFunctionReferenceProof {
 fn ct_function_identity_equal(machine: CtMachine, left: CtFunctionIdentity, right: CtFunctionIdentity) -> Bool {
   match (left, right) {
     (FunctionSingleton(left), FunctionSingleton(right)) => left == right
-    (GenericFunctionSingleton(left), GenericFunctionSingleton(right)) => {
+    (FunctionSpecialization(left, key), FunctionSpecialization(right, other)) => left == right && key == other
+    (GenericFunctionSingleton(left), FunctionSpecialization(right, _)), (FunctionSpecialization(left, _), GenericFunctionSingleton(right)), (GenericFunctionSingleton(left), GenericFunctionSingleton(right)) => {
       if left == right {
         let _ = ct_fail(machine, "generic function reference identity needs a checked ABI identity")
       }
@@ -35,4 +37,60 @@ fn ct_checked_function_identity(lowering: SelfHostPlannedProgramLowering, select
     }
     None => CtFunctionIdentity::FunctionInstance
   }
+}
+
+struct CtFunctionIdentityPlan {
+  requests: Array<SelfHostProgramSpecializationRequest>
+  shapes: Array<SelfHostPlannedValueShape>
+  heads: Map<U64, U32>
+  next: Array<U32>
+}
+
+fn ct_function_identity_plan() -> CtFunctionIdentityPlan {
+  {
+    requests: []
+    shapes: []
+    heads: map_empty::<U64, U32>()
+    next: []
+  }
+}
+
+// Use the normal request matcher. Interpreter frame indices can distinguish
+// logical types even when the normal runtime uses a shared function instance.
+fn ct_frame_function_identity(
+  runtime_lowering: SelfHostPlannedProgramLowering,
+  selected: SelfHostProgramSpecializationPlan,
+  module_: SelfHostPlannedModuleLowering,
+  call: SelfHostProgramSpecializedCall,
+  identities: CtFunctionIdentityPlan,
+) -> CtFunctionIdentity {
+  let identity = ct_checked_function_identity(runtime_lowering, call.target)
+  if !(identity is GenericFunctionSingleton(_)) || call.target_specialization >= selected.requests.length() {
+    return identity
+  }
+  let request = selected.requests[call.target_specialization]
+  self_host_assert_compiler_invariant(request.declaration == call.target, "checked function identity lost its selected request")
+  self_host_assert_array_span(request.shapes.start, request.shapes.length, selected.shapes.length(), "checked function identity shape span")
+  let shapes = array_new::<SelfHostPlannedValueShape>()
+  while 0u32 {
+    index if index < request.shapes.length => {
+      shapes.push(selected.shapes[request.shapes.start + index])
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let caller = match self_host_program_specialization_body(module_, call.caller_body) {
+    Some(body) => self_host_program_specialization_callable(module_, body.declaration)
+    None => None
+  }
+  let expression = module_.expressions[call.expression]
+  let evidence = self_host_program_specialization_call_evidence_types(
+    runtime_lowering, module_, caller, call.caller_specialization,
+    selected.requests, call.target, expression.call_type_arguments,
+  )
+  let key = self_host_program_specialization_add_request_with_evidence(
+    identities.requests, identities.shapes, identities.heads, identities.next,
+    call.target, shapes, evidence,
+  )
+  CtFunctionIdentity::FunctionSpecialization(call.target, key)
 }

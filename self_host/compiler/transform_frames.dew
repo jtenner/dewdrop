@@ -153,6 +153,7 @@ fn ct_transform_frame_roots(plan: CtPlan, collected: SelfHostCollectedProgram) -
 }
 
 fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original: SelfHostPlannedProgramLowering) -> Unit {
+  let runtime_lowering = self_host_compile_time_planning_lowering(original)
   let original = self_host_compile_time_planning_lowering(original)
   let roots = ct_transform_frame_roots(plan, collected)
   if plan.error.byte_length() != 0u32 {
@@ -198,6 +199,7 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
     }
     _ => break ()
   }
+  let identities = ct_function_identity_plan()
   for call in selected.calls {
     match lowering.index.declaration_owner(call.caller_body) {
       Some(mi) => {
@@ -228,7 +230,7 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
                     if reference {
                       proofs.references.set(key, {
                         target: target
-                        identity: ct_checked_function_identity(lowering, call.target)
+                        identity: ct_frame_function_identity(runtime_lowering, selected, module_, call, identities)
                       })
                     } else {
                       proofs.calls.set(key, target)

@@ -279,3 +279,22 @@ test "null tests reject invalid checked result carriers before ignored results" 
   }
   assert(found, "parsed ref_is_null builtin is tested")
 }
+
+test "generic function singleton identity includes checked specialization" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let first = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSpecialization(123u64, 0u32))
+  let same = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSpecialization(123u64, 0u32))
+  let other = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSpecialization(123u64, 1u32))
+  assert(ct_truth(machine, ct_reference_equal(machine, first, same)), "same checked specialization shares identity")
+  assert(!ct_truth(machine, ct_reference_equal(machine, first, other)), "checked evidence is part of identity")
+  assert(!ct_truth(machine, ct_reference_equal(machine, first, CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSpecialization(124u64, 0u32)))), "declaration is part of identity")
+  assert(machine.error.byte_length() == 0u32, "checked identities need no fallback")
+}
+
+test "generic identity with a missing proof remains diagnostic" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let first = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::FunctionSpecialization(123u64, 0u32))
+  let missing = CtValue::Function(CtCallTarget::Unsupported, [], CtFunctionIdentity::GenericFunctionSingleton(123u64))
+  let _ = ct_reference_equal(machine, first, missing)
+  assert(machine.error.contains("checked ABI identity"), "missing generic proof remains visible")
+}
