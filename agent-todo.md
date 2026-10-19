@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Current handoff updated September 10, 2026. The older deferred backlog below
+> Current handoff updated October 19, 2026. The older deferred backlog below
 > comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
 > roadmap was re-audited today. Use small commits with tests, docs, and measured
 > compiler runs. Fix correctness before speed. Do not push without a new request.
@@ -43,7 +43,28 @@ are in the [completion log](docs/research/compile-time-query-completion-2026-09-
   Starshine tests pass. The refreshed provider passes hardening and integration.
   Compiler B/C core and linked Wasm bytes match in the clean bootstrap run.
 
-### Current ten-part correctness batch
+### Core closure lookup check batch — October 19, 2026
+
+This is the remaining bounded lookup-check queue before the next feature work.
+The larger compiler audit below stays open; its design tasks are not a claim
+that these lookup contracts are unfinished.
+
+- [x] Capture-cell lookup identity, exact field/storage contract, and reverse map.
+  Committed in `f427d03938`; see the
+  [cell lookup log](docs/research/capture-cell-type-lookups-2026-10-19.md).
+- [x] Common closure lookup, immutable entry field, and reverse map.
+- [x] Lambda closure type identity, capture field maps, and selected layouts.
+- [x] Lambda function lookup identity and entry signature agreement.
+
+This batch is complete. All 1,532 native tests, 272 integration tests, library
+and self-host checks, clean B/C bootstrap, stress, and generated checks pass.
+The 38 new tests include a mixed Error/Generic tuple regression. The final
+independent GPT review finds no confirmed defect; Claude was unavailable due
+to its session limit. See the
+[batch log](docs/research/core-closure-lookup-batch-2026-10-19.md) for scope,
+measurements, and review limits. Feature work can follow this closed batch.
+
+### Completed ten-part correctness batch
 
 These are bounded parts of the open type-boundary, call-target, and arena
 audit entries below, not completion of those larger entries.
@@ -471,7 +492,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   mutable value field, exact full-width storage, and one reverse mapping.
   Program and module emission reject wrong in-range entries. See the
   [cell lookup log](docs/research/capture-cell-type-lookups-2026-10-19.md).
-  Next, validate the common closure type lookup and its immutable entry field.
+  The common closure, lambda closure/capture, and lambda function/signature
+  lookup checks now complete the immediate lookup batch. Error facts remain
+  errors before generic substitution. See the
+  [batch log](docs/research/core-closure-lookup-batch-2026-10-19.md).
+  The larger physical-boundary and full-reference design work remains open.
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.

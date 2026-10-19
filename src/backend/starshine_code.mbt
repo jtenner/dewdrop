@@ -5629,6 +5629,19 @@ fn starshine_emit_body_instructions(
             results.push(output)
           }
           @semantic.PlannedLambdaClosure(lambda, captures) => {
+            match
+              starshine_check_lambda_capture_cells(
+                lowering, lambda, generic_specialization,
+              ) {
+              Ok(_) => ()
+              Err(error) => return Err(error)
+            }
+            match
+              @semantic.verify_lambda_capture_layout(lowering, planned, lambda) {
+              Ok(_) => ()
+              Err(failure) =>
+                return Err(starshine_physical_type_invariant_error(failure))
+            }
             let function_index = starshine_lambda_function_index(
               planned, program, lambda,
             )
@@ -8489,6 +8502,10 @@ fn emit_starshine_lambda_body(
     ) {
     Ok(_) => ()
     Err(error) => return Err(error)
+  }
+  match @semantic.verify_lambda_capture_layout(lowering, planned, lambda) {
+    Ok(_) => ()
+    Err(failure) => return Err(starshine_physical_type_invariant_error(failure))
   }
   let (
     local_indices,

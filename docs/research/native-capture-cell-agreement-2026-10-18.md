@@ -173,9 +173,9 @@ hash and prior verified-lane provenance, not an isolated clean rebuild. The
 cost-summary cache filter omits `DEW_CACHE_PACK`; the harness sets it to zero.
 These limits prevent stronger scaling, allocation, or speed claims.
 
-## Next check
+## Follow-up
 
 The [cell lookup change](capture-cell-type-lookups-2026-10-19.md) now checks
 each native lookup against its exact cell kind, slot, field, and storage.
-The next check is the common closure type lookup and its immutable entry
-field.
+The [closure lookup batch](core-closure-lookup-batch-2026-10-19.md) completes
+the common and per-lambda closure lookup checks and their function maps.

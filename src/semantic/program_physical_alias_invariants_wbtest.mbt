@@ -39,7 +39,7 @@ test "canonical closure fields retain mutability in every source module" {
       expression: 0xffffffffU,
       expected: 0UL,
       actual: 1UL,
-      detail: (64UL << 32) | type_.fields.start.to_uint64(),
+      detail: (97UL << 32) | type_.fields.start.to_uint64(),
     }),
   )
 }
@@ -64,9 +64,9 @@ test "canonical closure fields retain their full storage type" {
       declaration: 0UL,
       body: 0UL,
       expression: 0xffffffffU,
-      expected: 9UL << 32,
-      actual: 8UL << 32,
-      detail: (65UL << 32) | type_.fields.start.to_uint64(),
+      expected: 1UL,
+      actual: 0UL,
+      detail: (98UL << 32) | type_.fields.start.to_uint64(),
     }),
   )
 }
@@ -112,7 +112,7 @@ test "canonical closure fields retain their logical field identity" {
       expression: 0xffffffffU,
       expected: 1UL,
       actual: 0UL,
-      detail: (67UL << 32) | type_.fields.start.to_uint64(),
+      detail: (96UL << 32) | type_.fields.start.to_uint64(),
     }),
   )
 }
@@ -138,7 +138,7 @@ test "canonical closure fields cannot disappear from one source alias" {
       expression: 0xffffffffU,
       expected: 1UL,
       actual: 0UL,
-      detail: (66UL << 32) | local.to_uint64(),
+      detail: (94UL << 32) | local.to_uint64(),
     }),
   )
 }

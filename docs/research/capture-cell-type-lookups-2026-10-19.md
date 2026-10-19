@@ -171,8 +171,8 @@ cache-clean command cleared the old native release cache. Source files were
 retained. The old release cache is no longer available. There is no matched
 baseline build measurement, so these build times do not prove a regression.
 
-## Next check
+## Follow-up
 
-Validate `closure_type_index` against the common `PlannedWasmClosureType`.
-Require one immutable `WasmClosureEntryField` at position zero with exact
-`WasmNullableFunctionRefStorage`.
+The [closure lookup batch](core-closure-lookup-batch-2026-10-19.md) now checks
+the common closure type, per-lambda closure/capture tables, and lambda function
+and entry-signature maps. This completes the immediate lookup-check queue.
