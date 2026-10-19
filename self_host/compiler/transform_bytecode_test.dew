@@ -1,0 +1,175 @@
+fn ct_bc_test_machine(source: Bytes, enabled: Bool) -> (CtMachine, SelfHostFunctionDeclaration) {
+  let plan = ct_test_plan(source.concat(b"\ntransform fn marker() -> Unit {\n}\n"))
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  let file = plan.files[0u32]
+  let machine = ct_machine_with_bytecode(plan, enabled)
+  machine.file_path = file.original.path
+  for token in self_host_tokenize(source) {
+    let key = ct_site_key(plan, 0u32, file.original.path, token.offset)
+    plan.scalar_proofs.set(key, b"primitive")
+    plan.pattern_proofs.set(key, "")
+  }
+  (machine, file.functions[0u32].declaration)
+}
+
+fn ct_bc_test_compare(source: Bytes, expected: U64) -> Unit {
+  let (tree, tree_fn) = ct_bc_test_machine(source, false)
+  let (machine, function) = ct_bc_test_machine(source, true)
+  assert(ct_compile_bytecode(machine, 0u32, function) is Some(_), "the case must execute bytecode")
+  let left = ct_source_call_frame(tree, 0u32, tree.file_path, tree_fn, [], "")
+  let right = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  assert(tree.error.byte_length() == 0u32, tree.error)
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  assert(ct_raw_bits(tree, left) == expected, "tree result")
+  assert(ct_raw_bits(machine, right) == expected, "bytecode result")
+  assert(machine.steps == tree.steps, "bytecode and tree logical work agree")
+  assert(machine.allocated == tree.allocated, "bytecode and tree allocation work agree")
+  assert(machine.depth == 0u32 && tree.depth == 0u32, "both paths restore depth")
+}
+
+test "bytecode and tree case 1" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n let mut count = 20i32\n let nested = if true {\n  let count = 200i32\n  if count == 200i32 {\n   21i32\n  } else {\n   0i32\n  }\n } else {\n  0i32\n }\n count = count + 1i32\n count + nested\n}\n", 42u64)
+}
+
+test "bytecode and tree case 2" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n if (false && 1i32 / 0i32 == 0i32) || (true || 1i32 / 0i32 == 1i32) {\n  42i32\n } else {\n  0i32\n }\n}\n", 42u64)
+}
+
+test "bytecode and tree case 3" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n let answer = 1i32 + if true {\n  return 42i32\n } else {\n  0i32\n }\n answer\n}\n", 42u64)
+}
+
+test "bytecode and tree case 4" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n let mut sum = 0i32\n let result = while 0i32 {\n  i if i < 3i32 => {\n   let inner = while 0i32 {\n    j if j < 2i32 => {\n     if j == 0i32 {\n      continue j + 1i32\n     }\n     break 7i32\n    }\n    _ => break 0i32\n   }\n   sum = sum + inner\n   continue i + 1i32\n  }\n  _ => break sum\n }\n result + sum\n}\n", 42u64)
+}
+
+test "bytecode and tree case 5" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n  while false {\n    _ if if true {\n      break 42i32\n    } else {\n      false\n    } => break 0i32\n    false => break 1i32\n    true => break 2i32\n  }\n}\n", 42u64)
+}
+
+test "bytecode and tree case 6" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n  while false {\n    state if if !state {\n      continue true\n    } else {\n      true\n    } => break 42i32\n    false => break 0i32\n    true => break 1i32\n  }\n}\n", 42u64)
+}
+
+test "bytecode and tree case 7" {
+  ct_bc_test_compare(b"fn compute() -> I32 {\n  while 0i32 {\n    _ => {\n      let _ = while if true {\n        break 42i32\n      } else {\n        0i32\n      } {\n        _ => break 0i32\n      }\n      break 1i32\n    }\n  }\n}\n", 42u64)
+}
+
+test "bytecode cache bounds include failed entries and frame maps" {
+  let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  machine.bytecode_bytes_left = 383u32
+  let first = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  assert(ct_raw_bits(machine, first) == 42u64, "low cache budget keeps the result")
+  assert(machine.bytecode.length() == 0u32 && machine.bytecode_bytes_left == 383u32, "no uncharged frame map")
+  machine.bytecode_bytes_left = 384u32
+  let second = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  assert(ct_raw_bits(machine, second) == 42u64, "metadata-only budget uses the tree")
+  assert(machine.bytecode_bytes_left == 0u32 && machine.bytecode.length() == 1u32, "map and failed entry consume the whole budget")
+  let cache = machine.bytecode.get_unchecked("")
+  assert(cache.length() == 1u32, "one negative entry")
+  let marker = machine.plan.files[0u32].functions[1u32].declaration
+  let _ = ct_source_call_frame(machine, 0u32, machine.file_path, marker, [], "")
+  assert(cache.length() == 1u32, "new failed entries cannot grow an exhausted cache")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "bytecode compile work exhaustion keeps the tree result" {
+  let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n 40i32 + 2i32\n}\n", true)
+  machine.bytecode_compile_work = 1u32
+  let value = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  assert(ct_raw_bits(machine, value) == 42u64 && machine.bytecode_compile_work == 0u32, "compilation stops at its bound")
+  let cache = machine.bytecode.get_unchecked("")
+  assert(cache.get(ct_site_key(machine.plan, 0u32, machine.file_path, function.offset)) is Some(None), "failed compilation is cached within its budget")
+}
+
+test "bytecode execution limits restore caller depth" {
+  let (work, work_fn) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  let code = match ct_compile_bytecode(work, 0u32, work_fn) {
+    Some(value) => value
+    None => {
+      assert(false, "simple function must compile to bytecode")
+      return
+    }
+  }
+  work.steps = 2u32
+  work.depth = 7u32
+  let _ = ct_run_bytecode(work, code, [])
+  assert(work.error == "transform work limit exceeded" && work.depth == 7u32, "work failure is visible and restores depth")
+  let (allocation, allocation_fn) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  let allocation_code = match ct_compile_bytecode(allocation, 0u32, allocation_fn) {
+    Some(value) => value
+    None => {
+      assert(false, "simple function must compile to bytecode")
+      return
+    }
+  }
+  allocation.allocated = 4194304u32
+  allocation.depth = 7u32
+  let _ = ct_run_bytecode(allocation, allocation_code, [])
+  assert(allocation.error == "transform allocation limit exceeded" && allocation.depth == 7u32, "allocation failure is visible and restores depth")
+}
+
+test "bytecode fallback preserves captured bindings" {
+  let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n let callback = fn() -> I32 {\n  42i32\n }\n 42i32\n}\n", true)
+  assert(ct_compile_bytecode(machine, 0u32, function) is None, "closures use the tree path as a whole")
+  let first = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  let remaining = machine.bytecode_compile_work
+  let second = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  assert(ct_raw_bits(machine, first) == 42u64 && ct_raw_bits(machine, second) == 42u64, "tree values remain correct")
+  assert(machine.bytecode_compile_work == remaining, "unsupported function is not compiled again")
+}
+test "bytecode and tree exact failure counters" {
+  for source in [
+    b"fn compute() -> I32 {\n 42i32\n}\n",
+    b"fn compute() -> I32 {\n 1i32 / 0i32\n}\n",
+    b"fn compute() -> I32 {\n while false {\n false => break 42i32\n true => break 0i32\n }\n}\n"
+  ] {
+    let (tree, tree_fn) = ct_bc_test_machine(source, false)
+    let (machine, function) = ct_bc_test_machine(source, true)
+    assert(ct_compile_bytecode(machine, 0u32, function) is Some(_), "boundary case must use bytecode")
+    for depth in [0u32, 126u32, 127u32, 128u32] {
+      for budget in [0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 8u32, 12u32, 32u32, 100000u32] {
+        for allocation in [0u32, 4194272u32, 4194304u32] {
+          tree.error = ""
+          machine.error = ""
+          tree.flow = 0u32
+          machine.flow = 0u32
+          tree.depth = depth
+          machine.depth = depth
+          tree.steps = budget
+          machine.steps = budget
+          tree.allocated = allocation
+          machine.allocated = allocation
+          let _ = ct_source_call_frame(tree, 0u32, tree.file_path, tree_fn, [], "")
+          let _ = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+          assert(machine.error == tree.error, "same diagnostic at exact failure boundary")
+          assert(machine.depth == depth && tree.depth == depth, "caller depth restored")
+          assert(machine.steps == tree.steps, "same work at failure boundary")
+          assert(machine.allocated == tree.allocated, "same allocation work at failure boundary")
+        }
+      }
+    }
+  }
+}
+
+test "bytecode slot limit falls back in Dew" {
+  let source = StringBuilder::new()
+  source.append("fn compute() -> I32 {\n")
+  let _ = while 0u32 {
+    index if index < 513u32 => {
+      source.append(" let value_")
+      source.append_u32(index)
+      source.append(" = 0i32\n")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  source.append(" 42i32\n}\n")
+  let (machine, function) = ct_bc_test_machine(source.finish().as_bytes(), true)
+  assert(ct_compile_bytecode(machine, 0u32, function) is None, "slot overflow uses tree fallback")
+  let result = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  assert(ct_raw_bits(machine, result) == 42u64, "fallback keeps result")
+}

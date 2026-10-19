@@ -1,0 +1,27 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+fn add(value: I32, increment: I32) -> I32 {
+  value + increment
+}
+
+fn compute(limit: I32) -> I32 {
+  let mut total = 0i32
+  let _ = while 0i32 {
+    index if index < limit => {
+      total = add(total, 3i32)
+      continue index + 1i32
+    }
+    _ => break ()
+  }
+  total
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(compute(14i32)))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

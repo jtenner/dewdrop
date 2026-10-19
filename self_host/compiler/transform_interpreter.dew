@@ -178,7 +178,10 @@ fn ct_variant_name(value: SelfHostEnumVariant) -> String {
 }
 
 fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
-  if !ct_charge(machine, 32u32 + args.length() * 16u32) || machine.flow != 0u32 {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if !ct_charge(machine, 32u32 + args.length() * 16u32) {
     return CtValue::Empty
   }
   match machine.functions.get(key) {
@@ -206,15 +209,9 @@ fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
             }
           }
           machine.functions.set(key, Source(file.module_index, file.original.path, function, ""))
-          let env = ct_environment()
-          let mut index = 0u32
-          for parameter in function.parameters {
-            env.set(parameter.name, ct_binding(parameter.name, args[index]))
-            index = index + 1u32
-          }
           let previous_file = machine.file_path
           machine.file_path = file.original.path
-          let value = ct_block(machine, file.module_index, function.body, env)
+          let value = ct_source_body(machine, file.module_index, function, args)
           machine.file_path = previous_file
           if machine.flow == 1u32 {
             machine.flow = 0u32
@@ -365,7 +362,10 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: CtEnvironm
   let env = ct_scope(machine, outer)
   let mut result = CtValue::Empty
   for item in block.items {
-    if !ct_charge(machine, 16u32) || machine.flow != 0u32 {
+    if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+      return result
+    }
+    if !ct_charge(machine, 16u32) {
       return result
     }
     result = CtValue::Empty
@@ -425,7 +425,10 @@ fn ct_eval_fields(machine: CtMachine, mi: U32, items: Array<SelfHostObjectField>
 }
 
 fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnvironment) -> CtValue {
-  if !ct_charge(machine, 16u32) || machine.flow != 0u32 {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if !ct_charge(machine, 16u32) {
     return CtValue::Empty
   }
   if machine.depth >= 128u32 {
@@ -526,35 +529,9 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtE
     PrefixExpr(op, expression, offset) => {
       let raw = ct_eval(machine, mi, expression, env)
       if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
-        return CtValue::Empty
-      }
-      let value = match ct_lookup_scalar_type(machine, mi, offset) {
-        Some(kind) => {
-          if kind.byte_length() == 0u32 {
-            return ct_fail(machine, "prefix operation needs concrete scalar type evidence at compile time")
-          }
-          ct_intrinsic_result(machine, raw, kind)
-        }
-        _ => raw
-      }
-      if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
-        return CtValue::Empty
-      }
-      match (op, value) {
-        (LogicalNot, DefaultValue) => CtValue::Boolean(true)
-        (LogicalNot, Boolean(value)) => CtValue::Boolean(!value)
-        (Negative, Number(value, kind)) => ct_number(0u64 - value, kind)
-        (Positive, Number(_, _)), (Positive, Floating(_, _)) => value
-        (Negative, Floating(bits, kind)) => {
-          let sign = if kind == "F32" {
-            2147483648u64
-          } else {
-            9223372036854775808u64
-          }
-          CtValue::Floating(bits ^ sign, kind)
-        }
-        _ => ct_fail(machine, "unsupported prefix operator at compile time")
-      }
+    return CtValue::Empty
+  }
+      ct_scalar_prefix(machine, op, raw, ct_lookup_scalar_type(machine, mi, offset))
     }
     ReturnExpr(value, _) => {
       let result = match value {
@@ -616,26 +593,7 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
         }
       }
     }
-    LiteralPattern(expression, _) => match (ct_eval(machine, mi, expression, env), value) {
-      (Text(a), Text(b)) => a == b
-      (Text(a), TextReference(_)) => a == ct_string(machine, value)
-      (Floating(a, "F32"), Floating(b, "F32")) => wasm_f32_from_bits(u64_into_u32(a)) == wasm_f32_from_bits(u64_into_u32(b))
-      (Floating(a, "F64"), Floating(b, "F64")) => wasm_f64_from_bits(a) == wasm_f64_from_bits(b)
-      (Number(number, _), DefaultValue) => number == 0u64
-      (Boolean(flag), DefaultValue) => !flag
-      (Number(a, kind), other) => match ct_intrinsic_result(machine, other, kind) {
-        Number(b, _) => a == b
-        _ => false
-      }
-      (Boolean(a), other) => match ct_intrinsic_result(machine, other, "Bool") {
-        Boolean(b) => a == b
-        _ => false
-      }
-      _ => {
-        let _ = ct_fail(machine, "unsupported equality in compile-time pattern")
-        false
-      }
-    }
+    LiteralPattern(expression, _) => ct_literal_pattern_equal(machine, ct_eval(machine, mi, expression, env), value)
     ProductPattern(patterns, _) => match value {
       Empty if patterns.length() == 0u32 => true
       DefaultValue if patterns.length() == 0u32 => true
@@ -831,4 +789,27 @@ fn ct_pattern(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value: CtVa
   let result = ct_pattern_inner(machine, mi, pattern, value, env)
   machine.depth = machine.depth - 1u32
   result
+}
+
+fn ct_literal_pattern_equal(machine: CtMachine, expected: CtValue, value: CtValue) -> Bool {
+  match (expected, value) {
+      (Text(a), Text(b)) => a == b
+      (Text(a), TextReference(_)) => a == ct_string(machine, value)
+      (Floating(a, "F32"), Floating(b, "F32")) => wasm_f32_from_bits(u64_into_u32(a)) == wasm_f32_from_bits(u64_into_u32(b))
+      (Floating(a, "F64"), Floating(b, "F64")) => wasm_f64_from_bits(a) == wasm_f64_from_bits(b)
+      (Number(number, _), DefaultValue) => number == 0u64
+      (Boolean(flag), DefaultValue) => !flag
+      (Number(a, kind), other) => match ct_intrinsic_result(machine, other, kind) {
+        Number(b, _) => a == b
+        _ => false
+      }
+      (Boolean(a), other) => match ct_intrinsic_result(machine, other, "Bool") {
+        Boolean(b) => a == b
+        _ => false
+      }
+      _ => {
+        let _ = ct_fail(machine, "unsupported equality in compile-time pattern")
+        false
+      }
+  }
 }

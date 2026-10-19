@@ -540,3 +540,19 @@ A `break` or `continue` in a functional loop guard targets that loop. The
 first value of a nested loop is evaluated in the outer loop's control scope.
 Both interpreters keep these checked targets. See
 `examples/transforms/loop_guards.dew`.
+
+
+## Interpreter execution
+
+Both compilers use portable 32-bit bytecode for supported function bodies.
+Checked calls, scalar proofs, loop flow and type reads keep the tree
+interpreter's rules. Unsupported bodies use the tree interpreter as a whole.
+This includes closure creation. The choice is automatic; source code uses the
+same API on both paths. No second Wasm instance or host call is needed.
+
+Bytecode compilation has separate work, slot and code-cache bounds. Exhausting
+one of these bounds selects the tree path. It does not remove the normal work,
+allocation, output-size or depth limits. The code-cache byte budget is a weighted
+estimate, not a measured total-heap limit. See
+[the bytecode notes](research/transform-bytecode.md) and
+`examples/transforms/bytecode.dew`.

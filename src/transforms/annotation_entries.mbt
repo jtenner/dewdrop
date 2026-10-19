@@ -11,7 +11,8 @@ pub fn Plan::annotation_entries(
       for function in file.functions {
         if function.transform {
           entries[self.modules[mi].path + "::" + function.declaration.name] = (
-            mi, function.declaration.name,
+            mi,
+            function.declaration.name,
           )
         }
       }
@@ -29,6 +30,10 @@ pub fn Plan::annotation_entries(
     globals: {},
     initializing: {},
     text_storage: {},
+    bytecode_enabled: true,
+    bytecode: {},
+    bytecode_compile_work: 1048576,
+    bytecode_bytes_left: 8388608,
   }
   let result = []
   let seen : Map[String, Bool] = {}

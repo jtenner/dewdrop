@@ -177,6 +177,6 @@ Unchecked items need further implementation. Checked items have code and tests.
 - [x] Per-transform work and allocation reports.
 - [ ] Identical resource accounting across compiler implementations.
 - [ ] Persistent transform-result cache with dependency tracking.
-- [ ] Compact bytecode backend.
+- [x] Compact bytecode backend.
 - [ ] Parallel independent transform execution.
 - [x] Pinned native Wago request check and CI job (host speed issue remains).

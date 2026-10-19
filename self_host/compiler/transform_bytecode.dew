@@ -1,0 +1,331 @@
+// Opcodes: 1 constant, 2 load, 3 store, 4 binary, 5 charge, 6 enter,
+// 7 leave, 8 jump, 9 jump-false, 10 jump-true, 11 call, 12 typed read,
+// 13 prefix, 14 field read, 15 field write (+ owner word), 16 return,
+// 17 restore loop depth, 18 truth, 19 simple pattern, 20 literal compare.
+
+// Portable 32-bit instruction words. No host memory or host call is exposed.
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+struct CtBytecodeFunction {
+  words: Array<U32>
+  constants: Array<CtValue>
+  calls: Array<CtBytecodeCall>
+  binaries: Array<CtBytecodeBinary>
+  prefixes: Array<CtBytecodePrefix>
+  names: Array<String>
+  kinds: Array<String>
+  slots: U32
+  estimated_bytes: U32
+}
+
+struct CtBytecodeCall {
+  target: CtCallTarget
+  arguments: Array<U32>
+  callee: Option<U32>
+}
+
+struct CtBytecodeBinary {
+  operator: SelfHostBinaryOperator
+  opcode: Option<Bytes>
+  target: Option<CtCallTarget>
+  left: U32
+}
+
+struct CtBytecodePrefix {
+  operator: SelfHostPrefixOperator
+  kind: Option<String>
+}
+
+struct CtBytecodeLoop {
+  value: U32
+  head: U32
+  depth: U32
+  breaks: Array<U32>
+}
+
+struct CtBytecodeBuilder {
+  machine: CtMachine
+  module_: U32
+  words: Array<U32>
+  constants: Array<CtValue>
+  calls: Array<CtBytecodeCall>
+  binaries: Array<CtBytecodeBinary>
+  prefixes: Array<CtBytecodePrefix>
+  names: Array<String>
+  kinds: Array<String>
+  mutable_slots: Array<Bool>
+  mut visits: U32
+  mut depth: U32
+  mut supported: Bool
+  mut estimated_bytes: U32
+}
+
+fn ct_bc_reserve(builder: CtBytecodeBuilder, bytes: U32) -> Bool {
+  if !builder.supported || bytes > 1048576u32 - builder.estimated_bytes {
+    builder.supported = false
+    return false
+  }
+  builder.estimated_bytes = builder.estimated_bytes + bytes
+  true
+}
+
+fn ct_bc_emit(builder: CtBytecodeBuilder, op: U32, arg: U32) -> U32 {
+  let at = builder.words.length()
+  if at >= 262144u32 || arg >= 16777216u32 {
+    builder.supported = false
+    return 0u32
+  }
+  if !ct_bc_reserve(builder, 4u32) {
+    return 0u32
+  }
+  builder.words.push(op | (arg << 8u32))
+  at
+}
+
+fn ct_bc_patch(builder: CtBytecodeBuilder, at: U32, target: U32) -> Unit {
+  if builder.supported {
+    builder.words[at] = (builder.words[at] & 255u32) | (target << 8u32)
+  }
+}
+
+fn ct_bc_slot(builder: CtBytecodeBuilder, mutable_: Bool) -> U32 {
+  let slot = builder.mutable_slots.length()
+  if slot >= 512u32 {
+    builder.supported = false
+    return 0u32
+  }
+  builder.mutable_slots.push(mutable_)
+  slot
+}
+
+fn ct_bc_constant(builder: CtBytecodeBuilder, value: CtValue) -> Unit {
+  if !ct_bc_reserve(builder, 64u32) {
+    return
+  }
+  let index = builder.constants.length()
+  builder.constants.push(value)
+  let _ = ct_bc_emit(builder, 1u32, index)
+}
+
+fn ct_bc_save(builder: CtBytecodeBuilder) -> U32 {
+  let slot = ct_bc_slot(builder, false)
+  let _ = ct_bc_emit(builder, 3u32, slot)
+  slot
+}
+
+fn ct_bc_type_read(builder: CtBytecodeBuilder, offset: U32) -> Unit {
+  match ct_lookup_scalar_type(builder.machine, builder.module_, offset) {
+    Some(kind) => {
+      if !ct_bc_reserve(builder, 8u32) {
+        return
+      }
+      let index = builder.kinds.length()
+      builder.kinds.push(kind)
+      let _ = ct_bc_emit(builder, 12u32, index)
+    }
+    None => {
+    }
+  }
+}
+
+fn ct_bc_scope(outer: Map<String, U32>) -> Map<String, U32> {
+  let result = map_empty::<String, U32>()
+  let entries = outer.entries()
+  while entries.has_next() {
+    true => {
+      let entry = map_entry_iter_next(entries)
+      result.set(entry.key, entry.value)
+      continue entries.has_next()
+    }
+    false => break ()
+  }
+  result
+}
+
+fn ct_bc_target(machine: CtMachine, target: CtCallTarget, values: Array<CtValue>, closure: CtValue) -> CtValue {
+  let selected = ct_unframe_call(target)
+  match selected.target {
+    Some(Constant(value)) => ct_checked_constant(machine, value)
+    Some(Source(mi, path, function, kind)) => ct_intrinsic_result(machine, ct_source_call_frame(machine, mi, path, function, values, selected.frame), kind)
+    Some(Intrinsic(builtin_, kind)) => ct_intrinsic_result(machine, ct_typed_intrinsic(machine, builtin_, values, kind), kind)
+    Some(Constructor(key)) => CtValue::Variant(key, values)
+    Some(FunctionValue(kind)) => ct_intrinsic_result(machine, ct_closure_call(machine, closure, values), kind)
+    _ => ct_fail(machine, "unsupported checked bytecode call target")
+  }
+}
+
+fn ct_scalar_prefix(machine: CtMachine, op: SelfHostPrefixOperator, raw: CtValue, kind: Option<String>) -> CtValue {
+  let value = match kind {
+    Some(kind) => {
+      if kind.byte_length() == 0u32 {
+        return ct_fail(machine, "prefix operation needs concrete scalar type evidence at compile time")
+      }
+      ct_intrinsic_result(machine, raw, kind)
+    }
+    None => raw
+  }
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+    return CtValue::Empty
+  }
+  match (op, value) {
+    (LogicalNot, DefaultValue) => CtValue::Boolean(true)
+    (LogicalNot, Boolean(value)) => CtValue::Boolean(!value)
+    (Negative, Number(bits, kind)) => ct_number(0u64 - bits, kind)
+    (Positive, Number(_, _)), (Positive, Floating(_, _)) => value
+    (Negative, Floating(bits, kind)) => {
+      let sign = if kind == "F32" {
+        2147483648u64
+      } else {
+        9223372036854775808u64
+      }
+      CtValue::Floating(bits ^ sign, kind)
+    }
+    _ => ct_fail(machine, "unsupported prefix operator at compile time")
+  }
+}
+
+fn ct_run_bytecode(machine: CtMachine, code: CtBytecodeFunction, arguments: Array<CtValue>) -> CtValue {
+  let initial_depth = machine.depth
+  let result = ct_run_bytecode_inner(machine, code, arguments, initial_depth)
+  machine.depth = initial_depth
+  result
+}
+
+fn ct_run_bytecode_inner(machine: CtMachine, code: CtBytecodeFunction, arguments: Array<CtValue>, initial_depth: U32) -> CtValue {
+  if arguments.length() > code.slots || code.slots > 512u32 {
+    return ct_fail(machine, "invalid bytecode frame layout")
+  }
+  let slots = array_new::<CtValue>()
+  while slots.length() < code.slots {
+    true => {
+      slots.push(CtValue::Empty)
+      continue slots.length() < code.slots
+    }
+    false => break ()
+  }
+  let mut index = 0u32
+  for argument in arguments {
+    slots[index] = argument
+    index = index + 1u32
+  }
+  let mut value = CtValue::Empty
+  let mut pc = 0u32
+  while pc < code.words.length() {
+    true => {
+      if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+        return value
+      }
+      let word = code.words[pc]
+      pc = pc + 1u32
+      let op = word & 255u32
+      let arg = word >> 8u32
+      if op == 1u32 {
+        value = code.constants[arg]
+      } else if op == 2u32 {
+        value = slots[arg]
+      } else if op == 3u32 {
+        slots[arg] = value
+      } else if op == 4u32 {
+        let selected = code.binaries[arg]
+        let left = slots[selected.left]
+        // Keep the tree interpreter's current accounting until its canonical
+        // operator event is changed in both paths.
+        if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+          return CtValue::Empty
+        }
+        let primitive = match selected.opcode {
+          Some(opcode) => opcode.equals(b"primitive") || opcode.equals(ct_scalar_expected_opcode(selected.operator, left))
+          None => false
+        }
+        if primitive {
+          value = ct_binary(machine, selected.operator, left, value)
+        } else {
+          let target = ct_unframe_option(selected.target)
+          match target.target {
+            Some(Source(mi, path, function, kind)) => {
+              value = ct_intrinsic_result(machine, ct_source_call_frame(machine, mi, path, function, [left, value], target.frame), kind)
+            }
+            _ => return ct_fail(machine, "selected operator has no supported compile-time source body")
+          }
+        }
+      } else if op == 5u32 {
+        let _ = ct_charge(machine, arg)
+      } else if op == 6u32 {
+        if !ct_charge(machine, 16u32) {
+          return CtValue::Empty
+        }
+        if machine.depth >= 128u32 {
+          return ct_fail(machine, "transform depth limit exceeded")
+        }
+        machine.depth = machine.depth + 1u32
+      } else if op == 7u32 {
+        if machine.depth <= initial_depth {
+          return ct_fail(machine, "unbalanced bytecode expression depth")
+        }
+        machine.depth = machine.depth - 1u32
+      } else if op == 8u32 {
+        pc = arg
+      } else if op == 9u32 {
+        if !ct_truth(machine, value) {
+          pc = arg
+        }
+      } else if op == 10u32 {
+        if ct_truth(machine, value) {
+          pc = arg
+        }
+      } else if op == 11u32 {
+        let selected = code.calls[arg]
+        let values = array_new::<CtValue>()
+        for slot in selected.arguments {
+          values.push(slots[slot])
+        }
+        let closure = match selected.callee {
+          Some(slot) => slots[slot]
+          None => CtValue::Empty
+        }
+        value = ct_bc_target(machine, selected.target, values, closure)
+      } else if op == 12u32 {
+        value = ct_intrinsic_result(machine, value, code.kinds[arg])
+      } else if op == 13u32 {
+        let prefix = code.prefixes[arg]
+        value = ct_scalar_prefix(machine, prefix.operator, value, prefix.kind)
+      } else if op == 14u32 {
+        value = ct_field(machine, value, code.names[arg])
+      } else if op == 15u32 {
+        if pc >= code.words.length() {
+          return ct_fail(machine, "truncated bytecode field write")
+        }
+        let owner = code.words[pc] >> 8u32
+        pc = pc + 1u32
+        ct_write_field(machine, slots[owner], code.names[arg], value)
+      } else if op == 16u32 {
+        machine.flow = 1u32
+        machine.result = value
+        return value
+      } else if op == 17u32 {
+        machine.depth = initial_depth + arg
+      } else if op == 18u32 {
+        value = CtValue::Boolean(ct_truth(machine, value))
+      } else if op == 19u32 {
+        if !ct_charge(machine, 16u32) {
+          return CtValue::Empty
+        }
+        if machine.depth >= 128u32 {
+          return ct_fail(machine, "transform depth limit exceeded")
+        }
+      } else if op == 20u32 {
+        value = CtValue::Boolean(ct_literal_pattern_equal(machine, value, slots[arg]))
+      } else {
+        return ct_fail(machine, "invalid bytecode instruction")
+      }
+      continue pc < code.words.length()
+    }
+    false => break ()
+  }
+  if machine.depth != initial_depth {
+    return ct_fail(machine, "unbalanced bytecode expression depth")
+  }
+  value
+}

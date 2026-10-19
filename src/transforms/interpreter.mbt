@@ -54,6 +54,10 @@ struct Machine {
   mut file_index : Int32
   mut frame : String
   text_storage : Map[String, Bytes]
+  bytecode_enabled : Bool
+  bytecode : Map[String, Map[(Int32, Int32, Int32), BytecodeFunction?]]
+  mut bytecode_compile_work : Int32
+  mut bytecode_bytes_left : Int32
 }
 
 ///|
@@ -310,14 +314,12 @@ fn Machine::call(
               return eval_fail("compile-time argument count mismatch: " + key)
             }
             self.functions[key] = Source(mi, fi, fn_, "")
-            let env : Map[String, Cell] = Map::default()
-            for i, parameter in fn_.parameters {
+            for _ in fn_.parameters {
               self.charge(16)
-              env[parameter.name] = { value: args[i], mutable_: false, }
             }
             let previous_file = self.file_index
             self.file_index = fi
-            let result = self.block(mi, fn_.body, env) catch {
+            let result = self.source_body(mi, fn_, args) catch {
               Returned(value) => value
               Broken(_) | Continued(_) => {
                 self.file_index = previous_file
@@ -690,32 +692,11 @@ fn Machine::eval_inner(
       )
     @parser.PrefixExpr(op, value, offset) => {
       let value = self.eval(mi, value, env)
-      let value = match
-        self.scalar_type_proof((mi, self.file_index, offset.to_int())) {
-        Some(kind) => {
-          guard kind != "" else {
-            return eval_fail(
-              "prefix operation needs concrete scalar type evidence at compile time",
-            )
-          }
-          self.typed_value(value, kind)
-        }
-        _ => value
-      }
-      match (op, value) {
-        (@parser.LogicalNot, DefaultValue) => Boolean(true)
-        (@parser.LogicalNot, Boolean(v)) => Boolean(!v)
-        (@parser.Negative, Number(n, kind)) => normalized(0UL - n, kind)
-        (@parser.Positive, Number(_, _)) | (@parser.Positive, Floating(_, _)) =>
-          value
-        (@parser.Negative, Floating(bits, kind)) =>
-          Floating(
-            bits ^
-            (if kind == "F32" { 2147483648UL } else { 9223372036854775808UL }),
-            kind,
-          )
-        _ => eval_fail("unsupported prefix operator at compile time")
-      }
+      self.scalar_prefix(
+        op,
+        value,
+        self.scalar_type_proof((mi, self.file_index, offset.to_int())),
+      )
     }
     @parser.ReturnExpr(value, _) =>
       raise Returned(

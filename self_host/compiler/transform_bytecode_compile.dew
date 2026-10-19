@@ -1,0 +1,462 @@
+fn ct_bc_block(builder: CtBytecodeBuilder, block: SelfHostBlock, outer: Map<String, U32>, loop_: Option<CtBytecodeLoop>) -> Unit {
+  if !builder.supported {
+    return
+  }
+  let env = ct_bc_scope(outer)
+  let _ = ct_bc_emit(builder, 5u32, outer.length() * 16u32)
+  ct_bc_constant(builder, CtValue::Empty)
+  for item in block.items {
+    if !builder.supported {
+      return
+    }
+    let _ = ct_bc_emit(builder, 5u32, 16u32)
+    ct_bc_constant(builder, CtValue::Empty)
+    if item.kind == 0u32 {
+      ct_bc_expr(builder, item.value, env, loop_)
+      let slot = ct_bc_slot(builder, item.mutable_)
+      let _ = ct_bc_emit(builder, 3u32, slot)
+      env.set(item.name, slot)
+      ct_bc_constant(builder, CtValue::Empty)
+    } else if item.kind == 3u32 {
+      ct_bc_expr(builder, item.value, env, loop_)
+    } else if item.kind == 1u32 {
+      match item.target {
+        NameExpr(name, _) => {
+          let slot = match env.get(name) {
+            Some(slot) if builder.mutable_slots[slot] => slot
+            _ => {
+              builder.supported = false
+              return
+            }
+          }
+          ct_bc_expr(builder, item.value, env, loop_)
+          let _ = ct_bc_emit(builder, 3u32, slot)
+          ct_bc_constant(builder, CtValue::Empty)
+        }
+        FieldExpr(owner, name, _) => {
+          ct_bc_expr(builder, owner, env, loop_)
+          let slot = ct_bc_save(builder)
+          ct_bc_expr(builder, item.value, env, loop_)
+          if !ct_bc_reserve(builder, 8u32) {
+            return
+          }
+          let index = builder.names.length()
+          builder.names.push(name)
+          let _ = ct_bc_emit(builder, 15u32, index)
+          let _ = ct_bc_emit(builder, 0u32, slot)
+          ct_bc_constant(builder, CtValue::Empty)
+        }
+        _ => {
+          builder.supported = false
+        }
+      }
+    } else if item.type_binding is None {
+      builder.supported = false
+    }
+  }
+}
+
+fn ct_bc_call(builder: CtBytecodeBuilder, callee: SelfHostExpr, arguments: Array<SelfHostExpr>, offset: U32, env: Map<String, U32>, loop_: Option<CtBytecodeLoop>) -> Unit {
+  let target = match ct_lookup_call(builder.machine, builder.module_, offset) {
+    Some(value) => value
+    None => {
+      builder.supported = false
+      return
+    }
+  }
+  let selected = ct_unframe_call(target)
+  let slots = array_new::<U32>()
+  let mut closure = None
+  match selected.target {
+    Some(Constant(_)) => {
+    }
+    Some(Source(_, _, function, _)) => {
+      if function.receiver is Some(_) {
+        match callee {
+          FieldExpr(owner, _, _) => {
+            ct_bc_expr(builder, owner, env, loop_)
+            slots.push(ct_bc_save(builder))
+          }
+          _ => {
+            builder.supported = false
+            return
+          }
+        }
+      }
+      for argument in arguments {
+        if !builder.supported {
+          return
+        }
+        ct_bc_expr(builder, argument, env, loop_)
+        slots.push(ct_bc_save(builder))
+      }
+    }
+    Some(Intrinsic(_, _)), Some(Constructor(_)) => {
+      for argument in arguments {
+        if !builder.supported {
+          return
+        }
+        ct_bc_expr(builder, argument, env, loop_)
+        slots.push(ct_bc_save(builder))
+      }
+    }
+    Some(FunctionValue(_)) => {
+      ct_bc_expr(builder, callee, env, loop_)
+      closure = Some(ct_bc_save(builder))
+      for argument in arguments {
+        if !builder.supported {
+          return
+        }
+        ct_bc_expr(builder, argument, env, loop_)
+        slots.push(ct_bc_save(builder))
+      }
+    }
+    _ => {
+      builder.supported = false
+      return
+    }
+  }
+  if !ct_bc_reserve(builder, 96u32 + slots.length() * 8u32) {
+    return
+  }
+  let index = builder.calls.length()
+  builder.calls.push(CtBytecodeCall::{
+    target: target
+    arguments: slots
+    callee: closure
+  })
+  let _ = ct_bc_emit(builder, 11u32, index)
+}
+
+fn ct_bc_expr(builder: CtBytecodeBuilder, expression: SelfHostExpr, env: Map<String, U32>, loop_: Option<CtBytecodeLoop>) -> Unit {
+  if !builder.supported {
+    return
+  }
+  if builder.machine.bytecode_compile_work == 0u32 {
+    builder.supported = false
+    return
+  }
+  builder.machine.bytecode_compile_work = builder.machine.bytecode_compile_work - 1u32
+  builder.visits = builder.visits + 1u32
+  if builder.visits > 100000u32 || builder.depth >= 128u32 {
+    builder.supported = false
+    return
+  }
+  let _ = ct_bc_emit(builder, 6u32, 0u32)
+  builder.depth = builder.depth + 1u32
+  match expression {
+    I8Expr(value, _) => ct_bc_constant(builder, ct_number(value, "I8"))
+    I16Expr(value, _) => ct_bc_constant(builder, ct_number(value, "I16"))
+    I32Expr(value, _) => ct_bc_constant(builder, ct_number(value, "I32"))
+    I64Expr(value, _) => ct_bc_constant(builder, ct_number(value, "I64"))
+    U8Expr(value, _) => ct_bc_constant(builder, ct_number(value, "U8"))
+    U16Expr(value, _) => ct_bc_constant(builder, ct_number(value, "U16"))
+    U32Expr(value, _) => ct_bc_constant(builder, ct_number(value, "U32"))
+    U64Expr(value, _) => ct_bc_constant(builder, ct_number(value, "U64"))
+    F32Expr(value, _) => ct_bc_constant(builder, CtValue::Floating(u32_into_u64(wasm_f32_to_bits(value)), "F32"))
+    F64Expr(value, _) => ct_bc_constant(builder, CtValue::Floating(wasm_f64_to_bits(value), "F64"))
+    BoolExpr(value, _) => ct_bc_constant(builder, CtValue::Boolean(value))
+    ProductExpr(values, _) if values.length() == 0u32 => ct_bc_constant(builder, CtValue::Empty)
+    NameExpr(name, _) => {
+      match env.get(name) {
+        Some(slot) => {
+          let _ = ct_bc_emit(builder, 2u32, slot)
+        }
+        None => {
+          builder.supported = false
+        }
+      }
+    }
+    BlockExpr(block) => ct_bc_block(builder, block, env, loop_)
+    IfExpr(condition, yes, no, _) => {
+      ct_bc_expr(builder, condition, env, loop_)
+      let next = ct_bc_emit(builder, 9u32, 0u32)
+      ct_bc_block(builder, yes, env, loop_)
+      let done = ct_bc_emit(builder, 8u32, 0u32)
+      ct_bc_patch(builder, next, builder.words.length())
+      match no {
+        Some(value) => ct_bc_expr(builder, value, env, loop_)
+        None => ct_bc_constant(builder, CtValue::Empty)
+      }
+      ct_bc_patch(builder, done, builder.words.length())
+    }
+    BinaryExpr(op, left, right, offset) => {
+      ct_bc_expr(builder, left, env, loop_)
+      if op is LogicalAnd || op is LogicalOr {
+        let _ = ct_bc_emit(builder, 18u32, 0u32)
+        let done = ct_bc_emit(builder, if op is LogicalAnd {
+          9u32
+        } else {
+          10u32
+        }, 0u32)
+        ct_bc_expr(builder, right, env, loop_)
+        let _ = ct_bc_emit(builder, 18u32, 0u32)
+        ct_bc_patch(builder, done, builder.words.length())
+      } else {
+        let slot = ct_bc_save(builder)
+        ct_bc_expr(builder, right, env, loop_)
+        let opcode = ct_lookup_scalar_operator(builder.machine, builder.module_, offset)
+        let target = ct_lookup_call(builder.machine, builder.module_, offset)
+        if opcode is None && target is None {
+          builder.supported = false
+        }
+        if !ct_bc_reserve(builder, 80u32) {
+          return
+        }
+        let index = builder.binaries.length()
+        builder.binaries.push(CtBytecodeBinary::{
+          operator: op
+          opcode: opcode
+          target: target
+          left: slot
+        })
+        let _ = ct_bc_emit(builder, 4u32, index)
+      }
+    }
+    PrefixExpr(op, value, offset) => {
+      ct_bc_expr(builder, value, env, loop_)
+      if !ct_bc_reserve(builder, 48u32) {
+        return
+      }
+      let index = builder.prefixes.length()
+      builder.prefixes.push(CtBytecodePrefix::{
+        operator: op
+        kind: ct_lookup_scalar_type(builder.machine, builder.module_, offset)
+      })
+      let _ = ct_bc_emit(builder, 13u32, index)
+    }
+    CallExpr(callee, args, offset), ExplicitTypeCallExpr(callee, _, args, offset) => ct_bc_call(builder, callee, args, offset, env, loop_)
+    FieldExpr(owner, name, offset) => {
+      if ct_lookup_reference(builder.machine, builder.module_, offset) is Some(_) {
+        builder.supported = false
+      } else {
+        ct_bc_expr(builder, owner, env, loop_)
+        if !ct_bc_reserve(builder, 8u32) {
+          return
+        }
+        let index = builder.names.length()
+        builder.names.push(name)
+        let _ = ct_bc_emit(builder, 14u32, index)
+      }
+    }
+    ReturnExpr(value, _) => {
+      match value {
+        Some(value) => ct_bc_expr(builder, value, env, loop_)
+        None => ct_bc_constant(builder, CtValue::Empty)
+      }
+      let _ = ct_bc_emit(builder, 16u32, 0u32)
+    }
+    BreakExpr(value, _), ContinueExpr(value, _) => {
+      let selected = match loop_ {
+        Some(value) => value
+        None => {
+          builder.supported = false
+          return
+        }
+      }
+      ct_bc_expr(builder, value, env, Some(selected))
+      let _ = ct_bc_emit(builder, 17u32, selected.depth)
+      if expression is ContinueExpr(_, _) {
+        let _ = ct_bc_emit(builder, 3u32, selected.value)
+        let _ = ct_bc_emit(builder, 8u32, selected.head)
+      } else {
+        selected.breaks.push(ct_bc_emit(builder, 8u32, 0u32))
+      }
+    }
+    WhileExpr(initial, arms, _) => {
+      ct_bc_expr(builder, initial, env, loop_)
+      let slot = ct_bc_save(builder)
+      let head = builder.words.length()
+      let selected = CtBytecodeLoop::{
+        value: slot
+        head: head
+        depth: builder.depth
+        breaks: array_new::<U32>()
+      }
+      let _ = ct_bc_emit(builder, 5u32, 0u32)
+      for arm in arms {
+        if !builder.supported {
+          break ()
+        }
+        let scope = ct_bc_scope(env)
+        let _ = ct_bc_emit(builder, 5u32, env.length() * 16u32)
+        let mut pattern_next = None
+        match arm.pattern {
+          WildcardPattern(_) => {
+            let _ = ct_bc_emit(builder, 19u32, 0u32)
+          }
+          BindingPattern(name, offset) => {
+            let _ = ct_bc_emit(builder, 19u32, 0u32)
+            let key = ct_site_key(builder.machine.plan, builder.module_, builder.machine.file_path, offset)
+            match builder.machine.plan.pattern_proofs.get(key) {
+              Some("") => {
+              }
+              _ => {
+                builder.supported = false
+                break ()
+              }
+            }
+            let bound = ct_bc_slot(builder, false)
+            let _ = ct_bc_emit(builder, 2u32, slot)
+            let _ = ct_bc_emit(builder, 3u32, bound)
+            scope.set(name, bound)
+          }
+          LiteralPattern(expected, _) => {
+            let _ = ct_bc_emit(builder, 6u32, 0u32)
+            builder.depth = builder.depth + 1u32
+            ct_bc_expr(builder, expected, scope, Some(selected))
+            builder.depth = builder.depth - 1u32
+            let _ = ct_bc_emit(builder, 7u32, 0u32)
+            let _ = ct_bc_emit(builder, 20u32, slot)
+            pattern_next = Some(ct_bc_emit(builder, 9u32, 0u32))
+          }
+          _ => {
+            builder.supported = false
+            break ()
+          }
+        }
+        let next = match arm.guard_condition {
+          Some(condition) => {
+            ct_bc_expr(builder, condition, scope, Some(selected))
+            Some(ct_bc_emit(builder, 9u32, 0u32))
+          }
+          None => None
+        }
+        ct_bc_expr(builder, arm.body, scope, Some(selected))
+        let _ = ct_bc_emit(builder, 8u32, head)
+        match next {
+          Some(at) => ct_bc_patch(builder, at, builder.words.length())
+          None => {
+          }
+        }
+        match pattern_next {
+          Some(at) => ct_bc_patch(builder, at, builder.words.length())
+          None => {
+          }
+        }
+      }
+      ct_bc_constant(builder, CtValue::Empty)
+      for at in selected.breaks {
+        ct_bc_patch(builder, at, builder.words.length())
+      }
+    }
+    _ => {
+      builder.supported = false
+    }
+  }
+  builder.depth = builder.depth - 1u32
+  let _ = ct_bc_emit(builder, 7u32, 0u32)
+  match expression {
+    NameExpr(_, offset), FieldExpr(_, _, offset) => ct_bc_type_read(builder, offset)
+    _ => {}
+  }
+}
+
+fn ct_compile_bytecode(machine: CtMachine, mi: U32, function: SelfHostFunctionDeclaration) -> Option<CtBytecodeFunction> {
+  let builder = CtBytecodeBuilder::{
+    machine: machine
+    module_: mi
+    words: array_new::<U32>()
+    constants: array_new::<CtValue>()
+    calls: array_new::<CtBytecodeCall>()
+    binaries: array_new::<CtBytecodeBinary>()
+    prefixes: array_new::<CtBytecodePrefix>()
+    names: array_new::<String>()
+    kinds: array_new::<String>()
+    mutable_slots: array_new::<Bool>()
+    visits: 0u32
+    depth: 0u32
+    supported: true
+    estimated_bytes: 256u32
+  }
+  let env = map_empty::<String, U32>()
+  if function.receiver is Some(_) {
+    env.set("self", ct_bc_slot(builder, false))
+  }
+  for parameter in function.parameters {
+    if !builder.supported {
+      return None
+    }
+    env.set(parameter.name, ct_bc_slot(builder, false))
+  }
+  ct_bc_block(builder, function.body, env, None)
+  if !builder.supported {
+    return None
+  }
+  Some(CtBytecodeFunction::{
+    words: builder.words
+    constants: builder.constants
+    calls: builder.calls
+    binaries: builder.binaries
+    prefixes: builder.prefixes
+    names: builder.names
+    kinds: builder.kinds
+    slots: builder.mutable_slots.length()
+    estimated_bytes: builder.estimated_bytes
+  })
+}
+
+fn ct_source_body(machine: CtMachine, mi: U32, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
+  if machine.bytecode_enabled {
+    let cache = match machine.bytecode.get(machine.frame) {
+      Some(value) => value
+      None => {
+        if machine.bytecode_bytes_left < 384u32 {
+          return ct_tree_source_body(machine, mi, function, args)
+        }
+        machine.bytecode_bytes_left = machine.bytecode_bytes_left - 256u32
+        let value = map_empty::<U64, Option<CtBytecodeFunction>>()
+        machine.bytecode.set(machine.frame, value)
+        value
+      }
+    }
+    let key = ct_site_key(machine.plan, mi, machine.file_path, function.offset)
+    let code = match cache.get(key) {
+      Some(value) => value
+      None => {
+        if machine.bytecode_bytes_left < 128u32 {
+          return ct_tree_source_body(machine, mi, function, args)
+        }
+        machine.bytecode_bytes_left = machine.bytecode_bytes_left - 128u32
+        let candidate = if machine.bytecode_bytes_left >= 256u32 && machine.bytecode_compile_work > 0u32 {
+          ct_compile_bytecode(machine, mi, function)
+        } else {
+          None
+        }
+        let result = match candidate {
+          Some(code) if code.estimated_bytes <= machine.bytecode_bytes_left => {
+            machine.bytecode_bytes_left = machine.bytecode_bytes_left - code.estimated_bytes
+            Some(code)
+          }
+          _ => None
+        }
+        cache.set(key, result)
+        result
+      }
+    }
+    match code {
+      Some(code) => return ct_run_bytecode(machine, code, args)
+      None => {
+      }
+    }
+  }
+  ct_tree_source_body(machine, mi, function, args)
+}
+
+fn ct_tree_source_body(machine: CtMachine, mi: U32, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
+  let env = ct_environment()
+  let receivers = if function.receiver is Some(_) {
+    1u32
+  } else {
+    0u32
+  }
+  if receivers == 1u32 {
+    env.set("self", ct_binding("self", args[0u32]))
+  }
+  let mut i = 0u32
+  for parameter in function.parameters {
+    env.set(parameter.name, ct_binding(parameter.name, args[i + receivers]))
+    i = i + 1u32
+  }
+  ct_block(machine, mi, function.body, env)
+}

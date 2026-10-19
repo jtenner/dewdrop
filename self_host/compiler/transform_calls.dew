@@ -54,7 +54,10 @@ fn ct_lookup_scalar_type(machine: CtMachine, mi: U32, offset: U32) -> Option<Str
 }
 
 fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: SelfHostFunctionDeclaration, args: Array<CtValue>, frame: String) -> CtValue {
-  if !ct_charge(machine, 32u32 + args.length() * 16u32) || machine.flow != 0u32 {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if !ct_charge(machine, 32u32 + args.length() * 16u32) {
     return CtValue::Empty
   }
   let receivers = if function.receiver is Some(_) {
@@ -69,20 +72,11 @@ fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: Sel
   if machine.plan.annotated_functions.get(annotation_key) is Some(_) {
     return ct_fail(machine, "annotated functions cannot execute at compile time")
   }
-  let env = ct_environment()
-  if receivers == 1u32 {
-    env.set("self", ct_binding("self", args[0u32]))
-  }
-  let mut i = 0u32
-  for parameter in function.parameters {
-    env.set(parameter.name, ct_binding(parameter.name, args[i + receivers]))
-    i = i + 1u32
-  }
   let previous = machine.file_path
   let previous_frame = machine.frame
   machine.frame = frame
   machine.file_path = path
-  let value = ct_block(machine, mi, function.body, env)
+  let value = ct_source_body(machine, mi, function, args)
   machine.file_path = previous
   machine.frame = previous_frame
   if machine.flow == 1u32 {

@@ -97,6 +97,10 @@ pub struct CtMachine {
   initializing: Map<String, Bool>
   mut file_path: String
   mut frame: String
+  bytecode_enabled: Bool
+  bytecode: Map<String, Map<U64, Option<CtBytecodeFunction>>>
+  mut bytecode_compile_work: U32
+  mut bytecode_bytes_left: U32
 }
 
 fn ct_empty() -> CtValue {
@@ -104,6 +108,10 @@ fn ct_empty() -> CtValue {
 }
 
 fn ct_machine(plan: CtPlan) -> CtMachine {
+  ct_machine_with_bytecode(plan, true)
+}
+
+fn ct_machine_with_bytecode(plan: CtPlan, enabled: Bool) -> CtMachine {
   {
     plan: plan
     error: ""
@@ -118,6 +126,10 @@ fn ct_machine(plan: CtPlan) -> CtMachine {
     initializing: map_empty::<String, Bool>()
     file_path: ""
     frame: ""
+    bytecode_enabled: enabled
+    bytecode: map_empty::<String, Map<U64, Option<CtBytecodeFunction>>>()
+    bytecode_compile_work: 1048576u32
+    bytecode_bytes_left: 8388608u32
   }
 }
 

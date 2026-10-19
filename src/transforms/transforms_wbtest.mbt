@@ -220,6 +220,10 @@ test "deep product patterns stop with a diagnostic" {
     globals: {},
     initializing: {},
     text_storage: {},
+    bytecode_enabled: true,
+    bytecode: {},
+    bytecode_compile_work: 1048576,
+    bytecode_bytes_left: 8388608,
   }
   let pattern = match plan.files[0][0].functions[0].declaration.body.items[0] {
     @parser.ExpressionItem(@parser.MatchExpr(_, arms, _), _) => arms[0].pattern
@@ -259,6 +263,10 @@ test "scope copies and name searches consume transform budgets" {
     globals: {},
     initializing: {},
     text_storage: {},
+    bytecode_enabled: true,
+    bytecode: {},
+    bytecode_compile_work: 1048576,
+    bytecode_bytes_left: 8388608,
   }
   let env : Map[String, Cell] = { "value": { value: Unit, mutable_: false, } }
   try {
@@ -373,6 +381,10 @@ test "generated source limit counts UTF-8 bytes" {
     globals: {},
     initializing: {},
     text_storage: {},
+    bytecode_enabled: true,
+    bytecode: {},
+    bytecode_compile_work: 1048576,
+    bytecode_bytes_left: 8388608,
   }
   let source = StringBuilder::new()
   for _ in 0..<600_000 {

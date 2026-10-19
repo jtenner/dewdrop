@@ -150,18 +150,11 @@ fn Machine::source_call(
     )
   }
   self.charge(32 + args.length() * 16)
-  let env : Map[String, Cell] = Map::default()
-  if receiver_count == 1 {
-    env["self"] = { value: args[0], mutable_: false, }
-  }
-  for i, parameter in function.parameters {
-    env[parameter.name] = { value: args[i + receiver_count], mutable_: false, }
-  }
   let previous = self.file_index
   let previous_frame = self.frame
   self.frame = frame
   self.file_index = fi
-  let result = self.block(mi, function.body, env) catch {
+  let result = self.source_body(mi, function, args) catch {
     Returned(value) => value
     Broken(_) | Continued(_) => {
       self.file_index = previous
@@ -273,9 +266,15 @@ fn Machine::closure_call(
     let (selected, frame) = unframe_call(Some(target))
     return match selected {
       Some(Source(mi, fi, function, kind)) =>
-        self.typed_value(self.source_call(mi, fi, function, values, frame~), kind)
+        self.typed_value(
+          self.source_call(mi, fi, function, values, frame~),
+          kind,
+        )
       Some(Intrinsic(builtin, kind)) =>
-        self.typed_value(self.intrinsic(builtin, values, result_kind=kind), kind)
+        self.typed_value(
+          self.intrinsic(builtin, values, result_kind=kind),
+          kind,
+        )
       Some(Constructor(key)) => Variant(key, values)
       _ => eval_fail("unsupported checked function reference")
     }
