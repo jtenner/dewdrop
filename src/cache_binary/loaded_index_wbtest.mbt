@@ -1,5 +1,5 @@
 ///|
-test "loaded owner index keeps old versions and first-owner replacement" {
+test "loaded owner index keeps lookup versions but saves the current owner" {
   let source = ArtifactPack::empty()
   let old = artifact_pack_test_entry(
     "module:a.dew", b"old", b"context", b"old payload",
@@ -33,9 +33,17 @@ test "loaded owner index keeps old versions and first-owner replacement" {
   assert_eq(pack.entries.length(), 2)
   pack.upsert(fresh).unwrap()
   assert_eq(pack.entries.length(), 2)
+  let saved = decode_artifact_pack(pack.encode().unwrap()).unwrap()
+  assert_eq(saved.entries.length(), 1)
   assert_eq(
-    pack.encode(),
-    Err("artifact pack contains duplicate section owners"),
+    saved.lookup(fresh.kind, fresh.schema_version, fresh.owner,
+      fresh.content_digest, fresh.context_digest),
+    Some(fresh.payload),
+  )
+  assert_eq(
+    saved.lookup(old.kind, old.schema_version, old.owner,
+      old.content_digest, old.context_digest),
+    None,
   )
   let decoded = decode_artifact_pack(source.encode().unwrap()).unwrap()
   decoded.upsert(fresh).unwrap()

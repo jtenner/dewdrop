@@ -108,10 +108,16 @@ fn ArtifactPack::materialized_entries(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  let output = self.entries.copy()
+  let output : Array[ArtifactPackEntry] = []
   let owners : Map[(UInt32, String), Bool] = {}
-  for entry in output {
-    owners[(entry.kind, entry.owner)] = true
+  // Lookups may cache an older indexed version after upsert. Keep those
+  // versions available to lookup, but persist upsert's first-owner choice.
+  for entry in self.entries {
+    let key = (entry.kind, entry.owner)
+    if !owners.contains(key) {
+      owners[key] = true
+      output.push(entry)
+    }
   }
   for indexed in self.indexed_entries {
     let entry = match self.decode_indexed_entry(indexed) {
