@@ -24,7 +24,7 @@ pub enum CtValue {
   Record(String, Array<CtBinding>)
   Variant(String, Array<CtValue>)
   Function(CtCallTarget, Array<CtValue>, CtFunctionIdentity)
-  Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, Array<CtBinding>, String)
+  Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, CtEnvironment, String)
 }
 
 pub struct CtBinding {
@@ -61,23 +61,25 @@ pub struct CtFile {
 pub struct CtPlan {
   manifest: SelfHostProgramManifest
   files: Array<CtFile>
+  site_files: Map<U32, Map<String, U32>>
+  mut next_site_file: U32
   active: Bool
   mut error: String
   mut validation_stop: String
   mut raw_array_declarations: Map<U64, Bool>
-  scalar_proofs: Map<String, Bytes>
-  pattern_proofs: Map<String, String>
-  references: Map<String, CtFunctionReferenceProof>
+  scalar_proofs: Map<U64, Bytes>
+  pattern_proofs: Map<U64, String>
+  references: Map<U64, CtFunctionReferenceProof>
   frames: Map<String, CtExecutionFrame>
-  calls: Map<String, CtCallTarget>
-  scalar_types: Map<String, String>
-  array_literals: Map<String, CtArrayLayout>
+  calls: Map<U64, CtCallTarget>
+  scalar_types: Map<U64, String>
+  array_literals: Map<U64, CtArrayLayout>
   array_layouts: Map<String, CtArrayLayout>
   raw_layouts: Map<String, CtRawLayout>
   reports: Array<CtTransformReport>
   expression_types: Map<String, Array<CtExpressionType>>
   reflection_errors: Array<String>
-  annotated_functions: Map<String, Bool>
+  annotated_functions: Map<U64, Bool>
   type_names: Array<CtTypeName>
 }
 
@@ -231,17 +233,6 @@ fn ct_field(machine: CtMachine, value: CtValue, name: String) -> CtValue {
   }
 }
 
-fn ct_scope(machine: CtMachine, outer: Array<CtBinding>) -> Array<CtBinding> {
-  let values = array_new::<CtBinding>()
-  for value in outer {
-    if !ct_charge(machine, 16u32) {
-      return values
-    }
-
-    values.push(value)
-  }
-  values
-}
 
 fn ct_part(source: Bytes, start: U32, end: U32) -> String {
   source.slice(start, end).to_string()

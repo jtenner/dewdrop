@@ -1,0 +1,32 @@
+// File ordinals distinguish equal logical paths in different modules.
+fn ct_register_site_file(plan: CtPlan, mi: U32, path: String) -> Unit {
+  let files = match plan.site_files.get(mi) {
+    Some(value) => value
+    None => {
+      let value = map_empty::<String, U32>()
+      plan.site_files.set(mi, value)
+      value
+    }
+  }
+  if !files.contains_key(path) {
+    self_host_assert_compiler_invariant(plan.next_site_file < 4294967295u32, "transform proof file ordinal limit exceeded")
+    files.set(path, plan.next_site_file)
+    plan.next_site_file = plan.next_site_file + 1u32
+  }
+}
+
+fn ct_site_key(plan: CtPlan, mi: U32, path: String, offset: U32) -> U64 {
+  match plan.site_files.get(mi) {
+    Some(files) => match files.get(path) {
+      Some(file) => (u32_into_u64(file) << 32u64) | u32_into_u64(offset)
+      None => {
+        self_host_assert_compiler_invariant(false, "transform proof lost its checked source file")
+        0u64
+      }
+    }
+    None => {
+      self_host_assert_compiler_invariant(false, "transform proof lost its checked source module")
+      0u64
+    }
+  }
+}

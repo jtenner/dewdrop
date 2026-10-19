@@ -7,7 +7,7 @@ fn ct_array_value(machine: CtMachine, mi: U32, offset: U32, values: Array<CtValu
   if !ct_charge(machine, values.length() * 16u32) {
     return CtValue::Empty
   }
-  match machine.plan.array_literals.get(ct_call_key(mi, machine.file_path, offset)) {
+  match machine.plan.array_literals.get(ct_site_key(machine.plan, mi, machine.file_path, offset)) {
     Some(layout) => CtValue::Record(layout.key, [
     ct_binding(layout.fields[0u32], CtValue::RawArray(CtRawStorage::{
       values: values
@@ -102,7 +102,7 @@ fn ct_collect_arrays(plan: CtPlan, collected: SelfHostCollectedProgram, lowering
                     if file.module_index == mi && file.original.path == source.file_paths[fi] {
                       match ct_scalar_original_offset(file, expression.offset(), 0u32) {
                         Some(offset) => {
-                          plan.array_literals.set(ct_call_key(mi, file.original.path, offset), layout)
+                          plan.array_literals.set(ct_site_key(plan, mi, file.original.path, offset), layout)
                           plan.array_layouts.set(layout.key, layout)
                         }
                         None => {

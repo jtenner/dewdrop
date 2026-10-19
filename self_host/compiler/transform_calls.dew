@@ -24,10 +24,10 @@ fn ct_call_key(mi: U32, path: String, offset: U32) -> String {
 }
 
 fn ct_lookup_call(machine: CtMachine, mi: U32, offset: U32) -> Option<CtCallTarget> {
-  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
     return None
   }
-  let key = ct_call_key(mi, machine.file_path, offset)
+  let key = ct_site_key(machine.plan, mi, machine.file_path, offset)
   match machine.plan.frames.get(machine.frame) {
     Some(frame) => match frame.calls.get(key) {
       Some(value) => return Some(value)
@@ -39,10 +39,10 @@ fn ct_lookup_call(machine: CtMachine, mi: U32, offset: U32) -> Option<CtCallTarg
 }
 
 fn ct_lookup_scalar_type(machine: CtMachine, mi: U32, offset: U32) -> Option<String> {
-  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
     return None
   }
-  let key = ct_call_key(mi, machine.file_path, offset)
+  let key = ct_site_key(machine.plan, mi, machine.file_path, offset)
   match machine.plan.frames.get(machine.frame) {
     Some(frame) => match frame.scalar_types.get(key) {
       Some(value) => return Some(value)
@@ -65,18 +65,17 @@ fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: Sel
   if args.length() != function.parameters.length() + receivers {
     return ct_fail(machine, "checked compile-time argument count mismatch")
   }
-  let annotation_key = ct_call_key(mi, path, function.offset)
-  let _ = ct_charge(machine, 32u32 + path.byte_length())
+  let annotation_key = ct_site_key(machine.plan, mi, path, function.offset)
   if machine.plan.annotated_functions.get(annotation_key) is Some(_) {
     return ct_fail(machine, "annotated functions cannot execute at compile time")
   }
-  let env = array_new::<CtBinding>()
+  let env = ct_environment()
   if receivers == 1u32 {
-    env.push(ct_binding("self", args[0u32]))
+    env.set("self", ct_binding("self", args[0u32]))
   }
   let mut i = 0u32
   for parameter in function.parameters {
-    env.push(ct_binding(parameter.name, args[i + receivers]))
+    env.set(parameter.name, ct_binding(parameter.name, args[i + receivers]))
     i = i + 1u32
   }
   let previous = machine.file_path
@@ -96,7 +95,7 @@ fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: Sel
   value
 }
 
-fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExpr, args: Array<SelfHostExpr>, env: Array<CtBinding>, types: Array<SelfHostTypeExpr>) -> CtValue {
+fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExpr, args: Array<SelfHostExpr>, env: CtEnvironment, types: Array<SelfHostTypeExpr>) -> CtValue {
   let _ = types
   let selected = ct_unframe_option(ct_lookup_call(machine, mi, offset))
   match selected.target {
@@ -252,7 +251,7 @@ fn ct_collect_module_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lo
                           PlannedModuleValueGet(selected), PlannedFunctionReference(selected) => ct_checked_function_identity(lowering, selected)
                           _ => CtFunctionIdentity::FunctionInstance
                         }
-                        proofs.references.set(ct_call_key(mi, file.original.path, offset), CtFunctionReferenceProof::{
+                        proofs.references.set(ct_site_key(plan, mi, file.original.path, offset), CtFunctionReferenceProof::{
                           target: target
                           identity: identity
                         })
@@ -335,8 +334,8 @@ fn ct_collect_module_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lo
                     if file.module_index == mi && file.original.path == source.file_paths[fi] {
                       match ct_scalar_original_offset(file, expression.offset(), 0u32) {
                         Some(offset) => match target {
-                          ScalarResult(kind) => proofs.scalar_types.set(ct_call_key(mi, file.original.path, offset), kind)
-                          _ => proofs.calls.set(ct_call_key(mi, file.original.path, offset), target)
+                          ScalarResult(kind) => proofs.scalar_types.set(ct_site_key(plan, mi, file.original.path, offset), kind)
+                          _ => proofs.calls.set(ct_site_key(plan, mi, file.original.path, offset), target)
                         }
                         None => {
                         }
@@ -385,7 +384,7 @@ fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -
       let env = ct_scope(machine, captured)
       let mut i = 0u32
       for parameter in parameters {
-        env.push(ct_binding(parameter.name, args[i]))
+        env.set(parameter.name, ct_binding(parameter.name, args[i]))
         i = i + 1u32
       }
       let previous = machine.file_path
@@ -433,7 +432,7 @@ fn ct_unit_variant(machine: CtMachine, key: String) -> CtValue {
   ct_fail(machine, "expression does not name a checked unit enum variant")
 }
 
-fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
+fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnvironment) -> CtValue {
   match ct_lookup_reference(machine, mi, expression.offset()) {
     Some(proof) => {
       let target = proof.target

@@ -1,0 +1,95 @@
+test "scope snapshots preserve mutable cells and lexical shadows" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let env = ct_environment()
+  let original = CtBinding::{name: "value"
+    value: ct_number(20u64, "I32")
+    mutable_: true
+  }
+  env.set("value", original)
+  let captured = ct_scope(machine, env)
+  let nested = ct_scope(machine, env)
+  nested.set("value", ct_binding("value", ct_number(200u64, "I32")))
+  original.value = ct_number(42u64, "I32")
+  assert(ct_raw_bits(machine, captured.get_unchecked("value").value) == 42u64, "captures share the original mutable cell")
+  assert(ct_raw_bits(machine, nested.get_unchecked("value").value) == 200u64, "a nested shadow has a separate cell")
+  env.set("value", ct_binding("value", ct_number(300u64, "I32")))
+  assert(ct_raw_bits(machine, captured.get_unchecked("value").value) == 42u64, "later declarations cannot rebind an earlier capture")
+  nested.set("local", ct_binding("local", CtValue::Empty))
+  assert(!env.contains_key("local") && !captured.contains_key("local"), "new lexical names stay inside their scope")
+  assert(machine.steps == 99998u32 && machine.allocated == 32u32, "two one-cell scope snapshots have canonical logical work")
+}
+
+test "nested successful alternatives retain only distinct lexical names" {
+  let machine = ct_machine(ct_test_plan(b""))
+  ct_register_site_file(machine.plan, 0u32, "main.dew")
+  machine.file_path = "main.dew"
+  machine.plan.pattern_proofs.set(ct_site_key(machine.plan, 0u32, "main.dew", 7u32), "")
+  let env = ct_environment()
+  env.set("outside", ct_binding("outside", ct_number(1u64, "I32")))
+  let mut pattern = SelfHostPattern::BindingPattern("selected", 7u32)
+  let mut depth = 0u32
+  while depth < 8u32 {
+    true => {
+      pattern = SelfHostPattern::AlternativePattern(pattern, [pattern], 7u32)
+      depth = depth + 1u32
+      continue depth < 8u32
+    }
+    false => break ()
+  }
+  assert(ct_pattern(machine, 0u32, pattern, ct_number(42u64, "I32"), env), "the first valid alternative succeeds")
+  assert(env.length() == 2u32, "successful alternatives cannot duplicate existing names")
+  assert(ct_raw_bits(machine, env.get_unchecked("selected").value) == 42u64, "the selected binding remains visible")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "proof site IDs separate modules files and logical frames" {
+  let machine = ct_machine(ct_test_plan(b""))
+  ct_register_site_file(machine.plan, 0u32, "same.dew")
+  ct_register_site_file(machine.plan, 1u32, "same.dew")
+  ct_register_site_file(machine.plan, 0u32, "other.dew")
+  let first = ct_site_key(machine.plan, 0u32, "same.dew", 7u32)
+  let second = ct_site_key(machine.plan, 1u32, "same.dew", 7u32)
+  let other = ct_site_key(machine.plan, 0u32, "other.dew", 7u32)
+  assert(first != second && first != other && second != other, "equal offsets and paths cannot alias proof owners")
+  machine.plan.scalar_types.set(first, "I32")
+  machine.plan.scalar_types.set(second, "U64")
+  ct_execution_frame(machine.plan, "selected").scalar_types.set(first, "F64")
+  machine.file_path = "same.dew"
+  machine.frame = "selected"
+  assert(ct_lookup_scalar_type(machine, 0u32, 7u32) is Some("F64"), "the selected frame overrides its own site")
+  assert(ct_lookup_scalar_type(machine, 1u32, 7u32) is Some("U64"), "a different module retains the base proof")
+  assert(ct_lookup_scalar_type(machine, 1u32, 8u32) is None, "an absent proof cannot borrow a nearby offset")
+  let _ = ct_checked_pattern_key(machine, 0u32, 9u32)
+  assert(machine.error.contains("pattern has no checked"), "missing required proof stays diagnostic")
+}
+
+test "scope snapshots retain explicit work and allocation failures" {
+  let work = ct_machine(ct_test_plan(b""))
+  work.steps = 0u32
+  let _ = ct_scope(work, ct_environment())
+  assert(work.error == "transform work limit exceeded", "even an empty scope has one logical work step")
+  let allocation = ct_machine(ct_test_plan(b""))
+  allocation.allocated = 4194304u32
+  let env = ct_environment()
+  env.set("value", ct_binding("value", CtValue::Empty))
+  let _ = ct_scope(allocation, env)
+  assert(allocation.error == "transform allocation limit exceeded", "cell copy allocation remains bounded")
+}
+
+test "checked mutable captures remain lexical through nested shadows" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{path: "example.app"
+      files: [{path: "capture-shadow.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  let mut count = 20i32\n  let tick = fn() -> I32 {\n    count = count + 1i32\n    count\n  }\n  let first = tick()\n  let second = if true {\n    let count = 200i32\n    let local = tick()\n    if count == 200i32 {\n      local\n    } else {\n      0i32\n    }\n  } else {\n    0i32\n  }\n  if first == 21i32 && second == 22i32 && count == 22i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}

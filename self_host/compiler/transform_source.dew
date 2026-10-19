@@ -23,6 +23,7 @@ fn ct_has_syntax(source: Bytes) -> Bool {
 }
 
 fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> CtFile {
+  ct_register_site_file(plan, module_index, original.path)
   let tokens = self_host_tokenize(original.source)
   let clean = BytesBuilder::new()
   let annotations = array_new::<CtAnnotation>()
@@ -219,7 +220,7 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
   for function in functions {
     for annotation in annotations {
       if annotation.target >= function.declaration.offset && annotation.target < function.declaration.name_offset {
-        plan.annotated_functions.set(ct_call_key(module_index, original.path, function.declaration.offset), true)
+        plan.annotated_functions.set(ct_site_key(plan, module_index, original.path, function.declaration.offset), true)
       }
     }
   }
@@ -253,23 +254,25 @@ fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_
       modules: modules
     }
     files: []
+    site_files: map_empty::<U32, Map<String, U32>>()
+    next_site_file: 0u32
     active: active
     error: ""
     validation_stop: "__dew_transform_validation_stop"
-    scalar_proofs: map_empty::<String, Bytes>()
-    pattern_proofs: map_empty::<String, String>()
+    scalar_proofs: map_empty::<U64, Bytes>()
+    pattern_proofs: map_empty::<U64, String>()
     frames: map_empty::<String, CtExecutionFrame>()
-    calls: map_empty::<String, CtCallTarget>()
-    scalar_types: map_empty::<String, String>()
-    references: map_empty::<String, CtFunctionReferenceProof>()
-    array_literals: map_empty::<String, CtArrayLayout>()
+    calls: map_empty::<U64, CtCallTarget>()
+    scalar_types: map_empty::<U64, String>()
+    references: map_empty::<U64, CtFunctionReferenceProof>()
+    array_literals: map_empty::<U64, CtArrayLayout>()
     array_layouts: map_empty::<String, CtArrayLayout>()
     reports: []
     expression_types: map_empty::<String, Array<CtExpressionType>>()
     reflection_errors: []
     raw_array_declarations: map_empty::<U64, Bool>()
     raw_layouts: map_empty::<String, CtRawLayout>()
-    annotated_functions: map_empty::<String, Bool>()
+    annotated_functions: map_empty::<U64, Bool>()
     type_names: []
   }
   if !active {

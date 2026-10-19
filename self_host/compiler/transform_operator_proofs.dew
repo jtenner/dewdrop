@@ -334,7 +334,7 @@ fn ct_collect_scalar_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, l
                     for file in plan.files {
                       if file.module_index == mi && file.original.path == source.file_paths[fi] {
                         match ct_scalar_original_offset(file, offset, validation_body.byte_length()) {
-                          Some(original) => plan.scalar_proofs.set(ct_call_key(mi, file.original.path, original), opcode)
+                          Some(original) => plan.scalar_proofs.set(ct_site_key(plan, mi, file.original.path, original), opcode)
                           None => {}
                         }
                       }

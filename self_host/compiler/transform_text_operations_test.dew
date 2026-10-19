@@ -1,0 +1,20 @@
+test "checked transform text views builders and byte searches" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "text_operations.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.string\nopen dew.std.bytes\nopen dew.std.string_builder\nopen dew.std.bytes_builder\nfn found(value: Option<U32>, expected: U32) -> Bool {\n  match value {\n    Some(index) => index == expected\n    None => false\n  }\n}\nfn check_text() -> Bool {\n  let text = \"0123456789abcdef\xf0\x9f\x98\x80\xc3\xa9XYZ\"\n  let view = text.view(16u32, 6u32)\n  let clone = text.compact()\n  text.byte_length() == 25u32 && text.utf16_length() == 22u32 && text.byte_at(16u32) == 240u8 && view.to_string() == \"\xf0\x9f\x98\x80\xc3\xa9\" && view.utf16_length() == 3u32 && view.byte_length() == 6u32 && view.byte_at(0u32) == 240u8 && view.as_bytes().byte_length() == 6u32 && view.slice(0u32, 4u32) == \"\xf0\x9f\x98\x80\" && view.subarray(4u32, 6u32).to_string() == \"\xc3\xa9\" && view.compact() == \"\xf0\x9f\x98\x80\xc3\xa9\" && clone == text && text.slice(16u32, 22u32) == \"\xf0\x9f\x98\x80\xc3\xa9\" && text.subarray(16u32, 22u32).to_string() == \"\xf0\x9f\x98\x80\xc3\xa9\" && text.starts_with(\"0123456789abcdef\") && text.ends_with(\"XYZ\") && found(text.find(\"f\xf0\x9f\x98\x80\"), 15u32) && found(text.find_view(view), 16u32) && text.contains_view(view) && view.contains_string(\"\xc3\xa9\") && found(view.find_string(\"\xc3\xa9\"), 4u32) && view.starts_with_string(\"\xf0\x9f\x98\x80\") && view.ends_with_string(\"\xc3\xa9\") && view.equals(text.view(16u32, 6u32)) && text.concat_view(view) == text.concat(\"\xf0\x9f\x98\x80\xc3\xa9\")\n}\nfn check_builders() -> Bool {\n  let text = \"\xf0\x9f\x98\x80\xc3\xa9\"\n  let builder = StringBuilder::with_capacity(1u32)\n  builder.append_view(text.view(0u32, 6u32))\n  builder.append_ascii(45u8)\n  builder.append_scalar(128512u32)\n  builder.append_i8(-8i8)\n  builder.append_u64(18446744073709551615u64)\n  let count = builder.byte_length()\n  let result = builder.finish()\n  let bytes = BytesBuilder::with_capacity(1u32)\n  bytes.append(b\"0123456789abcdef\")\n  bytes.append_byte(255u8)\n  bytes.append(b\"XYZ\")\n  let length = bytes.byte_length()\n  let raw = bytes.finish()\n  count == 33u32 && result == \"\xf0\x9f\x98\x80\xc3\xa9-\xf0\x9f\x98\x80-818446744073709551615\" && length == 20u32 && !raw.is_valid_utf8() && raw.byte_at(16u32) == 255u8 && raw.view(17u32, 3u32).to_string() == \"XYZ\" && found(raw.find_byte(255u8), 16u32) && raw.contains_byte(255u8) && raw.starts_with(b\"0123456789abcdef\") && raw.ends_with(b\"XYZ\") && found(raw.find(b\"ef\\xffX\"), 14u32) && raw.contains(b\"ef\\xffX\") && raw.slice(17u32, 20u32).equals(b\"XYZ\") && raw.subarray(0u32, 16u32).compact().concat(b\"!\").to_string() == \"0123456789abcdef!\"\n}\ntransform fn text_transform(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(if check_text() {\n    42i32\n  } else {\n    0i32\n  }))\n}\n#text_transform\nfn text_answer() -> I32 {\n  0i32\n}\ntransform fn builder_transform(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(if check_builders() {\n    42i32\n  } else {\n    0i32\n  }))\n}\n#builder_transform\nfn builder_answer() -> I32 {\n  0i32\n}\npub fn main() -> I32 {\n  if text_answer() == 42i32 && builder_answer() == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("fn text_answer() -> I32 {\n42i32\n}"), source)
+      assert(source.contains("fn builder_answer() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}

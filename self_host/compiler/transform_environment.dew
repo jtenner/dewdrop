@@ -1,0 +1,63 @@
+// Name snapshots share a map until a declaration changes its bindings.
+// The binding cells stay shared across all snapshots, including closures.
+pub struct CtEnvironment {
+  mut bindings: Map<String, CtBinding>
+  mut shared: Bool
+}
+
+fn ct_environment() -> CtEnvironment {
+  CtEnvironment::{
+    bindings: map_empty::<String, CtBinding>()
+    shared: false
+  }
+}
+
+fn ct_scope(machine: CtMachine, outer: CtEnvironment) -> CtEnvironment {
+  if !ct_charge(machine, outer.bindings.length() * 16u32) {
+    return outer
+  }
+  outer.shared = true
+  CtEnvironment::{
+    bindings: outer.bindings
+    shared: true
+  }
+}
+
+fn ct_environment_set(env: CtEnvironment, name: String, value: CtBinding) -> Unit {
+  if env.shared {
+    let bindings = map_empty::<String, CtBinding>()
+    let entries = env.bindings.entries()
+    while entries.has_next() {
+      true => {
+        let entry = map_entry_iter_next(entries)
+        bindings.set(entry.key, entry.value)
+        continue entries.has_next()
+      }
+      false => break ()
+    }
+    env.bindings = bindings
+    env.shared = false
+  }
+  env.bindings.set(name, value)
+}
+
+impl CtEnvironment {
+  fn length(self) -> U32 {
+    self.bindings.length()
+  }
+  fn get(self, name: String) -> Option<CtBinding> {
+    self.bindings.get(name)
+  }
+  fn get_unchecked(self, name: String) -> CtBinding {
+    self.bindings.get_unchecked(name)
+  }
+  fn contains_key(self, name: String) -> Bool {
+    self.bindings.contains_key(name)
+  }
+  fn set(self, name: String, value: CtBinding) -> Unit {
+    ct_environment_set(self, name, value)
+  }
+  fn entries(self) -> MapEntryIter<String, CtBinding> {
+    self.bindings.entries()
+  }
+}

@@ -3,10 +3,10 @@ open dew.std.map
 open dew.std.option
 
 struct CtExecutionFrame {
-  scalar_proofs: Map<String, Bytes>
-  calls: Map<String, CtCallTarget>
-  references: Map<String, CtFunctionReferenceProof>
-  scalar_types: Map<String, String>
+  scalar_proofs: Map<U64, Bytes>
+  calls: Map<U64, CtCallTarget>
+  references: Map<U64, CtFunctionReferenceProof>
+  scalar_types: Map<U64, String>
 }
 
 struct CtFrameTarget {
@@ -31,10 +31,10 @@ fn ct_execution_frame(plan: CtPlan, frame: String) -> CtExecutionFrame {
     Some(value) => value
     None => {
       let value = CtExecutionFrame::{
-        scalar_proofs: map_empty::<String, Bytes>()
-        calls: map_empty::<String, CtCallTarget>()
-        references: map_empty::<String, CtFunctionReferenceProof>()
-        scalar_types: map_empty::<String, String>()
+        scalar_proofs: map_empty::<U64, Bytes>()
+        calls: map_empty::<U64, CtCallTarget>()
+        references: map_empty::<U64, CtFunctionReferenceProof>()
+        scalar_types: map_empty::<U64, String>()
       }
       plan.frames.set(frame, value)
       value
@@ -73,7 +73,7 @@ fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostF
 }
 
 fn ct_lookup_reference(machine: CtMachine, mi: U32, offset: U32) -> Option<CtFunctionReferenceProof> {
-  let key = ct_call_key(mi, machine.file_path, offset)
+  let key = ct_site_key(machine.plan, mi, machine.file_path, offset)
   match machine.plan.frames.get(machine.frame) {
     Some(frame) => match frame.references.get(key) {
       Some(value) => return Some(value)
@@ -226,7 +226,7 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
               if file.module_index == mi && file.original.path == source.file_paths[fi] {
                 match ct_scalar_original_offset(file, expression.offset(), 0u32) {
                   Some(offset) => {
-                    let key = ct_call_key(mi, file.original.path, offset)
+                    let key = ct_site_key(plan, mi, file.original.path, offset)
                     if reference {
                       proofs.references.set(key, {
                         target: target
@@ -250,7 +250,7 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
 }
 
 fn ct_lookup_scalar_operator(machine: CtMachine, mi: U32, offset: U32) -> Option<Bytes> {
-  let key = ct_call_key(mi, machine.file_path, offset)
+  let key = ct_site_key(machine.plan, mi, machine.file_path, offset)
   match machine.plan.frames.get(machine.frame) {
     Some(frame) => match frame.scalar_proofs.get(key) {
       Some(value) => return Some(value)
@@ -278,7 +278,7 @@ fn ct_collect_frame_scalar_proofs(plan: CtPlan, collected: SelfHostCollectedProg
             for file in plan.files {
               if file.module_index == mi && file.original.path == source.file_paths[fi] {
                 match ct_scalar_original_offset(file, offset, 0u32) {
-                  Some(original) => frame.scalar_proofs.set(ct_call_key(mi, file.original.path, original), opcode)
+                  Some(original) => frame.scalar_proofs.set(ct_site_key(plan, mi, file.original.path, original), opcode)
                   None => {}
                 }
               }

@@ -28,7 +28,7 @@ fn ct_pattern_variant_key(collected: SelfHostCollectedProgram, selected: U64) ->
 }
 
 fn ct_add_pattern_proof(plan: CtPlan, mi: U32, path: String, offset: U32, constructor: String) -> Unit {
-  let key = ct_call_key(mi, path, offset)
+  let key = ct_site_key(plan, mi, path, offset)
   match plan.pattern_proofs.get(key) {
     Some(prior) => {
       let _ = prior
@@ -136,10 +136,10 @@ fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, 
 }
 
 fn ct_checked_pattern_key(machine: CtMachine, mi: U32, offset: U32) -> String {
-  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
     return ""
   }
-  match machine.plan.pattern_proofs.get(ct_call_key(mi, machine.file_path, offset)) {
+  match machine.plan.pattern_proofs.get(ct_site_key(machine.plan, mi, machine.file_path, offset)) {
     Some(constructor) => return constructor
     None => {}
   }

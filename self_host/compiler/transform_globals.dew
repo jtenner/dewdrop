@@ -19,7 +19,7 @@ fn ct_global_value(machine: CtMachine, mi: U32, path: String, declaration: SelfH
   machine.initializing.set(key, true)
   let previous = machine.file_path
   machine.file_path = path
-  let value = ct_eval(machine, mi, declaration.value, [])
+  let value = ct_eval(machine, mi, declaration.value, ct_environment())
   machine.file_path = previous
   machine.initializing.set(key, false)
   if machine.error.byte_length() != 0u32 {

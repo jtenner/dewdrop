@@ -483,6 +483,14 @@ unsupported. Arithmetic float NaNs use canonical bits; moves, sign operations,
 and pseudo-min/max preserve their selected operand bits. See
 `examples/transforms/vectors.dew`.
 
+Standard text views, UTF-8 conversion, cross-vector-boundary searches, byte
+views, and growing StringBuilder/BytesBuilder operations run through their Dew
+source. See `examples/transforms/text_operations.dew`. Lexical scope snapshots
+share cells and copy their name map only when a declaration changes the names.
+Checked source sites use numeric IDs that distinguish modules and files.
+Work and allocation reports remain implementation-specific; the current full
+text control uses78,686/83,981 work steps in Native/Dew respectively.
+
 Integer bit counts, rotations, and I64 sign extension also execute at compile
 time. Named function references keep their checked runtime identity, including
 generic references. Ordinary I32 and U32 instances can share that identity.

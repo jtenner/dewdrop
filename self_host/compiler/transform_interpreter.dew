@@ -206,10 +206,10 @@ fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
             }
           }
           machine.functions.set(key, Source(file.module_index, file.original.path, function, ""))
-          let env = array_new::<CtBinding>()
+          let env = ct_environment()
           let mut index = 0u32
           for parameter in function.parameters {
-            env.push(ct_binding(parameter.name, args[index]))
+            env.set(parameter.name, ct_binding(parameter.name, args[index]))
             index = index + 1u32
           }
           let previous_file = machine.file_path
@@ -361,7 +361,7 @@ fn ct_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, righ
   }
 }
 
-fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBinding>) -> CtValue {
+fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: CtEnvironment) -> CtValue {
   let env = ct_scope(machine, outer)
   let mut result = CtValue::Empty
   for item in block.items {
@@ -371,7 +371,7 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBi
     result = CtValue::Empty
     if item.kind == 0u32 {
       let value = ct_eval(machine, mi, item.value, env)
-      env.push({
+      env.set(item.name, {
         name: item.name
         value: value
         mutable_: item.mutable_
@@ -380,7 +380,7 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBi
       result = ct_eval(machine, mi, item.value, env)
     } else if item.kind == 1u32 {
       match item.target {
-        NameExpr(name, _) => match ct_lookup(machine, env, name) {
+        NameExpr(name, _) => match env.get(name) {
           Some(cell) if cell.mutable_ => {
             cell.value = ct_eval(machine, mi, item.value, env)
           }
@@ -402,7 +402,7 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBi
   result
 }
 
-fn ct_eval_values(machine: CtMachine, mi: U32, items: Array<SelfHostExpr>, env: Array<CtBinding>) -> Array<CtValue> {
+fn ct_eval_values(machine: CtMachine, mi: U32, items: Array<SelfHostExpr>, env: CtEnvironment) -> Array<CtValue> {
   let values = array_new::<CtValue>()
   for item in items {
     if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
@@ -413,7 +413,7 @@ fn ct_eval_values(machine: CtMachine, mi: U32, items: Array<SelfHostExpr>, env: 
   values
 }
 
-fn ct_eval_fields(machine: CtMachine, mi: U32, items: Array<SelfHostObjectField>, env: Array<CtBinding>) -> Array<CtBinding> {
+fn ct_eval_fields(machine: CtMachine, mi: U32, items: Array<SelfHostObjectField>, env: CtEnvironment) -> Array<CtBinding> {
   let values = array_new::<CtBinding>()
   for item in items {
     if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
@@ -424,7 +424,7 @@ fn ct_eval_fields(machine: CtMachine, mi: U32, items: Array<SelfHostObjectField>
   values
 }
 
-fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
+fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnvironment) -> CtValue {
   if !ct_charge(machine, 16u32) || machine.flow != 0u32 {
     return CtValue::Empty
   }
@@ -449,7 +449,7 @@ fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtB
   value
 }
 
-fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
+fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnvironment) -> CtValue {
   match expression {
     BytesExpr(value, _) => {
       let _ = ct_charge(machine, value.byte_length())
@@ -473,7 +473,7 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Arr
       }
       CtValue::Text(value.to_string())
     }
-    NameExpr(name, _) => match ct_lookup(machine, env, name) {
+    NameExpr(name, _) => match env.get(name) {
       Some(cell) => cell.value
       None => ct_function_reference(machine, mi, expression, env)
     }
@@ -598,10 +598,7 @@ fn ct_pattern_path_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern) 
   key
 }
 
-fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value: CtValue, env: Array<CtBinding>) -> Bool {
-  if !ct_charge(machine, 16u32) {
-    return false
-  }
+fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value: CtValue, env: CtEnvironment) -> Bool {
   match pattern {
     WildcardPattern(_) => true
     BindingPattern(name, offset) => {
@@ -610,7 +607,7 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
         return false
       }
       if constructor.byte_length() == 0u32 {
-        env.push(ct_binding(name, value))
+        env.set(name, ct_binding(name, value))
         true
       } else {
         match value {
@@ -692,8 +689,14 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
       for choice in choices {
         let scope = ct_scope(machine, env)
         if ct_pattern(machine, mi, choice, value, scope) {
-          for binding in scope {
-            env.push(binding)
+          let entries = scope.entries()
+          while entries.has_next() {
+            true => {
+              let entry = map_entry_iter_next(entries)
+              env.set(entry.key, entry.value)
+              continue entries.has_next()
+            }
+            false => break ()
           }
           return true
         }
@@ -720,7 +723,7 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
   }
 }
 
-fn ct_match(machine: CtMachine, mi: U32, expression: SelfHostExpr, arms: Array<SelfHostPatternArm>, env: Array<CtBinding>, loop_: Bool) -> CtValue {
+fn ct_match(machine: CtMachine, mi: U32, expression: SelfHostExpr, arms: Array<SelfHostPatternArm>, env: CtEnvironment, loop_: Bool) -> CtValue {
   let mut value = ct_eval(machine, mi, expression, env)
   let _ = while 0u32 {
     _ => {
@@ -796,7 +799,7 @@ fn ct_pattern_path(machine: CtMachine, mi: U32, pattern: SelfHostPattern) -> Str
   result
 }
 
-fn ct_pattern(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value: CtValue, env: Array<CtBinding>) -> Bool {
+fn ct_pattern(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value: CtValue, env: CtEnvironment) -> Bool {
   if !ct_charge(machine, 16u32) {
     return false
   }

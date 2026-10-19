@@ -99,9 +99,9 @@ test "function and closure reference identity uses the stored instance" {
     items: []
     offset: 0u32
   }
-  let closure = CtValue::Closure(0u32, "fixture.dew", [], body, [], "")
+  let closure = CtValue::Closure(0u32, "fixture.dew", [], body, ct_environment(), "")
   assert(ct_truth(machine, ct_reference_equal(machine, closure, closure)), "stored closure aliases have one identity")
-  assert(!ct_truth(machine, ct_reference_equal(machine, closure, CtValue::Closure(0u32, "fixture.dew", [], body, [], ""))), "separate closure instances have separate identities")
+  assert(!ct_truth(machine, ct_reference_equal(machine, closure, CtValue::Closure(0u32, "fixture.dew", [], body, ct_environment(), ""))), "separate closure instances have separate identities")
   assert(!ct_truth(machine, ct_reference_equal(machine, function, closure)), "different function kinds have separate identities")
   assert(!ct_reference_null_test(machine, function), "function reference is non-null")
   assert(machine.error.byte_length() == 0u32, "valid function checks have no error")
@@ -165,7 +165,9 @@ test "scalar floats keep Wasm rounding zero and conversion traps" {
 
 test "checked primitive operators execute float values" {
   let machine = ct_machine(ct_test_plan(b""))
-  machine.plan.scalar_proofs.set(ct_call_key(0u32, machine.file_path, 7u32), b"primitive")
+  ct_register_site_file(machine.plan, 0u32, "main.dew")
+  machine.file_path = "main.dew"
+  machine.plan.scalar_proofs.set(ct_site_key(machine.plan, 0u32, "main.dew", 7u32), b"primitive")
   let value = ct_scalar_binary(machine, 0u32, 7u32, Multiply, ct_float_f64_result(6.0f64), ct_float_f64_result(7.0f64))
   assert(ct_float_f64(machine, value) == 42.0f64, "proved float multiplication")
   let result = ct_scalar_binary(machine, 0u32, 7u32, Equal, ct_float_f32_result(2.0f32), ct_float_f32_result(2.0f32))

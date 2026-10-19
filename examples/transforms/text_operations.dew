@@ -1,0 +1,65 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.string
+open dew.std.bytes
+open dew.std.string_builder
+open dew.std.bytes_builder
+fn found(value: Option<U32>, expected: U32) -> Bool {
+  match value {
+    Some(index) => index == expected
+    None => false
+  }
+}
+fn check_text() -> Bool {
+  let text = "0123456789abcdef😀éXYZ"
+  let view = text.view(16u32, 6u32)
+  let clone = text.compact()
+  text.byte_length() == 25u32 && text.utf16_length() == 22u32 && text.byte_at(16u32) == 240u8 && view.to_string() == "😀é" && view.utf16_length() == 3u32 && view.byte_length() == 6u32 && view.byte_at(0u32) == 240u8 && view.as_bytes().byte_length() == 6u32 && view.slice(0u32, 4u32) == "😀" && view.subarray(4u32, 6u32).to_string() == "é" && view.compact() == "😀é" && clone == text && text.slice(16u32, 22u32) == "😀é" && text.subarray(16u32, 22u32).to_string() == "😀é" && text.starts_with("0123456789abcdef") && text.ends_with("XYZ") && found(text.find("f😀"), 15u32) && found(text.find_view(view), 16u32) && text.contains_view(view) && view.contains_string("é") && found(view.find_string("é"), 4u32) && view.starts_with_string("😀") && view.ends_with_string("é") && view.equals(text.view(16u32, 6u32)) && text.concat_view(view) == text.concat("😀é")
+}
+fn check_builders() -> Bool {
+  let text = "😀é"
+  let builder = StringBuilder::with_capacity(1u32)
+  builder.append_view(text.view(0u32, 6u32))
+  builder.append_ascii(45u8)
+  builder.append_scalar(128512u32)
+  builder.append_i8(-8i8)
+  builder.append_u64(18446744073709551615u64)
+  let count = builder.byte_length()
+  let result = builder.finish()
+  let bytes = BytesBuilder::with_capacity(1u32)
+  bytes.append(b"0123456789abcdef")
+  bytes.append_byte(255u8)
+  bytes.append(b"XYZ")
+  let length = bytes.byte_length()
+  let raw = bytes.finish()
+  count == 33u32 && result == "😀é-😀-818446744073709551615" && length == 20u32 && !raw.is_valid_utf8() && raw.byte_at(16u32) == 255u8 && raw.view(17u32, 3u32).to_string() == "XYZ" && found(raw.find_byte(255u8), 16u32) && raw.contains_byte(255u8) && raw.starts_with(b"0123456789abcdef") && raw.ends_with(b"XYZ") && found(raw.find(b"ef\xffX"), 14u32) && raw.contains(b"ef\xffX") && raw.slice(17u32, 20u32).equals(b"XYZ") && raw.subarray(0u32, 16u32).compact().concat(b"!").to_string() == "0123456789abcdef!"
+}
+transform fn text_transform(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(if check_text() {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#text_transform
+fn text_answer() -> I32 {
+  0i32
+}
+transform fn builder_transform(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(if check_builders() {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#builder_transform
+fn builder_answer() -> I32 {
+  0i32
+}
+pub fn main() -> I32 {
+  if text_answer() == 42i32 && builder_answer() == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}
