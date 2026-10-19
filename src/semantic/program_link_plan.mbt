@@ -202,6 +202,7 @@ pub struct PlannedProgramFunctionReferenceSingleton {
   function_index : Int32
   specialization_module_index : Int32
   specialization_shapes : HirSpan
+  specialization_abi_key : String
   signature_type_index : Int32
   global_index : Int32
 } derive(Eq, Debug)
@@ -380,12 +381,14 @@ pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(
 pub fn PlannedProgramWasmGCLink::specialized_function_reference_singleton_global(
   self : PlannedProgramWasmGCLink,
   declaration : DeclId,
+  specialization_abi_key : String,
   shapes : Array[PlannedValueShape],
   span : HirSpan,
   signature_type_index : Int32,
 ) -> Int32 {
   for singleton in self.function_reference_singletons {
     if singleton.declaration == declaration &&
+      singleton.specialization_abi_key == specialization_abi_key &&
       singleton.specialization_shapes.length > 0 &&
       (
         signature_type_index < 0 ||

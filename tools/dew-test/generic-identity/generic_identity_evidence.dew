@@ -1,0 +1,33 @@
+import dew.std.types as @types
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+trait Mark {
+  fn mark(self) -> I32
+}
+struct Left {}
+struct Right {}
+impl Mark for Left {
+  fn mark(self) -> I32 {
+    40i32
+  }
+}
+impl Mark for Right {
+  fn mark(self) -> I32 {
+    2i32
+  }
+}
+fn bounded<t: Mark>(value: t) -> I32 {
+  value.mark()
+}
+fn wrap<t: Mark>() -> fn(t) -> I32 {
+  bounded
+}
+fn forward<t: Mark>() -> fn(t) -> I32 {
+  wrap::<t>()
+}
+pub fn main() -> I32 {
+  if same(wrap::<Left>(), forward::<Left>()) && !same(wrap::<Left>(), wrap::<Right>()) && forward::<Left>()(Left::{}) == 40i32 && wrap::<Right>()(Right::{}) == 2i32 {
+    42i32
+  } else {
+    0i32
+  }
+}

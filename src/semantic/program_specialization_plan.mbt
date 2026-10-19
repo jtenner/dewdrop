@@ -1743,10 +1743,7 @@ fn materialize_program_expression_call(
       )
       match caller {
         Some(caller) if request_evidence.roots.length() > 0 &&
-          (
-            forwarded_runtime_evidence_parameters.length() > 0 ||
-            caller.specialization_abi_key != ""
-          ) =>
+          forwarded_runtime_evidence_parameters.length() > 0 =>
           record_program_evidence_function_reference(
             evidence_function_references,
             evidence_function_reference_runtime_evidence_parameters,

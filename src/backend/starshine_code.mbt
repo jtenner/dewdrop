@@ -5319,6 +5319,7 @@ fn starshine_emit_body_instructions(
                     if generic_specialization is None {
                       link.specialized_function_reference_singleton_global(
                         declaration,
+                        target.specialization_abi_key,
                         link.modules[target.module_index].specialization_shapes,
                         target.specialization_shapes,
                         starshine_program_expression_function_type_index(

@@ -1526,7 +1526,7 @@ test "bounded generic function references capture caller runtime evidence" {
   assert_eq(bound_references, 1)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
-  assert_eq(link.evidence_function_references.length(), 2)
+  assert_eq(link.evidence_function_references.length(), 1)
   let mut captured = 0
   let mut closed = 0
   for reference in link.evidence_function_references {
@@ -1539,7 +1539,7 @@ test "bounded generic function references capture caller runtime evidence" {
     }
   }
   assert_eq(captured, 1)
-  assert_eq(closed, 1)
+  assert_eq(closed, 0)
 }
 
 ///|

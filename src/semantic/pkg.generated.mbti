@@ -2118,6 +2118,7 @@ pub struct PlannedProgramFunctionReferenceSingleton {
   function_index : Int
   specialization_module_index : Int
   specialization_shapes : HirSpan
+  specialization_abi_key : String
   signature_type_index : Int
   global_index : Int
 } derive(Eq, @debug.Debug)
@@ -2251,7 +2252,7 @@ pub fn PlannedProgramWasmGCLink::specialized_call_function(Self, UInt64, String,
 pub fn PlannedProgramWasmGCLink::specialized_call_runtime_evidence(Self, UInt64, String, Int) -> HirSpan?
 pub fn PlannedProgramWasmGCLink::specialized_function_of(Self, UInt64, Array[PlannedValueShape], HirSpan) -> PlannedProgramWasmFunction?
 pub fn PlannedProgramWasmGCLink::specialized_function_of_exact_shapes(Self, UInt64, Array[PlannedValueShape]) -> PlannedProgramWasmFunction?
-pub fn PlannedProgramWasmGCLink::specialized_function_reference_singleton_global(Self, UInt64, Array[PlannedValueShape], HirSpan, Int) -> Int
+pub fn PlannedProgramWasmGCLink::specialized_function_reference_singleton_global(Self, UInt64, String, Array[PlannedValueShape], HirSpan, Int) -> Int
 pub fn PlannedProgramWasmGCLink::trait_dictionary_global(Self, Int, Int) -> Int
 
 pub struct PlannedProgramWasmPhysicalType {

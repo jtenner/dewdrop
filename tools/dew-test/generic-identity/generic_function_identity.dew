@@ -1,0 +1,37 @@
+import dew.std.types as @types
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+fn identity<t>(value: t) -> t {
+  value
+}
+fn signed() -> fn(I32) -> I32 {
+  identity
+}
+fn unsigned() -> fn(U32) -> U32 {
+  identity
+}
+fn narrow() -> fn(I8) -> I8 {
+  identity
+}
+fn type_flag<t>(value: t) -> Bool {
+  let _ = value
+  @types.type_equal::<t, I32>()
+}
+fn signed_flag() -> fn(I32) -> Bool {
+  type_flag
+}
+fn unsigned_flag() -> fn(U32) -> Bool {
+  type_flag
+}
+pub fn main() -> I32 {
+  let a = signed()
+  let b = signed()
+  let c = unsigned()
+  let d = narrow()
+  let e = signed_flag()
+  let f = unsigned_flag()
+  if same(a, b) && same(a, c) && !same(a, d) && !same(e, f) && e(1i32) && !f(1u32) {
+    42i32
+  } else {
+    0i32
+  }
+}

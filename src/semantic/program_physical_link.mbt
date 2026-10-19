@@ -1496,26 +1496,38 @@ pub fn link_program_wasmgc_fragments(
     PlannedProgramFunctionReferenceSingleton,
   ] = []
   let singleton_functions : Map[Int32, Bool] = Map::default()
+  let function_by_specialization : Map[String, Int32] = Map::default()
+  for index, function_ in functions {
+    if function_.specialization_abi_key != "" && function_.function_index >= 0 {
+      function_by_specialization[function_.specialization_abi_key] = index
+    }
+  }
+  // Canonical carrier shapes do not identify query-sensitive or evidenced
+  // instances. Reuse the exact target already selected for this source site.
+  let source_reference_targets : Map[(Int32, ExprId), Int32] = Map::default()
+  for call in fragments.specialized_calls {
+    if call.caller_specialization_abi_key != "" ||
+      call.runtime_evidence_parameters.length > 0 {
+      continue
+    }
+    let module_index = lowering.index.body_owner(call.caller_body).unwrap()
+    if !(lowering.modules[module_index].expressions[call.expression].kind
+      is PlannedFunctionReference(_, _)) {
+      continue
+    }
+    if function_by_specialization.get(call.target_specialization_abi_key) is Some(index) {
+      guard functions[index].declaration == call.target else {
+        abort("SPC-302 function reference key changed declaration identity")
+      }
+      source_reference_targets[(module_index, call.expression)] = index
+    }
+  }
   for module_index, module_ in lowering.modules {
     for expression_index, expression in module_.expressions {
       match expression.kind {
         PlannedFunctionReference(declaration, arguments) => {
           let target = if arguments.length > 0 {
-            let mut selected = None
-            for function_ in functions {
-              if function_.declaration == declaration &&
-                function_.specialization_shapes.length > 0 &&
-                program_specialization_shapes_equal(
-                  fragments.modules[function_.module_index].specialization_shapes,
-                  function_.specialization_shapes,
-                  module_.expression_type_argument_shapes,
-                  arguments,
-                ) {
-                selected = Some(function_)
-                break
-              }
-            }
-            selected
+            source_reference_targets.get((module_index, expression_index)).map(index => functions[index])
           } else {
             match function_lookup.get(declaration) {
               Some(index) => Some(functions[index])
@@ -1623,6 +1635,7 @@ pub fn link_program_wasmgc_fragments(
                   function_index: reference_function.function_index,
                   specialization_module_index: function_.module_index,
                   specialization_shapes: function_.specialization_shapes,
+                  specialization_abi_key: function_.specialization_abi_key,
                   signature_type_index,
                   global_index,
                 })
@@ -1639,12 +1652,6 @@ pub fn link_program_wasmgc_fragments(
   }
   // References in generic bodies need their caller-specific target, not the
   // unspecialized expression shape. Keep one singleton per physical function.
-  let function_by_specialization : Map[String, Int32] = Map::default()
-  for index, function_ in functions {
-    if function_.specialization_abi_key != "" && function_.function_index >= 0 {
-      function_by_specialization[function_.specialization_abi_key] = index
-    }
-  }
   for call in fragments.specialized_calls {
     if call.caller_specialization_abi_key == "" {
       // The concrete source reference scan above also selects exact-reference
@@ -1671,6 +1678,7 @@ pub fn link_program_wasmgc_fragments(
             function_index: target.function_index,
             specialization_module_index: target.module_index,
             specialization_shapes: target.specialization_shapes,
+            specialization_abi_key: target.specialization_abi_key,
             signature_type_index: target.signature_type_index,
             global_index,
           })

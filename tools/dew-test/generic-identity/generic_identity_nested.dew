@@ -1,0 +1,19 @@
+import dew.std.types as @types
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+fn identity<t>(value: t) -> t {
+  value
+}
+fn wrap<t>() -> fn(t) -> t {
+  identity
+}
+fn forward<t>() -> fn(t) -> t {
+  wrap::<t>()
+}
+let global_callback = forward::<I32>()
+pub fn main() -> I32 {
+  if same(forward::<I32>(), wrap::<U32>()) && !same(wrap::<I32>(), wrap::<I8>()) && same(global_callback, wrap::<I32>()) && forward::<I32>()(40i32) == 40i32 && wrap::<U32>()(2u32) == 2u32 && wrap::<I8>()(-8i8) == -8i8 {
+    42i32
+  } else {
+    0i32
+  }
+}
