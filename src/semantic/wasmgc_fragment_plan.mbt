@@ -987,6 +987,70 @@ fn wasmgc_mark_nominal_type(
 }
 
 ///|
+fn wasmgc_mark_body_nominal_declarations(
+  lowering : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+  required : Map[DeclId, Bool],
+) -> Unit {
+  let layouts = lowering.type_layouts
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    match lowering.expressions[expression].kind {
+      PlannedStructNew(declaration, _, _) => required[declaration] = true
+      PlannedUnitVariant(variant, _)
+      | PlannedVariantTupleNew(variant, _, _)
+      | PlannedVariantStructNew(variant, _, _) => {
+        if lowering.expressions[expression].shape is I32PlannedValueShape ||
+          lowering.expressions[expression].shape is I64PlannedValueShape {
+          continue
+        }
+        for candidate in layouts.variants {
+          if candidate.variant == variant {
+            required[candidate.declaration] = true
+            break
+          }
+        }
+      }
+      PlannedFieldGet(field, _, _) | PlannedFieldSet(field, _, _) =>
+        for candidate in layouts.fields {
+          if candidate.field == field {
+            required[candidate.declaration] = true
+            break
+          }
+        }
+      PlannedArrayLiteral(_, _, _) =>
+        required[standard_array_type_declaration()] = true
+      _ => ()
+    }
+  }
+  for
+    pattern in body.patterns.start..<(body.patterns.start +
+    body.patterns.length) {
+    if lowering.patterns[pattern].elided {
+      continue
+    }
+    match lowering.patterns[pattern].selected_constructor {
+      StructInferredPatternConstructor(declaration, _) =>
+        required[declaration] = true
+      VariantInferredPatternConstructor(variant, _) => {
+        if lowering.patterns[pattern].shape is I32PlannedValueShape ||
+          lowering.patterns[pattern].shape is I64PlannedValueShape {
+          continue
+        }
+        for candidate in layouts.variants {
+          if candidate.variant == variant {
+            required[candidate.declaration] = true
+            break
+          }
+        }
+      }
+      _ => ()
+    }
+  }
+}
+
+///|
 fn wasmgc_required_nominal_declarations(
   resolved : ResolvedModuleTypes,
   lowering : PlannedModuleLowering,
@@ -1033,61 +1097,21 @@ fn wasmgc_required_nominal_declarations(
       continue
     }
     let body = lowering.bodies[body_index]
-    for
-      expression in body.expressions.start..<(body.expressions.start +
-      body.expressions.length) {
-      match lowering.expressions[expression].kind {
-        PlannedStructNew(declaration, _, _) => required[declaration] = true
-        PlannedUnitVariant(variant, _)
-        | PlannedVariantTupleNew(variant, _, _)
-        | PlannedVariantStructNew(variant, _, _) => {
-          if lowering.expressions[expression].shape is I32PlannedValueShape ||
-            lowering.expressions[expression].shape is I64PlannedValueShape {
-            continue
-          }
-          for candidate in layouts.variants {
-            if candidate.variant == variant {
-              required[candidate.declaration] = true
-              break
-            }
-          }
-        }
-        PlannedFieldGet(field, _, _) | PlannedFieldSet(field, _, _) =>
-          for candidate in layouts.fields {
-            if candidate.field == field {
-              required[candidate.declaration] = true
-              break
-            }
-          }
-        PlannedArrayLiteral(_, _, _) =>
-          required[standard_array_type_declaration()] = true
-        _ => ()
-      }
+    wasmgc_mark_body_nominal_declarations(lowering, body, required)
+  }
+  for step in lowering.initialization.steps {
+    let declaration = match step.kind {
+      PlannedInitializeModuleValue(declaration, _, _) => declaration
+      PlannedCyclicModuleValues(_) => continue
     }
-    for
-      pattern in body.patterns.start..<(body.patterns.start +
-      body.patterns.length) {
-      if lowering.patterns[pattern].elided {
-        continue
-      }
-      match lowering.patterns[pattern].selected_constructor {
-        StructInferredPatternConstructor(declaration, _) =>
-          required[declaration] = true
-        VariantInferredPatternConstructor(variant, _) => {
-          if lowering.patterns[pattern].shape is I32PlannedValueShape ||
-            lowering.patterns[pattern].shape is I64PlannedValueShape {
-            continue
-          }
-          for candidate in layouts.variants {
-            if candidate.variant == variant {
-              required[candidate.declaration] = true
-              break
-            }
-          }
-        }
-        _ => ()
-      }
+    if !program_roots.contains(declaration) {
+      continue
     }
+    let body = match program_root_body(lowering, declaration) {
+      Some(body) => body
+      None => abort("SPC-304 selected initializer lost its checked body")
+    }
+    wasmgc_mark_body_nominal_declarations(lowering, body, required)
   }
   let mut changed = true
   while changed {

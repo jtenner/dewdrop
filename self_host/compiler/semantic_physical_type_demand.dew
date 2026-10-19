@@ -267,6 +267,21 @@ fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPla
         self_host_physical_type_demand_callable(scope, callable)
       }
     }
+    for step in module_.initialization.steps {
+      match step.kind {
+        PlannedInitializeModuleValue(declaration, body_id, _) => if reachable.contains_key(declaration) {
+          let body = match self_host_program_specialization_body(module_, body_id) {
+            Some(value) => value
+            None => {
+              let _ = self_host_assert_compiler_invariant(false, "SPC-304 selected initializer lost its checked body")
+              unreachable()
+            }
+          }
+          self_host_physical_type_demand_body(scope, body.expressions, body.locals, body.patterns)
+        }
+        _ => {}
+      }
+    }
     self_host_physical_type_demand_drain(demand, scope)
   }
   let _ = while 0u32 {

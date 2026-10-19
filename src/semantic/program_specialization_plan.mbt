@@ -181,14 +181,17 @@ fn program_reachable_callable_roots(
       if step.test_only && !emit_tests {
         continue
       }
-      let body_id = match step.kind {
-        PlannedInitializeModuleValue(_, body, _) => body
+      let (declaration, body_id) = match step.kind {
+        PlannedInitializeModuleValue(declaration, body, _) => (declaration, body)
         PlannedCyclicModuleValues(_) => continue
       }
       let body_index = semantic_id_local(body_id)
       if body_index < 0 || body_index >= module_.bodies.length() {
         continue
       }
+      // Runtime initialization executes these bodies even when no callable
+      // reads the stored value. Keep their physical layout demand as roots.
+      reachable[declaration] = true
       let body = module_.bodies[body_index]
       for expression in compile_time_owned_expressions(module_, body) {
         program_enqueue_expression_evidence(

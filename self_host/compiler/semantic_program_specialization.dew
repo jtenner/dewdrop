@@ -2031,11 +2031,18 @@ fn self_host_plan_program_specialization_roots(
           let step = module_.initialization.steps[current]
         if declaration_roots is None && (!step.test_only || emit_tests) {
           match step.kind {
-            PlannedInitializeModuleValue(_, body_id, _) => match self_host_program_specialization_body(
+            PlannedInitializeModuleValue(declaration, body_id, _) => match self_host_program_specialization_body(
               module_,
               body_id,
             ) {
               Some(body) => {
+                // Runtime initializers need physical layouts even when their
+                // stored module values are never read by a callable.
+                let _ = self_host_program_specialization_add_reachable(
+                  reachable,
+                  reachable_seen,
+                  declaration,
+                )
                 self_host_program_specialization_scan_body(
                   lowering,
                   current_module,

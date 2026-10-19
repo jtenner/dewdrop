@@ -1,7 +1,23 @@
 open dew.std.testing
 
+fn self_host_type_demand_test_lowering(source: Bytes) -> SelfHostPlannedProgramLowering {
+  let collected = self_host_collect_program_manifest(5100u64, {
+    modules: [{
+      path: "app.main"
+      files: [{
+        path: "main.dew"
+        source: source
+        test_only: false
+      }]
+    }]
+  })
+  assert(collected.diagnostics.length() == 0u32, "type-demand manifest parses")
+  assert(collected.modules.at(0u32).diagnostic_count() == 0u32, "type-demand source parses")
+  self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+}
+
 fn self_host_type_demand_test_plan(source: Bytes) -> SelfHostPlannedProgramWasmGCFragments {
-  self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(self_host_physical_test_lowering(source), false))
+  self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(self_host_type_demand_test_lowering(source), false))
 }
 
 test "WasmGC type demand excludes discarded generic branches" {
@@ -19,4 +35,17 @@ test "WasmGC type demand retains transitive fields and terminates on cycles" {
   )
   assert(plan.modules[0u32].physical_types.length() == 3u32, "public ABI roots retain two transitive records plus the common closure type")
   assert(plan.modules[0u32].fields.length() == 4u32, "three live record fields plus the common closure entry")
+}
+
+test "WasmGC type demand retains records constructed only by unread initializers" {
+  let plan = self_host_type_demand_test_plan(
+    b"struct Payload {\n value: I32\n}\nfn identity<t>(value: t) -> t {\n value\n}\nlet unread = identity(Payload::{\n value: 1i32\n}).value\npub fn main() -> I32 {\n 42i32\n}\n",
+  )
+  let mut records = 0u32
+  for type_ in plan.modules[0u32].physical_types {
+    if type_.kind is PlannedWasmStructType(_) {
+      records = records + 1u32
+    }
+  }
+  assert(records == 1u32, "unread runtime initializer retains exactly its record heap")
 }
