@@ -60,7 +60,9 @@ python3 tools/test_text_cast_policy.py
 python3 tools/test_string_builder_append_policy.py
 python3 tools/test_string_builder_storage_policy.py
 python3 tools/test_runtime_protocol_retirement_policy.py
+python3 tools/generate_wasm_scalar_intrinsics.py --check
 python3 tools/generate_self_host_numeric_builtins.py --check
+python3 tools/generate_scalar_intrinsic_tests.py --check
 python3 tools/generate_string_std.py --check
 python3 tools/generate_wasi_std.py --check
 python3 tools/generate_wasm_intrinsics_std.py --check

@@ -4,6 +4,8 @@ import re
 import unittest
 from pathlib import Path
 
+from wasm_scalar_intrinsics import NUMERIC_INSTRUCTIONS
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -18,8 +20,8 @@ class ArithmeticBuiltinPolicyTests(unittest.TestCase):
     def test_numeric_backend_contains_only_single_instructions(self):
         source = (ROOT / "src/backend/starshine_numeric_builtins.mbt").read_text()
         branches = re.findall(r'name == b"([^"]+)" \{\s+Some\(\[(.*?)\]\)', source, re.S)
-        # 66 binary arithmetic and 18 unary math/bit instructions.
-        self.assertEqual(len(branches), 86)
+        expected = {name for name, _, _, _ in NUMERIC_INSTRUCTIONS}
+        self.assertEqual({name for name, _ in branches}, expected)
         for name, body in branches:
             with self.subTest(opcode=name):
                 self.assertRegex(body.strip(), r'^@lib\.Instruction::\w+\(\)$')

@@ -5,7 +5,7 @@
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
   "wasm_sha256": "e2dcb59f3da6827e83a46c96a881ada86a3ad59a687e0dfcccf6c045264c4cd3",
   "available_export_count": 4375,
-  "binding_count": 473,
+  "binding_count": 498,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "49414057e4b62730c48d9b7272b3101bd52f364ad7c522d0f98178e3ba5a141a",
+    "prefix_sha256": "c844e44d84ef0c6a8e4f18b981e652f73101cc74bfad883177423001aa45725e",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -3813,6 +3813,206 @@
       "internal_name": "ffi_ffi_bridge_memory_argument",
       "export_name": "ffi_bridge::memory_argument",
       "signature": "(i32, i64) -> (ref 65)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3166,
+      "function_index": 3524,
+      "internal_name": "ffi_lib_Instruction_f32_copysign",
+      "export_name": "Instruction::f32_copysign",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3156,
+      "function_index": 3514,
+      "internal_name": "ffi_lib_Instruction_f32_max",
+      "export_name": "Instruction::f32_max",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3155,
+      "function_index": 3513,
+      "internal_name": "ffi_lib_Instruction_f32_min",
+      "export_name": "Instruction::f32_min",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3106,
+      "function_index": 3464,
+      "internal_name": "ffi_lib_Instruction_f64_copysign",
+      "export_name": "Instruction::f64_copysign",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3097,
+      "function_index": 3455,
+      "internal_name": "ffi_lib_Instruction_f64_max",
+      "export_name": "Instruction::f64_max",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3096,
+      "function_index": 3454,
+      "internal_name": "ffi_lib_Instruction_f64_min",
+      "export_name": "Instruction::f64_min",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2993,
+      "function_index": 3351,
+      "internal_name": "ffi_lib_Instruction_i32_clz",
+      "export_name": "Instruction::i32_clz",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2964,
+      "function_index": 3322,
+      "internal_name": "ffi_lib_Instruction_i32_rotl",
+      "export_name": "Instruction::i32_rotl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2963,
+      "function_index": 3321,
+      "internal_name": "ffi_lib_Instruction_i32_rotr",
+      "export_name": "Instruction::i32_rotr",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2951,
+      "function_index": 3309,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_sat_f32s",
+      "export_name": "Instruction::i32_trunc_sat_f32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2950,
+      "function_index": 3308,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_sat_f32u",
+      "export_name": "Instruction::i32_trunc_sat_f32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2949,
+      "function_index": 3307,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_sat_f64s",
+      "export_name": "Instruction::i32_trunc_sat_f64s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2948,
+      "function_index": 3306,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_sat_f64u",
+      "export_name": "Instruction::i32_trunc_sat_f64u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2887,
+      "function_index": 3245,
+      "internal_name": "ffi_lib_Instruction_i64_clz",
+      "export_name": "Instruction::i64_clz",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2885,
+      "function_index": 3243,
+      "internal_name": "ffi_lib_Instruction_i64_ctz",
+      "export_name": "Instruction::i64_ctz",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2880,
+      "function_index": 3238,
+      "internal_name": "ffi_lib_Instruction_i64_extend16s",
+      "export_name": "Instruction::i64_extend16s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2879,
+      "function_index": 3237,
+      "internal_name": "ffi_lib_Instruction_i64_extend32s",
+      "export_name": "Instruction::i64_extend32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2878,
+      "function_index": 3236,
+      "internal_name": "ffi_lib_Instruction_i64_extend8s",
+      "export_name": "Instruction::i64_extend8s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2857,
+      "function_index": 3215,
+      "internal_name": "ffi_lib_Instruction_i64_popcnt",
+      "export_name": "Instruction::i64_popcnt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2853,
+      "function_index": 3211,
+      "internal_name": "ffi_lib_Instruction_i64_rotl",
+      "export_name": "Instruction::i64_rotl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2852,
+      "function_index": 3210,
+      "internal_name": "ffi_lib_Instruction_i64_rotr",
+      "export_name": "Instruction::i64_rotr",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2839,
+      "function_index": 3197,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_sat_f32s",
+      "export_name": "Instruction::i64_trunc_sat_f32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2838,
+      "function_index": 3196,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_sat_f32u",
+      "export_name": "Instruction::i64_trunc_sat_f32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2837,
+      "function_index": 3195,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_sat_f64s",
+      "export_name": "Instruction::i64_trunc_sat_f64s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2836,
+      "function_index": 3194,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_sat_f64u",
+      "export_name": "Instruction::i64_trunc_sat_f64u",
+      "signature": "() -> (ref 0)",
       "status": "bound"
     }
   ]

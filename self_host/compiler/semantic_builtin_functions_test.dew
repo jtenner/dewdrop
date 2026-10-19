@@ -27,6 +27,23 @@ test "outlined builtin signatures are valid before mutation" {
   let _ = self_host_outlined_builtin_test_module()
 }
 
+test "outlined eqz retains the bool callback stack contract" {
+  let fragments = self_host_physical_test_fragments(b"builtin operation(value: Bool) -> Bool = \"i32.eqz\"\nfn callback() -> fn(Bool) -> Bool {\n operation\n}\npub fn main() -> Bool {\n callback()(false)\n}\n")
+  let module_ = fragments.modules[0u32]
+  let mut found = false
+  for function_ in module_.functions {
+    match function_.kind {
+      PlannedWasmOutlinedBuiltinFunction(name) => {
+        assert(name.equals(b"i32.eqz"), "address-taken instruction is eqz")
+        assert(self_host_verify_outlined_builtin(module_, function_, name) is None, "eqz has its explicit stack contract")
+        found = true
+      }
+      _ => {}
+    }
+  }
+  assert(found, "source builtin has an outlined wrapper")
+}
+
 test "ABI-703 outlined builtin parameter count must match" expect_trap "unreachable" {
   let module_ = self_host_outlined_builtin_test_module()
   let function_ = self_host_outlined_builtin_test_spans(module_, {

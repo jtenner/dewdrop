@@ -7,6 +7,7 @@ import re
 import argparse
 from pathlib import Path
 
+from wasm_scalar_intrinsics import SCALAR_INSTRUCTIONS
 from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_LANE_INSTRUCTIONS, SIMD_MEMORY_INSTRUCTIONS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,13 +76,11 @@ def main() -> None:
     args = parser.parse_args()
     source = SOURCE.read_text()
     branches = BRANCH.findall(source)
-    if len(branches) != 86:
-        raise SystemExit(f"expected 86 numeric instruction branches, found {len(branches)}")
     conversion_branches = BRANCH.findall(CONVERSION_SOURCE.read_text())
-    if len(conversion_branches) != 23:
-        raise SystemExit(
-            f"expected 23 conversion instruction branches, found {len(conversion_branches)}"
-        )
+    actual = {name: body.strip() for name, body in branches + conversion_branches}
+    expected = {name: f"@lib.Instruction::{method}()" for name, method, _, _ in SCALAR_INSTRUCTIONS}
+    if actual != expected or len(branches) + len(conversion_branches) != len(expected):
+        raise SystemExit("native scalar emission does not match the shared instruction catalog")
 
     aliases: list[tuple[str, list[str]]] = [
         ("unreachable", ["StarshineFfi.ffi_lib_Instruction_unreachable_()"]),
