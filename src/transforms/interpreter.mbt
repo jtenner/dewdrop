@@ -1,0 +1,755 @@
+///|
+enum Value {
+  Unit
+  Number(UInt64, String)
+  Boolean(Bool)
+  Text(String)
+  Sequence(Array[Value])
+  Record(String, Map[String, Value])
+  Variant(String, Array[Value])
+}
+
+///|
+suberror EvalError {
+  Failed(String)
+  Returned(Value)
+  Broken(Value)
+  Continued(Value)
+}
+
+///|
+struct Cell {
+  mut value : Value
+  mutable_ : Bool
+}
+
+///|
+struct Machine {
+  plan : Plan
+  mut steps : Int32
+  mut depth : Int32
+  mut allocated : Int32
+  mut file_index : Int32
+}
+
+///|
+fn Machine::charge(self : Machine, amount : Int32) -> Unit raise EvalError {
+  self.steps -= 1
+  self.allocated += amount
+  guard self.steps >= 0 else { raise Failed("transform work limit exceeded") }
+  guard self.allocated <= 4_194_304 else {
+    raise Failed("transform allocation limit exceeded")
+  }
+}
+
+///|
+fn eval_fail(message : String) -> Value raise EvalError {
+  raise Failed(message)
+}
+
+///|
+fn truth(value : Value) -> Bool raise EvalError {
+  match value {
+    Boolean(value) => value
+    _ => raise Failed("expected Bool in transform")
+  }
+}
+
+///|
+fn string(value : Value) -> String raise EvalError {
+  match value {
+    Text(value) => value
+    _ => raise Failed("expected String in transform")
+  }
+}
+
+///|
+fn fields(value : Value) -> Map[String, Value] raise EvalError {
+  match value {
+    Record(_, values) => values
+    _ => raise Failed("expected record in transform")
+  }
+}
+
+///|
+fn field(value : Value, name : String) -> Value raise EvalError {
+  match fields(value).get(name) {
+    Some(value) => value
+    None => eval_fail("unknown transform field: " + name)
+  }
+}
+
+///|
+fn Machine::module_index(
+  self : Machine,
+  path : String,
+) -> Int32 raise EvalError {
+  for i, module_ in self.plan.modules {
+    self.charge(16)
+    if module_.path == path {
+      return i
+    }
+  }
+  raise Failed("compile-time module source is unavailable: " + path)
+}
+
+///|
+fn Machine::local_member(
+  self : Machine,
+  mi : Int32,
+  name : String,
+  exported : Bool,
+) -> String? raise EvalError {
+  let mut found = false
+  for file in self.plan.files[mi] {
+    self.charge(0)
+    for declaration in file.declarations {
+      self.charge(16)
+      let unsupported = match declaration {
+        @parser.Let(d) =>
+          Some((d.name, !exported || d.visibility is @parser.Public))
+        @parser.Trait(d) =>
+          Some((d.name, !exported || d.visibility is @parser.Public))
+        @parser.TypeAlias(d) =>
+          Some((d.name, !exported || d.visibility is @parser.Public))
+        @parser.ForeignType(d) =>
+          Some((d.name, !exported || d.visibility is @parser.Public))
+        @parser.ForeignLibrary(d) => Some((d.namespace_alias, !exported))
+        _ => None
+      }
+      if unsupported is Some((n, visible)) && n == name && visible {
+        raise Failed(
+          "unsupported compile-time declaration shadows name: " + name,
+        )
+      }
+      let candidate = match declaration {
+        @parser.Function(d) => Some((d.name, d.visibility))
+        @parser.Struct(d) => Some((d.name, d.visibility))
+        @parser.Enum(d) => Some((d.name, d.visibility))
+        @parser.Builtin(d) => Some((d.name, d.visibility))
+        _ => None
+      }
+      if candidate is Some((n, visibility)) &&
+        n == name &&
+        (!exported || visibility is @parser.Public) {
+        guard !found else {
+          raise Failed(
+            "overloaded compile-time names are not supported: " + name,
+          )
+        }
+        found = true
+      }
+    }
+  }
+  if found {
+    Some(self.plan.modules[mi].path + "::" + name)
+  } else {
+    None
+  }
+}
+
+///|
+fn Machine::resolve(
+  self : Machine,
+  mi : Int32,
+  name : String,
+  alias : String?,
+) -> String raise EvalError {
+  if alias is Some(alias) {
+    let mut path : String? = None
+    for file in self.plan.files[mi] {
+      self.charge(0)
+      for declaration in file.declarations {
+        self.charge(16)
+        if declaration is @parser.Import(import_) &&
+          !import_.open_ &&
+          import_.import_alias.unwrap_or(import_.path.last().unwrap()) == alias {
+          let next = import_.path.join(".")
+          if path is Some(prior) && prior != next {
+            raise Failed("ambiguous transform import alias: " + alias)
+          }
+          path = Some(next)
+        }
+      }
+    }
+    guard path is Some(path) else {
+      raise Failed("unknown transform import alias: " + alias)
+    }
+    let target = self.module_index(path)
+    guard self.local_member(target, name, true) is Some(key) else {
+      raise Failed("unknown or non-public compile-time member: " + name)
+    }
+    return key
+  }
+  if self.local_member(mi, name, false) is Some(key) {
+    return key
+  }
+  let mut result : String? = None
+  for file in self.plan.files[mi] {
+    self.charge(0)
+    for declaration in file.declarations {
+      self.charge(16)
+      if declaration is @parser.Import(import_) && import_.open_ {
+        guard !import_.wildcard else {
+          raise Failed(
+            "wildcard imports are not supported by the transform interpreter",
+          )
+        }
+        let target = self.module_index(import_.path.join("."))
+        if self.local_member(target, name, true) is Some(key) {
+          if result is Some(prior) && prior != key {
+            raise Failed("ambiguous compile-time name: " + name)
+          }
+          result = Some(key)
+        }
+      }
+    }
+  }
+  if result is Some(key) {
+    return key
+  }
+  if self.plan.type_names.get((mi, name)) is Some(key) {
+    return key
+  }
+  raise Failed("unknown or unsupported compile-time name: " + name)
+}
+
+///|
+fn Machine::path(
+  self : Machine,
+  mi : Int32,
+  expr : @parser.Expr,
+) -> String raise EvalError {
+  self.charge(16)
+  guard self.depth < 128 else { raise Failed("transform depth limit exceeded") }
+  self.depth += 1
+  let result = self.path_inner(mi, expr) catch {
+    error => {
+      self.depth -= 1
+      raise error
+    }
+  }
+  self.depth -= 1
+  result
+}
+
+///|
+fn Machine::path_inner(
+  self : Machine,
+  mi : Int32,
+  expr : @parser.Expr,
+) -> String raise EvalError {
+  match expr {
+    @parser.NameExpr(name, _) => self.resolve(mi, name, None)
+    @parser.FieldExpr(@parser.ImportAliasExpr(alias, _), name, _)
+    | @parser.QualifiedExpr(@parser.ImportAliasExpr(alias, _), name, _) =>
+      self.resolve(mi, name, Some(alias))
+    @parser.QualifiedExpr(owner, name, _) => self.path(mi, owner) + "::" + name
+    _ =>
+      raise Failed(
+        "compile-time calls require a direct function or enum constructor",
+      )
+  }
+}
+
+///|
+fn Machine::call(
+  self : Machine,
+  key : String,
+  args : Array[Value],
+) -> Value raise EvalError {
+  self.charge(32 + args.length() * 16)
+  for mi, module_ in self.plan.modules {
+    self.charge(0)
+    for fi, file in self.plan.files[mi] {
+      self.charge(0)
+      for declaration in file.declarations {
+        self.charge(16)
+        match declaration {
+          @parser.Function(fn_) if key == module_.path + "::" + fn_.name => {
+            guard fn_.receiver is None else {
+              return eval_fail("method calls are not supported at compile time")
+            }
+            guard !file.annotations.any(fn(annotation) {
+              annotation.target >= fn_.offset.to_int() &&
+              annotation.target < fn_.name_offset.to_int()
+            }) else {
+              return eval_fail(
+                "annotated functions cannot execute at compile time",
+              )
+            }
+            guard args.length() == fn_.parameters.length() else {
+              return eval_fail("compile-time argument count mismatch: " + key)
+            }
+            let env : Map[String, Cell] = Map::default()
+            for i, parameter in fn_.parameters {
+              self.charge(16)
+              env[parameter.name] = { value: args[i], mutable_: false, }
+            }
+            let previous_file = self.file_index
+            self.file_index = fi
+            let result = self.block(mi, fn_.body, env) catch {
+              Returned(value) => value
+              Broken(_) | Continued(_) => {
+                self.file_index = previous_file
+                return eval_fail("loop control escaped a compile-time function")
+              }
+              Failed(message) => {
+                self.file_index = previous_file
+                return eval_fail(key + ": " + message)
+              }
+            }
+            self.file_index = previous_file
+            return result
+          }
+          @parser.Enum(enum_) =>
+            for variant in enum_.variants {
+              self.charge(16)
+              if key == module_.path + "::" + enum_.name + "::" + variant.name() {
+                return Variant(key, args)
+              }
+            }
+          @parser.Builtin(builtin) if key == module_.path + "::" + builtin.name =>
+            return eval_fail(
+              "builtin is not supported at compile time: " +
+              text(builtin.builtin_name),
+            )
+          _ => ()
+        }
+      }
+    }
+  }
+  eval_fail(
+    "function is unavailable at compile time (host calls are forbidden): " + key,
+  )
+}
+
+///|
+fn normalized(bits : UInt64, kind : String) -> Value {
+  let bits = match kind {
+    "I8" | "U8" => bits & 255UL
+    "I16" | "U16" => bits & 65535UL
+    "I32" | "U32" => bits & 4294967295UL
+    _ => bits
+  }
+  Number(bits, kind)
+}
+
+///|
+fn signed(bits : UInt64, kind : String) -> Int64 {
+  match kind {
+    "I8" => bits.to_int64() << 56 >> 56
+    "I16" => bits.to_int64() << 48 >> 48
+    "I32" => bits.to_int64() << 32 >> 32
+    _ => bits.to_int64()
+  }
+}
+
+///|
+fn binary(
+  op : @parser.BinaryOperator,
+  left : Value,
+  right : Value,
+) -> Value raise EvalError {
+  match (left, right) {
+    (Boolean(a), Boolean(b)) =>
+      match op {
+        @parser.Equal => Boolean(a == b)
+        @parser.NotEqual => Boolean(a != b)
+        _ => eval_fail("unsupported Bool operator at compile time")
+      }
+    (Number(a, kind), Number(b, other)) if kind == other => {
+      let sa = signed(a, kind)
+      let sb = signed(b, kind)
+      let is_signed = kind.has_prefix("I")
+      match op {
+        @parser.Add => normalized(a + b, kind)
+        @parser.Subtract => normalized(a - b, kind)
+        @parser.Multiply => normalized(a * b, kind)
+        @parser.BitAnd => normalized(a & b, kind)
+        @parser.BitOr => normalized(a | b, kind)
+        @parser.BitXor => normalized(a ^ b, kind)
+        @parser.Equal => Boolean(a == b)
+        @parser.NotEqual => Boolean(a != b)
+        @parser.Less => Boolean(if is_signed { sa < sb } else { a < b })
+        @parser.LessEqual => Boolean(if is_signed { sa <= sb } else { a <= b })
+        @parser.Greater => Boolean(if is_signed { sa > sb } else { a > b })
+        @parser.GreaterEqual =>
+          Boolean(if is_signed { sa >= sb } else { a >= b })
+        @parser.Divide | @parser.Remainder => {
+          guard b != 0UL else {
+            return eval_fail("division by zero in transform")
+          }
+          guard !(op is @parser.Divide &&
+            is_signed &&
+            sb == -1L &&
+            (
+              sa == -9223372036854775808L ||
+              (kind == "I32" && sa == -2147483648L)
+            )) else {
+            return eval_fail("signed division overflow in transform")
+          }
+          normalized(
+            if is_signed {
+              (if op is @parser.Divide {
+                sa / sb
+              } else if sb == -1L {
+                0L
+              } else {
+                sa % sb
+              }).reinterpret_as_uint64()
+            } else if op is @parser.Divide {
+              a / b
+            } else {
+              a % b
+            },
+            kind,
+          )
+        }
+        _ => eval_fail("unsupported integer operator at compile time")
+      }
+    }
+    _ => eval_fail("unsupported operands at compile time")
+  }
+}
+
+///|
+fn Machine::block(
+  self : Machine,
+  mi : Int32,
+  block : @parser.Block,
+  outer : Map[String, Cell],
+) -> Value raise EvalError {
+  let env = self.scope(outer)
+  let mut result = Unit
+  for item in block.items {
+    self.charge(16)
+    result = Unit
+    match item {
+      @parser.LetItem(mutable_, name, _, value, _) =>
+        env[name] = { value: self.eval(mi, value, env), mutable_, }
+      @parser.ExpressionItem(value, _) => result = self.eval(mi, value, env)
+      @parser.AssignmentItem(@parser.NameExpr(name, _), value, _) => {
+        guard env.get(name) is Some(cell) && cell.mutable_ else {
+          return eval_fail("assignment requires a mutable compile-time local")
+        }
+        cell.value = self.eval(mi, value, env)
+      }
+      @parser.TypeBindingItem(_, _, _) => ()
+      _ => return eval_fail("unsupported assignment at compile time")
+    }
+  }
+  result
+}
+
+///|
+fn Machine::eval(
+  self : Machine,
+  mi : Int32,
+  expr : @parser.Expr,
+  env : Map[String, Cell],
+) -> Value raise EvalError {
+  self.charge(16)
+  guard self.depth < 128 else {
+    return eval_fail("transform depth limit exceeded")
+  }
+  self.depth += 1
+  let result = self.eval_inner(mi, expr, env) catch {
+    error => {
+      self.depth -= 1
+      raise error
+    }
+  }
+  self.depth -= 1
+  result
+}
+
+///|
+fn Machine::eval_inner(
+  self : Machine,
+  mi : Int32,
+  expr : @parser.Expr,
+  env : Map[String, Cell],
+) -> Value raise EvalError {
+  match expr {
+    @parser.I8Expr(n, _) => normalized(n, "I8")
+    @parser.I16Expr(n, _) => normalized(n, "I16")
+    @parser.I32Expr(n, _) => normalized(n, "I32")
+    @parser.I64Expr(n, _) => normalized(n, "I64")
+    @parser.U8Expr(n, _) => normalized(n, "U8")
+    @parser.U16Expr(n, _) => normalized(n, "U16")
+    @parser.U32Expr(n, _) => normalized(n, "U32")
+    @parser.U64Expr(n, _) => normalized(n, "U64")
+    @parser.BoolExpr(value, _) => Boolean(value)
+    @parser.StringExpr(value, _) => {
+      self.charge(value.length())
+      let decoded = @utf8.decode(value) catch {
+        _ =>
+          raise Failed(
+            "non-UTF-8 string literals are not supported at compile time",
+          )
+      }
+      Text(decoded)
+    }
+    @parser.NameExpr(name, _) =>
+      match env.get(name) {
+        Some(cell) => cell.value
+        None =>
+          eval_fail(
+            "compile-time globals and function values are not supported: " +
+            name,
+          )
+      }
+    @parser.ArrayExpr(items, _) | @parser.ProductExpr(items, _) =>
+      Sequence(items.map(fn(item) { self.eval(mi, item, env) }))
+    @parser.BlockExpr(block) => self.block(mi, block, env)
+    @parser.ObjectExpr(items, _) => {
+      let values : Map[String, Value] = Map::default()
+      for item in items {
+        values[item.name] = self.eval(mi, item.value, env)
+      }
+      Record("", values)
+    }
+    @parser.ConstructExpr(type_, items, _) => {
+      let key = self.path(mi, type_)
+      let values : Map[String, Value] = Map::default()
+      for item in items {
+        values[item.name] = self.eval(mi, item.value, env)
+      }
+      Record(key, values)
+    }
+    @parser.FieldExpr(owner, name, _) => field(self.eval(mi, owner, env), name)
+    @parser.ProductFieldExpr(owner, index, _, _) => {
+      guard self.eval(mi, owner, env) is Sequence(values) &&
+        index >= 0 &&
+        index < values.length() else {
+        return eval_fail("invalid compile-time product access")
+      }
+      values[index]
+    }
+    @parser.IndexExpr(_, _, _) =>
+      eval_fail("indexed access is not supported at compile time")
+    @parser.IfExpr(condition, yes, no, _) =>
+      if truth(self.eval(mi, condition, env)) {
+        self.block(mi, yes, env)
+      } else {
+        match no {
+          Some(no) => self.eval(mi, no, env)
+          None => Unit
+        }
+      }
+    @parser.CallExpr(callee, args, _)
+    | @parser.ExplicitTypeCallExpr(callee, _, args, _) => {
+      let key = self.path(mi, callee)
+      self.call(key, args.map(fn(arg) { self.eval(mi, arg, env) }))
+    }
+    @parser.BinaryExpr(@parser.LogicalAnd, left, right, _) =>
+      Boolean(
+        truth(self.eval(mi, left, env)) && truth(self.eval(mi, right, env)),
+      )
+    @parser.BinaryExpr(@parser.LogicalOr, left, right, _) =>
+      Boolean(
+        truth(self.eval(mi, left, env)) || truth(self.eval(mi, right, env)),
+      )
+    @parser.BinaryExpr(op, left, right, offset) =>
+      self.scalar_binary(
+        mi,
+        offset,
+        op,
+        self.eval(mi, left, env),
+        self.eval(mi, right, env),
+      )
+    @parser.PrefixExpr(op, value, _) => {
+      let value = self.eval(mi, value, env)
+      match (op, value) {
+        (@parser.LogicalNot, Boolean(v)) => Boolean(!v)
+        (@parser.Negative, Number(n, kind)) => normalized(0UL - n, kind)
+        (@parser.Positive, Number(_, _)) => value
+        _ => eval_fail("unsupported prefix operator at compile time")
+      }
+    }
+    @parser.ReturnExpr(value, _) =>
+      raise Returned(
+        match value {
+          Some(value) => self.eval(mi, value, env)
+          None => Unit
+        },
+      )
+    @parser.BreakExpr(value, _) => raise Broken(self.eval(mi, value, env))
+    @parser.ContinueExpr(value, _) => raise Continued(self.eval(mi, value, env))
+    @parser.MatchExpr(value, arms, _) => {
+      let value = self.eval(mi, value, env)
+      for arm in arms {
+        let scope = self.scope(env)
+        if self.pattern(mi, arm.pattern, value, scope) {
+          if arm.guard_condition is Some(guard_) &&
+            !truth(self.eval(mi, guard_, scope)) {
+            continue
+          }
+          return self.eval(mi, arm.body, scope)
+        }
+      }
+      eval_fail("non-exhaustive match during transform execution")
+    }
+    @parser.WhileExpr(initial, arms, _) => {
+      let mut value = self.eval(mi, initial, env)
+      while true {
+        self.charge(0)
+        let mut matched = false
+        for arm in arms {
+          let scope = self.scope(env)
+          if self.pattern(mi, arm.pattern, value, scope) {
+            if arm.guard_condition is Some(guard_) &&
+              !truth(self.eval(mi, guard_, scope)) {
+              continue
+            }
+            matched = true
+            try {
+              let _ = self.eval(mi, arm.body, scope)
+            } catch {
+              Continued(next) => value = next
+              Broken(result) => return result
+              error => raise error
+            }
+            break
+          }
+        }
+        if !matched {
+          return Unit
+        }
+      } nobreak {
+        Unit
+      }
+    }
+    _ => eval_fail("expression is not supported by the transform interpreter")
+  }
+}
+
+///|
+fn Machine::pattern(
+  self : Machine,
+  mi : Int32,
+  pattern : @parser.Pattern,
+  value : Value,
+  env : Map[String, Cell],
+) -> Bool raise EvalError {
+  self.charge(16)
+  guard self.depth < 128 else { raise Failed("transform depth limit exceeded") }
+  self.depth += 1
+  let result = self.pattern_inner(mi, pattern, value, env) catch {
+    error => {
+      self.depth -= 1
+      raise error
+    }
+  }
+  self.depth -= 1
+  result
+}
+
+///|
+fn Machine::pattern_inner(
+  self : Machine,
+  mi : Int32,
+  pattern : @parser.Pattern,
+  value : Value,
+  env : Map[String, Cell],
+) -> Bool raise EvalError {
+  match pattern {
+    @parser.WildcardPattern(_) => true
+    @parser.BindingPattern(name, offset) => {
+      let constructor = self.pattern_key(mi, offset)
+      if constructor.is_empty() {
+        env[name] = { value, mutable_: false, }
+        true
+      } else {
+        value is Variant(key, values) && key == constructor && values.is_empty()
+      }
+    }
+    @parser.LiteralPattern(@parser.StringExpr(_, _), _) =>
+      raise Failed("string patterns are not supported at compile time")
+    @parser.LiteralPattern(expr, _) => equal(self.eval(mi, expr, env), value)
+    @parser.ProductPattern(patterns, _) => {
+      guard value is Sequence(values) && values.length() == patterns.length() else {
+        return false
+      }
+      for i, p in patterns {
+        if !self.pattern(mi, p, values[i], env) {
+          return false
+        }
+      }
+      true
+    }
+    @parser.QualifiedPattern(_, _, offset) => {
+      let constructor = self.pattern_key(mi, offset)
+      guard !constructor.is_empty() else {
+        raise Failed("expected a checked enum constructor pattern")
+      }
+      value is Variant(key, values) && key == constructor && values.is_empty()
+    }
+    @parser.TuplePattern(_, patterns, _) => {
+      guard value is Variant(key, values) &&
+        key == self.pattern_path(mi, pattern) &&
+        values.length() == patterns.length() else {
+        return false
+      }
+      for i, p in patterns {
+        if !self.pattern(mi, p, values[i], env) {
+          return false
+        }
+      }
+      true
+    }
+    _ => raise Failed("pattern is not supported by the transform interpreter")
+  }
+}
+
+///|
+fn Machine::scope(
+  self : Machine,
+  outer : Map[String, Cell],
+) -> Map[String, Cell] raise EvalError {
+  self.charge(outer.length() * 16)
+  outer.copy()
+}
+
+///|
+fn Machine::pattern_path(
+  self : Machine,
+  mi : Int32,
+  pattern : @parser.Pattern,
+) -> String raise EvalError {
+  self.charge(16)
+  guard self.depth < 128 else { raise Failed("transform depth limit exceeded") }
+  self.depth += 1
+  let result = self.pattern_path_inner(mi, pattern) catch {
+    error => {
+      self.depth -= 1
+      raise error
+    }
+  }
+  self.depth -= 1
+  result
+}
+
+///|
+fn Machine::pattern_path_inner(
+  self : Machine,
+  mi : Int32,
+  pattern : @parser.Pattern,
+) -> String raise EvalError {
+  let key = self.pattern_key(mi, pattern.offset())
+  guard !key.is_empty() else {
+    raise Failed("expected a checked enum constructor pattern")
+  }
+  key
+}
+
+///|
+fn equal(a : Value, b : Value) -> Bool raise EvalError {
+  match (a, b) {
+    (Number(a, k), Number(b, l)) => a == b && k == l
+    (Boolean(a), Boolean(b)) => a == b
+    (Text(a), Text(b)) => a == b
+    _ => raise Failed("unsupported equality in compile-time pattern")
+  }
+}

@@ -1,0 +1,418 @@
+///|
+pub(all) struct SourceFile {
+  path : String
+  source : Bytes
+}
+
+///|
+pub(all) struct SourceModule {
+  path : String
+  files : Array[SourceFile]
+}
+
+///|
+struct Annotation {
+  name : String
+  offset : Int32
+  target : Int32
+}
+
+///|
+struct SourceFunction {
+  module_ : Int32
+  file : Int32
+  declaration : @parser.FunctionDeclaration
+  transform : Bool
+  start : Int32
+  end : Int32
+}
+
+///|
+struct ParsedFile {
+  file : SourceFile
+  clean : Bytes
+  annotations : Array[Annotation]
+  functions : Array[SourceFunction]
+  declarations : Array[@parser.Declaration]
+}
+
+///|
+pub struct Plan {
+  modules : Array[SourceModule]
+  files : Array[Array[ParsedFile]]
+  active : Bool
+  validation_stop : String
+  scalar_proofs : Map[(Int32, Int32, Int32), Bytes]
+  pattern_proofs : Map[(Int32, Int32, Int32), String]
+  type_names : Map[(Int32, String), String]
+}
+
+///|
+/// Add already checked source-loader modules for name lookup and helper calls.
+/// They retain the semantic program's module and file order for operator proofs.
+pub fn Plan::add_checked_module(
+  self : Plan,
+  module_ : SourceModule,
+) -> Result[Unit, String] {
+  guard self.active && self.files.length() == self.modules.length() else {
+    return Err(
+      "checked transform modules require an active, aligned source plan",
+    )
+  }
+  let mi = self.modules.length()
+  let parsed : Array[ParsedFile] = []
+  for fi, file in module_.files {
+    match scan(file, mi, fi) {
+      Ok(value) => parsed.push(value)
+      Err(message) => return Err(file.path + ": error: " + message)
+    }
+  }
+  self.modules.push(module_)
+  self.files.push(parsed)
+  Ok(())
+}
+
+///|
+fn text(bytes : Bytes) -> String {
+  @utf8.decode_lossy(bytes)
+}
+
+///|
+fn bytes(value : String) -> Bytes {
+  let out = @buffer.new()
+  out.write_string_utf8(value)
+  out.to_bytes()
+}
+
+///|
+fn part(source : Bytes, start : Int32, end : Int32) -> String {
+  text(source[start:end].to_owned())
+}
+
+///|
+fn blank(source : FixedArray[Byte], start : Int32, end : Int32) -> Unit {
+  for i = start; i < end; i = i + 1 {
+    if source[i] != b'\n' && source[i] != b'\r' {
+      source[i] = b' '
+    }
+  }
+}
+
+///|
+fn scan(
+  file : SourceFile,
+  module_ : Int32,
+  file_index : Int32,
+) -> Result[ParsedFile, String] {
+  let tokens = @tokenizer.tokens(file.source).collect()
+  let clean = file.source.to_fixedarray()
+  let annotations : Array[Annotation] = []
+  let marks : Array[Int32] = []
+  let pending : Array[(String, Int32)] = []
+  let mut depth = 0
+  let mut i = 0
+  while i < tokens.length() {
+    let token = tokens[i]
+    let offset = token.offset().to_int()
+    match token.kind() {
+      @tokenizer.Symbol(@tokenizer.LeftBrace) => depth += 1
+      @tokenizer.Symbol(@tokenizer.RightBrace) => depth -= 1
+      @tokenizer.Error(@tokenizer.UnexpectedUnit(35U)) if depth == 0 => {
+        let mut before = offset
+        while before > 0 && file.source[before - 1] != b'\n' {
+          before -= 1
+          guard file.source[before] == b' ' ||
+            file.source[before] == b'\t' ||
+            file.source[before] == b'\r' else {
+            return Err("a transform annotation must occupy its own line")
+          }
+        }
+        let start = i
+        i += 1
+        guard i < tokens.length() else {
+          return Err("unfinished transform annotation")
+        }
+        let mut name = match tokens[i].kind() {
+          @tokenizer.Identifier(name) => name
+          @tokenizer.AtIdentifier(name) => "@" + name
+          _ => return Err("expected a transform name after #")
+        }
+        i += 1
+        if name.has_prefix("@") {
+          guard i + 1 < tokens.length() &&
+            tokens[i].kind() == @tokenizer.Symbol(@tokenizer.Dot) else {
+            return Err("expected #@alias.transform_name")
+          }
+          match tokens[i + 1].kind() {
+            @tokenizer.Identifier(member) => name += "." + member
+            _ => return Err("expected transform name after import alias")
+          }
+          i += 2
+        }
+        guard i == tokens.length() || tokens[i].kind() == @tokenizer.Newline else {
+          return Err("a transform annotation must occupy its own line")
+        }
+        let end = if i < tokens.length() {
+          tokens[i].offset().to_int()
+        } else {
+          clean.length()
+        }
+        blank(clean, tokens[start].offset().to_int(), end)
+        pending.push((name, offset))
+        continue
+      }
+      @tokenizer.Identifier("transform") if depth == 0 &&
+        i + 1 < tokens.length() &&
+        tokens[i + 1].kind() == @tokenizer.Keyword(@tokenizer.Fn) => {
+        guard i + 1 < tokens.length() &&
+          tokens[i + 1].kind() == @tokenizer.Keyword(@tokenizer.Fn) else {
+          return Err("expected fn after transform")
+        }
+        guard pending.is_empty() else {
+          return Err("a transform cannot itself have a transform annotation")
+        }
+        marks.push(tokens[i + 1].offset().to_int())
+        blank(clean, offset, offset + 9)
+      }
+      @tokenizer.Keyword(@tokenizer.Fn) if depth == 0 => {
+        for (name, at) in pending {
+          annotations.push({ name, offset: at, target: offset, })
+        }
+        pending.clear()
+      }
+      @tokenizer.Newline | @tokenizer.Keyword(@tokenizer.Pub) => ()
+      _ if depth == 0 && !pending.is_empty() =>
+        return Err("transforms can only be applied to functions")
+      _ => ()
+    }
+    i += 1
+  }
+  guard pending.is_empty() else {
+    return Err("transform annotation has no function")
+  }
+  let declarations : Array[@parser.Declaration] = []
+  let functions : Array[SourceFunction] = []
+  let clean = Bytes::from_fixedarray(clean)
+  let mut token_cursor = 0
+  for event in @parser.parse_bytes(clean) {
+    match event {
+      @parser.Diagnostic(error) =>
+        return Err(
+          "invalid transform source: " +
+          "parse error at byte " +
+          error.error.offset().to_string(),
+        )
+      @parser.Declaration(declaration) => {
+        declarations.push(declaration)
+        if declaration is @parser.Function(fn_) {
+          let body = fn_.body.offset.to_int()
+          let mut nesting = 0
+          let mut end = body
+          while token_cursor < tokens.length() {
+            let t = tokens[token_cursor]
+            token_cursor += 1
+            if t.offset().to_int() >= body {
+              match t.kind() {
+                @tokenizer.Symbol(@tokenizer.LeftBrace) => nesting += 1
+                @tokenizer.Symbol(@tokenizer.RightBrace) => {
+                  nesting -= 1
+                  if nesting == 0 {
+                    end = t.offset().to_int() + 1
+                    break
+                  }
+                }
+                _ => ()
+              }
+            }
+          }
+          let mut is_transform = false
+          for mark in marks {
+            if mark >= fn_.offset.to_int() && mark < fn_.name_offset.to_int() {
+              is_transform = true
+            }
+          }
+          functions.push({
+            module_,
+            file: file_index,
+            declaration: fn_,
+            transform: is_transform,
+            start: fn_.offset.to_int(),
+            end,
+          })
+        }
+      }
+    }
+  }
+  Ok({ file, clean, annotations, functions, declarations, })
+}
+
+///|
+pub fn contains_transform_syntax(source : Bytes) -> Bool {
+  let mut depth = 0
+  let mut previous_transform = false
+  for token in @tokenizer.tokens(source) {
+    if depth == 0 &&
+      (
+        token.kind() == @tokenizer.Error(@tokenizer.UnexpectedUnit(35U)) ||
+        (
+          previous_transform &&
+          token.kind() == @tokenizer.Keyword(@tokenizer.Fn)
+        )
+      ) {
+      return true
+    }
+    if token.kind() == @tokenizer.Symbol(@tokenizer.LeftBrace) {
+      depth += 1
+    }
+    if token.kind() == @tokenizer.Symbol(@tokenizer.RightBrace) {
+      depth -= 1
+    }
+    previous_transform = depth == 0 &&
+      token.kind() == @tokenizer.Identifier("transform")
+  }
+  false
+}
+
+///|
+pub fn transform_library_sources() -> Array[SourceModule] {
+  [
+    {
+      path: "dewdrop.ast",
+      files: [{ path: "lib/dewdrop/ast.dew", source: ast_source(), }],
+    },
+    {
+      path: "dewdrop.transform",
+      files: [
+        { path: "lib/dewdrop/transform.dew", source: transform_source(), },
+      ],
+    },
+  ]
+}
+
+///|
+pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
+  // Avoid parsing the ordinary build twice. Tokens keep strings/comments inert.
+  let active = modules.any(fn(module_) {
+    module_.files.any(fn(file) { contains_transform_syntax(file.source) })
+  })
+  if !active {
+    return Ok({
+      modules,
+      files: [],
+      active,
+      validation_stop: "",
+      scalar_proofs: {},
+      pattern_proofs: {},
+      type_names: {},
+    })
+  }
+  let modules = modules.copy()
+  for module_ in modules {
+    if module_.path == "dewdrop.ast" || module_.path == "dewdrop.transform" {
+      return Err(
+        "dewdrop.ast and dewdrop.transform are supplied by the compiler",
+      )
+    }
+  }
+  for library in transform_library_sources() {
+    modules.push(library)
+  }
+  let files : Array[Array[ParsedFile]] = []
+  for mi, module_ in modules {
+    let parsed : Array[ParsedFile] = []
+    for fi, file in module_.files {
+      let _ = @utf8.decode(file.source) catch {
+        _ =>
+          return Err(
+            file.path +
+            ": error: compile-time transform sources must be valid UTF-8",
+          )
+      }
+      match scan(file, mi, fi) {
+        Ok(value) => parsed.push(value)
+        Err(error) => return Err(file.path + ": error: " + error)
+      }
+    }
+    files.push(parsed)
+  }
+  let mut validation_stop = "__dew_transform_validation_stop"
+  while modules.any(fn(module_) {
+          module_.files.any(fn(file) {
+            text(file.source).contains(validation_stop)
+          })
+        }) {
+    validation_stop += "_"
+  }
+  Ok({
+    modules,
+    files,
+    active,
+    validation_stop,
+    scalar_proofs: {},
+    pattern_proofs: {},
+    type_names: {},
+  })
+}
+
+///|
+fn Plan::validation_body(self : Plan) -> String {
+  "{\n " + self.validation_stop + "()\n}"
+}
+
+///|
+pub fn Plan::validation_sources(self : Plan) -> Array[SourceModule] {
+  if !self.active {
+    return self.modules
+  }
+  self.modules.mapi(fn(mi, module_) {
+    let files : Array[SourceFile] = []
+    let checks : Array[SourceFile] = []
+    for fi, file in self.files[mi] {
+      let out = @buffer.new()
+      let mut cursor = 0
+      for function in file.functions {
+        if file.annotations.any(fn(a) {
+            a.target >= function.start &&
+            a.target < function.declaration.name_offset.to_int()
+          }) {
+          out.write_bytes(file.clean[cursor:function.start])
+          let removed = file.clean[function.start:function.end]
+            .to_owned()
+            .to_fixedarray()
+          blank(removed, 0, removed.length())
+          out.write_bytes(Bytes::from_fixedarray(removed))
+          cursor = function.end
+          let mut path = file.file.path +
+            "::transform-check::" +
+            function.declaration.name +
+            "@" +
+            function.start.to_string()
+          while self.modules.any(fn(module_) {
+                  module_.files.any(fn(source) { source.path == path })
+                }) {
+            path += "_"
+          }
+          let header = part(
+            file.clean,
+            function.start,
+            function.declaration.body.offset.to_int(),
+          )
+          checks.push({ path, source: bytes(header + self.validation_body()), })
+        }
+      }
+      out.write_bytes(file.clean[cursor:])
+      if fi == 0 {
+        out.write_string_utf8(
+          "\nbuiltin " +
+          self.validation_stop +
+          "() -> Never = \"unreachable\"\n",
+        )
+      }
+      files.push({ path: file.file.path, source: out.to_bytes(), })
+    }
+    for check in checks {
+      files.push(check)
+    }
+    { path: module_.path, files, }
+  })
+}

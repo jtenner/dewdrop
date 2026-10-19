@@ -1,0 +1,246 @@
+// Compile-time execution is local to the compiler. No host calls are exposed.
+open dew.std.array
+open dew.std.string
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.string_builder
+
+pub enum CtValue {
+  Empty
+  Number(U64, String)
+  Boolean(Bool)
+  Text(String)
+  Sequence(Array<CtValue>)
+  Record(String, Array<CtBinding>)
+  Variant(String, Array<CtValue>)
+}
+
+pub struct CtBinding {
+  name: String
+  mut value: CtValue
+  mutable_: Bool
+}
+
+pub struct CtAnnotation {
+  name: String
+  offset: U32
+  target: U32
+}
+
+pub struct CtFunction {
+  declaration: SelfHostFunctionDeclaration
+  transform_: Bool
+  start: U32
+  end: U32
+}
+
+pub struct CtFile {
+  module_index: U32
+  original: SelfHostManifestFile
+  clean: Bytes
+  annotations: Array<CtAnnotation>
+  functions: Array<CtFunction>
+  declarations: Array<SelfHostDeclaration>
+}
+
+pub struct CtPlan {
+  manifest: SelfHostProgramManifest
+  files: Array<CtFile>
+  active: Bool
+  mut error: String
+  mut validation_stop: String
+  scalar_proofs: Array<CtScalarProof>
+  pattern_proofs: Array<CtPatternProof>
+  type_names: Array<CtTypeName>
+}
+
+pub struct CtMachine {
+  plan: CtPlan
+  mut error: String
+  mut steps: U32
+  mut depth: U32
+  mut allocated: U32
+  mut flow: U32
+  mut result: CtValue
+  mut file_path: String
+}
+
+fn ct_empty() -> CtValue {
+  CtValue::Empty
+}
+
+fn ct_machine(plan: CtPlan) -> CtMachine {
+  {
+    plan: plan
+    error: ""
+    steps: 100000u32
+    depth: 0u32
+    allocated: 0u32
+    flow: 0u32
+    result: CtValue::Empty
+    file_path: ""
+  }
+}
+
+fn ct_fail(machine: CtMachine, message: String) -> CtValue {
+  if machine.error.byte_length() == 0u32 {
+    machine.error = message
+  }
+  CtValue::Empty
+}
+
+fn ct_charge(machine: CtMachine, amount: U32) -> Bool {
+  if machine.error.byte_length() != 0u32 {
+    return false
+  }
+  if machine.steps == 0u32 {
+    let _ = ct_fail(machine, "transform work limit exceeded")
+    return false
+  }
+  machine.steps = machine.steps - 1u32
+  if amount > 4194304u32 - machine.allocated {
+    let _ = ct_fail(machine, "transform allocation limit exceeded")
+    return false
+  }
+  machine.allocated = machine.allocated + amount
+  true
+}
+
+fn ct_string(machine: CtMachine, value: CtValue) -> String {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return ""
+  }
+
+  match value {
+    Text(value) => value
+    _ => {
+      let _ = ct_fail(machine, "expected String in transform")
+      ""
+    }
+  }
+}
+
+fn ct_truth(machine: CtMachine, value: CtValue) -> Bool {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return false
+  }
+
+  match value {
+    Boolean(value) => value
+    _ => {
+      let _ = ct_fail(machine, "expected Bool in transform")
+      false
+    }
+  }
+}
+
+fn ct_binding(name: String, value: CtValue) -> CtBinding {
+  {
+    name: name
+    value: value
+    mutable_: false
+  }
+}
+
+fn ct_lookup(machine: CtMachine, values: Array<CtBinding>, name: String) -> Option<CtBinding> {
+  let mut i = values.length()
+  let _ = while 0u32 {
+    _ => {
+      if i == 0u32 {
+        break ()
+      }
+      if !ct_charge(machine, 0u32) {
+        return None
+      }
+      i = i - 1u32
+      let item = values[i]
+      if item.name == name {
+        return Some(item)
+      }
+      continue 0u32
+    }
+  }
+  None
+}
+
+fn ct_field(machine: CtMachine, value: CtValue, name: String) -> CtValue {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+
+  match value {
+    Record(_, values) => match ct_lookup(machine, values, name) {
+      Some(binding) => binding.value
+      None => ct_fail(machine, "unknown transform field".concat(name))
+    }
+    _ => ct_fail(machine, "expected record in transform")
+  }
+}
+
+fn ct_scope(machine: CtMachine, outer: Array<CtBinding>) -> Array<CtBinding> {
+  let values = array_new::<CtBinding>()
+  for value in outer {
+    if !ct_charge(machine, 16u32) {
+      return values
+    }
+
+    values.push(value)
+  }
+  values
+}
+
+fn ct_part(source: Bytes, start: U32, end: U32) -> String {
+  source.slice(start, end).to_string()
+}
+
+fn ct_blank(source: Bytes, start: U32, end: U32) -> Bytes {
+  let builder = BytesBuilder::new()
+  let _ = while start {
+    i if i < end => {
+      let byte = source.byte_at(i)
+      builder.append_byte(if byte == 10u8 || byte == 13u8 {
+          byte
+        } else {
+          32u8
+      })
+      continue i + 1u32
+    }
+
+    _ => break ()
+  }
+  builder.finish()
+}
+
+fn ct_number(value: U64, kind: String) -> CtValue {
+  let bits = if kind == "I8" || kind == "U8" {
+    value & 255u64
+  } else if kind == "I16" || kind == "U16" {
+    value & 65535u64
+  } else if kind == "I32" || kind == "U32" {
+    value & 4294967295u64
+  } else {
+    value
+  }
+  CtValue::Number(bits, kind)
+}
+
+fn ct_signed(value: U64, kind: String) -> I64 {
+  let result = ct_u64_to_i64(value)
+  if kind == "I8" {
+    (result << 56i64) >> 56i64
+  } else if kind == "I16" {
+    (result << 48i64) >> 48i64
+  } else if kind == "I32" {
+    (result << 32i64) >> 32i64
+  } else {
+    result
+  }
+}
+
+fn ct_u64_to_i64(value: U64) -> I64 {
+  unsafe_bitcast(value)
+}
+
+fn ct_i64_to_u64(value: I64) -> U64 {
+  unsafe_bitcast(value)
+}

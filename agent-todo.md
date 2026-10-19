@@ -1191,3 +1191,12 @@ self-host timing bugs or the correctness work listed above.
 - [ ] Add reproducible release builds and CI across supported targets/hosts.
 - [ ] Publish compiler binaries and standard-library sources.
 - [ ] Define language edition/version behavior before compatibility commitments.
+
+## Compile-time transforms
+
+Source-defined function body transforms are implemented. See
+[`docs/compile-time-transforms.md`](docs/compile-time-transforms.md). Next steps:
+
+- Extend syntax access and interpreted operations from real transform examples.
+- Measure work and allocation before adding bytecode execution or a result cache.
+- Add declaration generation and name hygiene as separate language changes.

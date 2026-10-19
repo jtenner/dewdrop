@@ -1,0 +1,417 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+pub struct CtScalarProof {
+  module_index: U32
+  file_path: String
+  offset: U32
+  opcode: Bytes
+}
+
+fn ct_operator_primitive_rank(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, type_: U32) -> U32 {
+  if type_ >= module_.resolved_types.types.length() {
+    return 4294967295u32
+  }
+  let selected = match module_.resolved_types.types[type_] {
+    SelfType(_) => callable.self_type
+    _ => type_
+  }
+  if selected >= module_.resolved_types.types.length() {
+    return 4294967295u32
+  }
+  match module_.resolved_types.types[selected] {
+    PrimitiveType(primitive) => primitive.rank()
+    _ => 4294967295u32
+  }
+}
+
+fn ct_operator_result_matches(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, opcode: Bytes) -> Bool {
+  if callable.parameters.length != 2u32 || !self_host_array_span_is_valid(callable.parameters.start, 2u32, module_.functions.parameters.length()) {
+    return false
+  }
+  let left = ct_operator_primitive_rank(module_, callable, module_.functions.parameters[callable.parameters.start].type_)
+  let right = ct_operator_primitive_rank(module_, callable, module_.functions.parameters[callable.parameters.start + 1u32].type_)
+  let result = ct_operator_primitive_rank(module_, callable, callable.result_type)
+  if left == 4294967295u32 || left != right || result == 4294967295u32 {
+    return false
+  }
+  let name = opcode.to_string()
+  let comparison = name.contains(".eq") || name.contains(".ne") || name.contains(".lt_") || name.contains(".le_") || name.contains(".gt_") || name.contains(".ge_")
+  if comparison {
+    result == 1u32
+  } else {
+    result == left
+  }
+}
+
+// This is the raw-forwarding proof with the operator receiver included among
+// its two original parameters. It accepts no extra statements or computations.
+fn ct_operator_forwarding_builtin(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> Option<Bytes> {
+  let body_id = match self_host_program_specialization_callable_body(callable) {
+    Some(value) => value
+    None => return None
+  }
+  let index = self_host_semantic_id_local(body_id)
+  if index >= module_.bodies.length() {
+    return None
+  }
+  let body = module_.bodies[index]
+  if body.body != body_id || callable.parameters.length > body.locals.length || !self_host_array_span_is_valid(body.locals.start, body.locals.length, module_.locals.length()) {
+    return None
+  }
+  let block = match body.root {
+    BlockBodyRoot(value) => value
+    _ => return None
+  }
+  if block >= module_.blocks.length() {
+    return None
+  }
+  let items = module_.blocks[block].items
+  if items.length != 1u32 || items.start >= module_.block_items.length() {
+    return None
+  }
+  let expression = match module_.block_items[items.start].kind {
+    PlannedExpressionItem(value) => value
+    _ => return None
+  }
+  if expression >= module_.expressions.length() || expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
+    return None
+  }
+  let result = match module_.expressions[expression].kind {
+    PlannedReturnExpression(value) => value
+    _ => expression
+  }
+  let unwrapped = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, result)
+  if unwrapped >= module_.expressions.length() {
+    return None
+  }
+  let value = module_.expressions[unwrapped]
+  let name = match self_host_raw_expression_target(lowering, value) {
+    Some(target) => target
+    None => return None
+  }
+  if self_host_raw_intrinsic_signature(name) is None {
+    return None
+  }
+  let arguments = self_host_raw_expression_arguments(value)
+  if arguments.length != callable.parameters.length || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
+    return None
+  }
+  let _ = while 0u32 {
+    parameter if parameter < arguments.length => {
+      let source = module_.expression_children[arguments.start + parameter]
+      if source < body.expressions.start || source - body.expressions.start >= body.expressions.length {
+        return None
+      }
+      let argument = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, source)
+      if argument >= module_.expressions.length() {
+        return None
+      }
+      match module_.expressions[argument].kind {
+        PlannedLocalGet(local) if local == parameter => {}
+        _ => return None
+      }
+      let local = module_.locals[body.locals.start + parameter]
+      if !(local.kind is ParameterLocal) || local.mutable_ {
+        return None
+      }
+      continue parameter + 1u32
+    }
+    _ => break ()
+  }
+  Some(name)
+}
+
+fn ct_operator_bool_block(module_: SelfHostPlannedModuleLowering, block: U32, left: Bool, right: Bool, remaining: U32) -> Option<Bool> {
+  if remaining == 0u32 || block >= module_.blocks.length() {
+    return None
+  }
+  let items = module_.blocks[block].items
+  if items.length != 1u32 || items.start >= module_.block_items.length() {
+    return None
+  }
+  match module_.block_items[items.start].kind {
+    PlannedExpressionItem(value) => ct_operator_bool_expression(module_, value, left, right, remaining - 1u32)
+    _ => None
+  }
+}
+
+fn ct_operator_bool_expression(module_: SelfHostPlannedModuleLowering, expression: U32, left: Bool, right: Bool, remaining: U32) -> Option<Bool> {
+  if remaining == 0u32 || expression >= module_.expressions.length() {
+    return None
+  }
+  match module_.expressions[expression].kind {
+    PlannedBoolConst(value) => Some(value)
+    PlannedLocalGet(0u32) => Some(left)
+    PlannedLocalGet(1u32) => Some(right)
+    PlannedPrefixExpression(LogicalNot, value) => match ct_operator_bool_expression(module_, value, left, right, remaining - 1u32) {
+      Some(value) => Some(!value)
+      None => None
+    }
+    PlannedBlockExpression(block) => ct_operator_bool_block(module_, block, left, right, remaining - 1u32)
+    PlannedIfExpression(condition, block, alternative) => match ct_operator_bool_expression(module_, condition, left, right, remaining - 1u32) {
+      Some(true) => ct_operator_bool_block(module_, block, left, right, remaining - 1u32)
+      Some(false) => ct_operator_bool_expression(module_, alternative, left, right, remaining - 1u32)
+      None => None
+    }
+    _ => None
+  }
+}
+
+fn ct_operator_bool_opcode(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> Bytes {
+  if callable.parameters.length != 2u32 || !self_host_array_span_is_valid(callable.parameters.start, 2u32, module_.functions.parameters.length()) {
+    return b""
+  }
+  if ct_operator_primitive_rank(module_, callable, module_.functions.parameters[callable.parameters.start].type_) != 1u32 || ct_operator_primitive_rank(module_, callable, module_.functions.parameters[callable.parameters.start + 1u32].type_) != 1u32 || ct_operator_primitive_rank(module_, callable, callable.result_type) != 1u32 {
+    return b""
+  }
+  let body_id = match self_host_program_specialization_callable_body(callable) {
+    Some(value) => value
+    None => return b""
+  }
+  let index = self_host_semantic_id_local(body_id)
+  if index >= module_.bodies.length() {
+    return b""
+  }
+  let body = module_.bodies[index]
+  if body.locals.length < 2u32 || !self_host_array_span_is_valid(body.locals.start, 2u32, module_.locals.length()) {
+    return b""
+  }
+  let _ = while 0u32 {
+    i if i < 2u32 => {
+      let local = module_.locals[body.locals.start + i]
+      if local.mutable_ || !(local.kind is ParameterLocal) {
+        return b""
+      }
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  let mut table = 0u32
+  let _ = while 0u32 {
+    bits if bits < 4u32 => {
+      let left = (bits & 2u32) != 0u32
+      let right = (bits & 1u32) != 0u32
+      let value = match body.root {
+        ExpressionBodyRoot(value) => ct_operator_bool_expression(module_, value, left, right, 16u32)
+        BlockBodyRoot(block) => ct_operator_bool_block(module_, block, left, right, 16u32)
+      }
+      match value {
+        Some(true) => {
+          table = table | (1u32 << bits)
+        }
+        Some(false) => {}
+        None => return b""
+      }
+      continue bits + 1u32
+    }
+    _ => break ()
+  }
+  if table == 9u32 {
+    b"i32.eq"
+  } else if table == 6u32 {
+    b"i32.ne"
+  } else {
+    b""
+  }
+}
+
+fn ct_operator_proved_opcode(lowering: SelfHostPlannedProgramLowering, target: U64) -> Bytes {
+  let owner = match lowering.index.declaration_owner(target) {
+    Some(value) => value
+    None => return b""
+  }
+  if owner >= lowering.modules.length() {
+    return b""
+  }
+  let module_ = lowering.modules[owner]
+  let callable = match self_host_program_specialization_callable(module_, target) {
+    Some(value) => value
+    None => return b""
+  }
+  if callable.parameters.length != 2u32 || self_host_program_specialization_callable_generics(callable).length != 0u32 {
+    return b""
+  }
+  let opcode = match callable.kind {
+    PlannedBuiltinCallable(name) => name
+    _ => match ct_operator_forwarding_builtin(lowering, module_, callable) {
+      Some(name) => name
+      None => ct_operator_bool_opcode(module_, callable)
+    }
+  }
+  if ct_operator_result_matches(module_, callable, opcode) {
+    opcode
+  } else {
+    b""
+  }
+}
+
+fn ct_scalar_original_offset(file: CtFile, offset: U32, validation_length: U32) -> Option<U32> {
+  let _ = validation_length
+  if offset >= file.clean.byte_length() {
+    return None
+  }
+  for function in file.functions {
+    let mut annotated = false
+    for annotation in file.annotations {
+      if annotation.target >= function.start && annotation.target < function.declaration.name_offset {
+        annotated = true
+      }
+    }
+    if annotated {
+      if offset >= function.start && offset < function.end {
+        return None
+      }
+    }
+  }
+  Some(offset)
+}
+
+fn ct_scalar_source_targets(source: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering) -> Array<SelfHostBasicCallTarget> {
+  let targets = array_new::<SelfHostBasicCallTarget>()
+  for expression in source.expressions {
+    let _ = expression
+    targets.push(ErrorBasicCallTarget)
+  }
+  for job in module_.inferred.jobs {
+    let span = match job.kind {
+      MergedBodyInferenceJob(body) => {
+        let index = self_host_semantic_id_local(body)
+        if index < source.bodies.length() {
+          source.bodies[index].expressions
+        } else {
+          {
+            start: 0u32
+            length: 0u32
+          }
+        }
+      }
+      MergedLambdaInferenceJob(lambda) => {
+        if lambda < source.lambdas.length() {
+          source.lambdas[lambda].body.expressions
+        } else {
+          {
+            start: 0u32
+            length: 0u32
+          }
+        }
+      }
+    }
+    let _ = while 0u32 {
+      relative if relative < span.length && relative < job.operator_targets.length => {
+        if span.start < targets.length() && relative < targets.length() - span.start && job.operator_targets.start < module_.inferred.operator_targets.length() && relative < module_.inferred.operator_targets.length() - job.operator_targets.start {
+          targets[span.start + relative] = module_.inferred.operator_targets[job.operator_targets.start + relative]
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  targets
+}
+
+fn ct_collect_scalar_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering, validation_body: String) -> Unit {
+  let _ = while 0u32 {
+    mi if mi < plan.manifest.modules.length() && mi < lowering.modules.length() => {
+      let source = collected.modules.at(mi)
+      let module_ = lowering.modules[mi]
+      let targets = ct_scalar_source_targets(source, module_)
+      let _ = while 0u32 {
+        ei if ei < source.expressions.length() && ei < module_.expressions.length() => {
+          if source.expressions[ei] is BinaryExpr(_, _, _, offset) {
+            let opcode = match targets[ei] {
+              NoBasicCallTarget => b"primitive"
+              SelectedBasicCallTarget(target, arguments) if arguments.length == 0u32 => ct_operator_proved_opcode(lowering, target)
+              _ => b""
+            }
+            if opcode.byte_length() != 0u32 && ei < source.expression_files.length() {
+              let file_id = source.expression_files[ei]
+              let _ = while 0u32 {
+                fi if fi < source.files.length() => {
+                  if source.files[fi] == file_id {
+                    for file in plan.files {
+                      if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                        match ct_scalar_original_offset(file, offset, validation_body.byte_length()) {
+                          Some(original) => plan.scalar_proofs.push({
+                              module_index: mi
+                              file_path: file.original.path
+                              offset: original
+                              opcode: opcode
+                          })
+                          None => {}
+                        }
+                      }
+                    }
+                    break ()
+                  }
+                  continue fi + 1u32
+                }
+                _ => break ()
+              }
+            }
+          }
+          continue ei + 1u32
+        }
+        _ => break ()
+      }
+      continue mi + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn ct_scalar_expected_opcode(op: SelfHostBinaryOperator, value: CtValue) -> Bytes {
+  let kind = match value {
+    Number(_, kind) => kind
+    Boolean(_) => "Bool"
+    _ => return b""
+  }
+  let prefix = if kind == "I64" || kind == "U64" {
+    "i64."
+  } else {
+    "i32."
+  }
+  let suffix = if kind.starts_with("I") {
+    "_s"
+  } else {
+    "_u"
+  }
+  let name = match op {
+    Add => "add"
+    Subtract => "sub"
+    Multiply => "mul"
+    BitAnd => "and"
+    BitOr => "or"
+    BitXor => "xor"
+    Equal => "eq"
+    NotEqual => "ne"
+    Less => "lt".concat(suffix)
+    LessEqual => "le".concat(suffix)
+    Greater => "gt".concat(suffix)
+    GreaterEqual => "ge".concat(suffix)
+    Divide => "div".concat(suffix)
+    Remainder => "rem".concat(suffix)
+    _ => return b""
+  }
+  prefix.concat(name).as_bytes()
+}
+
+fn ct_scalar_binary(machine: CtMachine, mi: U32, offset: U32, op: SelfHostBinaryOperator, left: CtValue, right: CtValue) -> CtValue {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  for proof in machine.plan.scalar_proofs {
+    if !ct_charge(machine, 0u32) {
+      return CtValue::Empty
+    }
+    if proof.module_index == mi && proof.file_path == machine.file_path && proof.offset == offset {
+      if proof.opcode.equals(b"primitive") || proof.opcode.equals(ct_scalar_expected_opcode(op, left)) {
+        return ct_binary(machine, op, left, right)
+      }
+      break ()
+    }
+  }
+  ct_fail(machine, "selected operator has no supported compile-time primitive proof")
+}

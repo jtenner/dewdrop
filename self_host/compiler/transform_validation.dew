@@ -1,0 +1,119 @@
+fn ct_validation_body(plan: CtPlan) -> String {
+  "{\n ".concat(plan.validation_stop).concat("()\n}")
+}
+
+fn ct_validation_manifest(plan: CtPlan) -> SelfHostProgramManifest {
+  let modules = array_new::<SelfHostManifestModule>()
+  let mut mi = 0u32
+  for module_ in plan.manifest.modules {
+    let files = array_new::<SelfHostManifestFile>()
+    let generated = array_new::<SelfHostManifestFile>()
+    for file in plan.files {
+      if file.module_index == mi {
+        let out = BytesBuilder::new()
+        let mut cursor = 0u32
+        for function in file.functions {
+          if ct_is_annotated(file, function) {
+            out.append(file.clean.slice(cursor, function.start))
+            out.append(ct_blank(file.clean, function.start, function.end))
+            let path_builder = StringBuilder::new()
+            path_builder.append(file.original.path)
+            path_builder.append("::transform-check[")
+            path_builder.append(function.declaration.name)
+            path_builder.append("@")
+            path_builder.append_u32(function.start)
+            path_builder.append("]")
+            let path = path_builder.finish()
+            for original in module_.files {
+              if original.path == path {
+                plan.error = "generated transform check file path collision"
+              }
+            }
+            generated.push({
+                path: path
+                source: ct_part(file.clean, function.start, function.declaration.body.offset).concat(ct_validation_body(plan)).as_bytes()
+                test_only: file.original.test_only
+            })
+            cursor = function.end
+          }
+        }
+        out.append(file.clean.slice(cursor, file.clean.byte_length()))
+        if files.length() == 0u32 {
+          out.append("\nbuiltin ".concat(plan.validation_stop).concat("() -> Never = \"unreachable\"\n").as_bytes())
+        }
+        files.push({
+            path: file.original.path
+            source: out.finish()
+            test_only: file.original.test_only
+        })
+      }
+    }
+    for file in generated {
+      files.push(file)
+    }
+    modules.push({
+        path: module_.path
+        files: files
+    })
+    mi = mi + 1u32
+  }
+  {
+    modules: modules
+  }
+}
+
+fn ct_expand_checked(manifest: SelfHostProgramManifest, default_preamble: Bool) -> Result<SelfHostProgramManifest, String> {
+  let plan = ct_prepare(manifest)
+  if plan.error.byte_length() != 0u32 {
+    return Err(plan.error)
+  }
+  if !plan.active {
+    return Ok(manifest)
+  }
+  let validation_manifest = ct_validation_manifest(plan)
+  if plan.error.byte_length() != 0u32 {
+    return Err(plan.error)
+  }
+  let validation = self_host_manifest_with_default_preamble(validation_manifest, default_preamble)
+  let collected = self_host_collect_program_manifest(7200u64, validation)
+  if collected.diagnostics.length() != 0u32 {
+    return Err("invalid compile-time transform manifest")
+  }
+  for module_ in collected.modules.values {
+    if module_.diagnostic_count() != 0u32 {
+      return Err("invalid compile-time transform source")
+    }
+  }
+  match self_host_validate_collected_program_storage(collected) {
+    Some(error) => return Err(error)
+    None => {
+    }
+  }
+  let frozen = self_host_freeze_program_signature_interfaces(collected)
+  if frozen.import_diagnostics.length() != 0u32 || frozen.path_diagnostics.length() != 0u32 {
+    return Err("invalid compile-time transform imports")
+  }
+  match self_host_validate_collected_program_bodies(frozen) {
+    Some(error) => return Err(error)
+    None => {
+    }
+  }
+  let lowering = self_host_plan_program_lowering(frozen)
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => return Err(error)
+    None => {
+    }
+  }
+  match self_host_validate_program_lowering(lowering) {
+    Some(error) => return Err(error)
+    None => {
+    }
+  }
+  if !ct_check_transform_signatures(plan, collected, lowering) {
+    return Err(plan.error)
+  }
+  ct_collect_type_names(plan, frozen)
+  ct_collect_scalar_proofs(plan, collected, lowering, ct_validation_body(plan))
+  ct_collect_pattern_proofs(plan, collected, lowering)
+  ct_expand(plan)
+}

@@ -1,0 +1,30 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+enum Choice {
+  Empty
+  Item(I32)
+}
+
+fn choose() -> I32 {
+  let first = match Option::Some(40i32) {
+    None => 0i32
+    Some(value) => value
+  }
+  let second = match Choice::Item(2i32) {
+    Empty => 0i32
+    Item(value) => value
+  }
+  match first + second {
+    captured => captured
+  }
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  @ast.with_body(node, @ast.integer(choose()))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

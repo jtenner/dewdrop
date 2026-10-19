@@ -51,6 +51,14 @@ pub fn collect_program_manifest_with_standard_sources(UInt64, ProgramManifest, S
 
 pub fn collect_tokens(UInt64, Iter[@tokenizer.Token]) -> CollectedModule
 
+pub fn compile_time_imported_type_names(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, String, String)]
+
+pub fn compile_time_pattern_proofs(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, UInt64, UInt64, String)]
+
+pub fn compile_time_scalar_operator_proofs(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Array[(Int, UInt64, UInt64, Bytes)]
+
+pub fn compile_time_transform_signature_is_valid(CollectedProgram, PlannedProgramLowering, Int, String) -> Bool
+
 pub fn deserialize_body_inference_family_artifact(Bytes) -> Result[BodyInferenceFamilyArtifact, String]
 
 pub fn deserialize_body_inference_family_bundle(Bytes) -> Result[BodyInferenceFamilyBundle, String]

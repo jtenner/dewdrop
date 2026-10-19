@@ -1,0 +1,163 @@
+fn ct_test_plan(source: Bytes) -> CtPlan {
+  let plan = ct_prepare({
+    modules: [
+      {
+        path: "app"
+        files: [{
+          path: "main.dew"
+          source: source
+          test_only: false
+        }]
+      },
+      {
+        path: "dew.std.result"
+        files: [{
+          path: "result.dew"
+          source: b"pub enum Result<t, e> {\n Ok(t)\n Err(e)\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+  plan.type_names.push({
+    module_index: 0u32
+    name: "Result"
+    key: "dew.std.result::Result"
+  })
+  plan
+}
+
+test "transform interpreter calls ordinary helpers" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn answer() -> I32 {\n 42i32\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(answer()))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n")
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  match ct_expand(plan) {
+    Ok(manifest) => {
+      let source = ct_test_all_source(manifest.modules[0u32])
+      assert(source.contains("42i32"), "transform result")
+      assert(!source.contains("fn replace"), "compile-time entry removed")
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform interpreter resolves imported public functions" {
+  let plan = ct_prepare({
+      modules: [
+        {
+          path: "app"
+          files: [{
+              path: "main.dew"
+              source: b"import tools as @tools\n#@tools.replace\npub fn main() -> I32 {\n 0i32\n}\n"
+              test_only: false
+          }]
+        },
+        {
+          path: "tools"
+          files: [{
+              path: "tools.dew"
+              source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn answer() -> I32 {\n 42i32\n}\npub transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(answer()))\n}\n"
+              test_only: false
+          }]
+        },
+      ]
+  })
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  match ct_expand(plan) {
+    Ok(manifest) => assert(ct_test_all_source(manifest.modules[0u32]).contains("42i32"), "imported transform result")
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform interpreter bounds recursive calls" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn recurse() -> I32 {\n recurse()\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(recurse()))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n")
+  match ct_expand(plan) {
+    Err(error) => assert(error.contains("depth limit"), error)
+    Ok(_) => assert(false, "recursive transform must fail")
+  }
+}
+
+test "transform interpreter rejects source injection" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn bad(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.source(\"1i32\\n}\\nfn injected() -> I32 {\\n2i32\"))\n}\n#bad\nfn main() -> I32 {\n 0i32\n}\n")
+  assert(ct_expand(plan) is Err(_), "source injection must fail")
+}
+
+fn ct_test_all_source(module_: SelfHostManifestModule) -> String {
+  let out = StringBuilder::new()
+  for file in module_.files {
+    out.append(file.source.to_string())
+  }
+  out.finish()
+}
+
+test "transform patterns use checked variants and bindings" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nenum Choice {\n None\n Some(I32)\n}\nfn choose() -> I32 {\n match Choice::Some(5i32) {\n None => 0i32\n Some(x) => x\n }\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(choose()))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n")
+  for file in plan.files {
+    if file.module_index == 0u32 {
+      for function in file.functions {
+        if function.declaration.name == "choose" {
+          match function.declaration.body.items[0u32].value {
+            MatchExpr(_, arms, _) => {
+              ct_add_pattern_proof(plan, 0u32, "main.dew", arms[0u32].pattern.offset(), "app::Choice::None")
+              ct_add_pattern_proof(plan, 0u32, "main.dew", arms[1u32].pattern.offset(), "app::Choice::Some")
+              match arms[1u32].pattern {
+                TuplePattern(_, patterns, _) => ct_add_pattern_proof(plan, 0u32, "main.dew", patterns[0u32].offset(), "")
+                _ => assert(false, "expected Some payload")
+              }
+            }
+            _ => assert(false, "expected a match")
+          }
+        }
+      }
+    }
+  }
+  match ct_expand(plan) {
+    Ok(manifest) => {
+      let mut found = false
+      for file in manifest.modules[0u32].files {
+        if file.path.starts_with("main.dew::transform[main@") {
+          found = true
+          assert(file.source.to_string().contains("5i32"), "Some payload must be selected")
+        }
+      }
+      assert(found, "generated main")
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform interpreter propagates return inside condition" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn helper() -> I32 {\n if (return 42i32) {\n 0i32\n } else {\n 0i32\n }\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(helper()))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n")
+  match ct_expand(plan) {
+    Ok(manifest) => assert(ct_test_all_source(manifest.modules[0u32]).contains("42i32"), "return value")
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform interpreter bounds endless loops" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn forever() -> I32 {\n while 0u32 {\n _ => continue 0u32\n }\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(forever()))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n")
+  match ct_expand(plan) {
+    Err(error) => assert(error.contains("limit exceeded"), error)
+    Ok(_) => assert(false, "endless loop must fail")
+  }
+}
+
+test "transform interpreter reports explicit errors" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn no(node: @ast.FnNode, ctx: @transform.TransformContext) -> Result<@ast.FnNode, @transform.TransformError> {\n Result::Err(@transform.error(\"cannot transform this function\"))\n}\n#no\npub fn main() -> I32 {\n 0i32\n}\n")
+  match ct_expand(plan) {
+    Err(error) => assert(error.contains("cannot transform this function"), error)
+    Ok(_) => assert(false, "explicit error must fail")
+  }
+}
+
+test "transform context retains parameter source" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn reject(node: @ast.FnNode, ctx: @transform.TransformContext) -> Result<@ast.FnNode, @transform.TransformError> {\n Result::Err(@transform.error(ctx.parameters_source))\n}\n#reject\nfn sample(value: I32, other: Bool) -> I32 {\n value\n}\n")
+  match ct_expand(plan) {
+    Err(message) => assert(message.contains("value: I32, other: Bool"), message)
+    Ok(_) => assert(false, "context diagnostic was not returned")
+  }
+}
+
+test "transform annotation cannot follow code on the same line" {
+  let plan = ct_test_plan(b"fn before() -> I32 {\n 0i32\n} #replace\nfn after() -> I32 {\n 0i32\n}\n")
+  assert(plan.error.contains("must occupy its own line"), plan.error)
+}

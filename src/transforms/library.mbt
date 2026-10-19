@@ -1,0 +1,9 @@
+///|
+pub fn ast_source() -> Bytes {
+  b"open dew.std.array\n\npub enum ExprNode {\n  Source(String)\n  Integer(I32)\n  Boolean(Bool)\n  Text(String)\n  Name(String)\n  Call(ExprNode, Array<ExprNode>)\n  Binary(String, ExprNode, ExprNode)\n  Block(Array<ExprNode>)\n  Bind(String, ExprNode)\n  Return(ExprNode)\n  If(ExprNode, ExprNode, ExprNode)\n}\n\npub struct FnNode {\n  name: String\n  body: ExprNode\n}\n\npub fn with_body(node: FnNode, body: ExprNode) -> FnNode {\n  FnNode::{\n    name: node.name\n    body: body\n  }\n}\n\npub fn integer(value: I32) -> ExprNode {\n  ExprNode::Integer(value)\n}\n\npub fn source(value: String) -> ExprNode {\n  ExprNode::Source(value)\n}\n\npub fn call(callee: ExprNode, arguments: Array<ExprNode>) -> ExprNode {\n  ExprNode::Call(callee, arguments)\n}\n"
+}
+
+///|
+pub fn transform_source() -> Bytes {
+  b"pub struct SourceLocation {\n  file_name: String\n  line_no: U32\n  col_no: U32\n}\n\npub struct TransformContext {\n  location: SourceLocation\n  fn_name: String\n  module_name: String\n  parameters_source: String\n  return_type_source: String\n  fresh_name: String\n}\n\npub struct TransformError {\n  message: String\n}\n\npub fn error(message: String) -> TransformError {\n  TransformError::{\n    message: message\n  }\n}\n"
+}

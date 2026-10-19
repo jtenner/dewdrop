@@ -1,0 +1,14 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+transform fn answer(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  @ast.FnNode::{
+    name: node.name
+    body: @ast.integer(42i32)
+  }
+}
+
+#answer
+pub fn main() -> I32 {
+  0i32
+}

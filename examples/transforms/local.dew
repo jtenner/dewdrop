@@ -1,0 +1,18 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+fn answer_value() -> I32 {
+  21i32 + 21i32
+}
+
+transform fn answer(
+  node: @ast.FnNode,
+  ctx: @transform.TransformContext,
+) -> Result<@ast.FnNode, @transform.TransformError> {
+  Result::Ok(@ast.with_body(node, @ast.integer(answer_value())))
+}
+
+#answer
+pub fn main() -> I32 {
+  0i32
+}

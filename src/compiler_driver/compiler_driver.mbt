@@ -108,6 +108,11 @@ pub fn compile_manifest_uncached(
   standard_sources : @semantic.StandardLibrarySources,
   options : CompilerPipelineOptions,
 ) -> Result[CompilerCompilation, CompilerCompilationError] {
+  let manifest = match
+    compiler_expand_transforms(manifest, standard_sources, options) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   let program = @semantic.collect_program_manifest_with_standard_sources(
     options.module_id_base,
     manifest,
@@ -154,6 +159,11 @@ pub fn compile_manifest(
   ),
   pack~ : @standard_loader.CompilationCachePack? = None,
 ) -> Result[CompilerCompilation, CompilerCompilationError] {
+  let manifest = match
+    compiler_expand_transforms(manifest, loaded.sources, options) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   let prepared = match
     @standard_loader.prepare_program_parse_event_cache(
       manifest,

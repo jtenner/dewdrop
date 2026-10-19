@@ -128,6 +128,8 @@ Dewdrop currently includes, among other things:
 - Deterministic WAT snapshots and Wasm execution tests.
 - File-aware deterministic diagnostics with line/column positions, excerpts, carets, and related-location labels.
 
+Compile-time function transforms are available. Write a `transform fn`, apply it with `#name` or `#@module.name`, and call ordinary Dew helpers inside the compiler interpreter. See [the guide and runnable examples](docs/compile-time-transforms.md).
+
 Not every familiar language feature exists yet. General `#annotation(...)` metadata, a Dew source formatter, TOML/YAML, HTTP, broader secret-key cryptography, and several broader tooling/library milestones remain planned. Postfix `derive(Eq)`, `derive(Debug)`, `derive(Hash)`, and `derive(Show)` are implemented, as are explicit `Show`, `Disposable`, `defer`, `using`, growable arrays, collection iterators, iterator combinators, allocation-free Bloom filters, scalar math policies, portable byte I/O abstractions, strict JSON, standard testing helpers, and generated WebAssembly intrinsic parity. Consult the roadmap for the current boundary.
 
 ## How a Dew program runs

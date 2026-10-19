@@ -1,0 +1,52 @@
+pub struct CtTypeName {
+  module_index: U32
+  name: String
+  key: String
+}
+
+fn ct_imported_type_name(machine: CtMachine, mi: U32, name: String) -> Option<String> {
+  for binding in machine.plan.type_names {
+    if !ct_charge(machine, 0u32) {
+      return None
+    }
+    if binding.module_index == mi && binding.name == name {
+      return Some(binding.key)
+    }
+  }
+  None
+}
+
+fn ct_collect_type_names(plan: CtPlan, frozen: SelfHostFrozenSignatureProgram) -> Unit {
+  let mut mi = 0u32
+  for source in frozen.collected.modules.values {
+    let scope = frozen.import_scopes.at(mi)
+    for binding in scope.declarations {
+      if binding.source_kind is StructDecl || binding.source_kind is EnumDecl {
+        let owner = self_host_semantic_id_module(binding.declaration)
+        let mut oi = 0u32
+        for module_ in frozen.collected.modules.values {
+          if module_.module_id == owner {
+            match module_.declaration_reference(binding.declaration) {
+              Some(TopLevel(declaration)) => {
+                let name = module_.name(declaration.name)
+                match scope.lookup_type(name) {
+                  Some(selected) if selected.declaration == binding.declaration => {
+                    plan.type_names.push({
+                      module_index: mi
+                      name: name
+                      key: plan.manifest.modules[oi].path.concat("::").concat(name)
+                    })
+                  }
+                  _ => {}
+                }
+              }
+              _ => {}
+            }
+          }
+          oi = oi + 1u32
+        }
+      }
+    }
+    mi = mi + 1u32
+  }
+}

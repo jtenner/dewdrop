@@ -13,7 +13,10 @@ fn compile_swar_parity(source : Bytes) -> Bytes {
     ]),
   ])
   let loaded = match
-    @standard_loader.load_default_for_manifest_with_fingerprint(manifest, true) {
+    @standard_loader.load_default_for_manifest_with_fingerprint(
+      @compiler_driver.transform_loading_manifest(manifest),
+      true,
+    ) {
     Ok(loaded) => loaded
     Err(error) => abort(error)
   }

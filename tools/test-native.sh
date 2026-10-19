@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 # every test in the pinned Starshine source module. Keep each measured package
 # lane below the compiler activity limit instead of hiding one slow aggregate.
 source tools/self-host-common.sh
-read -r -a packages <<< "${DEW_NATIVE_TEST_PACKAGES:-tokenizer parser standard_sources semantic backend standard_loader compiler_driver}"
+read -r -a packages <<< "${DEW_NATIVE_TEST_PACKAGES:-tokenizer parser standard_sources transforms semantic backend standard_loader compiler_driver}"
 test_status=0
 for package in "${packages[@]}"; do
   targets=("src/$package")

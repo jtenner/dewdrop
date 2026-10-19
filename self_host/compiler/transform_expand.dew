@@ -1,0 +1,429 @@
+fn ct_quote(value: String) -> String {
+  let out = BytesBuilder::new()
+  out.append_byte(34u8)
+  let _ = while 0u32 {
+    i if i < value.byte_length() => {
+      let byte = value.byte_at(i)
+      if byte == 10u8 {
+        out.append(b"\\n")
+      } else if byte == 13u8 {
+        out.append(b"\\r")
+      } else if byte == 9u8 {
+        out.append(b"\\t")
+      } else if byte == 34u8 {
+        out.append(b"\\\"")
+      } else if byte == 92u8 {
+        out.append(b"\\\\")
+      } else {
+        out.append_byte(byte)
+      }
+      continue i + 1u32
+    }
+
+    _ => break ()
+  }
+  out.append_byte(34u8)
+  out.finish().to_string()
+}
+
+fn ct_identifier(name: String) -> Bool {
+  let tokens = self_host_tokenize(name.as_bytes())
+  if tokens.length() != 1u32 {
+    return false
+  }
+  match tokens[0u32].kind {
+    Identifier(value, _) => value == name
+    _ => false
+  }
+}
+
+fn ct_render(machine: CtMachine, value: CtValue, depth: U32) -> String {
+  if !ct_charge(machine, 32u32) {
+    return ""
+  }
+  if depth >= 128u32 {
+    let _ = ct_fail(machine, "generated syntax depth limit exceeded")
+    return ""
+  }
+  let result = ct_render_inner(machine, value, depth)
+  let _ = ct_charge(machine, result.byte_length())
+  if result.byte_length() > 1048576u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  result
+}
+
+fn ct_render_list(machine: CtMachine, values: Array<CtValue>, separator: String, depth: U32) -> String {
+  let out = StringBuilder::new()
+  let mut first = true
+  for value in values {
+    if !first {
+      out.append(separator)
+    }
+    first = false
+    out.append(ct_render(machine, value, depth))
+    if machine.error.byte_length() != 0u32 {
+      return ""
+    }
+  }
+  out.finish()
+}
+
+fn ct_render_inner(machine: CtMachine, value: CtValue, depth: U32) -> String {
+  match value {
+    Variant(key, args) => {
+      if key == "dewdrop.ast::ExprNode::Source" && args.length() == 1u32 {
+        return ct_string(machine, args[0u32])
+      }
+      if key == "dewdrop.ast::ExprNode::Integer" && args.length() == 1u32 {
+        match args[0u32] {
+          Number(number, kind) if kind == "I32" => {
+            let out = StringBuilder::new()
+            out.append_i64(ct_signed(number, kind))
+            out.append("i32")
+            return out.finish()
+          }
+          _ => {
+          }
+        }
+      }
+      if key == "dewdrop.ast::ExprNode::Boolean" && args.length() == 1u32 {
+        return if ct_truth(machine, args[0u32]) {
+          "true"
+        } else {
+          "false"
+        }
+      }
+      if key == "dewdrop.ast::ExprNode::Text" && args.length() == 1u32 {
+        return ct_quote(ct_string(machine, args[0u32]))
+      }
+      if key == "dewdrop.ast::ExprNode::Name" && args.length() == 1u32 {
+        let name = ct_string(machine, args[0u32])
+        if !ct_identifier(name) {
+          let _ = ct_fail(machine, "invalid generated identifier")
+          return ""
+        }
+        return name
+      }
+      if key == "dewdrop.ast::ExprNode::Call" && args.length() == 2u32 {
+        match args[1u32] {
+          Sequence(values) => return "(".concat(ct_render(machine, args[0u32], depth + 1u32)).concat(")(").concat(ct_render_list(machine, values, ", ", depth + 1u32)).concat(")")
+          _ => {
+          }
+        }
+      }
+      if key == "dewdrop.ast::ExprNode::Block" && args.length() == 1u32 {
+        match args[0u32] {
+          Sequence(values) => return "match () {\n_ => {\n".concat(ct_render_list(machine, values, "\n", depth + 1u32)).concat("\n}\n}")
+          _ => {
+          }
+        }
+      }
+      if key == "dewdrop.ast::ExprNode::Bind" && args.length() == 2u32 {
+        let name = ct_string(machine, args[0u32])
+        if !ct_identifier(name) {
+          let _ = ct_fail(machine, "invalid generated binding name")
+          return ""
+        }
+        return "let ".concat(name).concat(" = ").concat(ct_render(machine, args[1u32], depth + 1u32))
+      }
+      if key == "dewdrop.ast::ExprNode::Return" && args.length() == 1u32 {
+        return "return ".concat(ct_render(machine, args[0u32], depth + 1u32))
+      }
+      if key == "dewdrop.ast::ExprNode::If" && args.length() == 3u32 {
+        return "if ".concat(ct_render(machine, args[0u32], depth + 1u32)).concat(" {\n").concat(ct_render(machine, args[1u32], depth + 1u32)).concat("\n} else {\n").concat(ct_render(machine, args[2u32], depth + 1u32)).concat("\n}")
+      }
+      if key == "dewdrop.ast::ExprNode::Binary" && args.length() == 3u32 {
+        let op = ct_string(machine, args[0u32])
+        let mut allowed = false
+        for candidate in ["+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=", "&&", "||", "&", "|", "^", "<<", ">>"] {
+          if op == candidate {
+            allowed = true
+          }
+        }
+        if !allowed {
+          let _ = ct_fail(machine, "invalid generated binary operator")
+          return ""
+        }
+        return "(".concat(ct_render(machine, args[1u32], depth + 1u32)).concat(") ").concat(op).concat(" (").concat(ct_render(machine, args[2u32], depth + 1u32)).concat(")")
+      }
+    }
+    _ => {
+    }
+  }
+  let _ = ct_fail(machine, "invalid generated syntax node payload")
+  ""
+}
+
+fn ct_annotation_key(machine: CtMachine, mi: U32, name: String) -> String {
+  if name.starts_with("@") {
+    let mut dot = 0u32
+    let _ = while 1u32 {
+      i if i < name.byte_length() => {
+        if name.byte_at(i) == 46u8 {
+          dot = i
+          break ()
+        }
+        continue i + 1u32
+      }
+
+      _ => break ()
+    }
+    if dot == 0u32 {
+      let _ = ct_fail(machine, "expected #@alias.transform_name")
+      return ""
+    }
+    return ct_resolve(machine, mi, name.slice(dot + 1u32, name.byte_length()), Some(name.slice(1u32, dot)))
+  }
+  ct_resolve(machine, mi, name, None)
+}
+
+fn ct_is_annotated(file: CtFile, function: CtFunction) -> Bool {
+  for annotation in file.annotations {
+    if annotation.target >= function.start && annotation.target < function.declaration.name_offset {
+      return true
+    }
+  }
+  false
+}
+
+fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
+  let fn_ = function.declaration
+  let mut node = CtValue::Record("dewdrop.ast::FnNode", [
+      ct_binding("name", CtValue::Text(fn_.name)),
+      ct_binding("body", CtValue::Variant("dewdrop.ast::ExprNode::Source", [CtValue::Text("match () {\n_ => ".concat(ct_part(file.clean, fn_.body.offset, function.end)).concat("\n}"))])),
+  ])
+  for annotation in file.annotations {
+    if annotation.target >= function.start && annotation.target < fn_.name_offset {
+      machine.steps = 100000u32
+      machine.allocated = 0u32
+      let key = ct_annotation_key(machine, file.module_index, annotation.name)
+      let mut is_transform = false
+      for source in machine.plan.files {
+        for candidate in source.functions {
+          if !ct_charge(machine, 16u32) {
+            return ""
+          }
+          if candidate.transform_ && key == machine.plan.manifest.modules[source.module_index].path.concat("::").concat(candidate.declaration.name) {
+            is_transform = true
+          }
+        }
+      }
+      if !is_transform {
+        let _ = ct_fail(machine, "annotation must name a transform fn")
+        return ""
+      }
+      let mut line = 1u64
+      let mut column = 1u64
+      let _ = while 0u32 {
+        i if i < annotation.offset => {
+          if file.original.source.byte_at(i) == 10u8 {
+            line = line + 1u64
+            column = 1u64
+          } else {
+            column = column + 1u64
+          }
+          continue i + 1u32
+        }
+
+        _ => break ()
+      }
+      let fresh_builder = StringBuilder::new()
+      fresh_builder.append("__dew_transform_")
+      fresh_builder.append_u32(annotation.offset)
+      let mut fresh = fresh_builder.finish()
+      let _ = while 0u32 {
+        _ => {
+          let mut collision = false
+          for source in machine.plan.files {
+            if source.module_index == file.module_index {
+              if !ct_charge(machine, 16u32) {
+                return ""
+              }
+              if source.original.source.to_string().contains(fresh) {
+                collision = true
+              }
+            }
+          }
+          if !collision {
+            break ()
+          }
+          fresh = fresh.concat("_")
+          continue 0u32
+        }
+      }
+      let context = CtValue::Record("dewdrop.transform::TransformContext", [
+          ct_binding("location", CtValue::Record("dewdrop.transform::SourceLocation", [
+                ct_binding("file_name", CtValue::Text(file.original.path)),
+                ct_binding("line_no", CtValue::Number(line, "U32")),
+                ct_binding("col_no", CtValue::Number(column, "U32")),
+          ])),
+          ct_binding("fn_name", CtValue::Text(fn_.name)),
+          ct_binding("module_name", CtValue::Text(machine.plan.manifest.modules[file.module_index].path)),
+          ct_binding("parameters_source", CtValue::Text(ct_parameter_source(file.clean, fn_))),
+          ct_binding("return_type_source", CtValue::Text(ct_part(file.clean, fn_.return_type.offset(), fn_.body.offset))),
+          ct_binding("fresh_name", CtValue::Text(fresh)),
+      ])
+      let value = ct_call(machine, key, [node, context])
+      node = match value {
+        Variant(result_key, args) if result_key == "dew.std.result::Result::Ok" && args.length() == 1u32 => args[0u32]
+        Variant(result_key, args) if result_key == "dew.std.result::Result::Err" && args.length() == 1u32 => ct_fail(machine, ct_string(machine, ct_field(machine, args[0u32], "message")))
+        _ => value
+      }
+      if machine.error.byte_length() != 0u32 {
+        return ""
+      }
+      match node {
+        Record(type_, _) if type_ == "dewdrop.ast::FnNode" || type_ == "" => {
+        }
+        _ => {
+          let _ = ct_fail(machine, "transform must return FnNode or Result<FnNode, TransformError>")
+          return ""
+        }
+      }
+      if ct_string(machine, ct_field(machine, node, "name")) != fn_.name {
+        let _ = ct_fail(machine, "body transforms must preserve the function name")
+        return ""
+      }
+    }
+  }
+  let body = ct_render(machine, ct_field(machine, node, "body"), 0u32)
+  if machine.error.byte_length() != 0u32 {
+    return ""
+  }
+  let source = ct_part(file.clean, function.start, fn_.body.offset).concat("{\n").concat(body).concat("\n}")
+  if source.byte_length() > 1048576u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  let mut depth = 0u32
+  for token in self_host_tokenize(source.as_bytes()) {
+    let symbol = token.symbol_code
+    if symbol == 0u32 || symbol == 2u32 || symbol == 4u32 {
+      depth = depth + 1u32
+    } else if symbol == 1u32 || symbol == 3u32 || symbol == 5u32 {
+      if depth == 0u32 {
+        let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
+        return ""
+      }
+      depth = depth - 1u32
+    }
+    if depth > 128u32 {
+      let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
+      return ""
+    }
+  }
+  let events = self_host_parse_module(source.as_bytes()).events
+  let valid = if events.length() == 1u32 {
+    events[0u32] is Declaration(Function(_), _)
+  } else {
+    false
+  }
+  if !valid {
+    let _ = ct_fail(machine, "transform must produce one valid function body")
+    return ""
+  }
+  source
+}
+
+fn ct_expand(plan: CtPlan) -> Result<SelfHostProgramManifest, String> {
+  if plan.error.byte_length() != 0u32 {
+    return Err(plan.error)
+  }
+  if !plan.active {
+    return Ok(plan.manifest)
+  }
+  let machine = ct_machine(plan)
+  let modules = array_new::<SelfHostManifestModule>()
+  let mut mi = 0u32
+  for module_ in plan.manifest.modules {
+    let files = array_new::<SelfHostManifestFile>()
+    let generated = array_new::<SelfHostManifestFile>()
+    for file in plan.files {
+      if file.module_index == mi {
+        let out = BytesBuilder::new()
+        let mut cursor = 0u32
+        for function in file.functions {
+          if function.transform_ {
+            out.append(file.clean.slice(cursor, function.start))
+            out.append(ct_blank(file.clean, function.start, function.end))
+            cursor = function.end
+          } else if ct_is_annotated(file, function) {
+            out.append(file.clean.slice(cursor, function.start))
+            let replacement = ct_apply(machine, file, function)
+            out.append(ct_blank(file.clean, function.start, function.end))
+            let path_builder = StringBuilder::new()
+            path_builder.append(file.original.path)
+            path_builder.append("::transform[")
+            path_builder.append(function.declaration.name)
+            path_builder.append("@")
+            path_builder.append_u32(function.start)
+            path_builder.append("]")
+            let path = path_builder.finish()
+            for original in module_.files {
+              if original.path == path {
+                return Err("generated transform file path collision")
+              }
+            }
+            generated.push({
+                path: path
+                source: replacement.as_bytes()
+                test_only: file.original.test_only
+            })
+            if machine.error.byte_length() != 0u32 {
+              return Err(file.original.path.concat(": error: transform on ").concat(function.declaration.name).concat(": ").concat(machine.error))
+            }
+            cursor = function.end
+          }
+        }
+        out.append(file.clean.slice(cursor, file.clean.byte_length()))
+        files.push({
+            path: file.original.path
+            source: out.finish()
+            test_only: file.original.test_only
+        })
+      }
+    }
+    for file in generated {
+      files.push(file)
+    }
+    modules.push({
+        path: module_.path
+        files: files
+    })
+    mi = mi + 1u32
+  }
+  Ok({
+      modules: modules
+  })
+}
+
+fn ct_parameter_source(source: Bytes, function: SelfHostFunctionDeclaration) -> String {
+  let start = function.name_offset + function.name.byte_length()
+  let end = function.return_type.offset()
+  let mut angles = 0u32
+  let mut parentheses = 0u32
+  let mut begin = 4294967295u32
+  for token in self_host_tokenize(source.slice(start, end)) {
+    let symbol = token.symbol_code
+    if symbol == 29u32 && begin == 4294967295u32 {
+      angles = angles + 1u32
+    } else if symbol == 30u32 && begin == 4294967295u32 && angles > 0u32 {
+      angles = angles - 1u32
+    } else if symbol == 22u32 && begin == 4294967295u32 && angles > 1u32 {
+      angles = angles - 2u32
+    } else if symbol == 0u32 && angles == 0u32 {
+      if begin == 4294967295u32 {
+        begin = start + token.offset
+      }
+      parentheses = parentheses + 1u32
+    } else if symbol == 1u32 && begin != 4294967295u32 && parentheses > 0u32 {
+      parentheses = parentheses - 1u32
+      if parentheses == 0u32 {
+        return ct_part(source, begin, start + token.offset + 1u32)
+      }
+    }
+  }
+  ""
+}

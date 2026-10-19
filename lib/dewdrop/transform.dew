@@ -1,0 +1,24 @@
+pub struct SourceLocation {
+  file_name: String
+  line_no: U32
+  col_no: U32
+}
+
+pub struct TransformContext {
+  location: SourceLocation
+  fn_name: String
+  module_name: String
+  parameters_source: String
+  return_type_source: String
+  fresh_name: String
+}
+
+pub struct TransformError {
+  message: String
+}
+
+pub fn error(message: String) -> TransformError {
+  TransformError::{
+    message: message
+  }
+}

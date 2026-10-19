@@ -2136,3 +2136,23 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 - **Q-092 — Enum constructor accessibility:** Does exporting an enum automatically export all variant constructors, or can modules expose the type while restricting construction?
 - **Q-093 — Enum runtime representation:** How are tags, payload references, singleton unit variants, and recursive generic enums represented in WasmGC?
 - **Q-094 — Explicit generic qualification:** Qualified unit, tuple, and struct-like variant expressions now parse through `::`, calls, and construction. What syntax supplies explicit generic arguments without conflicting with comparison operators?
+
+## Source-defined function transforms
+
+A top-level `transform fn` declares a compile-time entry point. `pub transform fn`
+exports it. An annotation on its own line, `#name` or `#@alias.name`, applies the
+entry point to the following function. Stacked annotations run top to bottom.
+The entry has no receiver or type parameters. Its two parameters resolve to
+`dewdrop.ast.FnNode` and `dewdrop.transform.TransformContext`. Its result resolves
+to `FnNode` or `Result<FnNode, TransformError>`. Type aliases are permitted.
+
+The first implementation replaces function bodies and preserves the declared
+name, signature, visibility, and type parameters. The original body is supplied
+as `ExprNode::Source`. The interpreter can call ordinary source helpers, but
+cannot call host functions, builtins, or annotated target functions. Unsupported
+operations are errors. All generated code must form one function and pass normal
+semantic and backend checks. Transform entry declarations are removed after
+expansion. Source text does not undergo a second annotation pass.
+
+See [the transform guide](compile-time-transforms.md) for the API, supported
+operations, resource limits, diagnostic locations, and examples.

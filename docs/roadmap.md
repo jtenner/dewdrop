@@ -135,6 +135,10 @@ deferred until self-hosting.
 
 ## Compile-time annotations and derivation
 
+- [x] Add source-defined function body transforms with local/imported annotations, an in-process interpreter, checked entry signatures, bounded execution, and normal checking of generated code. See [the guide](compile-time-transforms.md).
+- [ ] Extend transform syntax access beyond function bodies and add more interpreted language operations.
+- [ ] Measure transform workloads before choosing a bytecode interpreter or result cache.
+
 - [ ] Define `#annotation(...)` syntax and its permitted compile-time constant values.
 - [ ] Define annotation name resolution, validation, retention, and frozen-interface serialization.
 - [ ] Expose frozen annotations to compiler features and tooling without ambient runtime reflection.

@@ -1,0 +1,94 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.string
+
+fn ct_signature_api_declaration(collected: SelfHostCollectedProgram, path: String, name: String) -> Option<U64> {
+  match collected.module_index(path) {
+    Some(index) => collected.modules.at(index).lookup_type(name)
+    None => None
+  }
+}
+
+fn ct_signature_nominal(module_: SelfHostPlannedModuleLowering, type_: U32, declaration: U64) -> Bool {
+  if type_ >= module_.resolved_types.types.length() {
+    return false
+  }
+  match module_.resolved_types.types[type_] {
+    NominalType(found) => found == declaration
+    _ => false
+  }
+}
+
+fn ct_signature_no_callable() -> Option<SelfHostPlannedCallable> {
+  None
+}
+
+fn ct_transform_signature_valid(collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering, mi: U32, name: String) -> Bool {
+  if mi >= lowering.modules.length() {
+    return false
+  }
+  let node = match ct_signature_api_declaration(collected, "dewdrop.ast", "FnNode") {
+    Some(value) => value
+    None => return false
+  }
+  let context = match ct_signature_api_declaration(collected, "dewdrop.transform", "TransformContext") {
+    Some(value) => value
+    None => return false
+  }
+  let error = match ct_signature_api_declaration(collected, "dewdrop.transform", "TransformError") {
+    Some(value) => value
+    None => return false
+  }
+  let module_ = lowering.modules[mi]
+  let mut selected = ct_signature_no_callable()
+  for callable in module_.functions.callables {
+    if callable.kind is PlannedFunctionCallable(_) && callable.name.to_string() == name {
+      if selected is Some(_) {
+        return false
+      }
+      selected = Some(callable)
+    }
+  }
+  let callable = match selected {
+    Some(value) => value
+    None => return false
+  }
+  if !(callable.kind is PlannedFunctionCallable(_)) || callable.has_receiver || callable.owner_generic_parameters.length != 0u32 || callable.generic_parameters.length != 0u32 || callable.parameters.length != 2u32 || !self_host_array_span_is_valid(callable.parameters.start, 2u32, module_.functions.parameters.length()) {
+    return false
+  }
+  if !ct_signature_nominal(module_, module_.functions.parameters[callable.parameters.start].type_, node) || !ct_signature_nominal(module_, module_.functions.parameters[callable.parameters.start + 1u32].type_, context) {
+    return false
+  }
+  if ct_signature_nominal(module_, callable.result_type, node) {
+    return true
+  }
+  if callable.result_type >= module_.resolved_types.types.length() {
+    return false
+  }
+  let result = match ct_signature_api_declaration(collected, "dew.std.result", "Result") {
+    Some(value) => value
+    None => return false
+  }
+  match module_.resolved_types.types[callable.result_type] {
+    AppliedType(base, arguments) => {
+      if arguments.length != 2u32 || !self_host_array_span_is_valid(arguments.start, 2u32, module_.resolved_types.type_arguments.length()) || !ct_signature_nominal(module_, base, result) {
+        return false
+      }
+      ct_signature_nominal(module_, module_.resolved_types.type_arguments[arguments.start], node) && ct_signature_nominal(module_, module_.resolved_types.type_arguments[arguments.start + 1u32], error)
+    }
+    _ => false
+  }
+}
+
+fn ct_check_transform_signatures(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Bool {
+  for file in plan.files {
+    for function in file.functions {
+      if function.transform_ && !ct_transform_signature_valid(collected, lowering, file.module_index, function.declaration.name) {
+        plan.error = file.original.path.concat(": error: invalid transform signature for ").concat(function.declaration.name).concat("; expected fn(FnNode, TransformContext) -> FnNode or Result<FnNode, TransformError>")
+        return false
+      }
+    }
+  }
+  true
+}

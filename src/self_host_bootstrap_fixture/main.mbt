@@ -114,7 +114,7 @@ fn main {
   let args = @sys.get_cli_args()
   if args.length() < 7 {
     println(
-      "usage: self_host_bootstrap_fixture REQUEST PROVIDER FINGERPRINT_PREFIX OUTPUT ROOT_MODULE SOURCE...",
+      "usage: self_host_bootstrap_fixture REQUEST PROVIDER FINGERPRINT_PREFIX OUTPUT ROOT_MODULE SOURCE... [--module NAME SOURCE...]",
     )
     @sys.exit(2)
   }
@@ -147,8 +147,21 @@ fn main {
       append_standard_module(modules, name, path, source)
     }
   }
-  let root_files : Array[@compile_request.CompilerRequestFile] = []
-  for index in 6..<args.length() {
+  let mut root_files : Array[@compile_request.CompilerRequestFile] = []
+  let mut current_module = args[5]
+  let mut index = 6
+  while index < args.length() {
+    if args[index] == "--module" {
+      if index + 2 >= args.length() {
+        println("--module requires a name and at least one source file")
+        @sys.exit(2)
+      }
+      modules.push({ name: current_module, files: root_files, })
+      current_module = args[index + 1]
+      root_files = []
+      index += 2
+      continue
+    }
     let path = args[index]
     let source = @fs.read_file_to_bytes(path) catch {
       error => {
@@ -160,8 +173,9 @@ fn main {
       }
     }
     root_files.push({ logical_path: path, source, })
+    index += 1
   }
-  modules.push({ name: args[5], files: root_files, })
+  modules.push({ name: current_module, files: root_files, })
   let request : @compile_request.CompilerRequest = {
     command: @compile_request.CompilerBuild,
     output_kind: @compile_request.CompilerWasmOutput,

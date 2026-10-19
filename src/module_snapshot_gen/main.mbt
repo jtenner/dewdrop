@@ -84,7 +84,10 @@ fn main {
   }
   let manifest = @semantic.ProgramManifest::new(modules)
   let loaded = match
-    @standard_loader.load_default_for_manifest_with_fingerprint(manifest, true) {
+    @standard_loader.load_default_for_manifest_with_fingerprint(
+      @compiler_driver.transform_loading_manifest(manifest),
+      true,
+    ) {
     Ok(loaded) => loaded
     Err(error) => {
       snapshot_fail(error)

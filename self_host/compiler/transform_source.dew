@@ -1,0 +1,304 @@
+fn ct_has_syntax(source: Bytes) -> Bool {
+  let tokens = self_host_tokenize(source)
+  let mut previous = false
+  let mut depth = 0u32
+  for token in tokens {
+    match token.kind {
+      Error(UnexpectedUnit(35u32)) if depth == 0u32 => return true
+      Keyword(0u32, _) if previous && depth == 0u32 => return true
+      _ => {
+      }
+    }
+    if token.symbol_code == 2u32 {
+      depth = depth + 1u32
+    } else if token.symbol_code == 3u32 && depth > 0u32 {
+      depth = depth - 1u32
+    }
+    previous = match token.kind {
+      Identifier(name, _) => depth == 0u32 && name == "transform"
+      _ => false
+    }
+  }
+  false
+}
+
+fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> CtFile {
+  let tokens = self_host_tokenize(original.source)
+  let clean = BytesBuilder::new()
+  let annotations = array_new::<CtAnnotation>()
+  let pending = array_new::<CtAnnotation>()
+  let marks = array_new::<U32>()
+  let mut depth = 0u32
+  let mut cursor = 0u32
+  let mut i = 0u32
+  let _ = while 0u32 {
+    _ if i < tokens.length() => {
+      let token = tokens[i]
+      match token.kind {
+        Symbol(2u32, _) => {
+          depth = depth + 1u32
+        }
+        Symbol(3u32, _) => if depth > 0u32 {
+          depth = depth - 1u32
+        }
+        Error(UnexpectedUnit(35u32)) if depth == 0u32 => {
+          let start = token.offset
+          let mut before = start
+          let _ = while 0u32 {
+            _ if before > 0u32 => {
+              let unit = original.source.byte_at(before - 1u32)
+              if unit == 10u8 {
+                break 0u32
+              }
+              if unit != 32u8 && unit != 9u8 && unit != 13u8 {
+                plan.error = "a transform annotation must occupy its own line"
+                break 0u32
+              }
+              before = before - 1u32
+              continue 0u32
+            }
+            _ => break 0u32
+          }
+          i = i + 1u32
+          let mut name = ""
+          if i < tokens.length() {
+            match tokens[i].kind {
+              Identifier(value, _) => {
+                name = value
+              }
+              AtIdentifier(value, _, _) => {
+                name = "@".concat(value)
+              }
+              _ => {
+                plan.error = "expected a transform name after #"
+              }
+            }
+          } else {
+            plan.error = "unfinished transform annotation"
+          }
+          i = i + 1u32
+          if name.starts_with("@") {
+            if i + 1u32 < tokens.length() && tokens[i].symbol_code == 27u32 {
+              match tokens[i + 1u32].kind {
+                Identifier(member, _) => {
+                  name = name.concat(".").concat(member)
+                }
+                _ => {
+                  plan.error = "expected transform name after import alias"
+                }
+              }
+              i = i + 2u32
+            } else {
+              plan.error = "expected #@alias.transform_name"
+            }
+          }
+          if i < tokens.length() {
+            if !(tokens[i].kind is Newline) {
+              plan.error = "a transform annotation must occupy its own line"
+            }
+          }
+          let end = if i < tokens.length() {
+            tokens[i].offset
+          } else {
+            original.source.byte_length()
+          }
+          clean.append(original.source.slice(cursor, start))
+          clean.append(ct_blank(original.source, start, end))
+          cursor = end
+          pending.push({
+              name: name
+              offset: start
+              target: 0u32
+          })
+          continue 0u32
+        }
+        Identifier(name, _) if depth == 0u32 && name == "transform" => {
+          if i + 1u32 < tokens.length() && tokens[i + 1u32].keyword_code == 0u32 {
+            if pending.length() != 0u32 {
+              plan.error = "a transform cannot itself have a transform annotation"
+            }
+            marks.push(tokens[i + 1u32].offset)
+            clean.append(original.source.slice(cursor, token.offset))
+            clean.append(ct_blank(original.source, token.offset, token.offset + 9u32))
+            cursor = token.offset + 9u32
+          }
+        }
+        Keyword(0u32, _) if depth == 0u32 => {
+          for annotation in pending {
+            annotations.push({
+                name: annotation.name
+                offset: annotation.offset
+                target: token.offset
+            })
+          }
+          pending.clear()
+        }
+        Newline => {
+        }
+        Keyword(2u32, _) => {
+        }
+        _ if depth == 0u32 && pending.length() != 0u32 => {
+          plan.error = "transforms can only be applied to functions"
+        }
+        _ => {
+        }
+      }
+      i = i + 1u32
+      continue 0u32
+    }
+
+    _ => break ()
+  }
+  if pending.length() != 0u32 {
+    plan.error = "transform annotation has no function"
+  }
+  clean.append(original.source.slice(cursor, original.source.byte_length()))
+  let source = clean.finish()
+  let declarations = array_new::<SelfHostDeclaration>()
+  let functions = array_new::<CtFunction>()
+  let mut token_cursor = 0u32
+  if plan.error.byte_length() == 0u32 {
+    for event in self_host_parse_module(source).events {
+      match event {
+        Diagnostic(_, _, _, _, _, _) => {
+          plan.error = "invalid transform source"
+        }
+        Declaration(declaration, _) => {
+          declarations.push(declaration)
+          match declaration {
+            Function(function) => {
+              let mut nesting = 0u32
+              let mut end = function.body.offset
+              let _ = while token_cursor {
+                _ if token_cursor < tokens.length() => {
+                  let body_token = tokens[token_cursor]
+                  token_cursor = token_cursor + 1u32
+                  if body_token.offset >= function.body.offset {
+                    if body_token.symbol_code == 2u32 {
+                      nesting = nesting + 1u32
+                    } else if body_token.symbol_code == 3u32 && nesting > 0u32 {
+                      nesting = nesting - 1u32
+                      if nesting == 0u32 {
+                        end = body_token.offset + 1u32
+                        break ()
+                      }
+                    }
+                  }
+                  continue token_cursor
+                }
+                _ => break ()
+              }
+              let mut is_transform = false
+              for mark in marks {
+                if mark >= function.offset && mark < function.name_offset {
+                  is_transform = true
+                }
+              }
+              functions.push({
+                  declaration: function
+                  transform_: is_transform
+                  start: function.offset
+                  end: end
+              })
+            }
+            _ => {
+            }
+          }
+        }
+      }
+    }
+  }
+  {
+    module_index: module_index
+    original: original
+    clean: source
+    annotations: annotations
+    functions: functions
+    declarations: declarations
+  }
+}
+
+fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
+  let modules = array_new::<SelfHostManifestModule>()
+  let mut active = false
+  for module_ in manifest.modules {
+    modules.push(module_)
+    for file in module_.files {
+      if !active && ct_has_syntax(file.source) {
+        active = true
+      }
+    }
+  }
+  let plan = CtPlan::{
+    manifest: {
+      modules: modules
+    }
+    files: []
+    active: active
+    error: ""
+    validation_stop: "__dew_transform_validation_stop"
+    scalar_proofs: []
+    pattern_proofs: []
+    type_names: []
+  }
+  if !active {
+    return plan
+  }
+  for module_ in modules {
+    if module_.path == "dewdrop.ast" || module_.path == "dewdrop.transform" {
+      plan.error = "dewdrop.ast and dewdrop.transform are supplied by the compiler"
+      return plan
+    }
+    for file in module_.files {
+      if !file.source.is_valid_utf8() {
+        plan.error = file.path.concat(": error: compile-time transform sources must be valid UTF-8")
+        return plan
+      }
+    }
+  }
+  modules.push({
+      path: "dewdrop.ast"
+      files: [{
+          path: "lib/dewdrop/ast.dew"
+          source: ct_ast_source()
+          test_only: false
+      }]
+  })
+  modules.push({
+      path: "dewdrop.transform"
+      files: [{
+          path: "lib/dewdrop/transform.dew"
+          source: ct_transform_source()
+          test_only: false
+      }]
+  })
+  let _ = while 0u32 {
+    _ => {
+      let mut collision = false
+      for module_ in modules {
+        for file in module_.files {
+          if file.source.to_string().contains(plan.validation_stop) {
+            collision = true
+          }
+        }
+      }
+      if !collision {
+        break ()
+      }
+      plan.validation_stop = plan.validation_stop.concat("_")
+      continue 0u32
+    }
+  }
+  let mut mi = 0u32
+  for module_ in modules {
+    for file in module_.files {
+      plan.files.push(ct_scan(plan, mi, file))
+      if plan.error.byte_length() != 0u32 {
+        plan.error = file.path.concat(": error: ").concat(plan.error)
+        return plan
+      }
+    }
+    mi = mi + 1u32
+  }
+  plan
+}

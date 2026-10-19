@@ -1,0 +1,17 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+fn factor() -> I32 {
+  2i32
+}
+
+pub transform fn twice(
+  node: @ast.FnNode,
+  ctx: @transform.TransformContext,
+) -> @ast.FnNode {
+  @ast.with_body(node, @ast.ExprNode::Binary(
+    "*",
+    node.body,
+    @ast.integer(factor()),
+  ))
+}

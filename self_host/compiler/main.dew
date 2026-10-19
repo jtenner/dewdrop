@@ -239,9 +239,13 @@ fn self_host_compile_request_semantic_plan(
   if 31022548779538u64 == 31022548779539u64 {
     return Err("compile request U64 direct inequality contract failed")
   }
+  let transformed_manifest = match ct_expand_checked(request.manifest, request.default_preamble) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   let collected = self_host_collect_program_manifest(
     7200u64,
-    self_host_manifest_with_default_preamble(request.manifest, request.default_preamble),
+    self_host_manifest_with_default_preamble(transformed_manifest, request.default_preamble),
   )
   if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
     return Err("compile request manifest is invalid")

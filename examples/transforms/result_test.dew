@@ -1,0 +1,3 @@
+test "transformed function returns 42" {
+  assert(main() == 42i32, "compile-time transform result")
+}

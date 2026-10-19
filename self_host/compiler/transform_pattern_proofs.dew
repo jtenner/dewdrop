@@ -1,0 +1,148 @@
+open dew.std.array
+open dew.std.option
+open dew.std.string
+
+pub struct CtPatternProof {
+  module_index: U32
+  file_path: String
+  offset: U32
+  mut constructor: String
+}
+
+fn ct_pattern_variant_key(collected: SelfHostCollectedProgram, selected: U64) -> Option<String> {
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    if source.module_id == self_host_semantic_id_module(selected) {
+      for variant in source.variants {
+        if variant.id == selected {
+          match source.declaration_reference(variant.declaration) {
+            Some(TopLevel(owner)) => return Some(collected.module_paths[mi].concat("::").concat(source.name(owner.name)).concat("::").concat(source.name(variant.name)))
+            _ => return None
+          }
+        }
+      }
+    }
+    mi = mi + 1u32
+  }
+  None
+}
+
+fn ct_add_pattern_proof(plan: CtPlan, mi: U32, path: String, offset: U32, constructor: String) -> Unit {
+  for prior in plan.pattern_proofs {
+    if prior.module_index == mi && prior.file_path == path && prior.offset == offset {
+      if constructor.byte_length() != 0u32 {
+        prior.constructor = constructor
+      }
+      return
+    }
+  }
+  plan.pattern_proofs.push({
+    module_index: mi
+    file_path: path
+    offset: offset
+    constructor: constructor
+  })
+}
+
+fn ct_pattern_source_targets(source: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering) -> Array<SelfHostBasicPatternConstructor> {
+  let targets = array_new::<SelfHostBasicPatternConstructor>()
+  for expression in source.patterns {
+    let _ = expression
+    targets.push(ErrorBasicPatternConstructor)
+  }
+  for job in module_.inferred.jobs {
+    let span = match job.kind {
+      MergedBodyInferenceJob(body) => {
+        let index = self_host_semantic_id_local(body)
+        if index < source.bodies.length() {
+          source.bodies[index].patterns
+        } else {
+          {
+            start: 0u32
+            length: 0u32
+          }
+        }
+      }
+      MergedLambdaInferenceJob(lambda) => {
+        if lambda < source.lambdas.length() {
+          source.lambdas[lambda].body.patterns
+        } else {
+          {
+            start: 0u32
+            length: 0u32
+          }
+        }
+      }
+    }
+    let _ = while 0u32 {
+      relative if relative < span.length && relative < job.pattern_constructors.length => {
+        if span.start < targets.length() && relative < targets.length() - span.start && job.pattern_constructors.start < module_.inferred.pattern_constructors.length() && relative < module_.inferred.pattern_constructors.length() - job.pattern_constructors.start {
+          targets[span.start + relative] = module_.inferred.pattern_constructors[job.pattern_constructors.start + relative]
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  targets
+}
+
+
+fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
+  let _ = while 0u32 {
+    mi if mi < plan.manifest.modules.length() && mi < lowering.modules.length() => {
+      let source = collected.modules.at(mi)
+      let targets = ct_pattern_source_targets(source, lowering.modules[mi])
+      let _ = while 0u32 {
+        pi if pi < source.patterns.length() => {
+          let constructor = match targets[pi] {
+            NoBasicPatternConstructor => Some("")
+            SelectedBasicPatternConstructor(selected, _, _) => ct_pattern_variant_key(collected, selected)
+            _ => None
+          }
+          match constructor {
+            Some(key) => {
+              let offset = source.patterns[pi].offset()
+              let file_id = source.pattern_files[pi]
+              let _ = while 0u32 {
+                fi if fi < source.files.length() => {
+                  if source.files[fi] == file_id {
+                    for file in plan.files {
+                      if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                        match ct_scalar_original_offset(file, offset, 0u32) {
+                          Some(original) => ct_add_pattern_proof(plan, mi, file.original.path, original, key)
+                          None => {}
+                        }
+                      }
+                    }
+                    break ()
+                  }
+                  continue fi + 1u32
+                }
+                _ => break ()
+              }
+            }
+            None => {}
+          }
+          continue pi + 1u32
+        }
+        _ => break ()
+      }
+      continue mi + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn ct_checked_pattern_key(machine: CtMachine, mi: U32, offset: U32) -> String {
+  for proof in machine.plan.pattern_proofs {
+    if !ct_charge(machine, 0u32) {
+      return ""
+    }
+    if proof.module_index == mi && proof.file_path == machine.file_path && proof.offset == offset {
+      return proof.constructor
+    }
+  }
+  let _ = ct_fail(machine, "pattern has no checked compile-time constructor or binding proof")
+  ""
+}

@@ -524,3 +524,22 @@ Cross-cutting architecture decisions are indexed in
 [`decisions/README.md`](decisions/README.md). Research notes may contain the
 measurements behind a decision; the decision record states the accepted boundary
 and links to those notes.
+
+## Source transforms
+
+`src/transforms` scans transform markers, keeps original source offsets, and
+interprets checked Dew functions. `compiler_driver` validates helper bodies and
+entry signatures before execution. It supplies checked names, pattern constructors,
+and proofs for selected scalar operators from semantic inference. The interpreter rejects host calls and
+unsupported operations. It has work, depth, allocation-work, and output limits.
+
+Transform API modules are ordinary embedded Dew source from `lib/dewdrop`.
+`tools/generate_transform_sources.py` keeps native and Dew copies in sync. The
+standard loader includes their imports when it selects external standard files.
+Generated functions go in separate logical source files, then pass through the
+normal compiler. Unchanged source files retain their byte offsets and line numbers.
+
+The Dew compiler uses `self_host/compiler/transform_*.dew` before collection in
+its compile-request path. This interpreter runs within the existing compiler
+instance, including when the host is Wago. See [the user guide](compile-time-transforms.md)
+for the supported source subset.

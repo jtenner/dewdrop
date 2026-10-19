@@ -1,0 +1,65 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/compiler_driver"
+
+import {
+  "jtenner/dewdrop/backend",
+  "jtenner/dewdrop/core_linker",
+  "jtenner/dewdrop/semantic",
+  "jtenner/dewdrop/standard_loader",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn compile_manifest(@semantic.ProgramManifest, @standard_loader.StandardLibraryLoad, CompilerPipelineOptions, prior_parse_event_cache_status? : @standard_loader.ParseEventCacheStatus, pack? : @standard_loader.CompilationCachePack?) -> Result[CompilerCompilation, CompilerCompilationError]
+
+pub fn compile_manifest_uncached(@semantic.ProgramManifest, @semantic.StandardLibrarySources, CompilerPipelineOptions) -> Result[CompilerCompilation, CompilerCompilationError]
+
+pub fn transform_loading_manifest(@semantic.ProgramManifest) -> @semantic.ProgramManifest
+
+// Errors
+
+// Types and methods
+pub struct CompilerCompilation {
+  program : @semantic.CollectedProgram
+  analyzed : @semantic.AnalyzedProgramSemantics
+  lowering : @semantic.PlannedProgramLowering
+  link : @semantic.PlannedProgramWasmGCLink
+  cache_status : @standard_loader.InterfaceBundleCacheStatus
+  body_cache_status : @standard_loader.BodyInferenceCacheStatus
+  planning_cache_status : @standard_loader.PlanningCacheStatus
+  parse_event_cache_status : @standard_loader.ParseEventCacheStatus
+  cache_pack_status : String
+}
+pub fn CompilerCompilation::emit_binary(Self) -> Result[Bytes, @backend.StarshineProgramBinaryEmissionError]
+pub fn CompilerCompilation::emit_linked_binary(Self, Array[@core_linker.CoreWasmLibrary]) -> Result[Bytes, String]
+pub fn CompilerCompilation::has_errors(Self) -> Bool
+pub fn CompilerCompilation::source_diagnostics(Self) -> Array[@semantic.CompilerSourceDiagnostic]
+
+pub(all) enum CompilerCompilationError {
+  CompilerSourceError(String, Array[CompilerRenderedDiagnostic])
+  CompilerInfrastructureError(String)
+} derive(Eq, @debug.Debug)
+pub fn CompilerCompilationError::message(Self) -> String
+
+pub struct CompilerPipelineOptions {
+  module_id_base : UInt64
+  root_module_index : Int
+  default_preamble : Bool
+  planning_mode : CompilerPlanningMode
+} derive(Eq, @debug.Debug)
+pub fn CompilerPipelineOptions::production(UInt64, Int, Bool) -> Self
+pub fn CompilerPipelineOptions::test_mode(UInt64, Int, Bool) -> Self
+
+pub enum CompilerPlanningMode {
+  CompilerProductionPlanning
+  CompilerTestPlanning
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CompilerRenderedDiagnostic {
+  severity : @semantic.CompilerDiagnosticSeverity
+  text : String
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

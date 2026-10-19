@@ -1,0 +1,6 @@
+import example.tools as @tools
+
+#@tools.twice
+pub fn main() -> I32 {
+  21i32
+}

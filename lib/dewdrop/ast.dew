@@ -1,0 +1,39 @@
+open dew.std.array
+
+pub enum ExprNode {
+  Source(String)
+  Integer(I32)
+  Boolean(Bool)
+  Text(String)
+  Name(String)
+  Call(ExprNode, Array<ExprNode>)
+  Binary(String, ExprNode, ExprNode)
+  Block(Array<ExprNode>)
+  Bind(String, ExprNode)
+  Return(ExprNode)
+  If(ExprNode, ExprNode, ExprNode)
+}
+
+pub struct FnNode {
+  name: String
+  body: ExprNode
+}
+
+pub fn with_body(node: FnNode, body: ExprNode) -> FnNode {
+  FnNode::{
+    name: node.name
+    body: body
+  }
+}
+
+pub fn integer(value: I32) -> ExprNode {
+  ExprNode::Integer(value)
+}
+
+pub fn source(value: String) -> ExprNode {
+  ExprNode::Source(value)
+}
+
+pub fn call(callee: ExprNode, arguments: Array<ExprNode>) -> ExprNode {
+  ExprNode::Call(callee, arguments)
+}
