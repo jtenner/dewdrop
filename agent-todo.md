@@ -463,7 +463,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   needing a type query; erased public exports keep their checked reference ABI.
   Selected product capture reads now reserve their shared reference scratch.
   See the [source-local log](docs/research/native-mutable-capture-source-shapes-2026-10-18.md).
-  Next, compare each concrete mutable source carrier with its capture carriers.
+  Native lambda emission now compares the source cell with every mutable
+  capture cell, including erased values and second aliases. Same-carrier small
+  integers remain valid. See the
+  [cell agreement log](docs/research/native-capture-cell-agreement-2026-10-18.md).
+  Next, validate capture-cell type lookups against their physical type and field
+  contracts, including wrong in-range lookup entries.
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.

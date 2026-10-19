@@ -73,3 +73,78 @@ fn starshine_check_capture_cell_shape(
     }),
   )
 }
+
+///|
+fn starshine_check_lambda_capture_cells(
+  lowering : @semantic.PlannedModuleLowering,
+  lambda : @semantic.LambdaId,
+  specialization : StarshineGenericSpecialization?,
+) -> Result[Unit, StarshineCodeEmissionError] {
+  // Capture metadata has already checked source owners and arena spans. Check
+  // every capture, rather than only the first alias of a mutable local.
+  let captures = lowering.lambdas[lambda].captures
+  for index in captures.start..<(captures.start + captures.length) {
+    let capture = lowering.captures[index]
+    let (body, local_index) = match capture.source {
+      @semantic.BodyLocalCapture(owner, id) => {
+        let body = lowering.bodies[@semantic.semantic_id_local(owner)]
+        (body, body.locals.start + id)
+      }
+      @semantic.LambdaLocalCapture(owner, id) => {
+        let source = lowering.lambdas[owner]
+        let body = lowering.bodies[@semantic.semantic_id_local(source.root_body)]
+        (body, source.locals.start + id)
+      }
+    }
+    let local_ = lowering.locals[local_index]
+    if !capture.mutable_ && !local_.mutable_ {
+      continue
+    }
+    let selected = starshine_specialized_shape(
+      lowering,
+      specialization,
+      local_.type_,
+      local_.shape,
+    )
+    match
+      starshine_check_capture_cell_shape(
+        lowering,
+        body,
+        local_index,
+        local_.shape,
+        selected,
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    // Emission selects these cells from the saved shapes. Compare physical
+    // slots: packed integers share I32, and products share the reference cell.
+    // Include erased slots so a missing cell cannot agree with a real cell.
+    let source_slot = if local_.mutable_ {
+      @semantic.wasmgc_capture_cell_slot(local_.shape)
+    } else {
+      -1
+    }
+    let capture_slot = if capture.mutable_ {
+      @semantic.wasmgc_capture_cell_slot(capture.shape)
+    } else {
+      -1
+    }
+    if source_slot != capture_slot {
+      return Err(
+        CompilerInvariantFailure({
+          code: 302U,
+          phase: 7U,
+          module_id: lowering.module_id,
+          declaration: body.declaration,
+          body: body.body,
+          expression: 0xffffffffU,
+          expected: source_slot.reinterpret_as_uint().to_uint64(),
+          actual: capture_slot.reinterpret_as_uint().to_uint64(),
+          detail: (2UL << 32) | index.to_uint64(),
+        }),
+      )
+    }
+  }
+  Ok(())
+}

@@ -1675,6 +1675,7 @@ pub struct PlannedCapture {
   nominal : UInt64
   offset : UInt64
 } derive(Eq, @debug.Debug)
+pub fn PlannedCapture::with_shape(Self, PlannedValueShape) -> Self
 
 pub struct PlannedExpression {
   type_ : Int

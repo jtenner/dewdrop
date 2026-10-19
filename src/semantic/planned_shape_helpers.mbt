@@ -15,3 +15,11 @@ pub fn PlannedLocal::with_shape(
 ) -> PlannedLocal {
   { ..self, shape, }
 }
+
+///|
+pub fn PlannedCapture::with_shape(
+  self : PlannedCapture,
+  shape : PlannedValueShape,
+) -> PlannedCapture {
+  { ..self, shape, }
+}

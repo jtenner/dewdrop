@@ -8483,6 +8483,13 @@ fn emit_starshine_lambda_body(
   } else {
     None
   }
+  match
+    starshine_check_lambda_capture_cells(
+      lowering, lambda, generic_specialization,
+    ) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
   let (
     local_indices,
     body_local_types,

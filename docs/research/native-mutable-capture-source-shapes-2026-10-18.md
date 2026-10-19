@@ -161,7 +161,6 @@ Review packets and reports are outside production source at
 `/tmp/dewdrop-mutable-capture-final-review`, and
 `/tmp/dewdrop-mutable-capture-final-review-2`.
 
-The next bounded check is agreement between a concrete source-local cell
-carrier and every mutable capture of that source. Two individually concrete
-shapes can still choose different physical cells. Compare storage carriers,
-since small integer shapes share a widened cell.
+The following change adds agreement between each source-local cell and every
+mutable capture of that source. See the
+[cell agreement log](native-capture-cell-agreement-2026-10-18.md).
