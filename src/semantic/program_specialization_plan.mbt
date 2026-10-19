@@ -1097,8 +1097,8 @@ fn materialize_program_generic_specialization(
   match base.kind {
     PlannedWasmDefinedFunction(_) => ()
     PlannedWasmInlineBuiltinFunction(name)
-    | PlannedWasmOutlinedBuiltinFunction(name) if name == b"unsafe.bitcast" =>
-      ()
+    | PlannedWasmOutlinedBuiltinFunction(name) if name == b"unsafe.bitcast" ||
+      raw_wasm_builtin_signature(name) is Some(_) => ()
     PlannedWasmInlineHeapFunction(RawArrayGetInstruction(_))
     | PlannedWasmOutlinedHeapFunction(RawArrayGetInstruction(_)) => ()
     _ => return None
