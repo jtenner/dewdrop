@@ -467,8 +467,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   capture cell, including erased values and second aliases. Same-carrier small
   integers remain valid. See the
   [cell agreement log](docs/research/native-capture-cell-agreement-2026-10-18.md).
-  Next, validate capture-cell type lookups against their physical type and field
-  contracts, including wrong in-range lookup entries.
+  Native capture-cell type lookups now require the exact cell family, one
+  mutable value field, exact full-width storage, and one reverse mapping.
+  Program and module emission reject wrong in-range entries. See the
+  [cell lookup log](docs/research/capture-cell-type-lookups-2026-10-19.md).
+  Next, validate the common closure type lookup and its immutable entry field.
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.

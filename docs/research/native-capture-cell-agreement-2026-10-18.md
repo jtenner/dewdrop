@@ -175,7 +175,7 @@ These limits prevent stronger scaling, allocation, or speed claims.
 
 ## Next check
 
-Check each used capture-cell type lookup against its physical type and field
-contract. Bounds checks alone permit an in-range I64 lookup to select an I32
-cell. Require the expected cell kind and slot, one mutable value field, and
-the expected field storage.
+The [cell lookup change](capture-cell-type-lookups-2026-10-19.md) now checks
+each native lookup against its exact cell kind, slot, field, and storage.
+The next check is the common closure type lookup and its immutable entry
+field.

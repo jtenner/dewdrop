@@ -56,6 +56,10 @@ fn verify_module_physical_type_fragments(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
+  match verify_module_capture_cell_types(module_) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
   let physical = module_.physical_types
   let groups = module_.type_groups
   let seen = Array::make(physical.length(), false)

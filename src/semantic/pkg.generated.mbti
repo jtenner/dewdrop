@@ -221,6 +221,8 @@ pub fn validate_module_wasmgc_arenas(PlannedModuleWasmGCFragments) -> Result[Uni
 
 pub fn validate_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result[Unit, String]
 
+pub fn verify_module_capture_cell_types(PlannedModuleWasmGCFragments) -> Result[Unit, ProgramPhysicalTypeFailure]
+
 pub fn verify_program_physical_type_fragments(PlannedProgramWasmGCLink) -> Result[Unit, ProgramPhysicalTypeFailure]
 
 pub fn verify_program_source_function_fragments(PlannedProgramWasmGCLink) -> Result[Unit, ProgramFunctionLookupFailure]

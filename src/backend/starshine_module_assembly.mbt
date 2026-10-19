@@ -4,6 +4,23 @@ pub fn emit_starshine_code_section(
   planned : @semantic.PlannedModuleWasmGCFragments,
 ) -> Result[@lib.CodeSec, StarshineCodeEmissionError] {
   @semantic.assert_planned_capture_metadata(lowering, 7)
+  match @semantic.verify_module_capture_cell_types(planned) {
+    Ok(_) => ()
+    Err(failure) =>
+      return Err(
+        CompilerInvariantFailure({
+          code: failure.code.reinterpret_as_uint(),
+          phase: 7U,
+          module_id: failure.module_id,
+          declaration: failure.declaration,
+          body: failure.body,
+          expression: failure.expression,
+          expected: failure.expected,
+          actual: failure.actual,
+          detail: failure.detail,
+        }),
+      )
+  }
   let functions : Array[@lib.Func] = []
   for function_ in planned.functions {
     match function_.kind {
