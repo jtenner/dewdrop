@@ -205,6 +205,32 @@ fn main {
     Err(error) => {
       match error {
         @backend.StarshineProgramCodeError(
+          @backend.InvalidLocal(body_id, local_id)
+        ) =>
+          for module_ in compiled.lowering.modules {
+            for body in module_.bodies {
+              if body.body == body_id {
+                let name = match
+                  module_.functions.callable_of(body.declaration) {
+                  Some(callable) => @debug.to_string(callable.name)
+                  None => "<module value>"
+                }
+                println(
+                  "invalid local module=\{module_.module_id} declaration=\{body.declaration} body=\{body_id} local=\{local_id} callable=" +
+                  name,
+                )
+                if local_id >= 0 && local_id < body.locals.length {
+                  println(
+                    "invalid local plan=" +
+                    @debug.to_string(
+                      module_.locals[body.locals.start + local_id],
+                    ),
+                  )
+                }
+              }
+            }
+          }
+        @backend.StarshineProgramCodeError(
           @backend.UnsupportedExpression(body_id, expression)
         ) =>
           for module_ in compiled.lowering.modules {

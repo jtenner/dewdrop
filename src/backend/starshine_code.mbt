@@ -6908,7 +6908,10 @@ fn starshine_emit_body_instructions(
                     local_info.type_,
                     local_info.shape,
                   ) {
-                  @semantic.UnitPlannedValueShape => continue
+                  // The initializer has already emitted its control transfer.
+                  // Neither Unit nor Never carries a value to a local slot.
+                  @semantic.UnitPlannedValueShape
+                  | @semantic.NeverPlannedValueShape => continue
                   _ => ()
                 }
               }
