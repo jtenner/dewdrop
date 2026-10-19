@@ -66,7 +66,10 @@ fn intrinsic_kind(value : Value, kind : String) -> Value raise EvalError {
     storage.default_kind = kind.substring(start=6).to_string()
     value
   } else if kind == "Bool" {
-    Boolean(raw_bits(value) != 0UL)
+    // Bool uses the full Wasm i32 carrier. Keep raw instruction bits, while
+    // retaining the small canonical representation for ordinary Bool values.
+    let bits = raw_bits(value) & 4294967295UL
+    if bits <= 1UL { Boolean(bits == 1UL) } else { Number(bits, "Bool") }
   } else if ["I8", "U8", "I16", "U16", "I32", "U32", "I64", "U64"].contains(
       kind,
     ) {

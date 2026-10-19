@@ -189,8 +189,8 @@ fn ct_bc_expr(builder: CtBytecodeBuilder, expression: SelfHostExpr, env: Map<Str
         } else {
           10u32
         }, 0u32)
+        // Preserve the evaluated right operand's raw Bool bits.
         ct_bc_expr(builder, right, env, loop_)
-        let _ = ct_bc_emit(builder, 18u32, 0u32)
         ct_bc_patch(builder, done, builder.words.length())
       } else {
         let slot = ct_bc_save(builder)

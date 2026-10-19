@@ -181,6 +181,7 @@ fn ct_truth(machine: CtMachine, value: CtValue) -> Bool {
 
   match value {
     Boolean(value) => value
+    Number(bits, "Bool") => bits != 0u64
     DefaultValue => false
     _ => {
       let _ = ct_fail(machine, "expected Bool in transform")

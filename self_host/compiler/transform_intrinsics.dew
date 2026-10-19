@@ -68,7 +68,13 @@ fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtVa
     return CtValue::Empty
   }
   if kind == "Bool" {
-    return CtValue::Boolean(ct_raw_bits(machine, value) != 0u64)
+    // Bool has a full i32 carrier; only canonical 0/1 use Boolean.
+    let bits = ct_raw_bits(machine, value) & 4294967295u64
+    return if bits <= 1u64 {
+      CtValue::Boolean(bits == 1u64)
+    } else {
+      CtValue::Number(bits, "Bool")
+    }
   }
   for candidate in ["I8", "U8", "I16", "U16", "I32", "U32", "I64", "U64"] {
     if kind == candidate {

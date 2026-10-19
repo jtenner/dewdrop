@@ -327,8 +327,8 @@ fn BytecodeBuilder::expr(
       if op is @parser.LogicalAnd || op is @parser.LogicalOr {
         let _ = self.emit(18U, 0)
         let done = self.emit(if op is @parser.LogicalAnd { 9U } else { 10U }, 0)
+        // The evaluated right operand is the Wasm result, including raw Bool bits.
         self.expr(right, env, loop_)
-        let _ = self.emit(18U, 0)
         self.patch(done, self.words.length())
       } else {
         let slot = self.save()
@@ -565,6 +565,7 @@ fn Machine::scalar_prefix(
   match (op, value) {
     (@parser.LogicalNot, DefaultValue) => Boolean(true)
     (@parser.LogicalNot, Boolean(value)) => Boolean(!value)
+    (@parser.LogicalNot, Number(bits, "Bool")) => Boolean(bits == 0UL)
     (@parser.Negative, Number(bits, kind)) => normalized(0UL - bits, kind)
     (@parser.Positive, Number(_, _)) | (@parser.Positive, Floating(_, _)) =>
       value
@@ -623,7 +624,8 @@ fn Machine::run_bytecode_inner(
       4U => {
         let selected = code.binaries[arg]
         let left = slots[selected.left]
-        if selected.opcode is Some(opcode) &&
+        if !raw_bool_operator_body(selected.target, left, value) &&
+          selected.opcode is Some(opcode) &&
           (
             opcode == b"primitive" ||
             opcode == scalar_opcode(selected.operator, left)

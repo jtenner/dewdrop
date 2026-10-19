@@ -401,12 +401,23 @@ fn ct_scalar_expected_opcode(op: SelfHostBinaryOperator, value: CtValue) -> Byte
   prefix.concat(name).as_bytes()
 }
 
+// Canonical Bool truth tables cannot replace a selected source body on raw bits.
+fn ct_raw_bool_operator_body(target: Option<CtCallTarget>, left: CtValue, right: CtValue) -> Bool {
+  if !(left is Number(_, "Bool") || right is Number(_, "Bool")) {
+    return false
+  }
+  ct_unframe_option(target).target is Some(Source(_, _, _, _))
+}
+
 fn ct_scalar_binary(machine: CtMachine, mi: U32, offset: U32, op: SelfHostBinaryOperator, left: CtValue, right: CtValue) -> CtValue {
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return CtValue::Empty
   }
   if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
     return CtValue::Empty
+  }
+  if (left is Number(_, "Bool") || right is Number(_, "Bool")) && ct_raw_bool_operator_body(ct_lookup_call(machine, mi, offset), left, right) {
+    return ct_selected_operator(machine, mi, offset, [left, right])
   }
   match ct_lookup_scalar_operator(machine, mi, offset) {
     Some(opcode) if opcode.equals(b"primitive") || opcode.equals(ct_scalar_expected_opcode(op, left)) =>

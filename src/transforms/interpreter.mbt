@@ -80,6 +80,7 @@ fn eval_fail(message : String) -> Value raise EvalError {
 fn truth(value : Value) -> Bool raise EvalError {
   match value {
     Boolean(value) => value
+    Number(bits, "Bool") => bits != 0UL
     DefaultValue => false
     _ => raise Failed("expected Bool in transform")
   }
@@ -413,6 +414,12 @@ fn binary(op : Operation, left : Value, right : Value) -> Value raise EvalError 
         Divide | Remainder =>
           eval_fail("integer division by zero at compile time")
       }
+    (Boolean(a), Number(b, "Bool")) | (Number(b, "Bool"), Boolean(a)) =>
+      match op {
+        Equal => Boolean((if a { 1UL } else { 0UL }) == b)
+        NotEqual => Boolean((if a { 1UL } else { 0UL }) != b)
+        _ => eval_fail("unsupported Bool operator at compile time")
+      }
     (Boolean(a), Boolean(b)) =>
       match op {
         Equal => Boolean(a == b)
@@ -676,13 +683,17 @@ fn Machine::eval_inner(
         self.eval(mi, index, env),
       ])
     @parser.BinaryExpr(@parser.LogicalAnd, left, right, _) =>
-      Boolean(
-        truth(self.eval(mi, left, env)) && truth(self.eval(mi, right, env)),
-      )
+      if truth(self.eval(mi, left, env)) {
+        self.eval(mi, right, env)
+      } else {
+        Boolean(false)
+      }
     @parser.BinaryExpr(@parser.LogicalOr, left, right, _) =>
-      Boolean(
-        truth(self.eval(mi, left, env)) || truth(self.eval(mi, right, env)),
-      )
+      if truth(self.eval(mi, left, env)) {
+        Boolean(true)
+      } else {
+        self.eval(mi, right, env)
+      }
     @parser.BinaryExpr(op, left, right, offset) =>
       self.scalar_binary(
         mi,
@@ -945,6 +956,9 @@ fn equal(a : Value, b : Value) -> Bool raise EvalError {
       let b = float_double(Floating(b, other), other)
       a == b
     }
+    (Boolean(a), Number(bits, "Bool")) | (Number(bits, "Bool"), Boolean(a)) =>
+      (if a { 1UL } else { 0UL }) == bits
+    (Number(a, "Bool"), Number(b, "Bool")) => a == b
     (Number(a, k), Number(_, _)) =>
       match intrinsic_kind(b, k) {
         Number(bits, _) => a == bits

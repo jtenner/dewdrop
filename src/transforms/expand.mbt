@@ -133,8 +133,8 @@ fn Machine::render(
       self.render(target, depth + 1) + " = " + self.render(value, depth + 1)
     ("dewdrop.ast::ExprNode::Integer", [Number(n, "I32")]) =>
       signed(n, "I32").to_string() + "i32"
-    ("dewdrop.ast::ExprNode::Boolean", [Boolean(value)]) =>
-      if value {
+    ("dewdrop.ast::ExprNode::Boolean", [value]) =>
+      if truth(value) {
         "true"
       } else {
         "false"

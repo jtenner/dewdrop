@@ -61,6 +61,17 @@ fn scalar_opcode(op : @parser.BinaryOperator, value : Value) -> Bytes {
 }
 
 ///|
+// A truth-table proof covers canonical Bool values only. For raw Bool bits,
+// the checked source body remains authoritative (including raw forwarding).
+fn raw_bool_operator_body(target : CallTarget?, left : Value, right : Value) -> Bool {
+  if !(left is Number(_, "Bool") || right is Number(_, "Bool")) {
+    return false
+  }
+  let (target, _) = unframe_call(target)
+  target is Some(Source(_, _, _, _))
+}
+
+///|
 fn Machine::scalar_binary(
   self : Machine,
   mi : Int32,
@@ -69,7 +80,12 @@ fn Machine::scalar_binary(
   left : Value,
   right : Value,
 ) -> Value raise EvalError {
-  let proof = self.scalar_operator_proof((mi, self.file_index, offset.to_int()))
+  let site = (mi, self.file_index, offset.to_int())
+  if (left is Number(_, "Bool") || right is Number(_, "Bool")) &&
+    raw_bool_operator_body(self.call_proof(site), left, right) {
+    return self.selected_operator(mi, offset, [left, right])
+  }
+  let proof = self.scalar_operator_proof(site)
   guard proof is Some(opcode) &&
     (opcode == b"primitive" || opcode == scalar_opcode(op, left)) else {
     return self.selected_operator(mi, offset, [left, right])

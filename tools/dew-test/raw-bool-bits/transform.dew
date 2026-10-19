@@ -1,0 +1,362 @@
+open dew.std.wasm.intrinsics
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+builtin as_bool(value: I32) -> Bool = "unsafe.bitcast"
+builtin as_i32(value: Bool) -> I32 = "unsafe.bitcast"
+fn pass(value: Bool) -> Bool {
+  value
+}
+fn calc_and_right() -> I32 {
+  as_i32(true && as_bool(42i32))
+}
+fn calc_and_left() -> I32 {
+  as_i32(as_bool(42i32) && true)
+}
+fn calc_or_right() -> I32 {
+  as_i32(false || as_bool(42i32))
+}
+fn calc_or_left() -> I32 {
+  as_i32(as_bool(42i32) || false)
+}
+fn calc_not_value() -> I32 {
+  as_i32(!as_bool(42i32))
+}
+fn calc_eq_left() -> I32 {
+  as_i32(as_bool(42i32).eq(true))
+}
+fn calc_eq_right() -> I32 {
+  as_i32(true.eq(as_bool(42i32)))
+}
+fn calc_true_pattern() -> I32 {
+  match as_bool(42i32) {
+    true => 1i32
+    _ => 0i32
+  }
+}
+fn calc_ne_left() -> I32 {
+  as_i32(as_bool(42i32).ne(false))
+}
+fn calc_ne_right() -> I32 {
+  as_i32(false.ne(as_bool(42i32)))
+}
+fn calc_fn_identity() -> I32 {
+  as_i32(pass(as_bool(42i32)))
+}
+fn operator_mask() -> I32 {
+  let mut result = 0i32
+  if calc_and_right() == 42i32 {
+    result = result + 1i32
+  }
+  if calc_and_left() == 1i32 {
+    result = result + 2i32
+  }
+  if calc_or_right() == 42i32 {
+    result = result + 4i32
+  }
+  if calc_or_left() == 1i32 {
+    result = result + 8i32
+  }
+  if calc_not_value() == 0i32 {
+    result = result + 16i32
+  }
+  if calc_eq_left() == 1i32 {
+    result = result + 32i32
+  }
+  if calc_eq_right() == 42i32 {
+    result = result + 64i32
+  }
+  if calc_true_pattern() == 0i32 {
+    result = result + 128i32
+  }
+  if calc_ne_left() == 1i32 {
+    result = result + 256i32
+  }
+  if calc_ne_right() == 42i32 {
+    result = result + 512i32
+  }
+  if calc_fn_identity() == 42i32 {
+    result = result + 1024i32
+  }
+  result
+}
+
+builtin eq_bits(left: Bool, right: Bool) -> Bool = "i32.eq"
+builtin ne_bits(left: Bool, right: Bool) -> Bool = "i32.ne"
+fn calc_eq_both() -> I32 {
+  as_i32(as_bool(42i32).eq(as_bool(17i32)))
+}
+fn calc_ne_both() -> I32 {
+  as_i32(as_bool(42i32).ne(as_bool(17i32)))
+}
+fn calc_raw_eq() -> I32 {
+  as_i32(eq_bits(as_bool(42i32), as_bool(17i32)))
+}
+fn calc_raw_ne() -> I32 {
+  as_i32(ne_bits(as_bool(42i32), as_bool(17i32)))
+}
+builtin add_bits(left: I32, right: I32) -> Bool = "i32.add"
+builtin store_word(address: U32, value: I32) -> Unit = "i32.store"
+builtin load_bool(address: U32) -> Bool = "i32.load"
+struct Holder {
+  value: Bool
+}
+builtin read_holder(value: Holder) -> Bool = "struct.get 0"
+fn calc_cast() -> I32 {
+  as_i32(as_bool(42i32))
+}
+fn calc_raw_add() -> I32 {
+  as_i32(add_bits(20i32, 22i32))
+}
+fn calc_memory() -> I32 {
+  store_word(0u32, 42i32)
+  let value = load_bool(0u32)
+  store_word(4u32, as_i32(value))
+  as_i32(load_bool(4u32))
+}
+fn calc_storage() -> I32 {
+  let values = wasm_array_new_default::<Bool>(1u32)
+  wasm_array_set(values, 0u32, as_bool(42i32))
+  let record = Holder::{
+    value: wasm_array_get(values, 0u32)
+  }
+  let sequence = [read_holder(record)]
+  as_i32(pass(sequence[0u32]))
+}
+fn calc_canonical() -> I32 {
+  if as_i32(as_bool(0i32)) == 0i32 && as_i32(as_bool(1i32)) == 1i32 {
+    42i32
+  } else {
+    0i32
+  }
+}
+fn true_literal(value: Bool) -> I32 {
+  match value {
+    true => 1i32
+    _ => 0i32
+  }
+}
+fn false_literal(value: Bool) -> I32 {
+  match value {
+    false => 1i32
+    _ => 0i32
+  }
+}
+fn calc_literal_edges() -> I32 {
+  if true_literal(as_bool(0i32)) == 0i32 && true_literal(as_bool(1i32)) == 1i32 && true_literal(as_bool(-1i32)) == 0i32 && false_literal(as_bool(0i32)) == 1i32 && false_literal(as_bool(1i32)) == 0i32 && false_literal(as_bool(-1i32)) == 0i32 && as_i32(pass(as_bool(-1i32))) == -1i32 && !as_bool(0i32) && !!as_bool(-1i32) {
+    42i32
+  } else {
+    0i32
+  }
+}
+fn calc_short_circuit() -> I32 {
+  let mut calls = 0i32
+  let _ = false && if true {
+    calls = calls + 1i32
+    as_bool(42i32)
+  } else {
+    false
+  }
+  let _ = true || if true {
+    calls = calls + 1i32
+    as_bool(42i32)
+  } else {
+    false
+  }
+  let left = true && if true {
+    calls = calls + 1i32
+    as_bool(42i32)
+  } else {
+    false
+  }
+  let right = false || if true {
+    calls = calls + 1i32
+    as_bool(42i32)
+  } else {
+    false
+  }
+  if calls == 2i32 && as_i32(left) == 42i32 && as_i32(right) == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}
+fn compute() -> I32 {
+  if calc_eq_both() == 17i32 && calc_ne_both() == 0i32 && calc_raw_eq() == 0i32 && calc_raw_ne() == 1i32 && operator_mask() == 2047i32 && calc_cast() == 42i32 && calc_raw_add() == 42i32 && calc_memory() == 42i32 && calc_storage() == 42i32 && calc_canonical() == 42i32 && calc_literal_edges() == 42i32 && calc_short_circuit() == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}
+
+transform fn replace_and_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_and_right()))
+}
+transform fn replace_and_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_and_left()))
+}
+transform fn replace_or_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_or_right()))
+}
+transform fn replace_or_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_or_left()))
+}
+transform fn replace_not_value(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_not_value()))
+}
+transform fn replace_eq_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_eq_left()))
+}
+transform fn replace_eq_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_eq_right()))
+}
+transform fn replace_true_pattern(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_true_pattern()))
+}
+transform fn replace_ne_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_ne_left()))
+}
+transform fn replace_ne_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_ne_right()))
+}
+transform fn replace_fn_identity(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_fn_identity()))
+}
+transform fn replace_main(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(compute()))
+}
+#replace_and_right
+pub fn and_right() -> I32 {
+  0i32
+}
+#replace_and_left
+pub fn and_left() -> I32 {
+  0i32
+}
+#replace_or_right
+pub fn or_right() -> I32 {
+  0i32
+}
+#replace_or_left
+pub fn or_left() -> I32 {
+  0i32
+}
+#replace_not_value
+pub fn not_value() -> I32 {
+  0i32
+}
+#replace_eq_left
+pub fn eq_left() -> I32 {
+  0i32
+}
+#replace_eq_right
+pub fn eq_right() -> I32 {
+  0i32
+}
+#replace_true_pattern
+pub fn true_pattern() -> I32 {
+  0i32
+}
+#replace_ne_left
+pub fn ne_left() -> I32 {
+  0i32
+}
+#replace_ne_right
+pub fn ne_right() -> I32 {
+  0i32
+}
+#replace_fn_identity
+pub fn fn_identity() -> I32 {
+  0i32
+}
+#replace_main
+pub fn main() -> I32 {
+  0i32
+}
+
+transform fn replace_eq_both(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_eq_both()))
+}
+#replace_eq_both
+pub fn eq_both() -> I32 {
+  0i32
+}
+
+transform fn replace_ne_both(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_ne_both()))
+}
+#replace_ne_both
+pub fn ne_both() -> I32 {
+  0i32
+}
+
+transform fn replace_raw_eq(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_raw_eq()))
+}
+#replace_raw_eq
+pub fn raw_eq() -> I32 {
+  0i32
+}
+
+transform fn replace_raw_ne(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_raw_ne()))
+}
+#replace_raw_ne
+pub fn raw_ne() -> I32 {
+  0i32
+}
+
+transform fn replace_cast(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_cast()))
+}
+#replace_cast
+pub fn cast() -> I32 {
+  0i32
+}
+
+transform fn replace_raw_add(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_raw_add()))
+}
+#replace_raw_add
+pub fn raw_add() -> I32 {
+  0i32
+}
+
+transform fn replace_memory(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_memory()))
+}
+#replace_memory
+pub fn memory() -> I32 {
+  0i32
+}
+
+transform fn replace_storage(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_storage()))
+}
+#replace_storage
+pub fn storage() -> I32 {
+  0i32
+}
+
+transform fn replace_canonical(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_canonical()))
+}
+#replace_canonical
+pub fn canonical() -> I32 {
+  0i32
+}
+
+transform fn replace_literal_edges(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_literal_edges()))
+}
+#replace_literal_edges
+pub fn literal_edges() -> I32 {
+  0i32
+}
+
+transform fn replace_short_circuit(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(calc_short_circuit()))
+}
+#replace_short_circuit
+pub fn short_circuit() -> I32 {
+  0i32
+}

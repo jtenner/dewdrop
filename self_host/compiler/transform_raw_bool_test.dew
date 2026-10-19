@@ -1,0 +1,136 @@
+test "checked transform raw Bool bits, selected methods, storage and short circuit" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "raw_bool.dew"
+        source: b"open dew.std.wasm.intrinsics\nimport dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nbuiltin as_bool(value: I32) -> Bool = \"unsafe.bitcast\"\nbuiltin as_i32(value: Bool) -> I32 = \"unsafe.bitcast\"\nfn pass(value: Bool) -> Bool {\n  value\n}\nfn calc_and_right() -> I32 {\n  as_i32(true && as_bool(42i32))\n}\nfn calc_and_left() -> I32 {\n  as_i32(as_bool(42i32) && true)\n}\nfn calc_or_right() -> I32 {\n  as_i32(false || as_bool(42i32))\n}\nfn calc_or_left() -> I32 {\n  as_i32(as_bool(42i32) || false)\n}\nfn calc_not_value() -> I32 {\n  as_i32(!as_bool(42i32))\n}\nfn calc_eq_left() -> I32 {\n  as_i32(as_bool(42i32).eq(true))\n}\nfn calc_eq_right() -> I32 {\n  as_i32(true.eq(as_bool(42i32)))\n}\nfn calc_true_pattern() -> I32 {\n  match as_bool(42i32) {\n    true => 1i32\n    _ => 0i32\n  }\n}\nfn calc_ne_left() -> I32 {\n  as_i32(as_bool(42i32).ne(false))\n}\nfn calc_ne_right() -> I32 {\n  as_i32(false.ne(as_bool(42i32)))\n}\nfn calc_fn_identity() -> I32 {\n  as_i32(pass(as_bool(42i32)))\n}\nfn operator_mask() -> I32 {\n  let mut result = 0i32\n  if calc_and_right() == 42i32 {\n    result = result + 1i32\n  }\n  if calc_and_left() == 1i32 {\n    result = result + 2i32\n  }\n  if calc_or_right() == 42i32 {\n    result = result + 4i32\n  }\n  if calc_or_left() == 1i32 {\n    result = result + 8i32\n  }\n  if calc_not_value() == 0i32 {\n    result = result + 16i32\n  }\n  if calc_eq_left() == 1i32 {\n    result = result + 32i32\n  }\n  if calc_eq_right() == 42i32 {\n    result = result + 64i32\n  }\n  if calc_true_pattern() == 0i32 {\n    result = result + 128i32\n  }\n  if calc_ne_left() == 1i32 {\n    result = result + 256i32\n  }\n  if calc_ne_right() == 42i32 {\n    result = result + 512i32\n  }\n  if calc_fn_identity() == 42i32 {\n    result = result + 1024i32\n  }\n  result\n}\n\nbuiltin eq_bits(left: Bool, right: Bool) -> Bool = \"i32.eq\"\nbuiltin ne_bits(left: Bool, right: Bool) -> Bool = \"i32.ne\"\nfn calc_eq_both() -> I32 {\n  as_i32(as_bool(42i32).eq(as_bool(17i32)))\n}\nfn calc_ne_both() -> I32 {\n  as_i32(as_bool(42i32).ne(as_bool(17i32)))\n}\nfn calc_raw_eq() -> I32 {\n  as_i32(eq_bits(as_bool(42i32), as_bool(17i32)))\n}\nfn calc_raw_ne() -> I32 {\n  as_i32(ne_bits(as_bool(42i32), as_bool(17i32)))\n}\nbuiltin add_bits(left: I32, right: I32) -> Bool = \"i32.add\"\nbuiltin store_word(address: U32, value: I32) -> Unit = \"i32.store\"\nbuiltin load_bool(address: U32) -> Bool = \"i32.load\"\nstruct Holder {\n  value: Bool\n}\nbuiltin read_holder(value: Holder) -> Bool = \"struct.get 0\"\nfn calc_cast() -> I32 {\n  as_i32(as_bool(42i32))\n}\nfn calc_raw_add() -> I32 {\n  as_i32(add_bits(20i32, 22i32))\n}\nfn calc_memory() -> I32 {\n  store_word(0u32, 42i32)\n  let value = load_bool(0u32)\n  store_word(4u32, as_i32(value))\n  as_i32(load_bool(4u32))\n}\nfn calc_storage() -> I32 {\n  let values = wasm_array_new_default::<Bool>(1u32)\n  wasm_array_set(values, 0u32, as_bool(42i32))\n  let record = Holder::{\n    value: wasm_array_get(values, 0u32)\n  }\n  let sequence = [read_holder(record)]\n  as_i32(pass(sequence[0u32]))\n}\nfn calc_canonical() -> I32 {\n  if as_i32(as_bool(0i32)) == 0i32 && as_i32(as_bool(1i32)) == 1i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\nfn true_literal(value: Bool) -> I32 {\n  match value {\n    true => 1i32\n    _ => 0i32\n  }\n}\nfn false_literal(value: Bool) -> I32 {\n  match value {\n    false => 1i32\n    _ => 0i32\n  }\n}\nfn calc_literal_edges() -> I32 {\n  if true_literal(as_bool(0i32)) == 0i32 && true_literal(as_bool(1i32)) == 1i32 && true_literal(as_bool(-1i32)) == 0i32 && false_literal(as_bool(0i32)) == 1i32 && false_literal(as_bool(1i32)) == 0i32 && false_literal(as_bool(-1i32)) == 0i32 && as_i32(pass(as_bool(-1i32))) == -1i32 && !as_bool(0i32) && !!as_bool(-1i32) {\n    42i32\n  } else {\n    0i32\n  }\n}\nfn calc_short_circuit() -> I32 {\n  let mut calls = 0i32\n  let _ = false && if true {\n    calls = calls + 1i32\n    as_bool(42i32)\n  } else {\n    false\n  }\n  let _ = true || if true {\n    calls = calls + 1i32\n    as_bool(42i32)\n  } else {\n    false\n  }\n  let left = true && if true {\n    calls = calls + 1i32\n    as_bool(42i32)\n  } else {\n    false\n  }\n  let right = false || if true {\n    calls = calls + 1i32\n    as_bool(42i32)\n  } else {\n    false\n  }\n  if calls == 2i32 && as_i32(left) == 42i32 && as_i32(right) == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\nfn compute() -> I32 {\n  if calc_eq_both() == 17i32 && calc_ne_both() == 0i32 && calc_raw_eq() == 0i32 && calc_raw_ne() == 1i32 && operator_mask() == 2047i32 && calc_cast() == 42i32 && calc_raw_add() == 42i32 && calc_memory() == 42i32 && calc_storage() == 42i32 && calc_canonical() == 42i32 && calc_literal_edges() == 42i32 && calc_short_circuit() == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n\ntransform fn replace_and_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_and_right()))\n}\ntransform fn replace_and_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_and_left()))\n}\ntransform fn replace_or_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_or_right()))\n}\ntransform fn replace_or_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_or_left()))\n}\ntransform fn replace_not_value(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_not_value()))\n}\ntransform fn replace_eq_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_eq_left()))\n}\ntransform fn replace_eq_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_eq_right()))\n}\ntransform fn replace_true_pattern(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_true_pattern()))\n}\ntransform fn replace_ne_left(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_ne_left()))\n}\ntransform fn replace_ne_right(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_ne_right()))\n}\ntransform fn replace_fn_identity(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_fn_identity()))\n}\ntransform fn replace_main(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace_and_right\npub fn and_right() -> I32 {\n  0i32\n}\n#replace_and_left\npub fn and_left() -> I32 {\n  0i32\n}\n#replace_or_right\npub fn or_right() -> I32 {\n  0i32\n}\n#replace_or_left\npub fn or_left() -> I32 {\n  0i32\n}\n#replace_not_value\npub fn not_value() -> I32 {\n  0i32\n}\n#replace_eq_left\npub fn eq_left() -> I32 {\n  0i32\n}\n#replace_eq_right\npub fn eq_right() -> I32 {\n  0i32\n}\n#replace_true_pattern\npub fn true_pattern() -> I32 {\n  0i32\n}\n#replace_ne_left\npub fn ne_left() -> I32 {\n  0i32\n}\n#replace_ne_right\npub fn ne_right() -> I32 {\n  0i32\n}\n#replace_fn_identity\npub fn fn_identity() -> I32 {\n  0i32\n}\n#replace_main\npub fn main() -> I32 {\n  0i32\n}\n\ntransform fn replace_eq_both(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_eq_both()))\n}\n#replace_eq_both\npub fn eq_both() -> I32 {\n  0i32\n}\n\ntransform fn replace_ne_both(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_ne_both()))\n}\n#replace_ne_both\npub fn ne_both() -> I32 {\n  0i32\n}\n\ntransform fn replace_raw_eq(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_raw_eq()))\n}\n#replace_raw_eq\npub fn raw_eq() -> I32 {\n  0i32\n}\n\ntransform fn replace_raw_ne(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_raw_ne()))\n}\n#replace_raw_ne\npub fn raw_ne() -> I32 {\n  0i32\n}\n\ntransform fn replace_cast(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_cast()))\n}\n#replace_cast\npub fn cast() -> I32 {\n  0i32\n}\n\ntransform fn replace_raw_add(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_raw_add()))\n}\n#replace_raw_add\npub fn raw_add() -> I32 {\n  0i32\n}\n\ntransform fn replace_memory(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_memory()))\n}\n#replace_memory\npub fn memory() -> I32 {\n  0i32\n}\n\ntransform fn replace_storage(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_storage()))\n}\n#replace_storage\npub fn storage() -> I32 {\n  0i32\n}\n\ntransform fn replace_canonical(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_canonical()))\n}\n#replace_canonical\npub fn canonical() -> I32 {\n  0i32\n}\n\ntransform fn replace_literal_edges(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_literal_edges()))\n}\n#replace_literal_edges\npub fn literal_edges() -> I32 {\n  0i32\n}\n\ntransform fn replace_short_circuit(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(calc_short_circuit()))\n}\n#replace_short_circuit\npub fn short_circuit() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked transform raw Bool Boolean AST rendering" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "raw_bool.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nbuiltin as_bool(value: I32) -> Bool = \"unsafe.bitcast\"\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.boolean(as_bool(42i32)))\n}\n#replace\npub fn main() -> Bool {\n  false\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> Bool {\ntrue\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "checked raw Bool retains its i32 bits" {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> Bool {\n true\n}\n", true)
+  for bits in [0u64, 1u64, 42u64, 4294967295u64, 4294967296u64] {
+    let value = ct_intrinsic_result(machine, CtValue::Number(bits, "I32"), "Bool")
+    assert(ct_raw_bits(machine, value) == (bits & 4294967295u64), "raw Bool bits")
+    assert(ct_truth(machine, value) == ((bits & 4294967295u64) != 0u64), "raw Bool truth")
+    if bits <= 1u64 {
+      assert(value is Boolean(_), "canonical Bool keeps Boolean representation")
+    }
+  }
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "raw Bool literal patterns compare exact bits" {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> Bool {\n true\n}\n", true)
+  for bits in [0u64, 1u64, 42u64, 4294967295u64] {
+    let value = CtValue::Number(bits, "Bool")
+    assert(ct_literal_pattern_equal(machine, CtValue::Boolean(true), value) == (bits == 1u64), "true pattern")
+    assert(ct_literal_pattern_equal(machine, value, CtValue::Boolean(true)) == (bits == 1u64), "reversed true pattern")
+    assert(ct_literal_pattern_equal(machine, CtValue::Boolean(false), value) == (bits == 0u64), "false pattern")
+    assert(ct_literal_pattern_equal(machine, value, CtValue::Boolean(false)) == (bits == 0u64), "reversed false pattern")
+  }
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "raw Bool short circuit and not agree in tree and bytecode" {
+  for (expression, preserve, canonical) in [
+    ("true && value", true, 0u64),
+    ("false || value", true, 0u64),
+    ("value && true", false, 1u64),
+    ("value || false", false, 1u64),
+    ("!value", false, 0u64)
+  ] {
+    let source = "fn compute(value: Bool) -> Bool {\n ".concat(expression).concat("\n}\n").as_bytes()
+    let (tree, tree_fn) = ct_bc_test_machine(source, false)
+    let (machine, function) = ct_bc_test_machine(source, true)
+    assert(ct_compile_bytecode(machine, 0u32, function) is Some(_), "raw Bool case must use bytecode")
+    for bits in [0u64, 1u64, 42u64, 4294967295u64] {
+      let expected = if preserve {
+        bits
+      } else if bits == 0u64 {
+        if expression == "!value" {
+          1u64
+        } else {
+          0u64
+        }
+      } else {
+        canonical
+      }
+      let left = ct_source_call_frame(tree, 0u32, tree.file_path, tree_fn, [CtValue::Number(bits, "Bool")], "")
+      let right = ct_source_call_frame(machine, 0u32, machine.file_path, function, [CtValue::Number(bits, "Bool")], "")
+      assert(tree.error.byte_length() == 0u32, tree.error)
+      assert(machine.error.byte_length() == 0u32, machine.error)
+      assert(ct_raw_bits(tree, left) == expected && ct_raw_bits(machine, right) == expected, expression)
+      assert(machine.steps == tree.steps && machine.allocated == tree.allocated, "same work and allocation")
+      assert(machine.depth == 0u32 && tree.depth == 0u32, "caller depth restored")
+    }
+  }
+}
+
+test "Boolean AST rendering accepts checked raw Bool" {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> Bool {\n true\n}\n", true)
+  for bits in [0u64, 1u64, 42u64, 4294967295u64] {
+    let value = CtValue::Variant("dewdrop.ast::ExprNode::Boolean", [CtValue::Number(bits, "Bool")])
+    let expected = if bits == 0u64 {
+      "false"
+    } else {
+      "true"
+    }
+    assert(ct_render(machine, value, 0u32) == expected, "Boolean syntax denotes a canonical literal")
+  }
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  let _ = ct_render(machine, CtValue::Variant("dewdrop.ast::ExprNode::Boolean", [CtValue::Number(42u64, "I32")]), 0u32)
+  assert(machine.error == "expected Bool in transform", "unchecked integer cannot render as Bool")
+}
+
+test "raw Bool operator shortcut retains checked source body" {
+  let source = b"fn compute(value: Bool) -> Bool {\n true == value\n}\nfn checked_eq(left: Bool, right: Bool) -> Bool {\n if left {\n  right\n } else {\n  !right\n }\n}\n"
+  let (tree, tree_fn) = ct_bc_test_machine(source, false)
+  let (machine, function) = ct_bc_test_machine(source, true)
+  for selected in [tree, machine] {
+    let target = selected.plan.files[0u32].functions[1u32].declaration
+    for token in self_host_tokenize(source) {
+      selected.plan.calls.set(ct_site_key(selected.plan, 0u32, selected.file_path, token.offset), CtCallTarget::Source(0u32, selected.file_path, target, "Bool"))
+    }
+  }
+  assert(ct_compile_bytecode(machine, 0u32, function) is Some(_), "checked source fallback must run bytecode")
+  for bits in [0u64, 1u64, 42u64, 4294967295u64] {
+    let left = ct_source_call_frame(tree, 0u32, tree.file_path, tree_fn, [CtValue::Number(bits, "Bool")], "")
+    let right = ct_source_call_frame(machine, 0u32, machine.file_path, function, [CtValue::Number(bits, "Bool")], "")
+    assert(tree.error.byte_length() == 0u32, tree.error)
+    assert(machine.error.byte_length() == 0u32, machine.error)
+    assert(ct_raw_bits(tree, left) == bits && ct_raw_bits(machine, right) == bits, "selected body preserves right bits")
+    assert(tree.steps == machine.steps && tree.allocated == machine.allocated, "same source fallback accounting")
+  }
+}

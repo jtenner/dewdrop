@@ -172,6 +172,7 @@ fn ct_scalar_prefix(machine: CtMachine, op: SelfHostPrefixOperator, raw: CtValue
   match (op, value) {
     (LogicalNot, DefaultValue) => CtValue::Boolean(true)
     (LogicalNot, Boolean(value)) => CtValue::Boolean(!value)
+    (LogicalNot, Number(bits, "Bool")) => CtValue::Boolean(bits == 0u64)
     (Negative, Number(bits, kind)) => ct_number(0u64 - bits, kind)
     (Positive, Number(_, _)), (Positive, Floating(_, _)) => value
     (Negative, Floating(bits, kind)) => {
@@ -239,7 +240,7 @@ fn ct_run_bytecode_inner(machine: CtMachine, code: CtBytecodeFunction, arguments
           Some(opcode) => opcode.equals(b"primitive") || opcode.equals(ct_scalar_expected_opcode(selected.operator, left))
           None => false
         }
-        if primitive {
+        if primitive && !ct_raw_bool_operator_body(selected.target, left, value) {
           value = ct_binary(machine, selected.operator, left, value)
         } else {
           let target = ct_unframe_option(selected.target)
