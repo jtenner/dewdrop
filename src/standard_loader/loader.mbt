@@ -74,6 +74,7 @@ fn fingerprint_write_string(output : Buffer, value : String) -> Unit {
 fn load_paths_with_fingerprint(
   root : String,
   paths : Array[String],
+  follow_imports~ : Bool = true,
 ) -> Result[StandardLibraryLoad, String] {
   load_standard_source_closure(paths, fn(logical) {
     let physical = join_standard_path(root, logical)
@@ -84,13 +85,14 @@ fn load_paths_with_fingerprint(
         )
     }
     Ok(source)
-  })
+  }, follow_imports~)
 }
 
 ///|
 fn load_standard_source_closure(
   paths : Array[String],
   read : (String) -> Result[Bytes, String],
+  follow_imports~ : Bool = true,
 ) -> Result[StandardLibraryLoad, String] {
   let files : Array[@semantic.ManifestFile] = []
   let fingerprint = Buffer()
@@ -117,14 +119,16 @@ fn load_standard_source_closure(
     files.push(file)
     fingerprint_write_string(fingerprint, logical)
     fingerprint_write_bytes(fingerprint, source)
-    let dependency = @semantic.ProgramManifest::new([
-      @semantic.ManifestModule::new("dependency", [file]),
-    ])
-    for
-      child in @semantic.direct_standard_library_source_paths(dependency, false) {
-      if !seen.contains(child) {
-        seen[child] = true
-        work.push(child)
+    if follow_imports {
+      let dependency = @semantic.ProgramManifest::new([
+        @semantic.ManifestModule::new("dependency", [file]),
+      ])
+      for
+        child in @semantic.direct_standard_library_source_paths(dependency, false) {
+        if !seen.contains(child) {
+          seen[child] = true
+          work.push(child)
+        }
       }
     }
   }
@@ -177,10 +181,18 @@ pub fn load_for_manifest_with_fingerprint(
   root : String,
   manifest : @semantic.ProgramManifest,
   default_preamble : Bool,
+  include_all_sources~ : Bool = false,
 ) -> Result[StandardLibraryLoad, String] {
   load_paths_with_fingerprint(
     root,
-    @semantic.direct_standard_library_source_paths(manifest, default_preamble),
+    if include_all_sources {
+      @semantic.standard_library_source_paths()
+    } else {
+      @semantic.direct_standard_library_source_paths(manifest, default_preamble)
+    },
+    // The complete registry already contains every possible dependency path.
+    // Do not parse unused source files merely to rediscover those paths.
+    follow_imports=!include_all_sources,
   )
 }
 

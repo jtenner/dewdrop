@@ -536,13 +536,12 @@ fn main {
     }
   }
   let manifest = prepared_manifest.manifest
-  let loading_manifest = @compiler_driver.transform_loading_manifest(manifest)
   let loaded = if bootstrap_standard_library {
     @standard_loader.StandardLibraryLoad::bootstrap()
   } else {
     match
-      @standard_loader.load_for_manifest_with_fingerprint(
-        standard_root, loading_manifest, default_preamble,
+      @compiler_driver.load_compilation_standard_sources(
+        standard_root, manifest, default_preamble,
       ) {
       Ok(loaded) => loaded
       Err(error) => {

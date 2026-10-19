@@ -1,0 +1,179 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/standard_loader"
+
+import {
+  "jtenner/dewdrop/cache_binary",
+  "jtenner/dewdrop/semantic",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn analyze_program_semantics_with_body_cache(@semantic.CollectedProgram, @semantic.FrozenProgramInterfaces, pack? : CompilationCachePack?) -> Result[CachedProgramSemanticAnalysis, String]
+
+pub fn analyze_program_with_interface_bundle_cache(@semantic.CollectedProgram, StandardLibraryLoad, root_module_index? : Int, pack? : CompilationCachePack?) -> Result[CachedInterfaceBundleAnalysis, String]
+
+pub let cache_pack_body_family_kind : UInt
+
+pub let cache_pack_body_module_kind : UInt
+
+pub let cache_pack_check_kind : UInt
+
+pub let cache_pack_fragment_kind : UInt
+
+pub let cache_pack_hir_kind : UInt
+
+pub let cache_pack_interface_kind : UInt
+
+pub let cache_pack_layout_kind : UInt
+
+pub let cache_pack_lowering_kind : UInt
+
+pub let cache_pack_parse_event_kind : UInt
+
+pub let cache_pack_wasm_kind : UInt
+
+pub fn combine_planning_cache_status(PlanningCacheStatus, PlanningCacheStatus) -> PlanningCacheStatus
+
+pub fn load(String) -> Result[@semantic.StandardLibrarySources, String]
+
+pub fn load_default() -> Result[@semantic.StandardLibrarySources, String]
+
+pub fn load_default_for_manifest(@semantic.ProgramManifest, Bool) -> Result[@semantic.StandardLibrarySources, String]
+
+pub fn load_default_for_manifest_with_fingerprint(@semantic.ProgramManifest, Bool) -> Result[StandardLibraryLoad, String]
+
+pub fn load_for_manifest(String, @semantic.ProgramManifest, Bool) -> Result[@semantic.StandardLibrarySources, String]
+
+pub fn load_for_manifest_with_fingerprint(String, @semantic.ProgramManifest, Bool, include_all_sources? : Bool) -> Result[StandardLibraryLoad, String]
+
+pub fn lookup_interface_bundle(@semantic.CollectedProgram, InterfaceBundleCacheKey, InterfaceBundlePolicy, pack? : CompilationCachePack?) -> Result[InterfaceBundleCacheLookup, String]
+
+pub fn lookup_program_output_cache(CompilationCachePack, @semantic.ProgramManifest, Int, Bool, Int, Int, Array[String], Array[String], static_link_providers? : Array[String], static_link_modules? : Array[Bytes]) -> Result[Bytes?, String]
+
+pub fn open_compilation_cache_pack(@semantic.ProgramManifest, Int, Bool, Int) -> Result[CompilationCachePack, String]
+
+pub fn plan_program_lowering_with_cache(@semantic.CollectedProgram, @semantic.AnalyzedProgramSemantics, pack? : CompilationCachePack?) -> Result[CachedProgramLowering, String]
+
+pub fn plan_program_wasmgc_link_with_cache(@semantic.CollectedProgram, @semantic.AnalyzedProgramSemantics, @semantic.PlannedProgramLowering, Int, @semantic.WasmGCPlanningOptions, pack? : CompilationCachePack?) -> Result[CachedProgramWasmGCLink, String]
+
+pub fn prepare_manifest_parse_event_cache(@semantic.ProgramManifest, pack? : CompilationCachePack?) -> Result[PreparedParseEventManifest, String]
+
+pub fn prepare_program_parse_event_cache(@semantic.ProgramManifest, StandardLibraryLoad, Bool, prior_status? : ParseEventCacheStatus, pack? : CompilationCachePack?) -> Result[PreparedParseEventInputs, String]
+
+pub fn store_interface_bundle(@semantic.CollectedProgram, Array[@semantic.FrozenModuleInterface], InterfaceBundleCacheKey, InterfaceBundlePolicy, pack? : CompilationCachePack?) -> Result[Unit, String]
+
+pub fn store_program_output_cache(CompilationCachePack, @semantic.ProgramManifest, Int, Bool, Int, Int, Array[String], Array[String], Bytes, static_link_providers? : Array[String], static_link_modules? : Array[Bytes]) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+pub struct BodyInferenceCacheStatus {
+  enabled : Bool
+  hits : Int
+  misses : Int
+  family_enabled : Bool
+  family_hits : Int
+  family_misses : Int
+}
+pub fn BodyInferenceCacheStatus::disabled() -> Self
+pub fn BodyInferenceCacheStatus::label(Self) -> String
+
+pub struct CachedInterfaceBundleAnalysis {
+  analyzed : @semantic.AnalyzedProgramSemantics
+  status : InterfaceBundleCacheStatus
+  body_cache_status : BodyInferenceCacheStatus
+}
+
+pub struct CachedProgramLowering {
+  lowering : @semantic.PlannedProgramLowering
+  status : PlanningCacheStatus
+}
+
+pub struct CachedProgramSemanticAnalysis {
+  analyzed : @semantic.AnalyzedProgramSemantics
+  status : BodyInferenceCacheStatus
+}
+
+pub struct CachedProgramWasmGCLink {
+  link : @semantic.PlannedProgramWasmGCLink
+  status : PlanningCacheStatus
+}
+
+pub struct CompilationCachePack {
+  enabled : Bool
+  path : String
+  pack : @cache_binary.ArtifactPack
+  mut dirty : Bool
+  mut hits : Int
+  mut misses : Int
+  reads : Int
+}
+pub fn CompilationCachePack::commit(Self) -> Result[Unit, String]
+pub fn CompilationCachePack::lookup(Self, UInt, UInt, String, FixedArray[Byte], FixedArray[Byte]) -> Result[Bytes?, String]
+pub fn CompilationCachePack::status(Self) -> String
+pub fn CompilationCachePack::store(Self, UInt, UInt, UInt, UInt, String, FixedArray[Byte], FixedArray[Byte], Bytes) -> Result[Unit, String]
+
+pub struct InterfaceBundleCacheKey {
+  fingerprint : String
+}
+
+pub enum InterfaceBundleCacheLookup {
+  InterfaceBundleCacheDisabled
+  InterfaceBundleCacheMiss
+  InterfaceBundleCacheHit(Array[@semantic.FrozenModuleInterface?])
+}
+
+pub struct InterfaceBundleCacheStatus {
+  enabled : Bool
+  hits : Int
+  misses : Int
+}
+pub fn InterfaceBundleCacheStatus::disabled() -> Self
+pub fn InterfaceBundleCacheStatus::label(Self) -> String
+
+pub struct InterfaceBundlePolicy {
+  enabled : Bool
+  store_on_miss : Bool
+  root_module_index : Int
+  include_dependencies : Bool
+}
+pub fn InterfaceBundlePolicy::for_compilation(StandardLibraryLoad, Int) -> Self
+
+pub(all) enum ParseEventCacheStatus {
+  ParseEventCacheWasDisabled(Int)
+  ParseEventCacheWasUsed(Int, Int)
+} derive(Eq, @debug.Debug)
+pub fn ParseEventCacheStatus::label(Self) -> String
+
+pub struct PlanningCacheStatus {
+  enabled : Bool
+  layout_hits : Int
+  layout_misses : Int
+  fragment_hits : Int
+  fragment_misses : Int
+} derive(Eq, @debug.Debug)
+pub fn PlanningCacheStatus::disabled() -> Self
+pub fn PlanningCacheStatus::label(Self) -> String
+
+pub struct PreparedParseEventInputs {
+  manifest : @semantic.ProgramManifest
+  standard_sources : @semantic.StandardLibrarySources
+  status : ParseEventCacheStatus
+}
+
+pub struct PreparedParseEventManifest {
+  manifest : @semantic.ProgramManifest
+  status : ParseEventCacheStatus
+}
+
+pub struct StandardLibraryLoad {
+  sources : @semantic.StandardLibrarySources
+  fingerprint : String
+  dependency_fingerprint : String
+  cacheable : Bool
+}
+pub fn StandardLibraryLoad::bootstrap() -> Self
+
+// Type aliases
+
+// Traits
