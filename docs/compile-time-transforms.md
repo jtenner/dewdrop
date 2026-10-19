@@ -280,3 +280,15 @@ source function; it does not claim a separate origin for every inserted token.
 An editor can show these files directly. The command checks and runs transforms,
 then writes source before generated-code type checks or Wasm emission. This lets
 you inspect generated code that has a type error.
+
+## Native Wago check
+
+```sh
+mise exec wasm-tools@1.262.0 -- tools/test-transform-wago.sh .tmp/self-host-bootstrap/a/compiler.wasm
+```
+
+This checks a real transform request with a pinned native Wago host and the
+existing Facet bindings. The CI job uses a Linux x64 project runner with the
+`dewdrop` label. Native Wago currently takes about 116 seconds for the small
+request; this is an open host speed issue. See
+`docs/research/native-wago-transform-check-2026-10-19.md` for measured limits.
