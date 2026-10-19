@@ -1,0 +1,80 @@
+fn ct_render_declaration(machine: CtMachine, value: CtValue) -> String {
+  if !ct_charge(machine, 64u32) {
+    return ""
+  }
+  let mut key = ""
+  let mut source = ""
+  match value {
+    Variant(kind, values) if values.length() == 1u32 => {
+      key = kind
+      source = ct_string(machine, values[0u32])
+    }
+    _ => {
+      let _ = ct_fail(machine, "invalid generated declaration node")
+      return ""
+    }
+  }
+  if source.byte_length() > 1048576u32 || !ct_charge(machine, source.byte_length()) {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  let mut depth = 0u32
+  for token in self_host_tokenize(source.as_bytes()) {
+    let symbol = token.symbol_code
+    if symbol == 0u32 || symbol == 2u32 || symbol == 4u32 {
+      depth = depth + 1u32
+    } else if symbol == 1u32 || symbol == 3u32 || symbol == 5u32 {
+      if depth == 0u32 {
+        let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
+        return ""
+      }
+      depth = depth - 1u32
+    }
+    if depth > 128u32 {
+      let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
+      return ""
+    }
+  }
+  let events = self_host_parse_module(source.as_bytes()).events
+  let mut valid = false
+  if events.length() == 1u32 {
+    valid = match events[0u32] {
+      Declaration(Function(_), _) => key == "dewdrop.ast::DeclarationNode::Function"
+      Declaration(Struct(_), _) => key == "dewdrop.ast::DeclarationNode::Type"
+      Declaration(Enum(_), _) => key == "dewdrop.ast::DeclarationNode::Type"
+      Declaration(TypeAlias(_), _) => key == "dewdrop.ast::DeclarationNode::Type"
+      Declaration(Impl(_), _) => key == "dewdrop.ast::DeclarationNode::Implementation"
+      _ => false
+    }
+  }
+  if !valid {
+    let _ = ct_fail(machine, "expected one valid generated declaration of the requested kind")
+    return ""
+  }
+  source
+}
+
+fn ct_render_import(machine: CtMachine, value: CtValue) -> String {
+  let path = ct_string(machine, ct_field(machine, value, "module_path"))
+  let alias = ct_string(machine, ct_field(machine, value, "alias"))
+  if !ct_charge(machine, path.byte_length() + alias.byte_length()) {
+    return ""
+  }
+  let mut start = 0u32
+  let mut valid = ct_identifier(alias) && path.byte_length() != 0u32
+  let _ = while 0u32 {
+    i if i <= path.byte_length() => {
+      if i == path.byte_length() || path.as_bytes().byte_at(i) == 46u8 {
+        valid = valid && ct_identifier(path.as_bytes().slice(start, i).to_string())
+        start = i + 1u32
+      }
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  if !valid {
+    let _ = ct_fail(machine, "invalid generated import path or alias")
+    return ""
+  }
+  "import ".concat(path).concat(" as @").concat(alias).concat("\n")
+}

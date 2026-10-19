@@ -182,3 +182,14 @@ pub fn syntax_array<t>(values: WasmArray<t>, count: U32) -> Array<t> {
     limit: count
   }
 }
+
+pub enum DeclarationNode {
+  Function(String)
+  Type(String)
+  Implementation(String)
+}
+
+pub struct ImportNode {
+  module_path: String
+  alias: String
+}

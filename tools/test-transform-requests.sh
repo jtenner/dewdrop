@@ -6,7 +6,7 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info; do
+for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations; do
   args=("examples/transforms/$kind.dew")
   if [[ "$kind" == imported || "$kind" == imported_methods ]]; then
     args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)
@@ -169,7 +169,33 @@ pub fn main() -> I32 {
 }
 DEW
 
-for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field; do
+cat > "$work/declaration-kind.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  ctx.add_type("fn generated() -> I32 {\n 42i32\n}")
+  node
+}
+#wrong
+pub fn main() -> I32 {
+  42i32
+}
+DEW
+
+cat > "$work/import-alias.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  ctx.import_module("dew.std.option", "invalid.alias")
+  node
+}
+#wrong
+pub fn main() -> I32 {
+  42i32
+}
+DEW
+
+for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias; do
   expected='invalid transform signature'
   if [[ "$kind" == sibling-declaration ]]; then
     expected='transform must produce one valid function body'
@@ -181,6 +207,10 @@ for kind in bad-signature sibling-declaration host-call array-bounds array-budge
     expected='allocation limit exceeded'
   elif [[ "$kind" == invalid-field ]]; then
     expected='invalid generated field name'
+  elif [[ "$kind" == declaration-kind ]]; then
+    expected='expected one valid generated declaration'
+  elif [[ "$kind" == import-alias ]]; then
+    expected='invalid generated import'
   elif [[ "$kind" == float-default || "$kind" == float-cast || "$kind" == boxed-float || "$kind" == float-field ]]; then
     expected='unsupported scalar type'
   fi

@@ -296,6 +296,9 @@ fn ct_is_annotated(file: CtFile, function: CtFunction) -> Bool {
 
 fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
   let fn_ = function.declaration
+  let generated_imports = StringBuilder::new()
+  let generated_declarations = StringBuilder::new()
+  let mut generated_bytes = 0u32
   let mut node = CtValue::Record("dewdrop.ast::FnNode", [
   ct_binding("name", CtValue::Text(fn_.name)),
   ct_binding("body", CtValue::Variant("dewdrop.ast::ExprNode::Source", [CtValue::Text("match () {\n_ => ".concat(ct_part(file.clean, fn_.body.offset, function.end)).concat("\n}"))])),
@@ -372,6 +375,8 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       ct_binding("parameters_source", CtValue::Text(ct_parameter_source(file.clean, fn_))),
       ct_binding("return_type_source", CtValue::Text(ct_part(file.clean, fn_.return_type.offset(), fn_.body.offset))),
       ct_binding("fresh_name", CtValue::Text(fresh)),
+      ct_binding("declarations", ct_syntax_values(machine, [])),
+      ct_binding("imports", ct_syntax_values(machine, [])),
       ])
       let value = ct_call(machine, key, [node, context])
       node = match value {
@@ -393,6 +398,25 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       if ct_string(machine, ct_field(machine, node, "name")) != fn_.name {
         let _ = ct_fail(machine, "body transforms must preserve the function name")
         return ""
+      }
+      for item in ct_sequence_values(machine, ct_field(machine, context, "imports")) {
+        let rendered = ct_render_import(machine, item)
+        if rendered.byte_length() > 1048576u32 - generated_bytes {
+          let _ = ct_fail(machine, "generated source size limit exceeded")
+          return ""
+        }
+        generated_bytes = generated_bytes + rendered.byte_length()
+        generated_imports.append(rendered)
+      }
+      for item in ct_sequence_values(machine, ct_field(machine, context, "declarations")) {
+        let rendered = ct_render_declaration(machine, item)
+        if rendered.byte_length() >= 1048576u32 - generated_bytes {
+          let _ = ct_fail(machine, "generated source size limit exceeded")
+          return ""
+        }
+        generated_bytes = generated_bytes + rendered.byte_length() + 1u32
+        generated_declarations.append(rendered)
+        generated_declarations.append("\n")
       }
     }
   }
@@ -432,7 +456,17 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
     let _ = ct_fail(machine, "transform must produce one valid function body")
     return ""
   }
-  source
+  let imports = generated_imports.finish()
+  let declarations = generated_declarations.finish()
+  if imports.byte_length() == 0u32 && declarations.byte_length() == 0u32 {
+    return source
+  }
+  let output = imports.concat(source).concat("\n").concat(declarations)
+  if output.byte_length() > 1048576u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  output
 }
 
 fn ct_expand(plan: CtPlan) -> Result<SelfHostProgramManifest, String> {

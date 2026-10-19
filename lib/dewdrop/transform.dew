@@ -17,6 +17,8 @@ pub struct TransformContext {
   parameters_source: String
   return_type_source: String
   fresh_name: String
+  declarations: Array<@ast.DeclarationNode>
+  imports: Array<@ast.ImportNode>
 }
 
 pub struct TransformError {
@@ -26,5 +28,23 @@ pub struct TransformError {
 pub fn error(message: String) -> TransformError {
   TransformError::{
     message: message
+  }
+}
+
+impl TransformContext {
+  fn add_function(self, source: String) -> Unit {
+    self.declarations.push(@ast.DeclarationNode::Function(source))
+  }
+  fn add_type(self, source: String) -> Unit {
+    self.declarations.push(@ast.DeclarationNode::Type(source))
+  }
+  fn add_implementation(self, source: String) -> Unit {
+    self.declarations.push(@ast.DeclarationNode::Implementation(source))
+  }
+  fn import_module(self, module_path: String, alias: String) -> Unit {
+    self.imports.push(@ast.ImportNode::{
+      module_path: module_path
+      alias: alias
+    })
   }
 }

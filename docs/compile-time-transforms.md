@@ -61,8 +61,8 @@ reserved for that API. Their library functions use ordinary evaluation rules.
 
 `FnNode` has `name: String` and `body: ExprNode`. The current API transforms
 function bodies. The name, parameters, type parameters, return type, and visibility
-remain unchanged. It does not provide typed expression reflection or declaration
-generation.
+remain unchanged. It does not yet provide typed expression reflection.
+A transform can add declarations and imports through the context.
 
 `ExprNode` has these variants:
 
@@ -142,6 +142,23 @@ work. Runnable examples are in `examples/transforms/`:
 | `scalar_values.dew` | Checked values in generic records, options, and tuples |
 | `signature_info.dew` | Structured parameter names and source types |
 | `type_info.dew` | Generic bounds, tuple types, function types, applied types |
+| `declarations.dew` | Generated imports, types, functions, and implementations |
+
+## Add declarations and imports
+
+Use `ctx.add_function(source)`, `ctx.add_type(source)`, and
+`ctx.add_implementation(source)` to add one declaration of the requested kind.
+Types can be structs, enums, or aliases. Use `ctx.import_module(module_path,
+alias)` to add a named import to the generated file. Do not include `@` in the
+alias. A later transform in a stack can use declarations emitted by an earlier
+transform in its output. Execution still uses the original checked source set.
+
+The context stores these requests in `declarations` and `imports` arrays.
+Each declaration must parse as exactly one item of its requested kind. Names,
+visibility, types, duplicate definitions, and references pass the normal final
+compiler checks. Generated declarations cannot contain transform annotations.
+All emitted imports, declarations, and the target function share the existing
+1 MiB output limit. Raw body fragments must still produce only a function body.
 
 ## Context
 

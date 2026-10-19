@@ -1,0 +1,22 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+transform fn generate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  ctx.import_module("dew.std.option", "generated_option")
+  ctx.add_type("struct Generated {\n  value: I32\n}")
+  ctx.add_function("fn generated() -> Generated {\n  Generated::{\n    value: 42i32\n  }\n}")
+  ctx.add_implementation("impl Generated {\n  fn answer(self) -> I32 {\n    self.value\n  }\n}")
+  node.with_body(@ast.source("@generated_option.Option::Some(generated().answer())"))
+}
+
+#generate
+fn answer() -> Option<I32> {
+  None
+}
+
+pub fn main() -> I32 {
+  match answer() {
+    Some(value) => value
+    None => 0i32
+  }
+}

@@ -215,6 +215,9 @@ fn Machine::apply(
   file : ParsedFile,
 ) -> String raise EvalError {
   let fn_ = function.declaration
+  let generated_imports : Array[String] = []
+  let generated_declarations : Array[String] = []
+  let mut generated_bytes = 0
   let mut node = record("dewdrop.ast::FnNode", [
     ("name", Text(fn_.name)),
     (
@@ -294,6 +297,8 @@ fn Machine::apply(
       ("parameters_source", Text(parameters)),
       ("return_type_source", Text(return_type)),
       ("fresh_name", Text(fresh)),
+      ("declarations", self.syntax_values([])),
+      ("imports", self.syntax_values([])),
     ])
     let value = self.call(key, [node, context])
     node = match value {
@@ -310,6 +315,22 @@ fn Machine::apply(
     }
     guard string(field(node, "name")) == fn_.name else {
       raise Failed("body transforms must preserve the function name")
+    }
+    for item in self.sequence_values(field(context, "imports")) {
+      let rendered = self.render_import(item)
+      generated_bytes += bytes(rendered).length()
+      guard generated_bytes <= 1_048_576 else {
+        raise Failed("generated source size limit exceeded")
+      }
+      generated_imports.push(rendered)
+    }
+    for item in self.sequence_values(field(context, "declarations")) {
+      let rendered = self.render_declaration(item)
+      generated_bytes += bytes(rendered).length() + 1
+      guard generated_bytes <= 1_048_576 else {
+        raise Failed("generated source size limit exceeded")
+      }
+      generated_declarations.push(rendered)
     }
   }
   let body = self.render(field(node, "body"), 0)
@@ -341,7 +362,17 @@ fn Machine::apply(
     events[0] is @parser.Declaration(@parser.Function(_)) else {
     raise Failed("transform must produce one valid function body:\n" + source)
   }
-  source
+  if generated_imports.is_empty() && generated_declarations.is_empty() {
+    return source
+  }
+  let output = generated_imports.join("") +
+    source +
+    "\n" +
+    generated_declarations.join("\n")
+  guard bytes(output).length() <= 1_048_576 else {
+    raise Failed("generated source size limit exceeded")
+  }
+  output
 }
 
 ///|

@@ -116,6 +116,9 @@ claims about the current interpreter.
 - [x] Structured type nodes.
 - [x] Structured generic parameter names and bounds.
 - [x] UTF-8 string literal patterns.
+- [x] New function and type declarations from transforms.
+- [x] Generated implementations and methods.
+- [x] Transform imports in generated code.
 
 ## Safety, tools, and checks
 
@@ -148,11 +151,9 @@ These need a further language or execution design. They remain open.
 - [ ] Parsed expression trees for every original function body.
 - [ ] Typed expression reflection.
 - [ ] Signature changes and call-site repair.
-- [ ] New function and type declarations from transforms.
 - [ ] Syntax quotation and splicing.
 - [ ] Automatic name hygiene.
 - [ ] Transform arguments on annotations.
-- [ ] Transform imports in generated code.
 - [ ] Immutable module constants during interpretation.
 - [ ] Complete default/null reference behavior for raw arrays.
 - [ ] Generic trait evidence during interpretation.
