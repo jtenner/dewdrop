@@ -1,0 +1,61 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import dew.std.types as @types
+
+trait Answer {
+  fn answer(self) -> I32
+}
+struct Left {
+  value: I32
+}
+struct Right {
+  value: I32
+}
+struct Box<t> {
+  value: t
+}
+impl Answer for Left {
+  fn answer(self) -> I32 {
+    self.value + 1i32
+  }
+}
+impl Answer for Right {
+  fn answer(self) -> I32 {
+    self.value + 2i32
+  }
+}
+impl<t: Answer> Answer for Box<t> {
+  fn answer(self) -> I32 {
+    self.value.answer() + if @types.type_equal::<t, Left>() {
+      1i32
+    } else {
+      2i32
+    }
+  }
+}
+fn read<t: Answer>(value: t) -> I32 {
+  value.answer()
+}
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let left = Box::{
+    value: Left::{
+      value: 18i32
+    }
+  }
+  let right = Box::{
+    value: Right::{
+      value: 18i32
+    }
+  }
+  let a = read(left)
+  let b = read(right)
+  node.with_body(@ast.integer(if a == 20i32 && b == 22i32 {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

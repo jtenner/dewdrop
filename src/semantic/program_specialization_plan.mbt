@@ -1876,13 +1876,46 @@ fn materialize_program_expression_call(
           let target_generic_count = program_callable_generic_parameters(
               target_callable,
             ).length
-          if arguments.length < target_generic_count {
+          let owner_count = target_callable.owner_generic_parameters.length
+          let method_count = target_callable.generic_parameters.length
+          if arguments.length != owner_count {
             return
+          }
+          let (receiver, call_arguments) = match source.kind {
+            PlannedBoundDirectCall(_, _, receiver, _, arguments)
+            | PlannedBoundOperatorCall(_, _, _, receiver, _, arguments) =>
+              (receiver, arguments)
+            _ => abort("INV-001 bound call changed during specialization")
+          }
+          let required_owner = lowering.index
+            .declaration_owner(requirement)
+            .unwrap()
+          let required_callable = lowering.modules[required_owner].functions
+            .callable_of(requirement)
+            .unwrap()
+          let trait_count = required_callable.owner_generic_parameters.length
+          if call_arguments.length != trait_count + method_count {
+            return
+          }
+          guard program_specialization_span_is_valid(
+              call_arguments,
+              owner.call_type_arguments.length(),
+            ) &&
+            program_specialization_span_is_valid(
+              call_arguments,
+              owner.call_type_argument_shapes.length(),
+            ) else {
+            abort("ARN-101 checked bound method type arguments")
           }
           let request_evidence = match
             copy_program_evidence_prerequisites(fragments, root) {
             Some(value) => value
             None => return
+          }
+          if !append_program_bound_method_evidence(
+              owner, fragments, caller, expression, request_evidence,
+            ) {
+            return
           }
           let forwarded_runtime_evidence_parameters = match
             normalize_program_runtime_evidence_parameters(request_evidence) {
@@ -1895,12 +1928,37 @@ fn materialize_program_expression_call(
             }
           }
           let request_shapes : Array[PlannedValueShape] = []
-          for index in 0..<target_generic_count {
+          for index in 0..<owner_count {
             request_shapes.push(
               fragments.specialization_evidence_arguments[arguments.start +
               index],
             )
           }
+          for index in 0..<method_count {
+            let source_index = call_arguments.start + trait_count + index
+            let shape = match caller_callable {
+              Some(callable) =>
+                program_resolve_specialized_shape(
+                  owner,
+                  program_callable_generic_parameters(callable),
+                  fragments.specialization_shapes,
+                  caller.specialization_shapes,
+                  owner.call_type_arguments[source_index],
+                  owner.call_type_argument_shapes[source_index],
+                )
+              None => owner.call_type_argument_shapes[source_index]
+            }
+            request_shapes.push(shape)
+          }
+          let logical_types = compile_time_bound_method_arguments(
+            lowering,
+            owner,
+            caller.specialization_abi_key,
+            implementation,
+            requirement,
+            receiver,
+            call_arguments,
+          )
           if target_generic_count == 0 &&
             forwarded_runtime_evidence_parameters.length() > 0 {
             return
@@ -1917,6 +1975,7 @@ fn materialize_program_expression_call(
                 { start: 0, length: request_shapes.length(), },
                 request_evidence,
                 false,
+                logical_types~,
               ) {
               Some(value) => value
               None => return

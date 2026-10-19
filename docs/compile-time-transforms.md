@@ -228,10 +228,10 @@ application. Mutable module bindings remain unavailable. Initializer cycles,
 escaped control flow, and host calls produce errors.
 
 Unsupported operations produce errors when reached. These include host calls,
-mutable module bindings, unresolved generic trait dispatch, and vector instructions
+mutable module bindings, dynamic trait objects, and vector instructions
 that access linear memory. Scalar floats and standard text methods execute
 through checked Wasm operations and ordinary Dew source. Generic source helpers keep selected type instances and checked trait witnesses.
-Unsupported instance or dynamic trait dispatch still produces an error. All branches must pass
+Unsupported dynamic trait dispatch still produces an error. All branches must pass
 the normal source checks, including branches that execution does not reach.
 
 Each application has a 100,000-step work budget and an estimated allocation
@@ -484,7 +484,11 @@ Each selected generic helper has a separate execution frame. It keeps its
 checked call targets, result types, local scalar types, primitive operator
 proofs, and folded query results. A returned closure keeps the frame that built
 it. Two instances of one source helper cannot replace each other's proofs.
-Trait-bound calls use the normal compiler's selected implementation.
+Trait-bound calls use the normal compiler's selected implementation. Generic
+implementation methods retain implementation types, method types, and both sets
+of checked bound proofs. Parameters used only by the trait argument also keep
+their logical type. See `generic_trait_impl.dew`, `generic_trait_method_bounds.dew`,
+and `generic_trait_trait_arguments.dew`.
 
 A generic branch can require another check after its types are known. Transform
 setup rejects errors from that check before it runs source code. Newly selected

@@ -1,0 +1,61 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import dew.std.types as @types
+trait Mark {
+  fn mark(self) -> I32
+}
+impl Mark for U8 {
+  fn mark(self) -> I32 {
+    40i32
+  }
+}
+impl Mark for U64 {
+  fn mark(self) -> I32 {
+    2i32
+  }
+}
+trait Answer {
+  fn answer<u: Mark>(self, value: u) -> I32
+}
+struct Left {}
+struct Right {}
+struct Box<t> {
+  value: t
+}
+impl Answer for Left {
+  fn answer<u: Mark>(self, value: u) -> I32 {
+    value.mark()
+  }
+}
+impl Answer for Right {
+  fn answer<u: Mark>(self, value: u) -> I32 {
+    value.mark()
+  }
+}
+impl<t: Answer> Answer for Box<t> {
+  fn answer<u: Mark>(self, value: u) -> I32 {
+    let _ = @types.type_equal::<t, Left>()
+    let _ = @types.type_equal::<u, U8>()
+    self.value.answer(value)
+  }
+}
+fn read<t: Answer, u: Mark>(value: t, other: u) -> I32 {
+  value.answer(other)
+}
+fn compute() -> I32 {
+  let left = Box::{
+    value: Left::{}
+  }
+  let right = Box::{
+    value: Right::{}
+  }
+  read(left, 1u8) + read(right, 1u64)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(compute()))
+}
+#replace
+pub fn main() -> I32 {
+  0i32
+}

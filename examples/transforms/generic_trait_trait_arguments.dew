@@ -1,0 +1,30 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import dew.std.types as @types
+trait Answer<u> {
+  fn answer(self) -> I32
+}
+struct Marker {}
+impl<t> Answer<t> for Marker {
+  fn answer(self) -> I32 {
+    if @types.type_equal::<t, I32>() {
+      40i32
+    } else {
+      2i32
+    }
+  }
+}
+fn read<t: Answer<u>, u>(value: t) -> I32 {
+  value.answer()
+}
+fn compute() -> I32 {
+  read::<Marker, I32>(Marker::{}) + read::<Marker, I64>(Marker::{})
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(compute()))
+}
+#replace
+pub fn main() -> I32 {
+  0i32
+}
