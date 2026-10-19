@@ -1,0 +1,34 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+builtin to_i32(value: F64) -> I32 = "i32.trunc_f64_s"
+
+fn default_float<t>() -> Option<t> {
+  Some(wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32))
+}
+
+fn answer(value: F64) -> F64 {
+  wasm_f64_nearest(value) * 7.0f64
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let first = match default_float::<F64>() {
+    Some(value) => -value
+    None => 1.0f64
+  }
+  let zero = wasm_unsafe_bitcast::<F64, F64>(first)
+  let correct_zero = wasm_f64_to_bits(zero) == 9223372036854775808u64
+  let rounded = wasm_f32_nearest(2.5f32) == 2.0f32
+  let result = if correct_zero && rounded {
+    to_i32(answer(5.5f64))
+  } else {
+    0i32
+  }
+  node.with_body(@ast.integer(result))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

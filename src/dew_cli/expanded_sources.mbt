@@ -31,6 +31,7 @@ fn expanded_source_origin(
 fn render_expanded_sources(
   expanded : @semantic.ProgramManifest,
   original : @semantic.ProgramManifest,
+  reports : Array[@transforms.TransformReport],
 ) -> Bytes {
   let modules : Array[Json] = []
   for module_ in expanded.modules {
@@ -91,6 +92,15 @@ fn render_expanded_sources(
     Json::object({
       "version": Json::number(1.0),
       "modules": Json::array(modules),
+      "transform_reports": Json::array(reports.map(report => Json::object({
+        "module": Json::string(report.module_name),
+        "file": Json::string(report.file_name),
+        "function": Json::string(report.function_name),
+        "transform": Json::string(report.transform_name),
+        "offset": Json::number(report.offset.to_double()),
+        "work": Json::number(report.work.to_double()),
+        "allocation_work": Json::number(report.allocation_work.to_double()),
+      }))),
     }).stringify(indent=2),
   )
 }

@@ -17,6 +17,17 @@ fn self_host_compile_time_static_callee(module_: SelfHostPlannedModuleLowering, 
   if callee >= module_.expressions.length() {
     return false
   }
+  // Imported module aliases are static roots, even when their callee node has
+  // no runtime value. The checked call target supplies the query declaration.
+  match module_.expressions[callee].reference {
+    ImportedModuleNameReference(_) => return true
+    ImportedModuleValueNameReference(target) if target == declaration => return true
+    _ => {}
+  }
+  let root = module_.expressions[callee].member_base
+  if root < module_.expressions.length() && module_.expressions[root].reference is ImportedModuleNameReference(_) {
+    return true
+  }
   match module_.expressions[callee].kind {
     PlannedFunctionReference(target) => target == declaration
     PlannedModuleValueGet(target) => {
@@ -325,13 +336,17 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
   let _ = while 0u32 {
     offset => if offset < owned.length() {
       let index = owned[offset]
-      let source = module_.expressions[index]
+      let source = self_host_normalize_static_assert_callee(lowering, module_, module_.expressions[index])
+      module_.expressions[index] = source
       match self_host_program_specialization_call_recipe(source) {
         Some(recipe) => match lowering.compile_time.targets.get(recipe.target) {
           Some(name) => if name != b"types.static_assert" {
             match self_host_fold_compile_time_call(lowering, module_, source, name, bindings, body.declaration) {
               Ok(value) => match value {
                 Some(replacement) => {
+                  if specialization == 4294967295u32 {
+                    self_host_save_query_constant(lowering, module_, index, replacement.kind)
+                  }
                   module_.expressions[index] = replacement
                 }
                 None => errors.set(index, "CT-004 type query remains unresolved in a concrete instance")
@@ -436,6 +451,9 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
               Some(name) => if name == b"types.static_assert" {
                 match self_host_fold_compile_time_assertion(module_, source, bindings) {
                   Ok(replacement) => {
+                    if specialization == 4294967295u32 {
+                      self_host_save_query_constant(lowering, module_, index, replacement.kind)
+                    }
                     module_.expressions[index] = replacement
                   }
                   Err(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
@@ -499,5 +517,38 @@ fn self_host_fold_program_compile_time_queries(lowering: SelfHostPlannedProgramL
     }
     lowering.modules[module_index] = self_host_compile_time_initialization(lowering, module_index, module_)
     module_index = module_index + 1u32
+  }
+}
+
+// Preserve original validated results before branch pruning replaces their nodes.
+fn self_host_save_query_constant(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, expression: U32, kind: SelfHostPlannedExpressionKind) -> Unit {
+  let sites = match lowering.compile_time.query_constants.get(module_.module_id) {
+    Some(value) => value
+    None => {
+      let value = map_empty::<U32, SelfHostPlannedExpressionKind>()
+      lowering.compile_time.query_constants.set(module_.module_id, value)
+      value
+    }
+  }
+  sites.set(expression, kind)
+}
+
+// The callee of a proved static assertion has no runtime value. Record that
+// before branch pruning removes its namespace selector nodes.
+fn self_host_normalize_static_assert_callee(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression) -> SelfHostPlannedExpression {
+  let recipe = match self_host_program_specialization_call_recipe(source) {
+    Some(value) => value
+    None => return source
+  }
+  match lowering.compile_time.targets.get(recipe.target) {
+    Some(name) if name.equals(b"types.static_assert") => {}
+    _ => return source
+  }
+  match source.kind {
+    PlannedDirectCall(target, receiver, arguments, types) if self_host_compile_time_static_callee(module_, receiver, target) =>
+      self_host_compile_time_replace_kind(source, PlannedDirectCall(target, 4294967295u32, arguments, types))
+    PlannedBuiltinCall(name, target, receiver, arguments, types) if self_host_compile_time_static_callee(module_, receiver, target) =>
+      self_host_compile_time_replace_kind(source, PlannedBuiltinCall(name, target, 4294967295u32, arguments, types))
+    _ => source
   }
 }

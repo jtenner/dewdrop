@@ -1,0 +1,134 @@
+fn ct_render_quote(machine: CtMachine, parts_value: CtValue, splices_value: CtValue, depth: U32) -> String {
+  let parts = ct_sequence_values(machine, parts_value)
+  let splices = ct_sequence_values(machine, splices_value)
+  if parts.length() != splices.length() + 1u32 {
+    let _ = ct_fail(machine, "quote needs one more text part than splice")
+    return ""
+  }
+  let rendered = array_new::<String>()
+  let pool_builder = StringBuilder::new()
+  let mut total = 0u32
+  for part in parts {
+    let text = ct_string(machine, part)
+    if text.byte_length() > 1048576u32 - total {
+      let _ = ct_fail(machine, "generated source size limit exceeded")
+      return ""
+    }
+    total = total + text.byte_length()
+    pool_builder.append(text)
+  }
+  for splice in splices {
+    let text = "(".concat(ct_render(machine, splice, depth + 1u32)).concat(")")
+    if text.byte_length() > 1048576u32 - total {
+      let _ = ct_fail(machine, "generated source size limit exceeded")
+      return ""
+    }
+    total = total + text.byte_length()
+    rendered.push(text)
+    pool_builder.append(text)
+  }
+  let pool = pool_builder.finish()
+  if pool.byte_length() > 1048576u32 || !ct_charge(machine, pool.byte_length()) {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  let names = map_empty::<String, String>()
+  let source = StringBuilder::new()
+  let boundaries = map_empty::<U32, U32>()
+  let mut length = 0u32
+  let mut i = 0u32
+  for part in parts {
+    let text = ct_string(machine, part)
+    source.append(text)
+    length = length + text.byte_length()
+    if i < rendered.length() {
+      boundaries.set(length, 0u32)
+      source.append(rendered[i])
+      length = length + rendered[i].byte_length()
+      boundaries.set(length - 1u32, 1u32)
+    }
+    i = i + 1u32
+  }
+  let body = ct_quote_part(machine, source.finish(), pool, names, boundaries)
+  "match () {\n_ => {\n".concat(body).concat("\n}\n}")
+}
+
+fn ct_quote_part(machine: CtMachine, part: String, pool: String, names: Map<String, String>, boundaries: Map<U32, U32>) -> String {
+  let source = part.as_bytes()
+  let tokens = self_host_tokenize(source)
+  let out = BytesBuilder::new()
+  let mut cursor = 0u32
+  let mut in_splice = false
+  let _ = while 0u32 {
+    i if i < tokens.length() => {
+      let token = tokens[i]
+      match boundaries.get(token.offset) {
+        Some(expected) => {
+          if (expected == 0u32 && token.symbol_code != 0u32) || (expected == 1u32 && token.symbol_code != 1u32) {
+            let _ = ct_fail(machine, "quote splices must occupy expression syntax")
+            return ""
+          }
+          in_splice = expected == 0u32
+          let _ = boundaries.remove(token.offset)
+        }
+        None => {
+        }
+      }
+      if token.kind is Error(UnexpectedUnit(36u32)) {
+        if in_splice {
+          let _ = ct_fail(machine, "quote-local names must be in quote text")
+          return ""
+        }
+        if i + 1u32 >= tokens.length() || tokens[i + 1u32].offset != token.offset + 1u32 {
+          let _ = ct_fail(machine, "expected a quote-local identifier after $")
+          return ""
+        }
+        let label = match tokens[i + 1u32].kind {
+          Identifier(value, _) => value
+          _ => {
+            let _ = ct_fail(machine, "expected a quote-local identifier after $")
+            return ""
+          }
+        }
+        let name = match names.get(label) {
+          Some(name) => name
+          None => {
+            let builder = StringBuilder::new()
+            builder.append("__dew_quote_")
+            builder.append_u32(names.length())
+            let mut candidate = builder.finish()
+            let _ = while 0u32 {
+              _ => {
+                if !ct_charge(machine, pool.byte_length() + candidate.byte_length()) {
+                  return ""
+                }
+                if !pool.contains(candidate) {
+                  break ()
+                }
+                candidate = candidate.concat("_")
+                continue 0u32
+              }
+            }
+            names.set(label, candidate)
+            candidate
+          }
+        }
+        if !ct_charge(machine, name.byte_length()) {
+          return ""
+        }
+        out.append(source.slice(cursor, token.offset))
+        out.append(name.as_bytes())
+        cursor = token.offset + 1u32 + label.byte_length()
+        continue i + 2u32
+      }
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  if boundaries.length() != 0u32 {
+    let _ = ct_fail(machine, "quote splices must occupy expression syntax")
+    return ""
+  }
+  out.append(source.slice(cursor, source.byte_length()))
+  out.finish().to_string()
+}

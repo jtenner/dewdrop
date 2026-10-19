@@ -7,11 +7,12 @@ test "expanded source view does not require generated code to type check" {
       ),
     ]),
   ])
+  let options = CompilerPipelineOptions::production(9200UL, 0, true)
   let expanded = match
     expand_manifest_sources(
       manifest,
       @semantic.StandardLibrarySources::bootstrap(),
-      CompilerPipelineOptions::production(9200UL, 0, true),
+      options,
     ) {
     Ok(value) => value
     Err(error) => {
@@ -19,6 +20,9 @@ test "expanded source view does not require generated code to type check" {
       abort("unreachable")
     }
   }
+  assert_eq(options.transform_reports.length(), 1)
+  assert_eq(options.transform_reports[0].function_name, "main")
+  assert_true(options.transform_reports[0].work > 0U)
   let app = expanded.modules[0]
   assert_eq(app.path, "app")
   assert_true(

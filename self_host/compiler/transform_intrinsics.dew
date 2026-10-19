@@ -22,6 +22,16 @@ fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtVa
   if kind.starts_with("unsupported:") {
     return ct_fail(machine, "unsupported scalar type at compile time: ".concat(kind.slice(12u32, kind.byte_length())))
   }
+  if kind == "nullable" {
+    if value is DefaultValue {
+      return CtValue::NullValue
+    }
+    let _ = ct_reference_is_null(machine, value)
+    return value
+  }
+  if (value is DefaultValue || value is NullValue) && (kind.starts_with("record:") || kind.starts_with("array:") || kind == "String" || kind == "Bytes" || kind == "StringView" || kind == "StringBuilder" || kind == "BytesBuilder") {
+    return ct_fail(machine, "null reference read requires a non-null value at compile time")
+  }
   match value {
     RawArray(storage) if kind.starts_with("array:") => {
       storage.default_kind = kind.slice(6u32, kind.byte_length())
@@ -29,6 +39,19 @@ fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtVa
     }
     _ => {
     }
+  }
+  if kind == "F32" || kind == "F64" {
+    match value {
+      DefaultValue => return CtValue::Floating(0u64, kind)
+      Floating(_, actual) if kind == actual => return value
+      _ => return ct_fail(machine, "floating-point value has an incompatible checked carrier")
+    }
+  }
+  if kind == "V128" && value is DefaultValue {
+    return CtValue::Vector(0u64, 0u64)
+  }
+  if !ct_check_intrinsic_result_carrier(machine, value, kind) {
+    return CtValue::Empty
   }
   if kind == "Bool" {
     return CtValue::Boolean(ct_raw_bits(machine, value) != 0u64)
@@ -41,13 +64,94 @@ fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtVa
   value
 }
 
+fn ct_typed_intrinsic(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration, args: Array<CtValue>, kind: String) -> CtValue {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+    return CtValue::Empty
+  }
+  let args = ct_intrinsic_arguments(machine, builtin_, args)
+  if machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if !ct_check_intrinsic_contract(machine, builtin_.builtin_name.to_string(), args, kind) {
+    return CtValue::Empty
+  }
+  if builtin_.builtin_name.equals(b"ref_is_null") {
+    let mut valid = false
+    for carrier in ["Bool", "I8", "U8", "I16", "U16", "I32", "U32"] {
+      if kind == carrier {
+        valid = true
+      }
+    }
+    if !valid {
+      return ct_fail(machine, "Wasm null test requires an i32 result carrier")
+    }
+  }
+  if builtin_.builtin_name.to_string() == "ref.cast" && args.length() == 1u32 {
+    let _ = ct_charge(machine, 16u32)
+    return ct_reference_cast(machine, args[0u32], kind)
+  }
+  if builtin_.builtin_name.to_string() == "unsafe.bitcast" && args.length() == 1u32 {
+    match args[0u32] {
+      Floating(_, actual) if kind == actual => {
+        let _ = ct_charge(machine, 16u32)
+        return args[0u32]
+      }
+      _ => {}
+    }
+  }
+  if builtin_.builtin_name.to_string() == "unsafe.bitcast" && args.length() == 1u32 && args[0u32] is Vector(_, _) && kind == "V128" {
+    let _ = ct_charge(machine, 16u32)
+    return args[0u32]
+  }
+  ct_intrinsic_values(machine, builtin_, args)
+}
+
 fn ct_intrinsic(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration, args: Array<CtValue>) -> CtValue {
+  let args = ct_intrinsic_arguments(machine, builtin_, args)
+  if machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  ct_intrinsic_values(machine, builtin_, args)
+}
+
+fn ct_intrinsic_values(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration, args: Array<CtValue>) -> CtValue {
   if !ct_charge(machine, 16u32) || machine.flow != 0u32 {
     return CtValue::Empty
   }
   let opcode = builtin_.builtin_name.to_string()
-  if args.length() != builtin_.parameters.length() {
-    return ct_fail(machine, "Wasm intrinsic argument count mismatch")
+  if ct_float_opcode(opcode) {
+    return ct_float_intrinsic(machine, opcode, args)
+  }
+  if opcode == "ref_null" && args.length() == 0u32 {
+ return CtValue::NullValue
+ }
+  if opcode == "ref_is_null" && args.length() == 1u32 {
+ return CtValue::Boolean(ct_reference_null_test(machine, args[0u32]))
+ }
+  if opcode == "ref_as_non_null" && args.length() == 1u32 {
+    if ct_reference_is_null(machine, args[0u32]) {
+ return ct_fail(machine, "null reference assertion trap at compile time")
+ }
+    return args[0u32]
+  }
+  if opcode == "ref.eq" && args.length() == 2u32 {
+    return ct_reference_equal(machine, args[0u32], args[1u32])
+  }
+  if opcode.starts_with("i8x16.") || opcode.starts_with("i64x2.") || opcode == "v128.bitselect" || opcode == "v128.or" || opcode == "v128.and" || opcode == "v128.xor" {
+    return ct_vector_intrinsic(machine, opcode, args)
+  }
+  match ct_raw_immediate(opcode, "struct.get ") {
+    Some(index) if args.length() == 1u32 => return ct_raw_struct_get(machine, args[0u32], index)
+    _ => {}
+  }
+  if opcode == "array.len" && args.length() == 1u32 {
+    return ct_number(ct_raw_array_length(machine, args[0u32]), "U32")
+  }
+  if opcode == "array.get" && args.length() == 2u32 {
+    return ct_raw_array_get(machine, args[0u32], ct_raw_bits(machine, args[1u32]))
+  }
+  if opcode == "array.copy" && args.length() == 5u32 {
+    return ct_raw_array_copy(machine, args[0u32], ct_raw_bits(machine, args[1u32]), args[2u32], ct_raw_bits(machine, args[3u32]), ct_raw_bits(machine, args[4u32]))
   }
   if opcode == "unreachable" {
     return ct_fail(machine, "unreachable executed at compile time")
@@ -78,66 +182,17 @@ fn ct_intrinsic(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration, args: 
       default_kind: ""
     })
   }
-  if args.length() > 0u32 {
+  if opcode == "array.set" && args.length() == 3u32 {
     match args[0u32] {
       RawArray(storage) => {
-        let values = storage.values
-        if opcode == "array.len" {
-          return ct_number(u32_into_u64(values.length()), "U32")
+        let index = ct_raw_bits(machine, args[1u32])
+        if index >= u32_into_u64(storage.values.length()) {
+          return ct_fail(machine, "Wasm array index out of bounds at compile time")
         }
-        if (opcode == "array.get" || opcode == "array.set") && args.length() >= 2u32 {
-          let index = ct_raw_bits(machine, args[1u32])
-          if index >= u32_into_u64(values.length()) {
-            return ct_fail(machine, "Wasm array index out of bounds at compile time")
-          }
-          if opcode == "array.get" {
-            let value = values[u64_into_u32(index)]
-            return if value is DefaultValue {
-              ct_intrinsic_result(machine, value, storage.default_kind)
-            } else {
-              value
-            }
-          }
-          values[u64_into_u32(index)] = args[2u32]
-          return CtValue::Empty
-        }
-        if opcode == "array.copy" && args.length() == 5u32 {
-          let target_at = ct_raw_bits(machine, args[1u32])
-          let source_at = ct_raw_bits(machine, args[3u32])
-          let count = ct_raw_bits(machine, args[4u32])
-          match args[2u32] {
-            RawArray(source_storage) => {
-              let source = source_storage.values
-              if target_at > u32_into_u64(values.length()) || count > u32_into_u64(values.length()) - target_at || source_at > u32_into_u64(source.length()) || count > u32_into_u64(source.length()) - source_at {
-                return ct_fail(machine, "Wasm array copy out of bounds at compile time")
-              }
-              if !ct_charge(machine, u64_into_u32(count) * 16u32) {
-                return CtValue::Empty
-              }
-              let copy = array_new::<CtValue>()
-              let _ = while 0u32 {
-                i if u32_into_u64(i) < count => {
-                  copy.push(source[u64_into_u32(source_at) + i])
-                  continue i + 1u32
-                }
-                _ => break ()
-              }
-              let mut i = 0u32
-              for value in copy {
-                if !ct_charge(machine, 0u32) {
-                  return CtValue::Empty
-                }
-                values[u64_into_u32(target_at) + i] = value
-                i = i + 1u32
-              }
-              return CtValue::Empty
-            }
-            _ => return ct_fail(machine, "Wasm array copy requires an array")
-          }
-        }
+        storage.values[u64_into_u32(index)] = args[2u32]
+        return CtValue::Empty
       }
-      _ => {
-      }
+      _ => return ct_fail(machine, "Wasm array write requires mutable array storage")
     }
   }
   let result = if args.length() == 1u32 {

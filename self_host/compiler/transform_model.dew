@@ -8,8 +8,14 @@ open dew.std.string_builder
 
 pub enum CtValue {
   Empty
+  NullValue
   DefaultValue
   RawArray(CtRawStorage)
+  Vector(U64, U64)
+  TextChunks(CtValue, Bytes)
+  TextReference(CtValue)
+  ReferenceView(CtValue, Array<String>)
+  Floating(U64, String)
   Number(U64, String)
   Boolean(Bool)
   Text(String)
@@ -27,6 +33,9 @@ pub struct CtBinding {
 }
 
 pub struct CtAnnotation {
+  arguments: Array<SelfHostExpr>
+  arguments_source: String
+  arguments_offset: U32
   name: String
   offset: U32
   target: U32
@@ -54,13 +63,18 @@ pub struct CtPlan {
   active: Bool
   mut error: String
   mut validation_stop: String
-  scalar_proofs: Array<CtScalarProof>
-  pattern_proofs: Array<CtPatternProof>
+  scalar_proofs: Map<String, Bytes>
+  pattern_proofs: Map<String, String>
   references: Map<String, CtCallTarget>
   calls: Map<String, CtCallTarget>
   scalar_types: Map<String, String>
   array_literals: Map<String, CtArrayLayout>
   array_layouts: Map<String, CtArrayLayout>
+  raw_layouts: Map<String, CtRawLayout>
+  reports: Array<CtTransformReport>
+  expression_types: Map<String, Array<CtExpressionType>>
+  reflection_errors: Array<String>
+  annotated_functions: Map<String, Bool>
   type_names: Array<CtTypeName>
 }
 
@@ -72,6 +86,8 @@ pub struct CtMachine {
   mut allocated: U32
   mut flow: U32
   mut result: CtValue
+  functions: Map<String, CtCallTarget>
+  imports: Map<String, String>
   globals: Map<String, CtValue>
   initializing: Map<String, Bool>
   mut file_path: String
@@ -90,6 +106,8 @@ fn ct_machine(plan: CtPlan) -> CtMachine {
     allocated: 0u32
     flow: 0u32
     result: CtValue::Empty
+    functions: map_empty::<String, CtCallTarget>()
+    imports: map_empty::<String, String>()
     globals: map_empty::<String, CtValue>()
     initializing: map_empty::<String, Bool>()
     file_path: ""
@@ -127,6 +145,7 @@ fn ct_string(machine: CtMachine, value: CtValue) -> String {
 
   match value {
     Text(value) => value
+    TextReference(value) => ct_reference_string(machine, value)
     _ => {
       let _ = ct_fail(machine, "expected String in transform")
       ""
@@ -184,9 +203,24 @@ fn ct_field(machine: CtMachine, value: CtValue, name: String) -> CtValue {
   }
 
   match value {
-    Record(_, values) => match ct_lookup(machine, values, name) {
+    ReferenceView(base, names) => {
+      let _ = while 0u32 {
+        index if index < names.length() => {
+          if !ct_charge(machine, 0u32) {
+            return CtValue::Empty
+          }
+          if names[index] == name {
+            return ct_raw_struct_get(machine, base, index)
+          }
+          continue index + 1u32
+        }
+        _ => break ()
+      }
+      ct_fail(machine, "unknown checked raw reference field: ".concat(name))
+    }
+    Record(key, values) => match ct_lookup(machine, values, name) {
       Some(binding) => binding.value
-      None => ct_fail(machine, "unknown transform field".concat(name))
+      None => ct_fail(machine, "unknown transform field ".concat(name).concat(" in ").concat(key))
     }
     _ => ct_fail(machine, "expected record in transform")
   }

@@ -1,0 +1,118 @@
+pub struct CtAnnotationArguments {
+  values: Array<SelfHostExpr>
+  source: String
+  offset: U32
+  next: U32
+}
+
+fn ct_scan_annotation_arguments(plan: CtPlan, source: Bytes, tokens: Array<SelfHostToken>, start: U32) -> CtAnnotationArguments {
+  let result = CtAnnotationArguments::{
+    values: []
+    source: ""
+    offset: 0u32
+    next: start
+  }
+  if start >= tokens.length() || tokens[start].symbol_code != 0u32 {
+    return result
+  }
+  let begin = tokens[start].offset + 1u32
+  let stack = [1u32]
+  let mut index = start + 1u32
+  let _ = while 0u32 {
+    _ if index < tokens.length() => {
+      let token = tokens[index]
+      if token.offset - begin > 65536u32 {
+        plan.error = "transform annotation argument size limit exceeded"
+        break ()
+      }
+      if token.kind is Newline {
+        plan.error = "a transform annotation must occupy its own line"
+        break ()
+      }
+      let symbol = token.symbol_code
+      if symbol == 0u32 || symbol == 2u32 || symbol == 4u32 {
+        stack.push(symbol + 1u32)
+      } else if symbol == 1u32 || symbol == 3u32 || symbol == 5u32 {
+        let matches = match stack.pop() {
+          Some(value) => value == symbol
+          None => false
+        }
+        if !matches {
+          plan.error = "unbalanced transform annotation arguments"
+          break ()
+        }
+        if stack.length() == 0u32 {
+          let raw = ct_part(source, begin, token.offset)
+          match self_host_parse_expression_source("[".concat(raw).concat("]").as_bytes()) {
+            Ok(ArrayExpr(values, _)) => {
+              if values.length() > 256u32 {
+                plan.error = "transform annotation argument count limit exceeded"
+                break ()
+              }
+              return CtAnnotationArguments::{
+                values: values
+                source: raw
+                offset: begin
+                next: index + 1u32
+              }
+            }
+            _ => {
+              plan.error = "invalid transform annotation arguments"
+              break ()
+            }
+          }
+        }
+      }
+      if stack.length() >= 128u32 {
+        plan.error = "transform annotation argument depth limit exceeded"
+        break ()
+      }
+      index = index + 1u32
+      continue 0u32
+    }
+    _ => {
+      plan.error = "unfinished transform annotation arguments"
+      break ()
+    }
+  }
+  CtAnnotationArguments::{
+    values: []
+    source: ""
+    offset: 0u32
+    next: tokens.length()
+  }
+}
+
+fn ct_annotation_nodes(machine: CtMachine, annotation: CtAnnotation) -> CtValue {
+  let values = array_new::<CtValue>()
+  for argument in annotation.arguments {
+    let node = ct_syntax_expr(machine, argument, 0u32)
+    ct_shift_annotation_node(machine, node, annotation.arguments_offset - 1u32)
+    values.push(node)
+    if machine.error.byte_length() != 0u32 {
+      return CtValue::Empty
+    }
+  }
+  ct_syntax_values(machine, values)
+}
+
+fn ct_shift_annotation_node(machine: CtMachine, node: CtValue, delta: U32) -> Unit {
+  if !ct_charge(machine, 16u32) {
+    return
+  }
+  match node {
+    Record(_, fields) => {
+      for field in fields {
+        if field.name == "offset" {
+          field.value = CtValue::Number(ct_raw_bits(machine, field.value) + u32_into_u64(delta), "U32")
+        }
+      }
+      for child in ct_sequence_values(machine, ct_field(machine, node, "children")) {
+        ct_shift_annotation_node(machine, child, delta)
+      }
+    }
+    _ => {
+      let _ = ct_fail(machine, "invalid annotation syntax node")
+    }
+  }
+}

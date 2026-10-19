@@ -1,0 +1,33 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.string
+open dew.std.array
+
+fn count(node: @ast.SyntaxNode, kind: String) -> I32 {
+  let mut total = if node.kind == kind {
+    1i32
+  } else {
+    0i32
+  }
+  for child in node.children {
+    total = total + count(child, kind)
+  }
+  total
+}
+
+transform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> Result<@ast.FnNode, @transform.TransformError> {
+  if ctx.syntax.kind != "block" || count(ctx.syntax, "call") != 1i32 || count(ctx.syntax, "binary") != 1i32 {
+    return Err(@transform.error("wrong original expression tree"))
+  }
+  Ok(node)
+}
+
+fn identity(value: I32) -> I32 {
+  value
+}
+
+#inspect
+pub fn main() -> I32 {
+  let x = 40i32
+  identity(x + 2i32)
+}

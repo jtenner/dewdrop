@@ -180,7 +180,10 @@ fn ct_render_inner(machine: CtMachine, value: CtValue, depth: U32) -> String {
       if key == "dewdrop.ast::ExprNode::Assign" && args.length() == 2u32 {
         return ct_render(machine, args[0u32], depth + 1u32).concat(" = ").concat(ct_render(machine, args[1u32], depth + 1u32))
       }
-      if key == "dewdrop.ast::ExprNode::Source" && args.length() == 1u32 {
+      if key == "dewdrop.ast::ExprNode::Quote" && args.length() == 2u32 {
+    return ct_render_quote(machine, args[0u32], args[1u32], depth)
+  }
+  if key == "dewdrop.ast::ExprNode::Source" && args.length() == 1u32 {
         return ct_string(machine, args[0u32])
       }
       if key == "dewdrop.ast::ExprNode::Integer" && args.length() == 1u32 {
@@ -299,6 +302,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
   let generated_imports = StringBuilder::new()
   let generated_declarations = StringBuilder::new()
   let mut generated_bytes = 0u32
+  let mut first_generated_declaration = true
   let mut node = CtValue::Record("dewdrop.ast::FnNode", [
   ct_binding("name", CtValue::Text(fn_.name)),
   ct_binding("body", CtValue::Variant("dewdrop.ast::ExprNode::Source", [CtValue::Text("match () {\n_ => ".concat(ct_part(file.clean, fn_.body.offset, function.end)).concat("\n}"))])),
@@ -371,6 +375,11 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       ])),
       ct_binding("fn_name", CtValue::Text(fn_.name)),
       ct_binding("module_name", CtValue::Text(machine.plan.manifest.modules[file.module_index].path)),
+      ct_binding("syntax", ct_syntax_block(machine, fn_.body, 0u32)),
+      ct_binding("expression_types", ct_expression_type_nodes(machine, file, function)),
+      ct_binding("type_errors", ct_reflection_error_nodes(machine)),
+      ct_binding("arguments", ct_annotation_nodes(machine, annotation)),
+      ct_binding("arguments_source", CtValue::Text(annotation.arguments_source)),
       ct_binding("parameters", ct_parameter_nodes(machine, fn_.parameters)),
       ct_binding("type_parameters", ct_type_parameter_nodes(machine, fn_.type_parameters)),
       ct_binding("return_type", ct_type_node(machine, fn_.return_type)),
@@ -402,7 +411,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
         return ""
       }
       for item in ct_sequence_values(machine, ct_field(machine, context, "imports")) {
-        let rendered = ct_render_import(machine, item)
+        let rendered = ct_register_import(machine, file.module_index, item)
         if rendered.byte_length() > 1048576u32 - generated_bytes {
           let _ = ct_fail(machine, "generated source size limit exceeded")
           return ""
@@ -417,9 +426,21 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
           return ""
         }
         generated_bytes = generated_bytes + rendered.byte_length() + 1u32
+        if !first_generated_declaration {
+          generated_declarations.append("\n")
+        }
+        first_generated_declaration = false
         generated_declarations.append(rendered)
-        generated_declarations.append("\n")
       }
+      machine.plan.reports.push(CtTransformReport::{
+        module_name: machine.plan.manifest.modules[file.module_index].path
+        file_name: file.original.path
+        function_name: fn_.name
+        transform_name: key
+        offset: annotation.offset
+        work: 100000u32 - machine.steps
+        allocation_work: machine.allocated
+      })
     }
   }
   let body = ct_render(machine, ct_field(machine, node, "body"), 0u32)
@@ -486,6 +507,7 @@ fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations:
   let modules = array_new::<SelfHostManifestModule>()
   let mut mi = 0u32
   for module_ in plan.manifest.modules {
+    ct_seed_imports(machine, mi)
     let files = array_new::<SelfHostManifestFile>()
     let generated = array_new::<SelfHostManifestFile>()
     for file in plan.files {

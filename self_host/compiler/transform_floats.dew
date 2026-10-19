@@ -1,0 +1,479 @@
+open dew.std.array
+open dew.std.string
+builtin ct_host_f32_abs(v0: F32) -> F32 = "f32.abs"
+builtin ct_host_f32_neg(v0: F32) -> F32 = "f32.neg"
+builtin ct_host_f32_sqrt(v0: F32) -> F32 = "f32.sqrt"
+builtin ct_host_f32_ceil(v0: F32) -> F32 = "f32.ceil"
+builtin ct_host_f32_floor(v0: F32) -> F32 = "f32.floor"
+builtin ct_host_f32_trunc(v0: F32) -> F32 = "f32.trunc"
+builtin ct_host_f32_nearest(v0: F32) -> F32 = "f32.nearest"
+builtin ct_host_f32_add(v0: F32, v1: F32) -> F32 = "f32.add"
+builtin ct_host_f32_sub(v0: F32, v1: F32) -> F32 = "f32.sub"
+builtin ct_host_f32_mul(v0: F32, v1: F32) -> F32 = "f32.mul"
+builtin ct_host_f32_div(v0: F32, v1: F32) -> F32 = "f32.div"
+builtin ct_host_f32_eq(v0: F32, v1: F32) -> Bool = "f32.eq"
+builtin ct_host_f32_ne(v0: F32, v1: F32) -> Bool = "f32.ne"
+builtin ct_host_f32_lt(v0: F32, v1: F32) -> Bool = "f32.lt"
+builtin ct_host_f32_le(v0: F32, v1: F32) -> Bool = "f32.le"
+builtin ct_host_f32_gt(v0: F32, v1: F32) -> Bool = "f32.gt"
+builtin ct_host_f32_ge(v0: F32, v1: F32) -> Bool = "f32.ge"
+builtin ct_host_f32_convert_i32_s(v0: I32) -> F32 = "f32.convert_i32_s"
+builtin ct_host_i32_trunc_f32_s(v0: F32) -> I32 = "i32.trunc_f32_s"
+builtin ct_host_f32_convert_i32_u(v0: U32) -> F32 = "f32.convert_i32_u"
+builtin ct_host_i32_trunc_f32_u(v0: F32) -> I32 = "i32.trunc_f32_u"
+builtin ct_host_f32_convert_i64_s(v0: I64) -> F32 = "f32.convert_i64_s"
+builtin ct_host_i64_trunc_f32_s(v0: F32) -> I64 = "i64.trunc_f32_s"
+builtin ct_host_f32_convert_i64_u(v0: U64) -> F32 = "f32.convert_i64_u"
+builtin ct_host_i64_trunc_f32_u(v0: F32) -> I64 = "i64.trunc_f32_u"
+builtin ct_host_f64_abs(v0: F64) -> F64 = "f64.abs"
+builtin ct_host_f64_neg(v0: F64) -> F64 = "f64.neg"
+builtin ct_host_f64_sqrt(v0: F64) -> F64 = "f64.sqrt"
+builtin ct_host_f64_ceil(v0: F64) -> F64 = "f64.ceil"
+builtin ct_host_f64_floor(v0: F64) -> F64 = "f64.floor"
+builtin ct_host_f64_trunc(v0: F64) -> F64 = "f64.trunc"
+builtin ct_host_f64_nearest(v0: F64) -> F64 = "f64.nearest"
+builtin ct_host_f64_add(v0: F64, v1: F64) -> F64 = "f64.add"
+builtin ct_host_f64_sub(v0: F64, v1: F64) -> F64 = "f64.sub"
+builtin ct_host_f64_mul(v0: F64, v1: F64) -> F64 = "f64.mul"
+builtin ct_host_f64_div(v0: F64, v1: F64) -> F64 = "f64.div"
+builtin ct_host_f64_eq(v0: F64, v1: F64) -> Bool = "f64.eq"
+builtin ct_host_f64_ne(v0: F64, v1: F64) -> Bool = "f64.ne"
+builtin ct_host_f64_lt(v0: F64, v1: F64) -> Bool = "f64.lt"
+builtin ct_host_f64_le(v0: F64, v1: F64) -> Bool = "f64.le"
+builtin ct_host_f64_gt(v0: F64, v1: F64) -> Bool = "f64.gt"
+builtin ct_host_f64_ge(v0: F64, v1: F64) -> Bool = "f64.ge"
+builtin ct_host_f64_convert_i32_s(v0: I32) -> F64 = "f64.convert_i32_s"
+builtin ct_host_i32_trunc_f64_s(v0: F64) -> I32 = "i32.trunc_f64_s"
+builtin ct_host_f64_convert_i32_u(v0: U32) -> F64 = "f64.convert_i32_u"
+builtin ct_host_i32_trunc_f64_u(v0: F64) -> I32 = "i32.trunc_f64_u"
+builtin ct_host_f64_convert_i64_s(v0: I64) -> F64 = "f64.convert_i64_s"
+builtin ct_host_i64_trunc_f64_s(v0: F64) -> I64 = "i64.trunc_f64_s"
+builtin ct_host_f64_convert_i64_u(v0: U64) -> F64 = "f64.convert_i64_u"
+builtin ct_host_i64_trunc_f64_u(v0: F64) -> I64 = "i64.trunc_f64_u"
+builtin ct_host_f32_demote_f64(v0: F64) -> F32 = "f32.demote_f64"
+builtin ct_host_f64_promote_f32(v0: F32) -> F64 = "f64.promote_f32"
+fn ct_float_opcode(opcode: String) -> Bool {
+  opcode.starts_with("f32.") || opcode.starts_with("f64.") || opcode.contains(".trunc_f") || opcode.contains(".trunc_sat_f") || opcode == "i32.reinterpret_f32" || opcode == "i64.reinterpret_f64"
+}
+fn ct_float_f32(machine: CtMachine, value: CtValue) -> F32 {
+  match value {
+    Floating(bits, "F32") => wasm_f32_from_bits(u64_into_u32(bits))
+    _ => {
+      let _ = ct_fail(machine, "Wasm floating-point intrinsic requires a matching float")
+      0.0f32
+    }
+  }
+}
+fn ct_float_f64(machine: CtMachine, value: CtValue) -> F64 {
+  match value {
+    Floating(bits, "F64") => wasm_f64_from_bits(bits)
+    _ => {
+      let _ = ct_fail(machine, "Wasm floating-point intrinsic requires a matching float")
+      0.0f64
+    }
+  }
+}
+fn ct_float_f32_result(value: F32) -> CtValue {
+  CtValue::Floating(if value != value {
+    2143289344u64
+  } else {
+    u32_into_u64(wasm_f32_to_bits(value))
+  }, "F32")
+}
+fn ct_float_f64_result(value: F64) -> CtValue {
+  CtValue::Floating(if value != value {
+    9221120237041090560u64
+  } else {
+    wasm_f64_to_bits(value)
+  }, "F64")
+}
+fn ct_float_conversion_valid(machine: CtMachine, opcode: String, value: F64) -> Bool {
+  let unsigned_ = opcode.ends_with("_u")
+  let upper = if opcode.starts_with("i64.") {
+    if unsigned_ {
+      wasm_f64_from_bits(4895412794951729152u64)
+    } else {
+      wasm_f64_from_bits(4890909195324358656u64)
+    }
+  } else {
+    if unsigned_ {
+      wasm_f64_from_bits(4751297606875873280u64)
+    } else {
+      wasm_f64_from_bits(4746794007248502784u64)
+    }
+  }
+  let lower = if unsigned_ {
+    0.0f64
+  } else {
+    -upper
+  }
+  let truncated = ct_host_f64_trunc(value)
+  if value != value || truncated < lower || truncated >= upper {
+    let _ = ct_fail(machine, "Wasm float-to-integer conversion trap at compile time")
+    return false
+  }
+  true
+}
+fn ct_float_intrinsic(machine: CtMachine, opcode: String, args: Array<CtValue>) -> CtValue {
+  if args.length() == 1u32 {
+    match args[0u32] {
+      Floating(bits, kind) if (kind == "F32" && opcode.starts_with("f32.")) || (kind == "F64" && opcode.starts_with("f64.")) => {
+        let sign = if kind == "F32" {
+          2147483648u64
+        } else {
+          9223372036854775808u64
+        }
+        if opcode.ends_with(".abs") {
+          return CtValue::Floating(bits & (18446744073709551615u64 ^ sign), kind)
+        }
+        if opcode.ends_with(".neg") {
+          return CtValue::Floating(bits ^ sign, kind)
+        }
+      }
+      _ => {
+      }
+    }
+    if opcode == "f32.reinterpret_i32" {
+      return CtValue::Floating(ct_raw_bits(machine, args[0u32]) & 4294967295u64, "F32")
+    }
+    if opcode == "f64.reinterpret_i64" {
+      return CtValue::Floating(ct_raw_bits(machine, args[0u32]), "F64")
+    }
+    if opcode == "i32.reinterpret_f32" {
+      return ct_number(u32_into_u64(wasm_f32_to_bits(ct_float_f32(machine, args[0u32]))), "I32")
+    }
+    if opcode == "i64.reinterpret_f64" {
+      return ct_number(wasm_f64_to_bits(ct_float_f64(machine, args[0u32])), "I64")
+    }
+    if opcode.contains(".trunc_sat_f") {
+      let value = if opcode.contains("_f32_") {
+        ct_host_f64_promote_f32(ct_float_f32(machine, args[0u32]))
+      } else {
+        ct_float_f64(machine, args[0u32])
+      }
+      return ct_float_saturate(machine, opcode, value)
+    }
+    // Check the range before a host conversion can trap the compiler itself.
+    if opcode.contains(".trunc_f") {
+      let value = if opcode.contains("_f32_") {
+        ct_host_f64_promote_f32(ct_float_f32(machine, args[0u32]))
+      } else {
+        ct_float_f64(machine, args[0u32])
+      }
+      if !ct_float_conversion_valid(machine, opcode, value) {
+        return CtValue::Empty
+      }
+    }
+    if opcode == "f32.abs" {
+      return ct_float_f32_result(ct_host_f32_abs(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.neg" {
+      return ct_float_f32_result(ct_host_f32_neg(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.sqrt" {
+      return ct_float_f32_result(ct_host_f32_sqrt(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.ceil" {
+      return ct_float_f32_result(ct_host_f32_ceil(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.floor" {
+      return ct_float_f32_result(ct_host_f32_floor(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.trunc" {
+      return ct_float_f32_result(ct_host_f32_trunc(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.nearest" {
+      return ct_float_f32_result(ct_host_f32_nearest(ct_float_f32(machine, args[0u32])))
+    }
+    if opcode == "f32.convert_i32_s" {
+      return ct_float_f32_result(ct_host_f32_convert_i32_s(unsafe_bitcast::<U32, I32>(u64_into_u32(ct_raw_bits(machine, args[0u32])))))
+    }
+    if opcode == "i32.trunc_f32_s" {
+      return ct_number(u32_into_u64(unsafe_bitcast::<I32, U32>(ct_host_i32_trunc_f32_s(ct_float_f32(machine, args[0u32])))), "I32")
+    }
+    if opcode == "f32.convert_i32_u" {
+      return ct_float_f32_result(ct_host_f32_convert_i32_u(u64_into_u32(ct_raw_bits(machine, args[0u32]))))
+    }
+    if opcode == "i32.trunc_f32_u" {
+      return ct_number(u32_into_u64(unsafe_bitcast::<I32, U32>(ct_host_i32_trunc_f32_u(ct_float_f32(machine, args[0u32])))), "I32")
+    }
+    if opcode == "f32.convert_i64_s" {
+      return ct_float_f32_result(ct_host_f32_convert_i64_s(unsafe_bitcast::<U64, I64>(ct_raw_bits(machine, args[0u32]))))
+    }
+    if opcode == "i64.trunc_f32_s" {
+      return ct_number(unsafe_bitcast::<I64, U64>(ct_host_i64_trunc_f32_s(ct_float_f32(machine, args[0u32]))), "I64")
+    }
+    if opcode == "f32.convert_i64_u" {
+      return ct_float_f32_result(ct_host_f32_convert_i64_u(ct_raw_bits(machine, args[0u32])))
+    }
+    if opcode == "i64.trunc_f32_u" {
+      return ct_number(unsafe_bitcast::<I64, U64>(ct_host_i64_trunc_f32_u(ct_float_f32(machine, args[0u32]))), "I64")
+    }
+    if opcode == "f64.abs" {
+      return ct_float_f64_result(ct_host_f64_abs(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.neg" {
+      return ct_float_f64_result(ct_host_f64_neg(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.sqrt" {
+      return ct_float_f64_result(ct_host_f64_sqrt(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.ceil" {
+      return ct_float_f64_result(ct_host_f64_ceil(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.floor" {
+      return ct_float_f64_result(ct_host_f64_floor(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.trunc" {
+      return ct_float_f64_result(ct_host_f64_trunc(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.nearest" {
+      return ct_float_f64_result(ct_host_f64_nearest(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.convert_i32_s" {
+      return ct_float_f64_result(ct_host_f64_convert_i32_s(unsafe_bitcast::<U32, I32>(u64_into_u32(ct_raw_bits(machine, args[0u32])))))
+    }
+    if opcode == "i32.trunc_f64_s" {
+      return ct_number(u32_into_u64(unsafe_bitcast::<I32, U32>(ct_host_i32_trunc_f64_s(ct_float_f64(machine, args[0u32])))), "I32")
+    }
+    if opcode == "f64.convert_i32_u" {
+      return ct_float_f64_result(ct_host_f64_convert_i32_u(u64_into_u32(ct_raw_bits(machine, args[0u32]))))
+    }
+    if opcode == "i32.trunc_f64_u" {
+      return ct_number(u32_into_u64(unsafe_bitcast::<I32, U32>(ct_host_i32_trunc_f64_u(ct_float_f64(machine, args[0u32])))), "I32")
+    }
+    if opcode == "f64.convert_i64_s" {
+      return ct_float_f64_result(ct_host_f64_convert_i64_s(unsafe_bitcast::<U64, I64>(ct_raw_bits(machine, args[0u32]))))
+    }
+    if opcode == "i64.trunc_f64_s" {
+      return ct_number(unsafe_bitcast::<I64, U64>(ct_host_i64_trunc_f64_s(ct_float_f64(machine, args[0u32]))), "I64")
+    }
+    if opcode == "f64.convert_i64_u" {
+      return ct_float_f64_result(ct_host_f64_convert_i64_u(ct_raw_bits(machine, args[0u32])))
+    }
+    if opcode == "i64.trunc_f64_u" {
+      return ct_number(unsafe_bitcast::<I64, U64>(ct_host_i64_trunc_f64_u(ct_float_f64(machine, args[0u32]))), "I64")
+    }
+    if opcode == "f32.demote_f64" {
+      return ct_float_f32_result(ct_host_f32_demote_f64(ct_float_f64(machine, args[0u32])))
+    }
+    if opcode == "f64.promote_f32" {
+      return ct_float_f64_result(ct_host_f64_promote_f32(ct_float_f32(machine, args[0u32])))
+    }
+  }
+  if args.length() == 2u32 {
+    if opcode.ends_with(".min") || opcode.ends_with(".max") {
+      return ct_float_minmax(machine, opcode, args[0u32], args[1u32])
+    }
+    match (args[0u32], args[1u32]) {
+      (Floating(a, kind), Floating(b, other)) if kind == other && ((kind == "F32" && opcode == "f32.copysign") || (kind == "F64" && opcode == "f64.copysign")) => {
+        let sign = if kind == "F32" {
+          2147483648u64
+        } else {
+          9223372036854775808u64
+        }
+        return CtValue::Floating((a & (18446744073709551615u64 ^ sign)) | (b & sign), kind)
+      }
+      _ => {
+      }
+    }
+    if opcode == "f32.add" {
+      return ct_float_f32_result(ct_host_f32_add(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.sub" {
+      return ct_float_f32_result(ct_host_f32_sub(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.mul" {
+      return ct_float_f32_result(ct_host_f32_mul(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.div" {
+      return ct_float_f32_result(ct_host_f32_div(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+
+
+
+    if opcode == "f32.eq" {
+      return CtValue::Boolean(ct_host_f32_eq(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.ne" {
+      return CtValue::Boolean(ct_host_f32_ne(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.lt" {
+      return CtValue::Boolean(ct_host_f32_lt(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.le" {
+      return CtValue::Boolean(ct_host_f32_le(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.gt" {
+      return CtValue::Boolean(ct_host_f32_gt(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f32.ge" {
+      return CtValue::Boolean(ct_host_f32_ge(ct_float_f32(machine, args[0u32]), ct_float_f32(machine, args[1u32])))
+    }
+    if opcode == "f64.add" {
+      return ct_float_f64_result(ct_host_f64_add(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.sub" {
+      return ct_float_f64_result(ct_host_f64_sub(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.mul" {
+      return ct_float_f64_result(ct_host_f64_mul(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.div" {
+      return ct_float_f64_result(ct_host_f64_div(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+
+
+
+    if opcode == "f64.eq" {
+      return CtValue::Boolean(ct_host_f64_eq(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.ne" {
+      return CtValue::Boolean(ct_host_f64_ne(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.lt" {
+      return CtValue::Boolean(ct_host_f64_lt(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.le" {
+      return CtValue::Boolean(ct_host_f64_le(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.gt" {
+      return CtValue::Boolean(ct_host_f64_gt(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+    if opcode == "f64.ge" {
+      return CtValue::Boolean(ct_host_f64_ge(ct_float_f64(machine, args[0u32]), ct_float_f64(machine, args[1u32])))
+    }
+  }
+  ct_fail(machine, "Wasm floating-point intrinsic has incompatible arguments: ".concat(opcode))
+}
+fn ct_float_saturate(machine: CtMachine, opcode: String, value: F64) -> CtValue {
+  let wide = opcode.starts_with("i64.")
+  let unsigned_ = opcode.ends_with("_u")
+  let kind = if wide {
+    if unsigned_ {
+      "U64"
+    } else {
+      "I64"
+    }
+  } else {
+    if unsigned_ {
+      "U32"
+    } else {
+      "I32"
+    }
+  }
+  let upper = if wide {
+    if unsigned_ {
+      wasm_f64_from_bits(4895412794951729152u64)
+    } else {
+      wasm_f64_from_bits(4890909195324358656u64)
+    }
+  } else {
+    if unsigned_ {
+      4294967296.0f64
+    } else {
+      2147483648.0f64
+    }
+  }
+  let lower = if unsigned_ {
+    0.0f64
+  } else {
+    -upper
+  }
+  if value != value {
+    return ct_number(0u64, kind)
+  }
+  let truncated = ct_host_f64_trunc(value)
+  if truncated < lower {
+    return ct_number(if unsigned_ {
+      0u64
+    } else if wide {
+      9223372036854775808u64
+    } else {
+      2147483648u64
+    }, kind)
+  }
+  if truncated >= upper {
+    return ct_number(if unsigned_ {
+      if wide {
+        18446744073709551615u64
+      } else {
+        4294967295u64
+      }
+    } else if wide {
+      9223372036854775807u64
+    } else {
+      2147483647u64
+    }, kind)
+  }
+  if unsigned_ {
+    if wide {
+      return ct_number(unsafe_bitcast::<I64, U64>(ct_host_i64_trunc_f64_u(value)), kind)
+    }
+    return ct_number(u32_into_u64(unsafe_bitcast::<I32, U32>(ct_host_i32_trunc_f64_u(value))), kind)
+  }
+  if wide {
+    return ct_number(unsafe_bitcast::<I64, U64>(ct_host_i64_trunc_f64_s(value)), kind)
+  }
+  ct_number(u32_into_u64(unsafe_bitcast::<I32, U32>(ct_host_i32_trunc_f64_s(value))), kind)
+}
+
+fn ct_float_minmax(machine: CtMachine, opcode: String, left: CtValue, right: CtValue) -> CtValue {
+  let small = opcode.starts_with("f32.")
+  let x = if small {
+    ct_host_f64_promote_f32(ct_float_f32(machine, left))
+  } else {
+    ct_float_f64(machine, left)
+  }
+  let y = if small {
+    ct_host_f64_promote_f32(ct_float_f32(machine, right))
+  } else {
+    ct_float_f64(machine, right)
+  }
+  if x != x || y != y {
+    return CtValue::Floating(if small {
+      2143289344u64
+    } else {
+      9221120237041090560u64
+    }, if small {
+      "F32"
+    } else {
+      "F64"
+    })
+  }
+  match (left, right) {
+    (Floating(a, kind), Floating(b, _)) if x == 0.0f64 && y == 0.0f64 => return CtValue::Floating(if opcode.ends_with(".min") {
+      a | b
+    } else {
+      a & b
+    }, kind)
+    _ => {}
+  }
+  if (opcode.ends_with(".min") && x < y) || (opcode.ends_with(".max") && x > y) {
+    left
+  } else {
+    right
+  }
+}
+
+fn ct_float_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, right: CtValue, kind: String) -> CtValue {
+  let name = match op {
+    Add => "add"
+    Subtract => "sub"
+    Multiply => "mul"
+    Divide => "div"
+    Equal => "eq"
+    NotEqual => "ne"
+    Less => "lt"
+    LessEqual => "le"
+    Greater => "gt"
+    GreaterEqual => "ge"
+    _ => return ct_fail(machine, "unsupported float operator at compile time")
+  }
+  let prefix = if kind == "F32" {
+    "f32."
+  } else {
+    "f64."
+  }
+  ct_float_intrinsic(machine, prefix.concat(name), [left, right])
+}

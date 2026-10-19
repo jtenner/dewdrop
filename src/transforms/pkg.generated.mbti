@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "jtenner/dewdrop/transforms"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn ast_source() -> Bytes
 
@@ -22,6 +26,15 @@ type CallTarget
 
 type Cell
 
+pub(all) enum CheckedConstant {
+  CheckedBool(Bool)
+  CheckedU32(UInt64)
+  CheckedStrings(Array[Bytes])
+  CheckedUnit
+}
+
+type IntrinsicContract
+
 type Machine
 
 type Operation
@@ -41,18 +54,41 @@ pub struct Plan {
   scalar_types : Map[(Int, Int, Int), String]
   array_literals : Map[(Int, Int, Int), (String, Array[String])]
   array_layouts : Map[String, Array[String]]
+  raw_layouts : Map[String, RawLayout]
+  intrinsic_contracts : Map[String, IntrinsicContract]
+  reports : Array[TransformReport]
+  expression_types : Map[(Int, Int), Array[ReflectedExpressionType]]
+  reflection_errors : Array[String]
 }
 pub fn Plan::add_array_layout(Self, Int, String, UInt64, String, Array[String]) -> Unit
 pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String) -> Unit
 pub fn Plan::add_checked_module(Self, SourceModule) -> Result[Unit, String]
+pub fn Plan::add_constant(Self, Int, String, UInt64, CheckedConstant) -> Unit
+pub fn Plan::add_expression_type(Self, Int, String, UInt64, String, ReflectedType) -> Unit
+pub fn Plan::add_intrinsic_contract(Self, Bytes, Array[String], String) -> Unit
 pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
+pub fn Plan::add_raw_layout(Self, String, String, Array[String], Array[String]) -> Unit
 pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes) -> Unit
 pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
 pub fn Plan::expand(Self, output_module_count? : Int, retain_transform_declarations? : Bool) -> Result[Array[SourceModule], String]
+pub fn Plan::reflection_sources(Self) -> Array[SourceModule]
+pub fn Plan::reflection_targets(Self) -> Array[(Int, String, UInt64, UInt64)]
+pub fn Plan::reports(Self) -> Array[TransformReport]
+pub fn Plan::set_reflection_error(Self, String) -> Unit
 pub fn Plan::validation_sources(Self) -> Array[SourceModule]
 
+type RawLayout
+
 type RawStorage
+
+type ReflectedExpressionType
+
+pub(all) struct ReflectedType {
+  kind : String
+  name : String
+  arguments : Array[ReflectedType]
+}
 
 pub(all) struct SourceFile {
   path : String
@@ -65,6 +101,16 @@ pub(all) struct SourceModule {
   path : String
   files : Array[SourceFile]
 }
+
+pub(all) struct TransformReport {
+  module_name : String
+  file_name : String
+  function_name : String
+  transform_name : String
+  offset : UInt
+  work : UInt
+  allocation_work : UInt
+} derive(Eq, @debug.Debug)
 
 type Value
 

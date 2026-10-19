@@ -1,0 +1,52 @@
+fn ct_append_intrinsic_argument(machine: CtMachine, output: Array<CtValue>, type_: SelfHostTypeExpr, value: CtValue) -> Bool {
+  match type_ {
+    ProductType(fields, _) => {
+      match value {
+        Sequence(values) if values.length() == fields.length() => {
+          let _ = while 0u32 {
+            index if index < fields.length() => {
+              if !ct_append_intrinsic_argument(machine, output, fields[index], values[index]) {
+                return false
+              }
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+        }
+        _ => {
+          let _ = ct_fail(machine, "Wasm intrinsic tuple operand does not match its checked shape")
+          return false
+        }
+      }
+    }
+    _ => output.push(value)
+  }
+  true
+}
+
+fn ct_intrinsic_arguments(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration, args: Array<CtValue>) -> Array<CtValue> {
+  if args.length() != builtin_.parameters.length() {
+    let _ = ct_fail(machine, "Wasm intrinsic argument count mismatch")
+    return []
+  }
+  let mut product = false
+  for parameter in builtin_.parameters {
+    if parameter.type_ is ProductType(_, _) {
+      product = true
+    }
+  }
+  if !product {
+    return args
+  }
+  let output = array_new::<CtValue>()
+  let _ = while 0u32 {
+    index if index < builtin_.parameters.length() => {
+      if !ct_append_intrinsic_argument(machine, output, builtin_.parameters[index].type_, args[index]) {
+        return output
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  output
+}

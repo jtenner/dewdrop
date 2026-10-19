@@ -78,3 +78,51 @@ fn ct_render_import(machine: CtMachine, value: CtValue) -> String {
   }
   "import ".concat(path).concat(" as @").concat(alias).concat("\n")
 }
+
+fn ct_seed_imports(machine: CtMachine, mi: U32) -> Unit {
+  for file in machine.plan.files {
+    if file.module_index == mi {
+      for declaration in file.declarations {
+        match declaration {
+          Import(import_) if !import_.open_ && import_.path.length() != 0u32 => {
+            let alias = match import_.import_alias {
+              Some(value) => value
+              None => import_.path[import_.path.length() - 1u32]
+            }
+            let path = StringBuilder::new()
+            let mut first = true
+            for part in import_.path {
+              if !first {
+                path.append(".")
+              }
+              first = false
+              path.append(part)
+            }
+            machine.imports.set(ct_call_key(mi, alias, 0u32), path.finish())
+          }
+          _ => {
+          }
+        }
+      }
+    }
+  }
+}
+
+fn ct_register_import(machine: CtMachine, mi: U32, value: CtValue) -> String {
+  let rendered = ct_render_import(machine, value)
+  let path = ct_string(machine, ct_field(machine, value, "module_path"))
+  let alias = ct_string(machine, ct_field(machine, value, "alias"))
+  let key = ct_call_key(mi, alias, 0u32)
+  match machine.imports.get(key) {
+    Some(existing) => {
+      if existing != path {
+        let _ = ct_fail(machine, "generated import alias already names a different module: ".concat(alias))
+      }
+      ""
+    }
+    None => {
+      machine.imports.set(key, path)
+      rendered
+    }
+  }
+}

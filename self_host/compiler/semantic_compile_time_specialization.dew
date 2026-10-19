@@ -20,6 +20,7 @@ pub struct SelfHostCompileTimeProgramContext {
   sensitive: Map<U64, Bool>
   instances: Map<U32, SelfHostCompileTimeInstance>
   diagnostics: Array<String>
+  query_constants: Map<U64, Map<U32, SelfHostPlannedExpressionKind>>
 }
 
 fn self_host_compile_time_target_map() -> Map<U64, Bytes> {
@@ -53,6 +54,7 @@ fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowe
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()
     diagnostics: diagnostics
+    query_constants: source.query_constants
   }
   {
     raw_arrays: lowering.raw_arrays
@@ -160,6 +162,7 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()
     diagnostics: []
+    query_constants: map_empty::<U64, Map<U32, SelfHostPlannedExpressionKind>>()
   }
 }
 

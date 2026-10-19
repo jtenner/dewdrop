@@ -526,13 +526,14 @@ fn main {
         }
       }
     }
+    let options = @compiler_driver.CompilerPipelineOptions::production(
+      4000UL, root_module_index, default_preamble,
+    )
     let expanded = match
       @compiler_driver.expand_manifest_sources(
         manifest,
         loaded.sources,
-        @compiler_driver.CompilerPipelineOptions::production(
-          4000UL, root_module_index, default_preamble,
-        ),
+        options,
       ) {
       Ok(value) => value
       Err(error) => {
@@ -540,7 +541,7 @@ fn main {
         abort("unreachable")
       }
     }
-    write_cli_output(output, render_expanded_sources(expanded, manifest))
+    write_cli_output(output, render_expanded_sources(expanded, manifest, options.transform_reports))
     return
   }
   let cache_pack = match

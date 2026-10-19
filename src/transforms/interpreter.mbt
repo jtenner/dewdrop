@@ -1,8 +1,14 @@
 ///|
 enum Value {
   Unit
+  NullValue
   DefaultValue
   RawArray(RawStorage)
+  Vector(UInt64, UInt64)
+  TextChunks(Value, Bytes)
+  TextReference(Value)
+  ReferenceView(Value, Array[String])
+  Floating(UInt64, String)
   Number(UInt64, String)
   Boolean(Bool)
   Text(String)
@@ -39,9 +45,12 @@ struct Machine {
   mut steps : Int32
   mut depth : Int32
   mut allocated : Int32
+  functions : Map[String, CallTarget]
+  imports : Map[(Int32, String), String]
   globals : Map[String, Value]
   initializing : Map[String, Bool]
   mut file_index : Int32
+  text_storage : Map[String, Bytes]
 }
 
 ///|
@@ -272,6 +281,9 @@ fn Machine::call(
   args : Array[Value],
 ) -> Value raise EvalError {
   self.charge(32 + args.length() * 16)
+  if self.functions.get(key) is Some(Source(mi, fi, function, _)) {
+    return self.source_call(mi, fi, function, args)
+  }
   for mi, module_ in self.plan.modules {
     self.charge(0)
     for fi, file in self.plan.files[mi] {
@@ -294,6 +306,7 @@ fn Machine::call(
             guard args.length() == fn_.parameters.length() else {
               return eval_fail("compile-time argument count mismatch: " + key)
             }
+            self.functions[key] = Source(mi, fi, fn_, "")
             let env : Map[String, Cell] = Map::default()
             for i, parameter in fn_.parameters {
               self.charge(16)
@@ -400,6 +413,7 @@ fn binary(op : Operation, left : Value, right : Value) -> Value raise EvalError 
         NotEqual => Boolean(a != b)
         _ => eval_fail("unsupported Bool operator at compile time")
       }
+    (Floating(_, kind), Floating(_, other)) if kind == other => float_binary(op, left, right, kind)
     (Number(a, kind), Number(b, other)) if kind == other ||
       op is ShiftLeft ||
       op is ShiftRight => {
@@ -500,11 +514,8 @@ fn Machine::block(
         cell.value = self.eval(mi, value, env)
       }
       @parser.AssignmentItem(@parser.FieldExpr(owner, name, _), value, _) => {
-        let owner = fields(self.eval(mi, owner, env))
-        guard owner.contains(name) else {
-          return eval_fail("unknown mutable record field")
-        }
-        owner[name] = self.eval(mi, value, env)
+        let owner = self.eval(mi, owner, env)
+        self.write_field(owner, name, self.eval(mi, value, env))
       }
       @parser.TypeBindingItem(_, _, _) => ()
       _ => return eval_fail("unsupported assignment at compile time")
@@ -561,6 +572,8 @@ fn Machine::eval_inner(
     @parser.U16Expr(n, _) => normalized(n, "U16")
     @parser.U32Expr(n, _) => normalized(n, "U32")
     @parser.U64Expr(n, _) => normalized(n, "U64")
+    @parser.F32Expr(value, _) => Floating(value.reinterpret_as_uint().to_uint64(), "F32")
+    @parser.F64Expr(value, _) => Floating(value.reinterpret_as_uint64(), "F64")
     @parser.BoolExpr(value, _) => Boolean(value)
     @parser.StringExpr(value, _) => {
       self.charge(value.length())
@@ -621,7 +634,7 @@ fn Machine::eval_inner(
         ) {
         self.function_reference(mi, expr, env)
       } else {
-        field(self.eval(mi, owner, env), name)
+        self.read_field(self.eval(mi, owner, env), name)
       }
     @parser.ProductFieldExpr(owner, index, _, _) => {
       guard self.eval(mi, owner, env) is Sequence(values) &&
@@ -683,7 +696,8 @@ fn Machine::eval_inner(
         (@parser.LogicalNot, DefaultValue) => Boolean(true)
         (@parser.LogicalNot, Boolean(v)) => Boolean(!v)
         (@parser.Negative, Number(n, kind)) => normalized(0UL - n, kind)
-        (@parser.Positive, Number(_, _)) => value
+        (@parser.Positive, Number(_, _)) | (@parser.Positive, Floating(_, _)) => value
+        (@parser.Negative, Floating(bits, kind)) => Floating(bits ^ (if kind == "F32" { 2147483648UL } else { 9223372036854775808UL }), kind)
         _ => eval_fail("unsupported prefix operator at compile time")
       }
     }
@@ -790,7 +804,13 @@ fn Machine::pattern_inner(
         value is Variant(key, values) && key == constructor && values.is_empty()
       }
     }
-    @parser.LiteralPattern(expr, _) => equal(self.eval(mi, expr, env), value)
+    @parser.LiteralPattern(expr, _) => {
+      let expected = self.eval(mi, expr, env)
+      match (expected, value) {
+        (Text(text), TextReference(_)) => text == self.string(value)
+        _ => equal(expected, value)
+      }
+    }
     @parser.ProductPattern(patterns, _) => {
       if patterns.is_empty() && (value is Unit || value is DefaultValue) {
         return true
@@ -813,8 +833,16 @@ fn Machine::pattern_inner(
       value is Variant(key, values) && key == constructor && values.is_empty()
     }
     @parser.StructPattern(_, patterns, _, offset) => {
-      guard value is Record(key, values) else { return false }
       let expected = self.pattern_key(mi, offset)
+      if value is ReferenceView(_, _) {
+        for pattern in patterns {
+          if !self.pattern(mi, pattern.pattern, self.read_field(value, pattern.name), env) {
+            return false
+          }
+        }
+        return true
+      }
+      guard value is Record(key, values) else { return false }
       if !key.is_empty() && key != expected {
         return false
       }
@@ -906,6 +934,11 @@ fn equal(a : Value, b : Value) -> Bool raise EvalError {
     (DefaultValue, Number(n, _)) | (Number(n, _), DefaultValue) => n == 0UL
     (DefaultValue, Boolean(v)) | (Boolean(v), DefaultValue) => !v
     (DefaultValue, DefaultValue) => true
+    (Floating(a, k), Floating(b, other)) if k == other => {
+      let a = float_double(Floating(a, k), k)
+      let b = float_double(Floating(b, other), other)
+      a == b
+    }
     (Number(a, k), Number(_, _)) =>
       match intrinsic_kind(b, k) {
         Number(bits, _) => a == bits

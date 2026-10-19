@@ -1,0 +1,27 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+foreign type Handle
+
+fn default_slot<t>() -> t {
+  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let value = default_slot::<NullableRef<Handle>>()
+  let explicit = wasm_ref_null::<Handle>()
+  let values = wasm_array_new_default::<NullableRef<Handle>>(2u32)
+  wasm_array_set(values, 1u32, explicit)
+  let result = if wasm_ref_is_null(value) && wasm_ref_is_null(explicit) && wasm_ref_is_null(wasm_array_get(values, 0u32)) && wasm_ref_is_null(wasm_array_get(values, 1u32)) {
+    42i32
+  } else {
+    0i32
+  }
+  node.with_body(@ast.integer(result))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

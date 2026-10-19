@@ -218,7 +218,12 @@ fn fold_module_compile_time_queries(
             context, module_, source, name, receiver, arguments, type_arguments,
             bindings, evidence,
           ) {
-          Ok(Some(replacement)) => module_.expressions[index] = replacement
+          Ok(Some(replacement)) => {
+            if active is None && transform_folded_constant(replacement.kind) is Some(value) {
+              context.query_constants[(module_.module_id, index)] = value
+            }
+            module_.expressions[index] = replacement
+          }
           Ok(None) =>
             if active is Some(_) {
               errors[index] = "CT-004 type query remains unresolved in a concrete instance"
@@ -310,6 +315,7 @@ fn fold_module_compile_time_queries(
                 module_, source, receiver, arguments, type_arguments,
               ) {
               Ok(replacement) => {
+                if active is None { context.query_constants[(module_.module_id, expression)] = TransformUnitConstant }
                 module_.expressions[expression] = replacement
                 None
               }

@@ -1,0 +1,561 @@
+pub struct CtReflectedType {
+  kind: String
+  name: String
+  arguments: Array<CtReflectedType>
+}
+
+pub struct CtExpressionType {
+  offset: U32
+  kind: String
+  type_: CtReflectedType
+}
+
+struct CtReflectedParts {
+  kind: String
+  name: String
+  children: Array<I32>
+}
+
+fn ct_reflected_name(program: SelfHostCollectedProgram,
+id: U64) -> String {
+  let mut mi = 0u32
+  for source in program.modules.values {
+    if source.module_id == self_host_semantic_id_module(id) {
+      return match source.declaration_reference(id) {
+        Some(TopLevel(value)) => program.module_paths[mi].concat("::").concat(source.name(value.name))
+        _ => ""
+      }
+    }
+    mi = mi + 1u32
+  }
+  ""
+}
+
+fn ct_reflected_parameter(program: SelfHostCollectedProgram,
+id: U64) -> String {
+  for source in program.modules.values {
+    if source.module_id == self_host_semantic_id_module(id) {
+      let index = self_host_semantic_id_local(id)
+      if index < source.generic_parameters.length() {
+        let value = source.generic_parameters[index]
+        self_host_assert_compiler_invariant(value.id == id, "reflection generic parameter identity changed")
+        return source.name(value.name)
+      }
+    }
+  }
+  ""
+}
+
+fn ct_reflection_parts(program: SelfHostCollectedProgram,
+module_: SelfHostPlannedModuleLowering,
+root: I32,
+depth: U32) -> Option<CtReflectedParts> {
+  if depth >= 128u32 {
+    return None
+  }
+  let children = array_new::<I32>()
+  if root < -1i32 {
+    let value = module_.resolved_types.types[self_host_body_i32_to_u32(-(root + 2i32))]
+    let span = match value {
+      ErrorType => return None
+      PrimitiveType(primitive) => return Some(CtReflectedParts::{
+        kind: "named"
+        name: ct_reflected_primitive_name(primitive)
+        children: children
+      })
+      GenericParameterType(id) => return Some(CtReflectedParts::{
+        kind: "parameter"
+        name: ct_reflected_parameter(program, id)
+        children: children
+      })
+      SelfType(_) => return Some(CtReflectedParts::{
+        kind: "self"
+        name: "Self"
+        children: children
+      })
+      NominalType(id) => return Some(CtReflectedParts::{
+        kind: "nominal"
+        name: ct_reflected_name(program, id)
+        children: children
+      })
+      TraitType(id) => return Some(CtReflectedParts::{
+        kind: "trait"
+        name: ct_reflected_name(program, id)
+        children: children
+      })
+      MemberTypeProjection(base, operation, selector) => return Some(CtReflectedParts::{
+        kind: "projection"
+        name: operation.to_string().concat(":").concat(selector)
+        children: [-self_host_body_u32_to_i32(base) - 2i32]
+      })
+      ProductType(span), AppliedType(_, span), FunctionType(span, _) => span
+    }
+    match value {
+      AppliedType(base, _) => children.push(-self_host_body_u32_to_i32(base) - 2i32)
+      _ => {
+      }
+    }
+    let _ = while 0u32 {
+      index if index < span.length => {
+        children.push(-self_host_body_u32_to_i32(module_.resolved_types.type_arguments[span.start + index]) - 2i32)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let kind = match value {
+      ProductType(_) => "tuple"
+      AppliedType(_, _) => "applied"
+      FunctionType(_, result) => {
+        children.push(-self_host_body_u32_to_i32(result) - 2i32)
+        "function"
+      }
+      _ => {
+        self_host_assert_compiler_invariant(false, "reflection resolved type changed kind")
+        return None
+      }
+    }
+    return Some(CtReflectedParts::{
+      kind: kind
+      name: ""
+      children: children
+    })
+  }
+  if root < 0i32 || self_host_body_i32_to_u32(root) >= module_.inferred.types.length() {
+    return None
+  }
+  let value = module_.inferred.types[self_host_body_i32_to_u32(root)]
+  let span = match value {
+    BodyErrorType, BodyVariableType(_) => return None
+    BodyResolvedType(id) => return ct_reflection_parts(program, module_, -self_host_body_u32_to_i32(id) - 2i32, depth + 1u32)
+    BodyMemberTypeProjection(base, operation, selector) => return Some(CtReflectedParts::{
+      kind: "projection"
+      name: operation.to_string().concat(":").concat(selector)
+      children: [base]
+    })
+    BodyProductType(span), BodyAppliedType(_, span), BodyFunctionType(span, _) => span
+  }
+  match value {
+    BodyAppliedType(base, _) => children.push(base)
+    _ => {
+    }
+  }
+  let _ = while 0u32 {
+    index if index < span.length => {
+      children.push(module_.inferred.type_arguments[span.start + index])
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let kind = match value {
+    BodyProductType(_) => "tuple"
+    BodyAppliedType(_, _) => "applied"
+    BodyFunctionType(_, result) => {
+      children.push(result)
+      "function"
+    }
+    _ => {
+      self_host_assert_compiler_invariant(false, "reflection body type changed kind")
+      return None
+    }
+  }
+  Some(CtReflectedParts::{
+    kind: kind
+    name: ""
+    children: children
+  })
+}
+
+fn ct_reflected_type(program: SelfHostCollectedProgram,
+module_: SelfHostPlannedModuleLowering,
+root: I32,
+cache: Map<I32, CtReflectedType>,
+depth: U32) -> Option<CtReflectedType> {
+  if depth >= 128u32 {
+    return None
+  }
+  match cache.get(root) {
+    Some(value) => return Some(value)
+    None => {
+    }
+  }
+  let parts = match ct_reflection_parts(program, module_, root, 0u32) {
+    Some(value) => value
+    None => return None
+  }
+  let arguments = array_new::<CtReflectedType>()
+  for child in parts.children {
+    match ct_reflected_type(program, module_, child, cache, depth + 1u32) {
+      Some(value) => arguments.push(value)
+      None => return None
+    }
+  }
+  let value = CtReflectedType::{
+    kind: parts.kind
+    name: parts.name
+    arguments: arguments
+  }
+  cache.set(root, value)
+  Some(value)
+}
+
+fn ct_reflection_manifest(plan: CtPlan) -> SelfHostProgramManifest {
+  let modules = array_new::<SelfHostManifestModule>()
+  let mut mi = 0u32
+  for module_ in plan.manifest.modules {
+    let files = array_new::<SelfHostManifestFile>()
+    for file in plan.files {
+      if file.module_index == mi {
+        files.push(SelfHostManifestFile::{
+          path: file.original.path
+          source: file.clean
+          test_only: file.original.test_only
+        })
+      }
+    }
+    modules.push(SelfHostManifestModule::{
+      path: module_.path
+      files: files
+    })
+    mi = mi + 1u32
+  }
+  SelfHostProgramManifest::{
+    modules: modules
+  }
+}
+
+fn ct_sort_expression_types(values: Array<CtExpressionType>) -> Array<CtExpressionType> {
+  if values.length() < 2u32 {
+    return values
+  }
+  let mut source = values
+  for shift in [0u32, 8u32, 16u32, 24u32] {
+    let counts = array_new::<U32>()
+    let _ = while 0u32 {
+      index if index < 256u32 => {
+        counts.push(0u32)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    for value in source {
+      let digit = (value.offset >> shift) & 255u32
+      counts[digit] = counts[digit] + 1u32
+    }
+    let mut total = 0u32
+    let _ = while 0u32 {
+      index if index < 256u32 => {
+        let count = counts[index]
+        counts[index] = total
+        total = total + count
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let output = source.copy()
+    for value in source {
+      let digit = (value.offset >> shift) & 255u32
+      output[counts[digit]] = value
+      counts[digit] = counts[digit] + 1u32
+    }
+    source = output
+  }
+  source
+}
+
+fn ct_collect_expression_types(plan: CtPlan,
+default_preamble: Bool) -> Unit {
+  let mut requested = false
+  for file in plan.files {
+    if file.annotations.length() != 0u32 {
+      requested = true
+    }
+  }
+  if !requested {
+    return
+  }
+  let manifest = self_host_manifest_with_default_preamble(ct_reflection_manifest(plan), default_preamble)
+  let program = self_host_collect_program_manifest(7200u64, manifest)
+  if program.diagnostics.length() != 0u32 {
+    plan.reflection_errors.push("original body reflection: invalid manifest")
+    return
+  }
+  for source in program.modules.values {
+    if source.diagnostic_count() != 0u32 {
+      plan.reflection_errors.push("original body reflection: invalid source")
+      return
+    }
+  }
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  if frozen.import_diagnostics.length() != 0u32 || frozen.path_diagnostics.length() != 0u32 {
+    plan.reflection_errors.push("original body reflection: invalid imports")
+    return
+  }
+  match self_host_validate_collected_program_bodies(frozen) {
+    Some(error) => {
+      plan.reflection_errors.push(error)
+      return
+    }
+    None => {
+    }
+  }
+  let lowering = self_host_plan_program_lowering(frozen)
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => {
+      plan.reflection_errors.push(error)
+      return
+    }
+    None => {
+    }
+  }
+  match self_host_validate_program_lowering(lowering) {
+    Some(error) => {
+      plan.reflection_errors.push(error)
+      return
+    }
+    None => {
+    }
+  }
+  for file in plan.files {
+    let ranges = array_new::<CtFunction>()
+    for function in file.functions {
+      if ct_is_annotated(file, function) {
+        ranges.push(function)
+      }
+    }
+    if ranges.length() != 0u32 {
+      let mi = file.module_index
+      let source = program.modules.at(mi)
+      let module_ = lowering.modules[mi]
+      let mut file_id = 18446744073709551615u64
+      let mut fi = 0u32
+      for path in source.file_paths {
+        if path == file.original.path {
+          file_id = source.files[fi]
+        }
+        fi = fi + 1u32
+      }
+      self_host_assert_compiler_invariant(file_id != 18446744073709551615u64, "reflected expression lost its source file")
+      let cache = map_empty::<I32, CtReflectedType>()
+      let values = array_new::<CtExpressionType>()
+      let mut ei = 0u32
+      for expression in source.expressions {
+        let offset = expression.offset()
+        if source.expression_files[ei] == file_id && ct_reflection_in_ranges(ranges, offset) {
+          match ct_reflected_type(program, module_, module_.inferred.expression_types[ei], cache, 0u32) {
+            Some(type_) => values.push(CtExpressionType::{
+              offset: offset
+              kind: ct_reflected_expression_kind(expression)
+              type_: type_
+            })
+            None => {
+            }
+          }
+        }
+        ei = ei + 1u32
+      }
+      let mut bi = 0u32
+      for block in source.blocks {
+        if source.block_files[bi] == file_id && ct_reflection_in_ranges(ranges, block.offset) {
+          match ct_reflected_type(program, module_, module_.inferred.block_types[bi], cache, 0u32) {
+            Some(type_) => values.push(CtExpressionType::{
+              offset: block.offset
+              kind: "block"
+              type_: type_
+            })
+            None => {
+            }
+          }
+        }
+        bi = bi + 1u32
+      }
+      plan.expression_types.set(ct_call_key(mi, file.original.path, 0u32), ct_sort_expression_types(values))
+    }
+  }
+}
+
+fn ct_reflection_in_ranges(ranges: Array<CtFunction>,
+offset: U32) -> Bool {
+  for function in ranges {
+    if offset >= function.declaration.body.offset && offset < function.end {
+      return true
+    }
+  }
+  false
+}
+
+fn ct_reflected_type_node(machine: CtMachine,
+type_: CtReflectedType,
+depth: U32) -> CtValue {
+  if depth >= 128u32 {
+    return ct_fail(machine, "reflected type depth limit exceeded")
+  }
+  if !ct_charge(machine, 64u32 + type_.kind.byte_length() + type_.name.byte_length()) {
+    return CtValue::Empty
+  }
+  let arguments = array_new::<CtValue>()
+  for value in type_.arguments {
+    let argument = ct_reflected_type_node(machine, value, depth + 1u32)
+    if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+      return CtValue::Empty
+    }
+    arguments.push(argument)
+  }
+  CtValue::Record("dewdrop.ast::TypeNode", [
+    ct_binding("kind", CtValue::Text(type_.kind)),
+    ct_binding("name", CtValue::Text(type_.name)),
+    ct_binding("arguments", ct_syntax_values(machine, arguments)),
+  ])
+}
+
+fn ct_expression_type_nodes(machine: CtMachine,
+file: CtFile,
+function: CtFunction) -> CtValue {
+  let values = array_new::<CtValue>()
+  match machine.plan.expression_types.get(ct_call_key(file.module_index, file.original.path, 0u32)) {
+    Some(entries) => {
+      let start = while (0u32, entries.length()) {
+        (low, high) if low < high => {
+          if !ct_charge(machine, 0u32) {
+            return CtValue::Empty
+          }
+          let middle = low + (high - low) / 2u32
+          if entries[middle].offset < function.declaration.body.offset {
+            continue (middle + 1u32, high)
+          } else {
+            continue (low, middle)
+          }
+        }
+        (low, _) => break low
+      }
+      let _ = while start {
+        index if index < entries.length() => {
+          if !ct_charge(machine, 0u32) {
+            return CtValue::Empty
+          }
+          let value = entries[index]
+          if value.offset >= function.end {
+            break ()
+          }
+          if !ct_charge(machine, 64u32) {
+            return CtValue::Empty
+          }
+          let type_node = ct_reflected_type_node(machine, value.type_, 0u32)
+          if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+            return CtValue::Empty
+          }
+          values.push(CtValue::Record("dewdrop.ast::ExpressionTypeNode", [
+            ct_binding("offset", ct_number(u32_into_u64(value.offset), "U32")),
+            ct_binding("kind", CtValue::Text(value.kind)),
+            ct_binding("type_", type_node),
+          ]))
+          continue index + 1u32
+        }
+        _ => break ()
+      }
+    }
+
+    None => {
+    }
+  }
+  ct_syntax_values(machine, values)
+}
+
+fn ct_reflection_error_nodes(machine: CtMachine) -> CtValue {
+  let values = array_new::<CtValue>()
+  for message in machine.plan.reflection_errors {
+    if !ct_charge(machine, 16u32 + message.byte_length()) {
+      return CtValue::Empty
+    }
+    values.push(CtValue::Text(message))
+  }
+  ct_syntax_values(machine, values)
+}
+
+fn ct_reflected_expression_kind(value: SelfHostHirExpr) -> String {
+  match value {
+    I8Expr(_, _) => "I8"
+    I16Expr(_, _) => "I16"
+    I32Expr(_, _) => "I32"
+    I64Expr(_, _) => "I64"
+    U8Expr(_, _) => "U8"
+    U16Expr(_, _) => "U16"
+    U32Expr(_, _) => "U32"
+    U64Expr(_, _) => "U64"
+    F32Expr(_, _) => "F32"
+    F64Expr(_, _) => "F64"
+    BoolExpr(_, _) => "Bool"
+    StringExpr(_, _) => "String"
+    BytesExpr(_, _) => "Bytes"
+    NameExpr(_, _) => "name"
+    ImportAliasExpr(_, _) => "import"
+    ProductExpr(_, _) => "tuple"
+    ArrayExpr(_, _) => "array"
+    LambdaExpr(_, _) => "lambda"
+    ObjectExpr(_, _) => "record"
+    ConstructExpr(_, _, _) => "construct"
+    BlockExpr(_, _) => "block"
+    IfExpr(_, _, _, _) => "if"
+    MatchExpr(_, _, _) => "match"
+    WhileExpr(_, _, _) => "while"
+    ReturnExpr(_, _) => "return"
+    BreakExpr(_, _) => "break"
+    ContinueExpr(_, _) => "continue"
+    PrefixExpr(_, _, _) => "prefix"
+    BinaryExpr(_, _, _, _) => "binary"
+    CallExpr(_, _, _) => "call"
+    FieldExpr(_, _, _) => "field"
+    QualifiedExpr(_, _, _) => "qualified"
+    ProductFieldExpr(_, _, _, _) => "tuple_field"
+    IndexExpr(_, _, _) => "index"
+    AssignmentExpr(_, _, _) => "assign"
+    IndexSetExpr(_, _, _, _) => "index_set"
+    TypeBindingExpr(_, _) => "type_bind"
+  }
+}
+
+fn ct_reflected_primitive_name(value: SelfHostPrimitiveType) -> String {
+  match value {
+    UnitType => "Unit"
+    BoolType => "Bool"
+    I32Type => "I32"
+    U32Type => "U32"
+    I64Type => "I64"
+    U64Type => "U64"
+    F32Type => "F32"
+    F64Type => "F64"
+    StringType => "String"
+    NeverType => "Never"
+    I8Type => "I8"
+    I16Type => "I16"
+    U8Type => "U8"
+    U16Type => "U16"
+    BytesType => "Bytes"
+    V128Type => "V128"
+    Swar32Type => "Swar32"
+    Swar64Type => "Swar64"
+    I8x4Type => "I8x4"
+    U8x4Type => "U8x4"
+    I16x2Type => "I16x2"
+    U16x2Type => "U16x2"
+    I8x8Type => "I8x8"
+    U8x8Type => "U8x8"
+    I16x4Type => "I16x4"
+    U16x4Type => "U16x4"
+    I32x2Type => "I32x2"
+    U32x2Type => "U32x2"
+    I8x16Type => "I8x16"
+    U8x16Type => "U8x16"
+    I16x8Type => "I16x8"
+    U16x8Type => "U16x8"
+    I32x4Type => "I32x4"
+    U32x4Type => "U32x4"
+    I64x2Type => "I64x2"
+    U64x2Type => "U64x2"
+    F32x4Type => "F32x4"
+    F64x2Type => "F64x2"
+    StringViewType => "StringView"
+    StringBuilderType => "StringBuilder"
+    BytesBuilderType => "BytesBuilder"
+    CompileTimeTypeType => "Type"
+  }
+}

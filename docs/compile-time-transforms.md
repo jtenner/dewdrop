@@ -61,7 +61,7 @@ reserved for that API. Their library functions use ordinary evaluation rules.
 
 `FnNode` has `name: String` and `body: ExprNode`. The current API transforms
 function bodies. The name, parameters, type parameters, return type, and visibility
-remain unchanged. It does not yet provide typed expression reflection.
+remain unchanged. The context supplies checked types for original expressions.
 A transform can add declarations and imports through the context.
 
 `ExprNode` has these variants:
@@ -69,6 +69,7 @@ A transform can add declarations and imports through the context.
 | Variant | Generated code |
 | --- | --- |
 | `Source(String)` | A source fragment, checked before use |
+| `Quote(Array<String>, Array<ExprNode>)` | Source text with expression splices and fresh `$name` locals |
 | `Integer(I32)` | An I32 literal |
 | `Unit`, `Integer64(I64)`, `Unsigned64(U64)` | Unit and wide integer values |
 | `Path(String)` | A checked qualified name, including `@alias.Type::method` |
@@ -91,9 +92,8 @@ The input body is a `Source` node containing the original block. Builders let
 you wrap or replace that block. A source fragment is an explicit escape hatch;
 it must still produce exactly one valid function body and pass normal checks.
 
-Generated names resolve in the target module and lexical scope. This version
-has no automatic name hygiene or quotation syntax. Use `ctx.fresh_name` for an
-introduced local. Do not assume a plain `Name("x")` refers to a variable in the
+Generated names resolve in the target module and lexical scope. Quotes give `$name` bindings fresh local names. Use `ctx.fresh_name` for a
+local introduced with other builders. Do not assume a plain `Name("x")` refers to a variable in the
 transform's own module. Imported generated references can use
 `Path("@alias.function")` and an import in the target module.
 
@@ -146,14 +146,17 @@ work. Runnable examples are in `examples/transforms/`:
 | `constants.dew` | Local module constants and dependent initializers |
 | `constant_state.dew` | Initialization once per application, fresh state for stacked transforms |
 | `imported_constants.dew` | Public module constants from another module |
+| `repeated_imports.dew` | Generated imports shared by two transformed functions |
 
 ## Add declarations and imports
 
 Use `ctx.add_function(source)`, `ctx.add_type(source)`, and
 `ctx.add_implementation(source)` to add one declaration of the requested kind.
 Types can be structs, enums, or aliases. Use `ctx.import_module(module_path,
-alias)` to add a named import to the generated file. Do not include `@` in the
-alias. A later transform in a stack can use declarations emitted by an earlier
+alias)` to add a named import to the target module. Do not include `@` in the
+alias. Repeated requests for an existing path and alias reuse that import,
+including requests from transforms on different functions. An alias that already
+names a different module produces an error. A later transform in a stack can use declarations emitted by an earlier
 transform in its output. Execution still uses the original checked source set.
 
 The context stores these requests in `declarations` and `imports` arrays.
@@ -225,8 +228,9 @@ application. Mutable module bindings remain unavailable. Initializer cycles,
 escaped control flow, and host calls produce errors.
 
 Unsupported operations produce errors when reached. These include host calls,
-mutable module bindings, unresolved generic trait dispatch, floating-point
-execution, SIMD execution, and general text-library operations. Generic source helpers work
+mutable module bindings, unresolved generic trait dispatch, and vector instructions
+outside the supported subset. Scalar floats and standard text methods execute
+through checked Wasm operations and ordinary Dew source. Generic source helpers work
 when execution needs no missing type or trait evidence. All branches must pass
 the normal source checks, including branches that execution does not reach.
 
@@ -265,6 +269,112 @@ The test checks every public example and requires each exported `main` to
 return `42`. It also checks that invalid signatures, extra declarations, unsafe
 operations, and host calls fail with a diagnostic and produce no output file.
 
+## Quotes and splices
+
+Use `@ast.quote(parts, splices)` to join source text with expression nodes. The
+number of text parts must be one more than the number of expressions. Each
+inserted expression has parentheses. The complete quote has its own local scope.
+
+```dew
+node.with_body(@ast.quote([
+  "let $saved = 2i32\n",
+  " + $saved",
+], [node.body]))
+```
+
+Inside quote text, `$saved` is a quote-local name. The compiler gives it a fresh
+name and uses the same name for every `$saved` in that quote. It checks all text
+and inserted expressions for name conflicts. Nested quotes have their own names.
+Dollar text in strings and comments stays unchanged. An ordinary name such as
+`value` keeps its normal source meaning. Use `$name` for each new local binding.
+A quote does not parse or execute code during interpretation. The compiler checks
+its final source with all other generated code. The normal size, work, and
+nesting limits apply. See `examples/transforms/quotes.dew`.
+
+## Read the original body tree
+
+`ctx.syntax` is the original parsed body as a `SyntaxNode`. A node has `kind`,
+`label`, `offset`, `children`, and `types`. Offsets are byte offsets in the original
+UTF-8 source. Children keep source order. A block has one child per source item;
+a call has its callee first, then its arguments. Binary nodes have the operator
+in `label`, then left and right children. Bindings have the name in `label`.
+
+The tree includes expressions, blocks, lambda parameters, record properties,
+match arms, guards, and patterns. Explicit source types use `TypeNode` in `types`.
+Integer labels hold unsigned literal bits; a separate prefix node holds a minus
+sign. Float labels hold IEEE bits. String labels hold decoded text. A bytes
+literal has one `U8` child per byte, which preserves bytes that are not UTF-8.
+The tree keeps the source form. Use `ctx.type_of(node)` for checked types.
+Stacked transforms see the same original tree. Use `node.body` for the output of
+the previous transform. See `examples/transforms/syntax_tree.dew`.
+
+## Read checked expression types
+
+`ctx.type_of(syntax_node)` returns `Option<@ast.TypeNode>`. It reads the type of
+an expression in the original function body. A call and its callee can have the
+same byte offset; the lookup also checks the syntax kind.
+
+```dew
+let expression = ctx.syntax.children[0u32]
+match ctx.type_of(expression) {
+  Some(type_) => {
+    // Inspect type_.kind, type_.name, and type_.arguments.
+    node
+  }
+  None => node
+}
+```
+
+`ctx.expression_types` contains the underlying `ExpressionTypeNode` records,
+sorted by byte offset. Each record has `offset`, `kind`, and `type_`. The order
+of records at the same offset is unspecified. `type_of` uses a binary search
+and then checks the matching offset group. Binding statements and patterns do
+not have expression types.
+
+Primitive types use `kind: "named"` and names such as `I32`. Nominal and trait
+types use `nominal` and `trait`, with a qualified name such as
+`example.app::Box`. Generic parameters use `parameter` and their declared name.
+`self` represents `Self`. Tuples use `tuple`. Applied types put their base first
+in `arguments`; function types put their result last. Associated type
+projections use `projection` and retain their owner type.
+
+If the original input has a check error, `expression_types` is empty and
+`ctx.type_errors` contains the check errors. A transform can still repair the
+body. The generated result must then pass normal checking. A missing type
+returns `None`; the compiler does not guess it.
+
+The view always refers to the original body, including with stacked transforms.
+Each application gets fresh arrays. Type traversal and array construction use
+the transform work, allocation, and nesting limits. Building the checked view
+also needs a separate source-check pass; that pass is outside the interpreter
+work report.
+
+See `examples/transforms/typed_reflection.dew`, `typed_generics.dew`, and
+`typed_repair.dew`. All three can be built with `tools/dew build` as shown above.
+
+## Annotation arguments
+
+An annotation can pass syntax to its transform:
+
+```dew
+#labeled("answer")
+pub fn main() -> I32 {
+  0i32
+}
+```
+
+Read the arguments from `ctx.arguments: Array<SyntaxNode>`. For a string literal,
+`kind` is `"String"` and `label` is the decoded text. The source offsets refer to
+the original file. `ctx.arguments_source` holds the exact text inside the
+parentheses. No parentheses and empty parentheses both give an empty array.
+
+These are syntax arguments, like macro input. The compiler parses them but does
+not execute them or resolve names in them. A transform can inspect a call node
+without making that call. It can reject input with a normal transform error.
+The complete annotation must fit on one line. Limits are 256 arguments, 64 KiB
+of argument text, and 127 nested bracket pairs. See
+`examples/transforms/arguments.dew`.
+
 ## Inspect expanded source
 
 ```sh
@@ -293,9 +403,53 @@ existing Facet bindings. The CI job uses a Linux x64 project runner with the
 request; this is an open host speed issue. See
 `docs/research/native-wago-transform-check-2026-10-19.md` for measured limits.
 
-## Selected function values
+## Scalar floats and selected function values
+
+F32 and F64 literals, ordinary source helpers, scalar arithmetic, comparisons,
+and selected Wasm float instructions can run at compile time. Nearest rounds
+ties to even. Negative zero and NaN follow Wasm rules. A float-to-integer trap
+becomes a transform error. Use reinterpret instructions to read float bits;
+an unsafe cast cannot move a float into an integer carrier. See
+`examples/transforms/floats.dew`.
 
 A function value uses the target chosen by normal source checking. This also
 works for overloaded builtins when the expected function type selects a target.
 Dew does not permit overloaded ordinary free functions. See
 `examples/transforms/overloads.dew`.
+
+String equality, concat, and StringBuilder methods run from the ordinary Dew
+library source. A built String can supply AST source, names, quote text, and
+new declarations. See `examples/transforms/strings.dew`.
+
+## Work reports
+
+The expanded-source JSON includes `transform_reports`, in source order. Each
+completed annotation has its module, file, function, transform, byte offset,
+`work`, and `allocation_work`. Each annotation starts with a fresh budget.
+These are logical interpreter counts. Allocation work is an estimate of work
+that creates values; it is not retained heap bytes or peak memory. It includes
+context construction and generated import and declaration work. Final shared
+function rendering and later compiler passes are outside this per-annotation
+count. Counts can differ between the native and Dew implementations.
+
+Compiler API users can read `options.transform_reports` after compilation.
+The Dew API `ct_expand_checked_with_reports` returns the expanded manifest and
+reports without adding host calls. Failed annotations retain their normal
+error diagnostics. A report is emitted only for a completed annotation.
+
+## Nullable raw-array slots
+
+The interpreter handles `wasm_ref_null`, `wasm_ref_is_null`, and
+`wasm_ref_as_non_null` through the checked builtin opcodes. A default
+`NullableRef<Handle>` slot contains null. A non-null foreign reference read
+from an uninitialized slot fails before use. Null is separate from integer
+zero, floating-point zero, and generic defaults. See
+`examples/transforms/nulls.dew`.
+
+## Checked type queries
+
+Concrete `dew.std.types` queries can run inside a transform. They use results
+proved by normal type checking. Name arrays are fresh values, so changing one
+result does not change the next result. See
+`examples/transforms/type_queries.dew`. Queries that need a helper's unresolved
+generic type arguments still need interpreter type-instance support.

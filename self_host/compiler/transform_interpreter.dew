@@ -181,6 +181,11 @@ fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
   if !ct_charge(machine, 32u32 + args.length() * 16u32) || machine.flow != 0u32 {
     return CtValue::Empty
   }
+  match machine.functions.get(key) {
+    Some(Source(mi, path, function, _)) => return ct_source_call(machine, mi, path, function, args)
+    _ => {
+    }
+  }
   for file in machine.plan.files {
     let module_name = machine.plan.manifest.modules[file.module_index].path
     for declaration in file.declarations {
@@ -200,6 +205,7 @@ fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
               return ct_fail(machine, "compile-time calls to annotated functions are not supported")
             }
           }
+          machine.functions.set(key, Source(file.module_index, file.original.path, function, ""))
           let env = array_new::<CtBinding>()
           let mut index = 0u32
           for parameter in function.parameters {
@@ -270,6 +276,7 @@ fn ct_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, righ
       NotEqual => CtValue::Boolean(a != b)
       _ => ct_fail(machine, "unsupported Bool operator at compile time")
     }
+    (Floating(_, kind), Floating(_, other)) if kind == other => ct_float_binary(machine, op, left, right, kind)
     (Number(a, kind), Number(b, other)) if kind == other || (op is ShiftLeft) || (op is ShiftRight) => {
       let sa = ct_signed(a, kind)
       let sb = ct_signed(b, kind)
@@ -384,15 +391,7 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBi
           if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
             return result
           }
-          match target {
-            Record(_, fields) => match ct_lookup(machine, fields, name) {
-              Some(field) => {
-                field.value = ct_eval(machine, mi, item.value, env)
-              }
-              None => return ct_fail(machine, "unknown mutable record field")
-            }
-            _ => return ct_fail(machine, "field assignment requires a record")
-          }
+          ct_write_field(machine, target, name, ct_eval(machine, mi, item.value, env))
         }
         _ => return ct_fail(machine, "unsupported assignment at compile time")
       }
@@ -452,6 +451,8 @@ fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtB
 
 fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
   match expression {
+    F32Expr(value, _) => CtValue::Floating(u32_into_u64(wasm_f32_to_bits(value)), "F32")
+    F64Expr(value, _) => CtValue::Floating(wasm_f64_to_bits(value), "F64")
     I8Expr(value, _) => ct_number(value, "I8")
     I16Expr(value, _) => ct_number(value, "I16")
     I32Expr(value, _) => ct_number(value, "I32")
@@ -539,7 +540,15 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Arr
         (LogicalNot, DefaultValue) => CtValue::Boolean(true)
         (LogicalNot, Boolean(value)) => CtValue::Boolean(!value)
         (Negative, Number(value, kind)) => ct_number(0u64 - value, kind)
-        (Positive, Number(_, _)) => value
+        (Positive, Number(_, _)), (Positive, Floating(_, _)) => value
+        (Negative, Floating(bits, kind)) => {
+          let sign = if kind == "F32" {
+            2147483648u64
+          } else {
+            9223372036854775808u64
+          }
+          CtValue::Floating(bits ^ sign, kind)
+        }
         _ => ct_fail(machine, "unsupported prefix operator at compile time")
       }
     }
@@ -608,6 +617,9 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
     }
     LiteralPattern(expression, _) => match (ct_eval(machine, mi, expression, env), value) {
       (Text(a), Text(b)) => a == b
+      (Text(a), TextReference(_)) => a == ct_string(machine, value)
+      (Floating(a, "F32"), Floating(b, "F32")) => wasm_f32_from_bits(u64_into_u32(a)) == wasm_f32_from_bits(u64_into_u32(b))
+      (Floating(a, "F64"), Floating(b, "F64")) => wasm_f64_from_bits(a) == wasm_f64_from_bits(b)
       (Number(number, _), DefaultValue) => number == 0u64
       (Boolean(flag), DefaultValue) => !flag
       (Number(a, kind), other) => match ct_intrinsic_result(machine, other, kind) {
@@ -643,6 +655,14 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
       _ => false
     }
     StructPattern(_, patterns, _, offset) => match value {
+      ReferenceView(_, _) => {
+        for pattern in patterns {
+          if !ct_pattern(machine, mi, pattern.pattern, ct_field(machine, value, pattern.name), env) {
+            return false
+          }
+        }
+        true
+      }
       Record(key, values) => {
         let expected = ct_checked_pattern_key(machine, mi, offset)
         if machine.error.byte_length() != 0u32 || (key.byte_length() != 0u32 && key != expected) {

@@ -6,9 +6,9 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants overloads; do
+for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values signature_info type_info declarations constants constant_state imported_constants repeated_imports generated_imports quotes nested_quotes syntax_tree arguments floats strings overloads nulls type_queries typed_reflection typed_repair typed_generics; do
   args=("examples/transforms/$kind.dew")
-  if [[ "$kind" == imported || "$kind" == imported_methods ]]; then
+  if [[ "$kind" == imported || "$kind" == imported_methods || "$kind" == repeated_imports || "$kind" == generated_imports ]]; then
     args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)
   elif [[ "$kind" == imported_constants ]]; then
     args=("examples/transforms/$kind.dew" --module example.constant_tools examples/transforms/constant_tools.dew)
@@ -210,9 +210,92 @@ pub fn main() -> I32 {
 }
 DEW
 
-for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias mutable-global; do
+cat > "$work/foo-u32.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+struct Foo<t> {}
+builtin absent<t>() -> Foo<t> = "ref_null"
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+ let _ = absent::<U32>()
+ node.with_body(@ast.integer(42i32))
+}
+#replace
+pub fn main() -> I32 {
+ 0i32
+}
+DEW
+
+cat > "$work/foo-handle.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+foreign type Handle
+struct Foo<t> {}
+builtin absent<t>() -> Foo<t> = "ref_null"
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+ let _ = absent::<Handle>()
+ node.with_body(@ast.integer(42i32))
+}
+#replace
+pub fn main() -> I32 {
+ 0i32
+}
+DEW
+
+cat > "$work/bad-is-null-result.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+builtin wrong(value: String) -> String = "ref_is_null"
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+ let _ = wrong("x")
+ node.with_body(@ast.integer(42i32))
+}
+#replace
+pub fn main() -> I32 {
+ 0i32
+}
+DEW
+
+cat > "$work/bad-is-null-unit.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+builtin wrong(value: String) -> Unit = "ref_is_null"
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+ let _ = wrong("x")
+ node.with_body(@ast.integer(42i32))
+}
+#replace
+pub fn main() -> I32 {
+ 0i32
+}
+DEW
+
+cat > "$work/generic-hidden-result.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+builtin hidden<t>(a: I32, b: I32) -> t = "i32.add"
+fn trigger<t>() -> Unit {
+  let _ = hidden::<t>(1i32, 2i32)
+}
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  trigger::<String>()
+  node.with_body(@ast.integer(42i32))
+}
+#replace
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+
+for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field declaration-kind import-alias mutable-global foo-u32 foo-handle bad-is-null-result bad-is-null-unit generic-hidden-result; do
   expected='invalid transform signature'
-  if [[ "$kind" == sibling-declaration ]]; then
+  if [[ "$kind" == foo-u32 || "$kind" == foo-handle ]]; then
+    expected='null reference'
+  elif [[ "$kind" == bad-is-null-result || "$kind" == bad-is-null-unit ]]; then
+    expected='result carrier'
+  fi
+  if [[ "$kind" == generic-hidden-result ]]; then
+    expected='generic intrinsic result needs a concrete checked carrier'
+  elif [[ "$kind" == sibling-declaration ]]; then
     expected='transform must produce one valid function body'
   elif [[ "$kind" == host-call ]]; then
     expected='checked call requires unsupported compile-time dispatch'
@@ -229,7 +312,7 @@ for kind in bad-signature sibling-declaration host-call array-bounds array-budge
   elif [[ "$kind" == import-alias ]]; then
     expected='invalid generated import'
   elif [[ "$kind" == float-default || "$kind" == float-cast || "$kind" == boxed-float || "$kind" == float-field ]]; then
-    expected='unsupported scalar type'
+    expected='Wasm integer intrinsic requires an integer|floating-point value has an incompatible checked carrier|Wasm unsafe cast requires the same scalar carrier'
   fi
   rm -f "$work/$kind.wasm"
   self_host_measure "transform rejection request: $kind" \
@@ -245,7 +328,7 @@ for kind in bad-signature sibling-declaration host-call array-bounds array-budge
     exit 1
   fi
   cat "$work/$kind.log"
-  if ! rg -F -- "$expected" "$work/$kind.log" || [[ -e "$work/$kind.wasm" ]]; then
+  if ! rg -- "$expected" "$work/$kind.log" || [[ -e "$work/$kind.wasm" ]]; then
     echo "transform rejection lacked its diagnostic or wrote output: $kind" >&2
     exit 1
   fi

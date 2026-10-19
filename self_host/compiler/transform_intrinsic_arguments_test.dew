@@ -1,0 +1,38 @@
+test "intrinsic arguments flatten only explicit product parameters" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let tuple = CtValue::Sequence([ct_number(40u64, "I32"), ct_number(2u64, "I32")])
+  let output = array_new::<CtValue>()
+  assert(ct_append_intrinsic_argument(machine, output, SelfHostTypeExpr::ProductType([
+    SelfHostTypeExpr::NamedType("I32", 0u32), SelfHostTypeExpr::NamedType("I32", 0u32)
+  ], 0u32), tuple), "explicit product has matching values")
+  assert(output.length() == 2u32, "product gives two Wasm operands")
+  assert(ct_raw_bits(machine, output[0u32]) == 40u64, "first operand retains order")
+  assert(ct_raw_bits(machine, output[1u32]) == 2u64, "second operand retains order")
+  let generic = array_new::<CtValue>()
+  assert(ct_append_intrinsic_argument(machine, generic, SelfHostTypeExpr::NamedType("t", 0u32), tuple), "generic value remains boxed")
+  assert(generic.length() == 1u32, "generic value remains one operand")
+  assert(ct_reference_identity(generic[0u32], tuple), "generic value retains its identity")
+}
+
+test "null declaration contracts reject tuple carriers before execution" {
+  for source in [
+    b"builtin wrong(value: (I32, I32)) -> Bool = \"ref_is_null\"\n",
+    b"builtin wrong(value: (String, String)) -> Bool = \"ref_is_null\"\n"
+  ] {
+    let collected = self_host_collect_program_manifest(7200u64, {
+      modules: [{
+        path: "app"
+        files: [{
+          path: "null.dew"
+          source: source
+          test_only: false
+        }]
+      }]
+    })
+    let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+    match ct_intrinsic_declaration_contract_error(lowering) {
+      Some(error) => assert(error.contains("one reference operand"), error)
+      None => assert(false, "tuple null declaration must fail before expansion")
+    }
+  }
+}

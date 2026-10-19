@@ -1,0 +1,387 @@
+pub struct CtRawLayout {
+  fields: Array<String>
+  storage: Array<String>
+}
+
+builtin ct_reference_identity(left: CtValue, right: CtValue) -> Bool = "ref.eq"
+builtin ct_raw_storage_identity(left: CtRawStorage, right: CtRawStorage) -> Bool = "ref.eq"
+builtin ct_binding_storage_identity(left: Array<CtBinding>, right: Array<CtBinding>) -> Bool = "ref.eq"
+builtin ct_value_storage_identity(left: Array<CtValue>, right: Array<CtValue>) -> Bool = "ref.eq"
+
+fn ct_reference_equal(machine: CtMachine, left: CtValue, right: CtValue) -> CtValue {
+  let left = ct_reference_base(left)
+  let right = ct_reference_base(right)
+  match (left, right) {
+    (DefaultValue, DefaultValue), (DefaultValue, NullValue), (NullValue, DefaultValue), (NullValue, NullValue) => CtValue::Boolean(true)
+    (NullValue, _), (DefaultValue, _) => CtValue::Boolean(false)
+    (_, NullValue), (_, DefaultValue) => CtValue::Boolean(false)
+    (RawArray(left), RawArray(right)) => CtValue::Boolean(ct_raw_storage_identity(left, right))
+    (TextChunks(left, _), TextChunks(right, _)) => CtValue::Boolean(ct_reference_identity(left, right))
+    (Record(_, left), Record(_, right)) => CtValue::Boolean(ct_binding_storage_identity(left, right))
+    (Text(_), Text(_)) => CtValue::Boolean(ct_reference_identity(left, right))
+    (Variant(_, left), Variant(_, right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
+    (Sequence(left), Sequence(right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
+    (Function(_, _), Function(_, _)), (Closure(_, _, _, _, _), Closure(_, _, _, _, _)) => CtValue::Boolean(ct_reference_identity(left, right))
+    (Floating(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")
+    (_, Floating(_, _)) => ct_fail(machine, "Wasm reference identity requires references")
+    (Number(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")
+    (_, Number(_, _)) => ct_fail(machine, "Wasm reference identity requires references")
+    (Boolean(_), _) => ct_fail(machine, "Wasm reference identity requires references")
+    (_, Boolean(_)) => ct_fail(machine, "Wasm reference identity requires references")
+    (Vector(_, _), _) => ct_fail(machine, "Wasm reference identity requires references")
+    (_, Vector(_, _)) => ct_fail(machine, "Wasm reference identity requires references")
+    _ => CtValue::Boolean(false)
+  }
+}
+
+fn ct_raw_declaration_key(declaration: U64) -> String {
+  let out = StringBuilder::new()
+  out.append_u64(declaration)
+  out.finish()
+}
+
+fn ct_raw_storage_kind(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, type_: U32) -> String {
+  match module_.resolved_types.types[type_] {
+    PrimitiveType(primitive) => match primitive {
+      BoolType, I32Type, U32Type => "i32"
+      I8Type, U8Type => "i8"
+      I16Type, U16Type => "i16"
+      I64Type, U64Type => "i64"
+      F32Type => "f32"
+      F64Type => "f64"
+      V128Type, I8x16Type, U8x16Type, I16x8Type, U16x8Type, I32x4Type, U32x4Type, I64x2Type, U64x2Type, F32x4Type, F64x2Type => "v128"
+      StringType, BytesType, StringViewType => "text"
+      _ => "unsupported"
+    }
+    NominalType(declaration) => "record:".concat(ct_raw_declaration_key(declaration))
+    AppliedType(base, arguments) if arguments.length == 1u32 => match module_.resolved_types.types[base] {
+      NominalType(declaration) if lowering.raw_arrays.declarations.contains_key(declaration) =>
+        "array:".concat(ct_raw_storage_kind(lowering, module_, module_.resolved_types.type_arguments[arguments.start]))
+      _ => "unsupported"
+    }
+    _ => "unsupported"
+  }
+}
+
+fn ct_collect_raw_layouts(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
+  let mut mi = 0u32
+  for module_ in lowering.modules {
+    let source = collected.modules.at(mi)
+    for layout in module_.type_layouts.layouts {
+      match layout.kind {
+        PlannedStructLayout(fields) if layout.generic_parameters.length == 0u32 => {
+          let names = array_new::<String>()
+          let storage = array_new::<String>()
+          let _ = while 0u32 {
+            index if index < fields.length => {
+              let field = module_.type_layouts.fields[fields.start + index]
+              names.push(field.name)
+              let prefix = if field.mutable_ {
+                "mut:"
+              } else {
+                ""
+              }
+              storage.push(prefix.concat(ct_raw_storage_kind(lowering, module_, field.type_)))
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+          match source.declaration_reference(layout.declaration) {
+            Some(TopLevel(declaration)) => {
+              let value = CtRawLayout::{
+                fields: names
+                storage: storage
+              }
+              plan.raw_layouts.set(collected.module_paths[mi].concat("::").concat(source.name(declaration.name)), value)
+              plan.raw_layouts.set("record:".concat(ct_raw_declaration_key(layout.declaration)), value)
+            }
+            _ => {}
+          }
+        }
+        _ => {}
+      }
+    }
+    mi = mi + 1u32
+  }
+}
+
+fn ct_reference_base(value: CtValue) -> CtValue {
+  match value {
+    ReferenceView(base, _) => ct_reference_base(base)
+    TextReference(base) => ct_reference_base(base)
+    _ => value
+  }
+}
+
+fn ct_reference_storage(machine: CtMachine, value: CtValue) -> Array<String> {
+  match ct_reference_base(value) {
+    Text(_) => ["array:v128", "i32", "i32"]
+    Record(key, _) => match machine.plan.raw_layouts.get(key) {
+      Some(layout) => layout.storage
+      None => {
+        let _ = ct_fail(machine, "reference has no checked raw layout")
+        []
+      }
+    }
+    _ => {
+      let _ = ct_fail(machine, "expected a checked struct reference at compile time")
+      []
+    }
+  }
+}
+
+fn ct_reference_cast(machine: CtMachine, value: CtValue, kind: String) -> CtValue {
+  let source = ct_reference_storage(machine, value)
+  let fields = array_new::<String>()
+  let target = array_new::<String>()
+  if kind == "String" || kind == "Bytes" || kind == "StringView" {
+    target.push("array:v128")
+    target.push("i32")
+    target.push("i32")
+  } else if kind == "StringBuilder" || kind == "BytesBuilder" {
+    target.push("mut:array:v128")
+    target.push("mut:i32")
+    target.push("mut:i32")
+  } else {
+    match machine.plan.raw_layouts.get(kind) {
+      Some(layout) => {
+        for name in layout.fields {
+          fields.push(name)
+        }
+        for storage in layout.storage {
+          target.push(storage)
+        }
+      }
+      None => return ct_fail(machine, "reference cast has no checked target layout")
+    }
+  }
+  if source.length() != target.length() {
+    return ct_fail(machine, "reference cast heap type mismatch at compile time")
+  }
+  let _ = while 0u32 {
+    index if index < source.length() => {
+      if !ct_charge(machine, 0u32) {
+        return CtValue::Empty
+      }
+      if source[index] != target[index] || source[index].contains("unsupported") {
+        return ct_fail(machine, "reference cast heap type mismatch at compile time")
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  if fields.length() == 0u32 {
+    let base = ct_reference_base(value)
+    if kind == "String" && !(base is Text(_)) {
+      CtValue::TextReference(base)
+    } else {
+      base
+    }
+  } else {
+    CtValue::ReferenceView(ct_reference_base(value), fields)
+  }
+}
+
+fn ct_raw_struct_get(machine: CtMachine, value: CtValue, index: U32) -> CtValue {
+  let original = ct_reference_base(value)
+  match original {
+    Text(content) => match index {
+      0u32 => CtValue::TextChunks(original, content.as_bytes())
+      1u32 => ct_number(0u64, "U32")
+      2u32 => ct_number(u32_into_u64(content.byte_length()), "U32")
+      _ => ct_fail(machine, "Wasm struct field out of bounds at compile time")
+    }
+    Record(key, values) => match machine.plan.raw_layouts.get(key) {
+      Some(layout) if index < layout.fields.length() => match ct_lookup(machine, values, layout.fields[index]) {
+        Some(binding) => binding.value
+        None => ct_fail(machine, "Wasm struct reference lost a checked field")
+      }
+      _ => ct_fail(machine, "Wasm struct field has no checked layout")
+    }
+    _ => ct_fail(machine, "Wasm struct read requires a struct reference")
+  }
+}
+
+fn ct_raw_immediate(opcode: String, prefix: String) -> Option<U32> {
+  if !opcode.starts_with(prefix) || opcode.byte_length() == prefix.byte_length() {
+    return None
+  }
+  let mut result = 0u32
+  let _ = while prefix.byte_length() {
+    index if index < opcode.byte_length() => {
+      let byte = opcode.byte_at(index)
+      if byte < 48u8 || byte > 57u8 || result > 1000u32 {
+        return None
+      }
+      result = result * 10u32 + u8_into_u32(byte) - 48u32
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  Some(result)
+}
+
+fn ct_raw_array_length(machine: CtMachine, value: CtValue) -> U64 {
+  match value {
+    RawArray(storage) => u32_into_u64(storage.values.length())
+    TextChunks(_, backing) => u32_into_u64((backing.byte_length() + 15u32) / 16u32)
+    _ => {
+      let _ = ct_fail(machine, "Wasm array instruction requires an array")
+      0u64
+    }
+  }
+}
+
+fn ct_raw_array_get(machine: CtMachine, value: CtValue, index: U64) -> CtValue {
+  if index >= ct_raw_array_length(machine, value) {
+    return ct_fail(machine, "Wasm array index out of bounds at compile time")
+  }
+  match value {
+    RawArray(storage) => ct_intrinsic_result(machine, storage.values[u64_into_u32(index)], storage.default_kind)
+    TextChunks(_, backing) => {
+      let mut result = CtValue::Vector(0u64, 0u64)
+      let _ = while 0u32 {
+        lane if lane < 16u32 => {
+          let at = u64_into_u32(index) * 16u32 + lane
+          if at < backing.byte_length() {
+            result = ct_vector_replace(machine, result, lane, u8_into_u64(backing.byte_at(at)))
+          }
+          continue lane + 1u32
+        }
+        _ => break ()
+      }
+      result
+    }
+    _ => ct_fail(machine, "Wasm array read requires an array")
+  }
+}
+
+fn ct_raw_array_copy(machine: CtMachine, target: CtValue, target_at: U64, source: CtValue, source_at: U64, count: U64) -> CtValue {
+  let storage = match target {
+    RawArray(storage) => storage
+    _ => return ct_fail(machine, "Wasm array copy requires mutable array storage")
+  }
+  let target_length = ct_raw_array_length(machine, target)
+  let source_length = ct_raw_array_length(machine, source)
+  if machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if target_at > target_length || count > target_length - target_at || source_at > source_length || count > source_length - source_at {
+    return ct_fail(machine, "Wasm array copy out of bounds at compile time")
+  }
+  if !ct_charge(machine, u64_into_u32(count) * 16u32) {
+    return CtValue::Empty
+  }
+  let copy = array_new::<CtValue>()
+  let _ = while 0u32 {
+    index if u32_into_u64(index) < count => {
+      if !ct_charge(machine, 0u32) {
+        return CtValue::Empty
+      }
+      copy.push(ct_raw_array_get(machine, source, source_at + u32_into_u64(index)))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let mut index = 0u32
+  for value in copy {
+    storage.values[u64_into_u32(target_at) + index] = value
+    index = index + 1u32
+  }
+  CtValue::Empty
+}
+
+fn ct_write_field(machine: CtMachine, value: CtValue, name: String, replacement: CtValue) -> Unit {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+    return
+  }
+  match value {
+    ReferenceView(base, names) => match ct_reference_base(base) {
+      Record(key, values) => match machine.plan.raw_layouts.get(key) {
+        Some(layout) => {
+          let _ = while 0u32 {
+            index if index < names.length() => {
+              if !ct_charge(machine, 0u32) {
+                return
+              }
+              if names[index] == name {
+                if index >= layout.fields.length() || !layout.storage[index].starts_with("mut:") {
+                  let _ = ct_fail(machine, "field assignment requires a mutable checked field")
+                  return
+                }
+                match ct_lookup(machine, values, layout.fields[index]) {
+                  Some(binding) => {
+                    binding.value = replacement
+                  }
+                  None => {
+                    let _ = ct_fail(machine, "unknown mutable record field")
+                  }
+                }
+                return
+              }
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+          let _ = ct_fail(machine, "unknown mutable record field")
+        }
+        None => {
+          let _ = ct_fail(machine, "field assignment requires mutable struct storage")
+        }
+      }
+      _ => {
+        let _ = ct_fail(machine, "field assignment requires mutable struct storage")
+      }
+    }
+    Record(_, values) => match ct_lookup(machine, values, name) {
+      Some(binding) => {
+                    binding.value = replacement
+                  }
+      None => {
+                    let _ = ct_fail(machine, "unknown mutable record field")
+                  }
+    }
+    _ => {
+      let _ = ct_fail(machine, "field assignment requires a record")
+    }
+  }
+}
+
+fn ct_reference_string(machine: CtMachine, value: CtValue) -> String {
+  let backing = ct_raw_struct_get(machine, value, 0u32)
+  let start = ct_raw_bits(machine, ct_raw_struct_get(machine, value, 1u32))
+  let length = ct_raw_bits(machine, ct_raw_struct_get(machine, value, 2u32))
+  let capacity = ct_raw_array_length(machine, backing) * 16u64
+  if machine.error.byte_length() != 0u32 {
+    return ""
+  }
+  if start > capacity || length > capacity - start || length > 4194304u64 {
+    let _ = ct_fail(machine, "String reference range is out of bounds")
+    return ""
+  }
+  if !ct_charge(machine, u64_into_u32(length)) {
+    return ""
+  }
+  let out = BytesBuilder::with_capacity(u64_into_u32(length))
+  let mut chunk = CtValue::Vector(0u64, 0u64)
+  let _ = while 0u32 {
+    index if u32_into_u64(index) < length => {
+      if !ct_charge(machine, 0u32) {
+        return ""
+      }
+      let absolute = start + u32_into_u64(index)
+      if index == 0u32 || (absolute & 15u64) == 0u64 {
+        chunk = ct_raw_array_get(machine, backing, absolute >> 4u64)
+      }
+      out.append_byte(u64_into_u8(ct_vector_byte(machine, chunk, u64_into_u32(absolute & 15u64))))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let bytes = out.finish()
+  if !bytes.is_valid_utf8() {
+    let _ = ct_fail(machine, "invalid UTF-8 String at compile time")
+    return ""
+  }
+  bytes.to_string()
+}

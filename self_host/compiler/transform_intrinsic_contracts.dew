@@ -1,0 +1,282 @@
+fn ct_contract_carrier(carrier: SelfHostWasmBodyCarrier) -> String {
+  match carrier {
+    I32BodyCarrier => "i32"
+    I64BodyCarrier => "i64"
+    F32BodyCarrier => "f32"
+    F64BodyCarrier => "f64"
+    V128BodyCarrier => "v128"
+    EqRefBodyCarrier, FuncRefBodyCarrier => "ref"
+    UnitBodyCarrier, NeverBodyCarrier => "unit"
+    _ => ""
+  }
+}
+fn ct_contract_kind_carrier(kind: String) -> String {
+  if kind == "Bool" || kind == "I8" || kind == "U8" || kind == "I16" ||
+    kind == "U16" || kind == "I32" || kind == "U32" {
+    return "i32"
+  }
+  if kind == "I64" || kind == "U64" {
+    return "i64"
+  }
+  if kind == "F32" {
+    return "f32"
+  }
+  if kind == "F64" {
+    return "f64"
+  }
+  if kind == "V128" {
+    return "v128"
+  }
+  if kind == "Unit" || kind == "Never" {
+    return "unit"
+  }
+  if kind == "nullable" || kind.starts_with("record:") || kind.starts_with("array:") ||
+  kind == "String" || kind == "Bytes" || kind == "StringView" ||
+  kind == "StringBuilder" || kind == "BytesBuilder" {
+    return "ref"
+  }
+  ""
+}
+fn ct_contract_value_carrier(value: CtValue) -> String {
+  match value {
+    Empty => "unit"
+    DefaultValue => ""
+    Number(_, kind), Floating(_, kind) => ct_contract_kind_carrier(kind)
+    Boolean(_) => "i32"
+    Vector(_, _) => "v128"
+    _ => "ref"
+  }
+}
+fn ct_contract_kind_storage(kind: String) -> String {
+  if kind == "I8" || kind == "U8" {
+    return "i8"
+  }
+  if kind == "I16" || kind == "U16" {
+    return "i16"
+  }
+  if kind.starts_with("array:") {
+    let element = ct_contract_kind_storage(kind.slice(6u32, kind.byte_length()))
+    return if element.byte_length() == 0u32 {
+      ""
+    } else {
+      "array:".concat(element)
+    }
+  }
+  if kind.starts_with("record:") {
+    return kind
+  }
+  if kind == "String" || kind == "Bytes" || kind == "StringView" {
+    return "text"
+  }
+  let carrier = ct_contract_kind_carrier(kind)
+  if carrier == "ref" {
+    ""
+  } else {
+    carrier
+  }
+}
+fn ct_check_intrinsic_result_carrier(machine: CtMachine, value: CtValue, kind: String) -> Bool {
+  let actual = ct_contract_value_carrier(value)
+  let expected = ct_contract_kind_carrier(kind)
+  if actual.byte_length() != 0u32 && expected.byte_length() != 0u32 && actual != expected {
+    let _ = ct_fail(machine, "checked value has an incompatible Wasm carrier")
+    return false
+  }
+  true
+}
+fn ct_check_intrinsic_contract(machine: CtMachine, opcode: String, args: Array<CtValue>, kind: String) -> Bool {
+  let result = ct_contract_kind_carrier(kind)
+  let contract = if opcode.starts_with("i") || opcode.starts_with("f") ||
+    opcode.starts_with("v") || opcode == "ref.eq" || opcode == "unreachable" {
+    self_host_raw_intrinsic_signature(opcode.as_bytes())
+  } else {
+    None
+  }
+  match contract {
+    Some(contract) => {
+      if result.byte_length() == 0u32 && ct_contract_carrier(contract.result) != "unit" {
+        let _ = ct_fail(machine, "generic intrinsic result needs a concrete checked carrier: ".concat(opcode))
+        return false
+      }
+      if args.length() != contract.inputs.length() {
+        let _ = ct_fail(machine, "Wasm intrinsic operand carrier count mismatch: ".concat(opcode))
+        return false
+      }
+      let _ = while 0u32 {
+        index if index < args.length() => {
+          let actual = ct_contract_value_carrier(args[index])
+          if actual.byte_length() != 0u32 && actual != ct_contract_carrier(contract.inputs[index]) {
+            let _ = ct_fail(machine, "Wasm intrinsic operand carrier mismatch: ".concat(opcode))
+            return false
+          }
+          continue index + 1u32
+        }
+        _ => break ()
+      }
+      if result.byte_length() != 0u32 && result != ct_contract_carrier(contract.result) {
+        let _ = ct_fail(machine, "Wasm intrinsic result carrier mismatch: ".concat(opcode))
+        return false
+      }
+    }
+    None => {
+    }
+  }
+  if opcode == "unsafe.bitcast" && args.length() == 1u32 {
+    let input = ct_contract_value_carrier(args[0u32])
+    if input == "ref" || result == "ref" ||
+    (input.byte_length() != 0u32 && result.byte_length() != 0u32 && input != result) {
+      let _ = ct_fail(machine, "Wasm unsafe cast requires the same scalar carrier")
+      return false
+    }
+  }
+  match ct_raw_immediate(opcode, "struct.get ") {
+    Some(index) if args.length() == 1u32 => {
+      let storage = ct_reference_storage(machine, args[0u32])
+      if index >= storage.length() {
+        let _ = ct_fail(machine, "Wasm struct field has no checked layout")
+        return false
+      }
+      let field = storage[index]
+      let field = if field.starts_with("mut:") {
+        field.slice(4u32, field.byte_length())
+      } else {
+        field
+      }
+      let scalar = field == "i32" || field == "i64" || field == "f32" || field == "f64" || field == "v128"
+      let reference = field == "text" || field.starts_with("array:") || field.starts_with("record:")
+      let field_carrier = if reference {
+        "ref"
+      } else {
+        field
+      }
+      let expected_storage = ct_contract_kind_storage(kind)
+      if (!scalar && !reference) || (result.byte_length() != 0u32 && result != field_carrier) ||
+        (reference && expected_storage.byte_length() != 0u32 && expected_storage != field) {
+        let _ = ct_fail(machine, "Wasm struct.get result carrier does not match its checked field")
+        return false
+      }
+    }
+    _ => {
+    }
+  }
+  machine.error.byte_length() == 0u32
+}
+fn ct_contract_shape_carriers(shape: SelfHostPlannedValueShape) -> Option<Array<SelfHostWasmBodyCarrier>> {
+  match shape {
+    GenericPlannedValueShape, ErrorPlannedValueShape => None
+    UnitPlannedValueShape, NeverPlannedValueShape => Some([])
+    ProductPlannedValueShape(fields) => {
+      let result = array_new::<SelfHostWasmBodyCarrier>()
+      for field in fields {
+        match ct_contract_shape_carriers(field) {
+          Some(values) => {
+            for value in values {
+              result.push(value)
+            }
+          }
+          None => return None
+        }
+      }
+      Some(result)
+    }
+    _ => Some([self_host_body_carrier_from_shape(shape)])
+  }
+}
+fn ct_intrinsic_callable_contract_error(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> Option<String> {
+  let name = match callable.kind {
+    PlannedBuiltinCallable(name) => name
+    _ => return None
+  }
+  if name.equals(b"ref_is_null") {
+    if callable.parameters.length != 1u32 {
+      return Some("Wasm null test requires one reference operand")
+    }
+    let parameter = module_.functions.parameters[callable.parameters.start]
+    match ct_contract_shape_carriers(self_host_planned_resolved_value_shape(module_.resolved_types, parameter.type_)) {
+      Some(inputs) => {
+        if inputs.length() != 1u32 {
+          return Some("Wasm null test requires one reference operand")
+        }
+        if ct_contract_carrier(inputs[0u32]) != "ref" {
+          return Some("Wasm null test requires one reference operand")
+        }
+      }
+      None => {}
+    }
+    match ct_contract_shape_carriers(self_host_planned_resolved_value_shape(module_.resolved_types, callable.result_type)) {
+      Some(outputs) => {
+        if outputs.length() != 1u32 {
+          return Some("Wasm null test requires an i32 result carrier")
+        }
+        if ct_contract_carrier(outputs[0u32]) != "i32" {
+          return Some("Wasm null test requires an i32 result carrier")
+        }
+      }
+      None => {}
+    }
+  }
+  let signature = match self_host_raw_intrinsic_signature(name) {
+    Some(value) => value
+    None => return None
+  }
+  let inputs = array_new::<SelfHostWasmBodyCarrier>()
+  let mut known = true
+  let _ = while 0u32 {
+    index if index < callable.parameters.length => {
+      let parameter = module_.functions.parameters[callable.parameters.start + index]
+      match ct_contract_shape_carriers(self_host_planned_resolved_value_shape(module_.resolved_types, parameter.type_)) {
+        Some(values) => for value in values {
+          inputs.push(value)
+        }
+        None => {
+          known = false
+        }
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  if known {
+    if inputs.length() != signature.inputs.length() {
+      return Some("Wasm intrinsic operand carrier count mismatch: ".concat(name.to_string()))
+    }
+    let _ = while 0u32 {
+      index if index < inputs.length() => {
+        if !self_host_body_carrier_equal(inputs[index], signature.inputs[index]) {
+          return Some("Wasm intrinsic operand carrier mismatch: ".concat(name.to_string()))
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+  }
+  match ct_contract_shape_carriers(self_host_planned_resolved_value_shape(module_.resolved_types, callable.result_type)) {
+    Some(outputs) => {
+      let expected = ct_contract_carrier(signature.result)
+      if expected == "unit" {
+        if outputs.length() != 0u32 {
+          return Some("Wasm intrinsic result carrier mismatch: ".concat(name.to_string()))
+        }
+      } else if outputs.length() != 1u32 {
+        return Some("Wasm intrinsic result carrier mismatch: ".concat(name.to_string()))
+      } else if !self_host_body_carrier_equal(outputs[0u32], signature.result) {
+        return Some("Wasm intrinsic result carrier mismatch: ".concat(name.to_string()))
+      }
+    }
+    None => {
+    }
+  }
+  None
+}
+
+fn ct_intrinsic_declaration_contract_error(lowering: SelfHostPlannedProgramLowering) -> Option<String> {
+  for module_ in lowering.modules {
+    for callable in module_.functions.callables {
+      match ct_intrinsic_callable_contract_error(module_, callable) {
+        Some(error) => return Some(error)
+        None => {}
+      }
+    }
+  }
+  None
+}

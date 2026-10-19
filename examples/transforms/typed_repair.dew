@@ -1,0 +1,15 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.array
+transform fn repair(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let answer = if ctx.type_errors.length() > 0u32 && ctx.expression_types.length() == 0u32 {
+    42i32
+  } else {
+    0i32
+  }
+  node.with_body(@ast.integer(answer))
+}
+#repair
+pub fn main() -> I32 {
+  missing_original_function()
+}

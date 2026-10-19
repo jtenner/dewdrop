@@ -1,0 +1,35 @@
+fn ct_reference_is_null(machine: CtMachine, value: CtValue) -> Bool {
+  match value {
+    NullValue, DefaultValue => true
+    RawArray(_), Record(_, _), Variant(_, _), Text(_), TextReference(_), ReferenceView(_, _), TextChunks(_, _), Sequence(_), Function(_, _), Closure(_, _, _, _, _) => false
+    _ => {
+      let _ = ct_fail(machine, "Wasm null test requires a reference")
+      false
+    }
+  }
+}
+
+fn ct_reference_null_test(machine: CtMachine, value: CtValue) -> Bool {
+  if value is Sequence(_) {
+    let _ = ct_fail(machine, "Wasm null test tuple operand needs a checked reference carrier")
+    return false
+  }
+  ct_reference_is_null(machine, value)
+}
+
+fn ct_nullable_base(module_: SelfHostPlannedModuleLowering, base: I32) -> Bool {
+  let resolved = if base < -1i32 {
+    -base - 2i32
+  } else if base >= 0i32 {
+    match module_.inferred.types[self_host_body_i32_to_u32(base)] {
+      BodyResolvedType(id) => self_host_body_u32_to_i32(id)
+      _ => return false
+    }
+  } else {
+    return false
+  }
+  match module_.resolved_types.types[self_host_body_i32_to_u32(resolved)] {
+    NominalType(declaration) => declaration == self_host_standard_nullable_ref_type_declaration()
+    _ => false
+  }
+}

@@ -1,0 +1,92 @@
+test "reflected expression offsets sort across all byte positions" {
+  let type_ = CtReflectedType::{
+    kind: "named"
+    name: "I32"
+    arguments: []
+  }
+  let values = array_new::<CtExpressionType>()
+  for offset in [4294967295u32, 256u32, 0u32, 65536u32, 255u32, 16777216u32] {
+    values.push(CtExpressionType::{
+      offset: offset
+      kind: "name"
+      type_: type_
+    })
+  }
+  let sorted = ct_sort_expression_types(values)
+  assert(sorted.length() == 6u32, "sort retains every site")
+  assert(sorted[0u32].offset == 0u32, "first byte")
+  assert(sorted[5u32].offset == 4294967295u32, "last U32 byte")
+  let _ = while 1u32 {
+    index if index < sorted.length() => {
+      assert(sorted[index - 1u32].offset < sorted[index].offset, "strict source order")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}
+
+test "reflected types retain generic parameters and nominal record identity" {
+  let program = self_host_collect_program_manifest(7200u64, {
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "reflection.dew"
+        source: b"struct Box<t> {\n value: t\n}\nfn identity<t>(value: t) -> t {\n value\n}\nfn boxed<t>(value: t) -> Box<t> {\n Box::{\n value: value\n }\n}\n"
+        test_only: false
+      }]
+    }]
+  })
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(program))
+  let source = program.modules.at(0u32)
+  let module_ = lowering.modules[0u32]
+  let cache = map_empty::<I32, CtReflectedType>()
+  let mut found_parameter = false
+  let mut found_record = false
+  let mut index = 0u32
+  for expression in source.expressions {
+    let reflected = ct_reflected_type(program, module_, module_.inferred.expression_types[index], cache, 0u32)
+    match expression {
+      NameExpr(name, _) if source.name(name) == "value" => match reflected {
+        Some(type_) => {
+          assert(type_.kind == "parameter" && type_.name == "t", "parameter keeps its declared name")
+          found_parameter = true
+        }
+        None => assert(false, "checked value needs a reflected type")
+      }
+      ConstructExpr(_, _, _) => match reflected {
+        Some(type_) => {
+          assert(type_.kind == "applied", "generic record is an applied type")
+          assert(type_.arguments[0u32].kind == "nominal" && type_.arguments[0u32].name == "example.app::Box", "record keeps its logical module and name")
+          assert(type_.arguments[1u32].kind == "parameter" && type_.arguments[1u32].name == "t", "record keeps its generic argument")
+          found_record = true
+        }
+        None => assert(false, "checked constructor needs a reflected type")
+      }
+      _ => {}
+    }
+    index = index + 1u32
+  }
+  assert(found_parameter && found_record, "both expression forms were checked")
+}
+
+test "shared nested type prototypes retain visible work limits" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let mut type_ = CtReflectedType::{
+    kind: "named"
+    name: "I32"
+    arguments: []
+  }
+  let _ = while 0u32 {
+    index if index < 60u32 => {
+      type_ = CtReflectedType::{
+        kind: "function"
+        name: ""
+        arguments: [type_, type_]
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let _ = ct_reflected_type_node(machine, type_, 0u32)
+  assert(machine.error.contains("limit exceeded"), "shared type graph cannot bypass work or allocation limits")
+}

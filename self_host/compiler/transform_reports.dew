@@ -1,0 +1,26 @@
+// Logical interpreter work. Allocation work is not retained host heap bytes.
+pub struct CtTransformReport {
+  module_name: String
+  file_name: String
+  function_name: String
+  transform_name: String
+  offset: U32
+  work: U32
+  allocation_work: U32
+}
+
+pub struct CtExpansionResult {
+  manifest: SelfHostProgramManifest
+  reports: Array<CtTransformReport>
+}
+
+pub fn ct_expand_checked_with_reports(manifest: SelfHostProgramManifest, source_pool: SelfHostProgramManifest, default_preamble: Bool) -> Result<CtExpansionResult, String> {
+  let reports = array_new::<CtTransformReport>()
+  match ct_expand_checked_with_source_pool_reports(manifest, source_pool, default_preamble, reports) {
+    Ok(expanded) => Ok(CtExpansionResult::{
+      manifest: expanded
+      reports: reports
+    })
+    Err(error) => Err(error)
+  }
+}

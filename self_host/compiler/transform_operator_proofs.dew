@@ -334,12 +334,7 @@ fn ct_collect_scalar_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, l
                     for file in plan.files {
                       if file.module_index == mi && file.original.path == source.file_paths[fi] {
                         match ct_scalar_original_offset(file, offset, validation_body.byte_length()) {
-                          Some(original) => plan.scalar_proofs.push({
-                              module_index: mi
-                              file_path: file.original.path
-                              offset: original
-                              opcode: opcode
-                          })
+                          Some(original) => plan.scalar_proofs.set(ct_call_key(mi, file.original.path, original), opcode)
                           None => {}
                         }
                       }
@@ -364,16 +359,22 @@ fn ct_collect_scalar_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, l
 
 fn ct_scalar_expected_opcode(op: SelfHostBinaryOperator, value: CtValue) -> Bytes {
   let kind = match value {
-    Number(_, kind) => kind
+    Number(_, kind), Floating(_, kind) => kind
     Boolean(_) => "Bool"
     _ => return b""
   }
-  let prefix = if kind == "I64" || kind == "U64" {
+  let prefix = if kind == "F32" {
+    "f32."
+  } else if kind == "F64" {
+    "f64."
+  } else if kind == "I64" || kind == "U64" {
     "i64."
   } else {
     "i32."
   }
-  let suffix = if kind.starts_with("I") {
+  let suffix = if kind.starts_with("F") {
+    ""
+  } else if kind.starts_with("I") {
     "_s"
   } else {
     "_u"
@@ -404,16 +405,13 @@ fn ct_scalar_binary(machine: CtMachine, mi: U32, offset: U32, op: SelfHostBinary
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return CtValue::Empty
   }
-  for proof in machine.plan.scalar_proofs {
-    if !ct_charge(machine, 0u32) {
-      return CtValue::Empty
-    }
-    if proof.module_index == mi && proof.file_path == machine.file_path && proof.offset == offset {
-      if proof.opcode.equals(b"primitive") || proof.opcode.equals(ct_scalar_expected_opcode(op, left)) {
-        return ct_binary(machine, op, left, right)
-      }
-      break ()
-    }
+  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+    return CtValue::Empty
+  }
+  match machine.plan.scalar_proofs.get(ct_call_key(mi, machine.file_path, offset)) {
+    Some(opcode) if opcode.equals(b"primitive") || opcode.equals(ct_scalar_expected_opcode(op, left)) =>
+      return ct_binary(machine, op, left, right)
+    _ => {}
   }
   ct_selected_operator(machine, mi, offset, [left, right])
 }

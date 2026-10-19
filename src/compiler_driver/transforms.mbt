@@ -108,6 +108,10 @@ fn compiler_expand_transforms(
   if compiler_frontend_error(program, analyzed, lowering) is Some(error) {
     return Err(error)
   }
+  if @semantic.compile_time_intrinsic_contract_error(lowering) is Some(error) {
+    return Err(CompilerSourceError(error, []))
+  }
+  compiler_register_transform_intrinsic_contracts(plan, lowering)
   let output_module_count = plan.modules.length()
   for mi in output_module_count..<program.modules.length() {
     let module_ = program.modules[mi]
@@ -162,11 +166,31 @@ fn compiler_expand_transforms(
       )
     }
   }
+  for layout in @semantic.compile_time_raw_layouts(program, lowering) {
+    plan.add_raw_layout(
+      layout.key,
+      layout.identity,
+      layout.fields,
+      layout.storage,
+    )
+  }
   for call in @semantic.compile_time_calls(program, analyzed, lowering) {
     if program.source_file(call.file) is Some(source) {
       let target_path = match program.source_file(call.target_file) {
         Some(file) => file.path
         None => ""
+      }
+      if call.constant is Some(value) {
+        let constant = match value {
+          @semantic.TransformBoolConstant(value) =>
+            @transforms.CheckedBool(value)
+          @semantic.TransformU32Constant(value) => @transforms.CheckedU32(value)
+          @semantic.TransformStringsConstant(values) =>
+            @transforms.CheckedStrings(values)
+          @semantic.TransformUnitConstant => @transforms.CheckedUnit
+        }
+        plan.add_constant(call.module_index, source.path, call.offset, constant)
+        continue
       }
       plan.add_call_proof(
         call.module_index,
@@ -181,8 +205,14 @@ fn compiler_expand_transforms(
       )
     }
   }
+  compiler_collect_transform_expression_types(plan, sources, options)
   match plan.expand(output_module_count~, retain_transform_declarations~) {
-    Ok(modules) => Ok(transform_manifest(modules))
+    Ok(modules) => {
+      for report in plan.reports() {
+        options.transform_reports.push(report)
+      }
+      Ok(transform_manifest(modules))
+    }
     Err(message) => Err(CompilerSourceError(message, []))
   }
 }

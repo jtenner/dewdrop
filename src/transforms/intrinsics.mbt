@@ -18,6 +18,36 @@ fn intrinsic_kind(value : Value, kind : String) -> Value raise EvalError {
       kind.substring(start=12).to_string(),
     )
   }
+  if kind == "nullable" {
+    if value is DefaultValue {
+      return NullValue
+    }
+    let _ = reference_is_null(value)
+    return value
+  }
+  if (value is DefaultValue || value is NullValue) &&
+    (
+      kind.has_prefix("record:") ||
+      kind.has_prefix("array:") ||
+      ["String", "Bytes", "StringView", "StringBuilder", "BytesBuilder"].contains(
+        kind,
+      )
+    ) {
+    return eval_fail(
+      "null reference read requires a non-null value at compile time",
+    )
+  }
+  if kind == "F32" || kind == "F64" {
+    return match value {
+      DefaultValue => Floating(0UL, kind)
+      Floating(_, actual) if kind == actual => value
+      _ => eval_fail("floating-point value has an incompatible checked carrier")
+    }
+  }
+  if kind == "V128" && value is DefaultValue {
+    return Vector(0UL, 0UL)
+  }
+  check_intrinsic_result_carrier(value, kind)
   if value is RawArray(storage) && kind.has_prefix("array:") {
     storage.default_kind = kind.substring(start=6).to_string()
     value
@@ -37,13 +67,56 @@ fn Machine::intrinsic(
   self : Machine,
   builtin : @parser.BuiltinDeclaration,
   args : Array[Value],
+  result_kind~ : String = "",
 ) -> Value raise EvalError {
   self.charge(16)
   let opcode = text(builtin.builtin_name)
-  guard args.length() == builtin.parameters.length() else {
-    return eval_fail("Wasm intrinsic argument count mismatch")
+  let args = intrinsic_arguments(builtin, args)
+  self.check_intrinsic_contract(opcode, args, result_kind)
+  if float_opcode(opcode) {
+    return float_intrinsic(opcode, args)
+  }
+  if opcode.has_prefix("i8x16.") ||
+    opcode.has_prefix("i64x2.") ||
+    ["v128.bitselect", "v128.or", "v128.and", "v128.xor"].contains(opcode) {
+    return vector_intrinsic(opcode, args)
+  }
+  if raw_immediate(opcode, "struct.get ") is Some(index) && args.length() == 1 {
+    return self.raw_struct_get(args[0], index)
+  }
+  if opcode == "array.len" && args.length() == 1 {
+    return Number(self.raw_array_length(args[0]), "U32")
+  }
+  if opcode == "array.get" && args.length() == 2 {
+    return self.raw_array_get(args[0], raw_bits(args[1]))
+  }
+  if opcode == "array.copy" && args.length() == 5 {
+    return self.raw_array_copy(
+      args[0],
+      raw_bits(args[1]),
+      args[2],
+      raw_bits(args[3]),
+      raw_bits(args[4]),
+    )
   }
   let result = match (opcode, args[:]) {
+    ("ref_null", []) => NullValue
+    ("ref_is_null", [value]) => {
+      guard ["Bool", "I8", "U8", "I16", "U16", "I32", "U32"].contains(
+        result_kind,
+      ) else {
+        return eval_fail("Wasm null test requires an i32 result carrier")
+      }
+      Boolean(reference_null_test(value))
+    }
+    ("ref_as_non_null", [value]) => {
+      if reference_is_null(value) {
+        return eval_fail("null reference assertion trap at compile time")
+      }
+      value
+    }
+    ("ref.cast", [value]) => self.reference_cast(value, result_kind)
+    ("ref.eq", [left, right]) => Boolean(reference_equal(left, right))
     ("unreachable", []) =>
       return eval_fail("unreachable executed at compile time")
     ("array.new_default", [length]) | ("array.new", [length, _]) => {
@@ -55,21 +128,6 @@ fn Machine::intrinsic(
       let value = if args.length() == 2 { args[1] } else { DefaultValue }
       RawArray({ values: Array::make(count.to_int(), value), default_kind: "", })
     }
-    ("array.len", [RawArray(storage)]) =>
-      Number(storage.values.length().to_uint64(), "U32")
-    ("array.get", [RawArray(storage), index]) => {
-      let values = storage.values
-      let index = raw_bits(index)
-      guard index < values.length().to_uint64() else {
-        return eval_fail("Wasm array index out of bounds at compile time")
-      }
-      let value = values[index.to_int()]
-      if value is DefaultValue {
-        intrinsic_kind(value, storage.default_kind)
-      } else {
-        value
-      }
-    }
     ("array.set", [RawArray(storage), index, value]) => {
       let values = storage.values
       let index = raw_bits(index)
@@ -79,31 +137,10 @@ fn Machine::intrinsic(
       values[index.to_int()] = value
       Unit
     }
-    (
-      "array.copy",
-      [RawArray(target), target_at, RawArray(source), source_at, length],
-    ) => {
-      let target = target.values
-      let source = source.values
-      let target_at = raw_bits(target_at)
-      let source_at = raw_bits(source_at)
-      let count = raw_bits(length)
-      guard target_at <= target.length().to_uint64() &&
-        count <= target.length().to_uint64() - target_at &&
-        source_at <= source.length().to_uint64() &&
-        count <= source.length().to_uint64() - source_at else {
-        return eval_fail("Wasm array copy out of bounds at compile time")
-      }
-      self.charge(count.to_int() * 16)
-      let copy = Array::makei(count.to_int(), fn(i) {
-        source[source_at.to_int() + i]
-      })
-      for i, value in copy {
-        self.charge(0)
-        target[target_at.to_int() + i] = value
-      }
-      Unit
-    }
+    ("unsafe.bitcast", [Floating(_, kind) as value]) if result_kind == kind =>
+      value
+    ("unsafe.bitcast", [Vector(_, _) as value]) if result_kind == "V128" =>
+      value
     ("unsafe.bitcast", [value]) => {
       let _ = raw_bits(value)
       value

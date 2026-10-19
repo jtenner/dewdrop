@@ -32,6 +32,7 @@ pub struct CompilerPipelineOptions {
   root_module_index : Int32
   default_preamble : Bool
   planning_mode : CompilerPlanningMode
+  transform_reports : Array[@transforms.TransformReport]
 } derive(Eq, Debug)
 
 ///|
@@ -45,6 +46,7 @@ pub fn CompilerPipelineOptions::production(
     root_module_index,
     default_preamble,
     planning_mode: CompilerProductionPlanning,
+    transform_reports: [],
   }
 }
 
@@ -59,6 +61,7 @@ pub fn CompilerPipelineOptions::test_mode(
     root_module_index,
     default_preamble,
     planning_mode: CompilerTestPlanning,
+    transform_reports: [],
   }
 }
 

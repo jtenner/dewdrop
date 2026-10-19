@@ -24,3 +24,33 @@ test "transform context retains generic bounds and nested type structure" {
     Err(error) => fail(error.message())
   }
 }
+
+///|
+test "large modules do not consume the context work budget in repeated lookup" {
+  let out = StringBuilder::new()
+  out.write_string(
+    "import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.array\n",
+  )
+  for i in 0..<5000 {
+    out.write_string("fn unused_" + i.to_string() + "() -> I32 {\n 0i32\n}\n")
+  }
+  out.write_string(
+    "transform fn unchanged(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node\n}\n#unchanged\nfn large(",
+  )
+  for i in 0..<10 {
+    if i > 0 {
+      out.write_string(", ")
+    }
+    out.write_string("p" + i.to_string() + ": Array<I32>")
+  }
+  out.write_string(") -> I32 {\n 42i32\n}\npub fn main() -> I32 {\n 42i32\n}\n")
+  match
+    compile_transform_source(
+      Bytes::from_array(
+        out.to_string().iter().map(fn(c) { c.to_int().to_byte() }).to_array(),
+      ),
+    ) {
+    Ok(_) => ()
+    Err(error) => fail(error.message())
+  }
+}

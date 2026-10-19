@@ -1,0 +1,384 @@
+fn ct_syntax_decimal(value: U64) -> String {
+  let out = StringBuilder::new()
+  out.append_u64(value)
+  out.finish()
+}
+
+fn ct_syntax_node(machine: CtMachine, kind: String, label: String, offset: U32, children: Array<CtValue>, types: Array<CtValue>, depth: U32) -> CtValue {
+  if depth >= 128u32 {
+    return ct_fail(machine, "syntax tree depth limit exceeded")
+  }
+  if !ct_charge(machine, 64u32 + label.byte_length()) {
+    return CtValue::Empty
+  }
+  CtValue::Record("dewdrop.ast::SyntaxNode", [
+    ct_binding("kind", CtValue::Text(kind)),
+    ct_binding("label", CtValue::Text(label)),
+    ct_binding("offset", CtValue::Number(u32_into_u64(offset), "U32")),
+    ct_binding("children", ct_syntax_values(machine, children)),
+    ct_binding("types", ct_syntax_values(machine, types)),
+  ])
+}
+
+fn ct_syntax_block(machine: CtMachine, block: SelfHostBlock, depth: U32) -> CtValue {
+  if depth >= 128u32 || machine.error.byte_length() != 0u32 {
+    return ct_fail(machine, "syntax tree depth limit exceeded")
+  }
+  let children = array_new::<CtValue>()
+  for item in block.items {
+    let node = if item.kind == 3u32 {
+      ct_syntax_expr(machine, item.value, depth + 1u32)
+    } else if item.kind == 4u32 {
+      let types = array_new::<CtValue>()
+      match item.type_binding {
+        Some(type_) => types.push(ct_type_node(machine, type_))
+        None => {
+        }
+      }
+      ct_syntax_node(machine, "type_bind", item.name, item.offset, [], types, depth + 1u32)
+    } else if item.kind == 0u32 {
+      let kind = if item.mutable_ {
+        "mutable_bind"
+      } else {
+        "bind"
+      }
+      ct_syntax_node(machine, kind, item.name, item.offset, [ct_syntax_expr(machine, item.value, depth + 1u32)], [], depth + 1u32)
+    } else {
+      let kind = if item.kind == 1u32 {
+        "assign"
+      } else {
+        "index_set"
+      }
+      ct_syntax_node(machine, kind, "", item.offset, [ct_syntax_expr(machine, item.target, depth + 1u32), ct_syntax_expr(machine, item.value, depth + 1u32)], [], depth + 1u32)
+    }
+    children.push(node)
+    if machine.error.byte_length() != 0u32 {
+      return CtValue::Empty
+    }
+  }
+  ct_syntax_node(machine, "block", "", block.offset, children, [], depth)
+}
+
+fn ct_syntax_expr(machine: CtMachine, value: SelfHostExpr, depth: U32) -> CtValue {
+  if depth >= 128u32 || machine.error.byte_length() != 0u32 {
+    return ct_fail(machine, "syntax tree depth limit exceeded")
+  }
+  let children = array_new::<CtValue>()
+  let types = array_new::<CtValue>()
+  let mut kind = ""
+  let mut label = ""
+  match value {
+    I8Expr(bits, _) => {
+      kind = "I8"
+      label = ct_syntax_decimal(bits)
+    }
+    I16Expr(bits, _) => {
+      kind = "I16"
+      label = ct_syntax_decimal(bits)
+    }
+    I32Expr(bits, _) => {
+      kind = "I32"
+      label = ct_syntax_decimal(bits)
+    }
+    I64Expr(bits, _) => {
+      kind = "I64"
+      label = ct_syntax_decimal(bits)
+    }
+    U8Expr(bits, _) => {
+      kind = "U8"
+      label = ct_syntax_decimal(bits)
+    }
+    U16Expr(bits, _) => {
+      kind = "U16"
+      label = ct_syntax_decimal(bits)
+    }
+    U32Expr(bits, _) => {
+      kind = "U32"
+      label = ct_syntax_decimal(bits)
+    }
+    U64Expr(bits, _) => {
+      kind = "U64"
+      label = ct_syntax_decimal(bits)
+    }
+    F32Expr(bits, _) => {
+      kind = "F32"
+      label = ct_syntax_decimal(u32_into_u64(wasm_f32_to_bits(bits)))
+    }
+    F64Expr(bits, _) => {
+      kind = "F64"
+      label = ct_syntax_decimal(wasm_f64_to_bits(bits))
+    }
+    BoolExpr(flag, _) => {
+      kind = "Bool"
+      label = if flag {
+        "true"
+      } else {
+        "false"
+      }
+    }
+    StringExpr(raw, _) => {
+      kind = "String"
+      label = raw.to_string()
+    }
+    BytesExpr(raw, _) => {
+      kind = "Bytes"
+      let _ = while 0u32 {
+        i if i < raw.byte_length() => {
+          children.push(ct_syntax_node(machine, "U8", ct_syntax_decimal(u32_into_u64(wasm_unsafe_bitcast::<U8, U32>(raw.byte_at(i)))), value.offset(), [], [], depth + 1u32))
+          continue i + 1u32
+        }
+        _ => break ()
+      }
+    }
+    NameExpr(name, _) => {
+      kind = "name"
+      label = name
+    }
+    ImportAliasExpr(name, _) => {
+      kind = "import"
+      label = name
+    }
+    ProductExpr(values, _) => {
+      kind = "tuple"
+      for item in values {
+        children.push(ct_syntax_expr(machine, item, depth + 1u32))
+      }
+    }
+    ArrayExpr(values, _) => {
+      kind = "array"
+      for item in values {
+        children.push(ct_syntax_expr(machine, item, depth + 1u32))
+      }
+    }
+    BlockExpr(block) => {
+      kind = "block"
+      return ct_syntax_block(machine, block, depth)
+    }
+    BreakExpr(item, _) => {
+      kind = "break"
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    ContinueExpr(item, _) => {
+      kind = "continue"
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    ReturnExpr(item, _) => {
+      kind = "return"
+      match item {
+        Some(item) => children.push(ct_syntax_expr(machine, item, depth + 1u32))
+        None => {
+        }
+      }
+    }
+    FieldExpr(item, name, _) => {
+      kind = "field"
+      label = name
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    QualifiedExpr(item, name, _) => {
+      kind = "qualified"
+      label = name
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    ProductFieldExpr(item, index, arity, _) => {
+      kind = "tuple_field"
+      label = ct_syntax_decimal(u32_into_u64(index)).concat("/").concat(ct_syntax_decimal(u32_into_u64(arity)))
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    IndexExpr(owner, index, _) => {
+      kind = "index"
+      children.push(ct_syntax_expr(machine, owner, depth + 1u32))
+      children.push(ct_syntax_expr(machine, index, depth + 1u32))
+    }
+    PrefixExpr(op, item, _) => {
+      kind = "prefix"
+      label = match op {
+        Positive => "+"
+        Negative => "-"
+        LogicalNot => "!"
+      }
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    BinaryExpr(op, left, right, _) => {
+      kind = "binary"
+      label = match op {
+        LogicalOr => "||"
+        LogicalAnd => "&&"
+        BitOr => "|"
+        BitXor => "^"
+        BitAnd => "&"
+        Equal => "=="
+        NotEqual => "!="
+        Less => "<"
+        LessEqual => "<="
+        Greater => ">"
+        GreaterEqual => ">="
+        ShiftLeft => "<<"
+        ShiftRight => ">>"
+        Add => "+"
+        Subtract => "-"
+        Multiply => "*"
+        Divide => "/"
+        Remainder => "%"
+        Exponentiate => "**"
+      }
+      children.push(ct_syntax_expr(machine, left, depth + 1u32))
+      children.push(ct_syntax_expr(machine, right, depth + 1u32))
+    }
+    CallExpr(callee, values, _) => {
+      kind = "call"
+      children.push(ct_syntax_expr(machine, callee, depth + 1u32))
+      for item in values {
+        children.push(ct_syntax_expr(machine, item, depth + 1u32))
+      }
+    }
+    ExplicitTypeCallExpr(callee, arguments, values, _) => {
+      kind = "type_call"
+      children.push(ct_syntax_expr(machine, callee, depth + 1u32))
+      for item in values {
+        children.push(ct_syntax_expr(machine, item, depth + 1u32))
+      }
+      for type_ in arguments {
+        types.push(ct_type_node(machine, type_))
+      }
+    }
+    IfExpr(condition, then_, else_, _) => {
+      kind = "if"
+      children.push(ct_syntax_expr(machine, condition, depth + 1u32))
+      children.push(ct_syntax_block(machine, then_, depth + 1u32))
+      match else_ {
+        Some(item) => children.push(ct_syntax_expr(machine, item, depth + 1u32))
+        None => {
+        }
+      }
+    }
+    ObjectExpr(fields, _) => {
+      kind = "record"
+      for field in fields {
+        children.push(ct_syntax_node(machine, "property", field.name, field.offset, [ct_syntax_expr(machine, field.value, depth + 1u32)], [], depth + 1u32))
+      }
+    }
+    ConstructExpr(callee, fields, _) => {
+      kind = "construct"
+      children.push(ct_syntax_expr(machine, callee, depth + 1u32))
+      for field in fields {
+        children.push(ct_syntax_node(machine, "property", field.name, field.offset, [ct_syntax_expr(machine, field.value, depth + 1u32)], [], depth + 1u32))
+      }
+    }
+    LambdaExpr(parameters, result, block, _) => {
+      kind = "lambda"
+      for parameter in parameters {
+        children.push(ct_syntax_node(machine, "parameter", parameter.name, parameter.offset, [], [ct_type_node(machine, parameter.type_)], depth + 1u32))
+      }
+      types.push(ct_type_node(machine, result))
+      children.push(ct_syntax_block(machine, block, depth + 1u32))
+    }
+    MatchExpr(value, arms, _) => {
+      kind = "match"
+      children.push(ct_syntax_expr(machine, value, depth + 1u32))
+      for arm in arms {
+        let nodes = [ct_syntax_pattern(machine, arm.pattern, depth + 1u32)]
+        match arm.guard_condition {
+          Some(guard_) => nodes.push(ct_syntax_expr(machine, guard_, depth + 1u32))
+          None => {
+          }
+        }
+        nodes.push(ct_syntax_expr(machine, arm.body, depth + 1u32))
+        children.push(ct_syntax_node(machine, "arm", "", arm.offset, nodes, [], depth + 1u32))
+      }
+    }
+    WhileExpr(value, arms, _) => {
+      kind = "while"
+      children.push(ct_syntax_expr(machine, value, depth + 1u32))
+      for arm in arms {
+        let nodes = [ct_syntax_pattern(machine, arm.pattern, depth + 1u32)]
+        match arm.guard_condition {
+          Some(guard_) => nodes.push(ct_syntax_expr(machine, guard_, depth + 1u32))
+          None => {
+          }
+        }
+        nodes.push(ct_syntax_expr(machine, arm.body, depth + 1u32))
+        children.push(ct_syntax_node(machine, "arm", "", arm.offset, nodes, [], depth + 1u32))
+      }
+    }
+    IsExpr(value, pattern, _) => {
+      kind = "is"
+      children.push(ct_syntax_expr(machine, value, depth + 1u32))
+      children.push(ct_syntax_pattern(machine, pattern, depth + 1u32))
+    }
+    IsGuardExpr(value, pattern, guard_, _) => {
+      kind = "is_guard"
+      children.push(ct_syntax_expr(machine, value, depth + 1u32))
+      children.push(ct_syntax_pattern(machine, pattern, depth + 1u32))
+      children.push(ct_syntax_expr(machine, guard_, depth + 1u32))
+    }
+  }
+  ct_syntax_node(machine, kind, label, value.offset(), children, types, depth)
+}
+
+fn ct_syntax_pattern(machine: CtMachine, value: SelfHostPattern, depth: U32) -> CtValue {
+  if depth >= 128u32 || machine.error.byte_length() != 0u32 {
+    return ct_fail(machine, "syntax tree depth limit exceeded")
+  }
+  let children = array_new::<CtValue>()
+  let mut kind = ""
+  let mut label = ""
+  match value {
+    WildcardPattern(_) => {
+      kind = "pattern_wildcard"
+    }
+    RestPattern(_) => {
+      kind = "pattern_rest"
+    }
+    BindingPattern(name, _) => {
+      kind = "pattern_bind"
+      label = name
+    }
+    ImportAliasPattern(name, _) => {
+      kind = "pattern_import"
+      label = name
+    }
+    LiteralPattern(item, _) => {
+      kind = "pattern_literal"
+      children.push(ct_syntax_expr(machine, item, depth + 1u32))
+    }
+    QualifiedPattern(base, name, _) => {
+      kind = "pattern_qualified"
+      label = name
+      children.push(ct_syntax_pattern(machine, base, depth + 1u32))
+    }
+    TuplePattern(base, items, _) => {
+      kind = "pattern_variant"
+      children.push(ct_syntax_pattern(machine, base, depth + 1u32))
+      for item in items {
+        children.push(ct_syntax_pattern(machine, item, depth + 1u32))
+      }
+    }
+    AlternativePattern(base, items, _) => {
+      kind = "pattern_alternative"
+      children.push(ct_syntax_pattern(machine, base, depth + 1u32))
+      for item in items {
+        children.push(ct_syntax_pattern(machine, item, depth + 1u32))
+      }
+    }
+    ProductPattern(items, _) => {
+      kind = "pattern_tuple"
+      for item in items {
+        children.push(ct_syntax_pattern(machine, item, depth + 1u32))
+      }
+    }
+    StructPattern(base, fields, rest, _) => {
+      kind = "pattern_record"
+      children.push(ct_syntax_pattern(machine, base, depth + 1u32))
+      for field in fields {
+        children.push(ct_syntax_node(machine, "pattern_property", field.name, field.offset, [ct_syntax_pattern(machine, field.pattern, depth + 1u32)], [], depth + 1u32))
+      }
+      match rest {
+        Some(offset) => children.push(ct_syntax_node(machine, "pattern_rest", "", offset, [], [], depth + 1u32))
+        None => {
+        }
+      }
+    }
+  }
+  ct_syntax_node(machine, kind, label, value.offset(), children, [], depth)
+}

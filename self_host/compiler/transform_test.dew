@@ -179,3 +179,119 @@ test "generic default scalar values keep zero at checked uses" {
   assert(ct_render(machine, CtValue::Variant("dewdrop.ast::ExprNode::Boolean", [CtValue::DefaultValue]), 0u32) == "false", "Bool zero builder")
   assert(machine.error.byte_length() == 0u32, machine.error)
 }
+
+test "quotes keep splice names and quote locals apart" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let node = CtValue::Variant("dewdrop.ast::ExprNode::Quote", [
+    CtValue::Sequence([CtValue::Text("let $saved = 2i32\n"), CtValue::Text(" + $saved")]),
+    CtValue::Sequence([CtValue::Variant("dewdrop.ast::ExprNode::Source", [CtValue::Text("__dew_quote_0")])]),
+  ])
+  let source = ct_render(machine, node, 0u32)
+  assert(source.contains("let __dew_quote_0_ = 2i32"), source)
+  assert(source.contains("(__dew_quote_0) + __dew_quote_0_"), source)
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "quote strings and comments keep dollar text" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let node = CtValue::Variant("dewdrop.ast::ExprNode::Quote", [
+    CtValue::Sequence([CtValue::Text("// $comment\nlet $saved = \"$text\"\n$saved")]),
+    CtValue::Sequence([]),
+  ])
+  let source = ct_render(machine, node, 0u32)
+  assert(source.contains("// $comment"), source)
+  assert(source.contains("\"$text\""), source)
+  assert(source.contains("let __dew_quote_0 ="), source)
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "quote arity and invalid dollar names fail" {
+  for node in [
+    CtValue::Variant("dewdrop.ast::ExprNode::Quote", [CtValue::Sequence([]), CtValue::Sequence([])]),
+    CtValue::Variant("dewdrop.ast::ExprNode::Quote", [CtValue::Sequence([CtValue::Text("$ 1i32")]), CtValue::Sequence([])]),
+  ] {
+    let machine = ct_machine(ct_test_plan(b""))
+    let _ = ct_render(machine, node, 0u32)
+    assert(machine.error.byte_length() != 0u32, "invalid quote must fail")
+  }
+}
+
+test "quote splices cannot cross strings or comments" {
+  for parts in [
+    [CtValue::Text("\"prefix"), CtValue::Text("$text\"")],
+    [CtValue::Text("//"), CtValue::Text(" $text\n42i32")],
+  ] {
+    let machine = ct_machine(ct_test_plan(b""))
+    let node = CtValue::Variant("dewdrop.ast::ExprNode::Quote", [CtValue::Sequence(parts), CtValue::Sequence([CtValue::Variant("dewdrop.ast::ExprNode::Integer", [CtValue::Number(1u64, "I32")])])])
+    let _ = ct_render(machine, node, 0u32)
+    assert(machine.error.contains("quote splices must occupy expression syntax"), machine.error)
+  }
+}
+
+test "original syntax tree keeps block order and operator labels" {
+  let plan = ct_test_plan(b"transform fn sample() -> I32 {\n let answer = 40i32\n answer + 2i32\n}\n")
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  let machine = ct_machine(plan)
+  let tree = ct_syntax_block(machine, plan.files[0u32].functions[0u32].declaration.body, 0u32)
+  assert(ct_string(machine, ct_field(machine, tree, "kind")) == "block", "body block")
+  let children = ct_sequence_values(machine, ct_field(machine, tree, "children"))
+  assert(children.length() == 2u32, "two source items")
+  assert(ct_string(machine, ct_field(machine, children[0u32], "kind")) == "bind", "first binding")
+  assert(ct_string(machine, ct_field(machine, children[1u32], "kind")) == "binary", "last binary expression")
+  assert(ct_string(machine, ct_field(machine, children[1u32], "label")) == "+", "source operator")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "syntax reflection bounds recursive source trees" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let mut value = SelfHostExpr::I32Expr(1u64, 0u32)
+  let _ = while 0u32 {
+    i if i < 129u32 => {
+      value = SelfHostExpr::PrefixExpr(Negative, value, 0u32)
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  let _ = ct_syntax_expr(machine, value, 0u32)
+  assert(machine.error.contains("syntax tree depth limit"), machine.error)
+}
+
+test "annotation arguments preserve parsed syntax and source offsets" {
+  let plan = ct_test_plan(b"#replace(\"answer\", helper(1i32 + 2i32))\nfn sample() -> I32 {\n 0i32\n}\n")
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  let annotation = plan.files[0u32].annotations[0u32]
+  assert(annotation.arguments.length() == 2u32, "two arguments")
+  let machine = ct_machine(plan)
+  let nodes = ct_sequence_values(machine, ct_annotation_nodes(machine, annotation))
+  assert(ct_string(machine, ct_field(machine, nodes[0u32], "kind")) == "String", "text argument")
+  assert(ct_string(machine, ct_field(machine, nodes[0u32], "label")) == "answer", "decoded text")
+  assert(ct_raw_bits(machine, ct_field(machine, nodes[0u32], "offset")) == 9u64, "original byte offset")
+  assert(ct_string(machine, ct_field(machine, nodes[1u32], "kind")) == "call", "nested call syntax")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "annotation argument brackets and source lines are checked" {
+  for source in [
+    b"#replace(1i32]\nfn sample() -> I32 {\n 0i32\n}\n",
+    b"#replace(1i32) extra\nfn sample() -> I32 {\n 0i32\n}\n",
+    b"#replace(\n1i32)\nfn sample() -> I32 {\n 0i32\n}\n",
+  ] {
+    let plan = ct_test_plan(source)
+    assert(plan.error.byte_length() != 0u32, "invalid annotation must fail")
+  }
+}
+
+test "each stacked annotation retains its own resource report" {
+  let plan = ct_test_plan(b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n @ast.with_body(node, @ast.integer(42i32))\n}\n#replace\n#replace\npub fn main() -> I32 {\n 0i32\n}\n")
+  match ct_expand(plan) {
+    Ok(_) => {}
+    Err(error) => assert(false, error)
+  }
+  assert(plan.reports.length() == 2u32, "one report per annotation")
+  for report in plan.reports {
+    assert(report.function_name == "main", "original function name")
+    assert(report.work > 0u32 && report.work <= 100000u32, "bounded work count")
+    assert(report.allocation_work > 0u32 && report.allocation_work <= 4194304u32, "bounded allocation work count")
+  }
+  assert(plan.reports[0u32].offset < plan.reports[1u32].offset, "source order")
+}

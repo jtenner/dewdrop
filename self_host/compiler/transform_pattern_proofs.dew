@@ -28,20 +28,16 @@ fn ct_pattern_variant_key(collected: SelfHostCollectedProgram, selected: U64) ->
 }
 
 fn ct_add_pattern_proof(plan: CtPlan, mi: U32, path: String, offset: U32, constructor: String) -> Unit {
-  for prior in plan.pattern_proofs {
-    if prior.module_index == mi && prior.file_path == path && prior.offset == offset {
+  let key = ct_call_key(mi, path, offset)
+  match plan.pattern_proofs.get(key) {
+    Some(prior) => {
+      let _ = prior
       if constructor.byte_length() != 0u32 {
-        prior.constructor = constructor
+        plan.pattern_proofs.set(key, constructor)
       }
-      return
     }
+    None => plan.pattern_proofs.set(key, constructor)
   }
-  plan.pattern_proofs.push({
-    module_index: mi
-    file_path: path
-    offset: offset
-    constructor: constructor
-  })
 }
 
 fn ct_pattern_source_targets(source: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering) -> Array<SelfHostBasicPatternConstructor> {
@@ -140,13 +136,12 @@ fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, 
 }
 
 fn ct_checked_pattern_key(machine: CtMachine, mi: U32, offset: U32) -> String {
-  for proof in machine.plan.pattern_proofs {
-    if !ct_charge(machine, 0u32) {
-      return ""
-    }
-    if proof.module_index == mi && proof.file_path == machine.file_path && proof.offset == offset {
-      return proof.constructor
-    }
+  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+    return ""
+  }
+  match machine.plan.pattern_proofs.get(ct_call_key(mi, machine.file_path, offset)) {
+    Some(constructor) => return constructor
+    None => {}
   }
   let _ = ct_fail(machine, "pattern has no checked compile-time constructor or binding proof")
   ""

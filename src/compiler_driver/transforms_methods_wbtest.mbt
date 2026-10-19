@@ -290,17 +290,19 @@ test "generic raw defaults survive enum payloads and checked scalar uses" {
 }
 
 ///|
-test "untyped defaults cannot use integer negation for floats" {
+test "float defaults cannot use an integer unsafe cast" {
   match
     compile_transform_source(
       b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\nfn first<t>() -> Option<t> {\n Some(wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32))\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n let value = match first::<F32>() {\n Some(value) => value\n None => 1.0f32\n }\n node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(-value)))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n",
     ) {
     Err(error) =>
       assert_true(
-        error.message().contains("unsupported scalar type"),
+        (error.message().contains("Wasm integer intrinsic requires an integer") ||
+          error.message().contains("floating-point value has an incompatible checked carrier") ||
+          error.message().contains("Wasm unsafe cast requires the same scalar carrier")),
         msg=error.message(),
       )
-    Ok(_) => fail("float negation is not supported by the interpreter")
+    Ok(_) => fail("float unsafe cast must not use integer execution")
   }
 }
 
@@ -312,7 +314,9 @@ test "float bitcasts cannot execute as integer values" {
     ) {
     Err(error) =>
       assert_true(
-        error.message().contains("unsupported scalar type"),
+        (error.message().contains("Wasm integer intrinsic requires an integer") ||
+          error.message().contains("floating-point value has an incompatible checked carrier") ||
+          error.message().contains("Wasm unsafe cast requires the same scalar carrier")),
         msg=error.message(),
       )
     Ok(_) => fail("float values must not use integer execution")
@@ -327,7 +331,9 @@ test "generic boxed floats keep their checked prefix type" {
     ) {
     Err(error) =>
       assert_true(
-        error.message().contains("unsupported scalar type"),
+        (error.message().contains("Wasm integer intrinsic requires an integer") ||
+          error.message().contains("floating-point value has an incompatible checked carrier") ||
+          error.message().contains("Wasm unsafe cast requires the same scalar carrier")),
         msg=error.message(),
       )
     Ok(_) => fail("boxed float must not use integer prefix execution")
@@ -358,7 +364,9 @@ test "generic float fields cannot execute integer binary operations" {
     ) {
     Err(error) =>
       assert_true(
-        error.message().contains("unsupported scalar type"),
+        (error.message().contains("Wasm integer intrinsic requires an integer") ||
+          error.message().contains("floating-point value has an incompatible checked carrier") ||
+          error.message().contains("Wasm unsafe cast requires the same scalar carrier")),
         msg=error.message(),
       )
     Ok(_) => fail("float fields must not use integer execution")

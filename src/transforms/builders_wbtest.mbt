@@ -6,8 +6,11 @@ fn builder_machine() -> Machine raise {
     depth: 0,
     allocated: 0,
     file_index: 0,
+    functions: {},
+    imports: {},
     globals: {},
     initializing: {},
+    text_storage: {},
   }
 }
 

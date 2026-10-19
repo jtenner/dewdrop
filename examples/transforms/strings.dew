@@ -1,0 +1,20 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.string
+open dew.std.string_builder
+open dew.std.array
+
+transform fn build(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let tail = StringBuilder::new()
+  tail.append("2")
+  tail.append("i32")
+  node.with_body(@ast.block([
+    @ast.source("4".concat(tail.finish())).bind("an".concat("swer")),
+    @ast.name("answer")
+  ]))
+}
+
+#build
+pub fn main() -> I32 {
+  0i32
+}

@@ -1,5 +1,6 @@
 ///|
 enum CallTarget {
+  Constant(CheckedConstant)
   Source(Int32, Int32, @parser.FunctionDeclaration, String)
   Global(Int32, Int32, @parser.LetDeclaration)
   Intrinsic(@parser.BuiltinDeclaration, String)
@@ -134,6 +135,7 @@ fn Machine::checked_call(
 ) -> Value raise EvalError {
   let _ = type_arguments
   match self.plan.calls.get((mi, self.file_index, offset.to_int())) {
+    Some(Constant(value)) => self.checked_constant(value)
     Some(Source(target_mi, target_fi, function, kind)) => {
       let values : Array[Value] = []
       if function.receiver is Some(_) {
@@ -156,6 +158,7 @@ fn Machine::checked_call(
       let result = self.intrinsic(
         builtin,
         args.map(fn(arg) { self.eval(mi, arg, env) }),
+        result_kind=kind,
       )
       intrinsic_kind(result, kind)
     }
@@ -209,7 +212,7 @@ fn Machine::closure_call(
       Source(mi, fi, function, kind) =>
         intrinsic_kind(self.source_call(mi, fi, function, values), kind)
       Intrinsic(builtin, kind) =>
-        intrinsic_kind(self.intrinsic(builtin, values), kind)
+        intrinsic_kind(self.intrinsic(builtin, values, result_kind=kind), kind)
       Constructor(key) => Variant(key, values)
       _ => eval_fail("unsupported checked function reference")
     }

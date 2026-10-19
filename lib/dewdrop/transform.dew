@@ -1,5 +1,8 @@
 import dewdrop.ast as @ast
 open dew.std.array
+open dew.std.option
+open dew.std.preamble
+open dew.std.string
 
 pub struct SourceLocation {
   file_name: String
@@ -11,6 +14,11 @@ pub struct TransformContext {
   location: SourceLocation
   fn_name: String
   module_name: String
+  syntax: @ast.SyntaxNode
+  expression_types: Array<@ast.ExpressionTypeNode>
+  type_errors: Array<String>
+  arguments: Array<@ast.SyntaxNode>
+  arguments_source: String
   parameters: Array<@ast.ParameterNode>
   type_parameters: Array<@ast.TypeParameterNode>
   return_type: @ast.TypeNode
@@ -46,5 +54,42 @@ impl TransformContext {
       module_path: module_path
       alias: alias
     })
+  }
+}
+
+impl TransformContext {
+  fn type_of(self, node: @ast.SyntaxNode) -> Option<@ast.TypeNode> {
+    let kind = if node.kind == "type_call" {
+      "call"
+    } else if node.kind == "is" {
+      "match"
+    } else {
+      node.kind
+    }
+    let start = while (0u32, self.expression_types.length()) {
+      (low, high) if low < high => {
+        let middle = low + (high - low) / 2u32
+        if self.expression_types[middle].offset < node.offset {
+          continue (middle + 1u32, high)
+        } else {
+          continue (low, middle)
+        }
+      }
+      (low, _) => break low
+    }
+    let _ = while start {
+      index if index < self.expression_types.length() => {
+        let value = self.expression_types[index]
+        if value.offset != node.offset {
+          return None
+        }
+        if value.kind == kind {
+          return Some(value.type_)
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    None
   }
 }

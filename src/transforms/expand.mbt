@@ -44,8 +44,15 @@ fn Machine::render(
   guard value is Variant(key, args) && key.has_prefix("dewdrop.ast::ExprNode::") else {
     raise Failed("transform returned an invalid ExprNode")
   }
+  let args = if args.any(fn(value) { value is TextReference(_) }) {
+    args.map(fn(value) { if value is TextReference(_) { Text(self.string(value)) } else { value } })
+  } else {
+    args
+  }
   let rendered = match (key, args[:]) {
     ("dewdrop.ast::ExprNode::Source", [Text(source)]) => source
+    ("dewdrop.ast::ExprNode::Quote", [parts, splices]) =>
+      self.render_quote(parts, splices, depth)
     ("dewdrop.ast::ExprNode::Unit", []) => "()"
     ("dewdrop.ast::ExprNode::Integer", [DefaultValue]) => "0i32"
     ("dewdrop.ast::ExprNode::Integer64", [DefaultValue]) => "0i64"
@@ -240,6 +247,7 @@ fn Machine::apply(
     self.initializing.clear()
     self.steps = 100_000
     self.allocated = 0
+    self.text_storage.clear()
     let key = self.annotation_key(function.module_, annotation.name)
     let mut is_transform = false
     for files in self.plan.files {
@@ -293,6 +301,11 @@ fn Machine::apply(
       ),
       ("fn_name", Text(fn_.name)),
       ("module_name", Text(self.plan.modules[function.module_].path)),
+      ("syntax", self.syntax_block(fn_.body, 0)),
+      ("expression_types", self.expression_type_nodes(function)),
+      ("type_errors", self.reflection_errors()),
+      ("arguments", self.annotation_nodes(annotation)),
+      ("arguments_source", Text(annotation.arguments_source)),
       ("parameters", self.parameter_nodes(fn_.parameters)),
       ("type_parameters", self.type_parameter_nodes(fn_.type_parameters)),
       ("return_type", self.type_node(fn_.return_type)),
@@ -306,7 +319,7 @@ fn Machine::apply(
     node = match value {
       Variant("dew.std.result::Result::Ok", [value]) => value
       Variant("dew.std.result::Result::Err", [value]) =>
-        raise Failed(string(field(value, "message")))
+        raise Failed(self.string(field(value, "message")))
       _ => value
     }
     guard node is Record(type_, _) &&
@@ -315,16 +328,17 @@ fn Machine::apply(
         "transform must return FnNode or Result<FnNode, TransformError>",
       )
     }
-    guard string(field(node, "name")) == fn_.name else {
+    guard self.string(field(node, "name")) == fn_.name else {
       raise Failed("body transforms must preserve the function name")
     }
     for item in self.sequence_values(field(context, "imports")) {
-      let rendered = self.render_import(item)
-      generated_bytes += bytes(rendered).length()
-      guard generated_bytes <= 1_048_576 else {
-        raise Failed("generated source size limit exceeded")
+      if self.register_import(function.module_, item) is Some(rendered) {
+        generated_bytes += bytes(rendered).length()
+        guard generated_bytes <= 1_048_576 else {
+          raise Failed("generated source size limit exceeded")
+        }
+        generated_imports.push(rendered)
       }
-      generated_imports.push(rendered)
     }
     for item in self.sequence_values(field(context, "declarations")) {
       let rendered = self.render_declaration(item)
@@ -334,6 +348,15 @@ fn Machine::apply(
       }
       generated_declarations.push(rendered)
     }
+    self.plan.reports.push({
+      module_name: self.plan.modules[function.module_].path,
+      file_name: file.file.path,
+      function_name: fn_.name,
+      transform_name: key,
+      offset: annotation.offset.to_uint(),
+      work: (100_000 - self.steps).to_uint(),
+      allocation_work: self.allocated.to_uint(),
+    })
   }
   let body = self.render(field(node, "body"), 0)
   let source = part(file.clean, function.start, fn_.body.offset.to_int()) +
@@ -392,14 +415,18 @@ pub fn Plan::expand(
     depth: 0,
     allocated: 0,
     file_index: 0,
+    functions: {},
+    imports: {},
     globals: {},
     initializing: {},
+    text_storage: {},
   }
   let modules : Array[SourceModule] = []
   for mi, module_ in self.modules {
     if output_module_count >= 0 && mi >= output_module_count {
       break
     }
+    machine.seed_imports(mi)
     let files : Array[SourceFile] = []
     let generated : Array[SourceFile] = []
     for file in self.files[mi] {
@@ -407,7 +434,8 @@ pub fn Plan::expand(
       let mut cursor = 0
       for function in file.functions {
         if function.transform && retain_transform_declarations {
-          // Keep entries callable by later source-pool modules.
+          // Keep callable compile-time entries for later selected modules. The
+          // annotations on targets are still removed by the ordinary branch.
           out.write_bytes(file.file.source[cursor:function.end])
           cursor = function.end
         } else if function.transform {

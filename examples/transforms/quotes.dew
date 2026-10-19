@@ -1,0 +1,18 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+transform fn wrap(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.quote([
+    "let $saved = 2i32\n",
+    " + $saved",
+  ], [node.body]))
+}
+
+#wrap
+fn answer(__dew_quote_0: I32) -> I32 {
+  __dew_quote_0
+}
+
+pub fn main() -> I32 {
+  answer(40i32)
+}

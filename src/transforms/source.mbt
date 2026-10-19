@@ -12,6 +12,9 @@ pub(all) struct SourceModule {
 
 ///|
 struct Annotation {
+  arguments : Array[@parser.Expr]
+  arguments_source : String
+  arguments_offset : Int32
   name : String
   offset : Int32
   target : Int32
@@ -50,6 +53,11 @@ pub struct Plan {
   scalar_types : Map[(Int32, Int32, Int32), String]
   array_literals : Map[(Int32, Int32, Int32), (String, Array[String])]
   array_layouts : Map[String, Array[String]]
+  raw_layouts : Map[String, RawLayout]
+  intrinsic_contracts : Map[String, IntrinsicContract]
+  reports : Array[TransformReport]
+  expression_types : Map[(Int32, Int32), Array[ReflectedExpressionType]]
+  reflection_errors : Array[String]
 }
 
 ///|
@@ -113,7 +121,7 @@ fn scan(
   let clean = file.source.to_fixedarray()
   let annotations : Array[Annotation] = []
   let marks : Array[Int32] = []
-  let pending : Array[(String, Int32)] = []
+  let pending : Array[Annotation] = []
   let mut depth = 0
   let mut i = 0
   while i < tokens.length() {
@@ -154,6 +162,12 @@ fn scan(
           }
           i += 2
         }
+        let (arguments, arguments_source, arguments_offset, next) = match
+          scan_annotation_arguments(file.source, tokens, i) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        i = next
         guard i == tokens.length() || tokens[i].kind() == @tokenizer.Newline else {
           return Err("a transform annotation must occupy its own line")
         }
@@ -163,7 +177,14 @@ fn scan(
           clean.length()
         }
         blank(clean, tokens[start].offset().to_int(), end)
-        pending.push((name, offset))
+        pending.push({
+          name,
+          offset,
+          target: 0,
+          arguments,
+          arguments_source,
+          arguments_offset,
+        })
         continue
       }
       @tokenizer.Identifier("transform") if depth == 0 &&
@@ -180,8 +201,8 @@ fn scan(
         blank(clean, offset, offset + 9)
       }
       @tokenizer.Keyword(@tokenizer.Fn) if depth == 0 => {
-        for (name, at) in pending {
-          annotations.push({ name, offset: at, target: offset, })
+        for annotation in pending {
+          annotations.push({ ..annotation, target: offset, })
         }
         pending.clear()
       }
@@ -317,6 +338,11 @@ pub fn prepare(
       references: {},
       array_literals: {},
       array_layouts: {},
+      raw_layouts: {},
+      intrinsic_contracts: {},
+      reports: [],
+      expression_types: {},
+      reflection_errors: [],
     })
   }
   let modules = modules.copy()
@@ -386,6 +412,11 @@ pub fn prepare(
     references: {},
     array_literals: {},
     array_layouts: {},
+    raw_layouts: {},
+    intrinsic_contracts: {},
+    reports: [],
+    expression_types: {},
+    reflection_errors: [],
   })
 }
 
@@ -436,7 +467,7 @@ pub fn Plan::validation_sources(self : Plan) -> Array[SourceModule] {
         }
       }
       out.write_bytes(file.clean[cursor:])
-      if fi == 0 {
+      if fi == self.files[mi].length() - 1 {
         out.write_string_utf8(
           "\nbuiltin " +
           self.validation_stop +

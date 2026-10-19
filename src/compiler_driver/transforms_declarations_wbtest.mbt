@@ -53,3 +53,53 @@ test "generated invalid import alias is rejected" {
     Ok(_) => fail("invalid generated declaration must fail")
   }
 }
+
+///|
+test "generated named imports reuse original and repeated module aliases" {
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("app", [
+      @semantic.ManifestFile::new(
+        "main.dew", b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport example.tools as @tools\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  ctx.import_module(\"example.tools\", \"tools\")\n  node.with_body(@ast.integer(42i32))\n}\n#replace\nfn first() -> I32 {\n  0i32\n}\n#replace\npub fn main() -> I32 {\n  first()\n}\n",
+      ),
+    ]),
+    @semantic.ManifestModule::new("example.tools", [
+      @semantic.ManifestFile::new(
+        "tools.dew", b"pub fn helper() -> I32 {\n 42i32\n}\n",
+      ),
+    ]),
+  ])
+  match
+    compile_manifest_uncached(
+      manifest,
+      @semantic.StandardLibrarySources::bootstrap(),
+      CompilerPipelineOptions::production(5100UL, 0, true),
+    ) {
+    Ok(_) => ()
+    Err(error) => fail(error.message())
+  }
+}
+
+///|
+test "generated imports are shared when neither function originally imports the module" {
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("app", [
+      @semantic.ManifestFile::new(
+        "main.dew", b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  ctx.import_module(\"example.tools\", \"tools\")\n  node.with_body(@ast.integer(42i32))\n}\n#replace\nfn first() -> I32 {\n  0i32\n}\n#replace\npub fn main() -> I32 {\n  first()\n}\n",
+      ),
+    ]),
+    @semantic.ManifestModule::new("example.tools", [
+      @semantic.ManifestFile::new(
+        "tools.dew", b"pub fn helper() -> I32 {\n 42i32\n}\n",
+      ),
+    ]),
+  ])
+  match
+    compile_manifest_uncached(
+      manifest,
+      @semantic.StandardLibrarySources::bootstrap(),
+      CompilerPipelineOptions::production(5100UL, 0, true),
+    ) {
+    Ok(_) => ()
+    Err(error) => fail(error.message())
+  }
+}

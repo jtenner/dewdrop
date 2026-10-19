@@ -1,0 +1,44 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.array
+open dew.std.string
+
+struct Box<t> {
+  value: t
+}
+
+transform fn check_parameter(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  match ctx.type_of(ctx.syntax.children[0u32]) {
+    Some(type_) if type_.kind == "parameter" && type_.name == "t" => node
+    _ => node.with_body(@ast.source("invalid_reflected_parameter()"))
+  }
+}
+
+transform fn check_record(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  match ctx.type_of(ctx.syntax.children[0u32]) {
+    Some(type_) if type_.kind == "applied" => {
+      if type_.arguments[0u32].kind == "nominal" && type_.arguments[0u32].name == "example.app::Box" && type_.arguments[1u32].kind == "parameter" && type_.arguments[1u32].name == "t" {
+        node
+      } else {
+        node.with_body(@ast.source("invalid_reflected_record()"))
+      }
+    }
+    _ => node.with_body(@ast.source("missing_reflected_record()"))
+  }
+}
+
+#check_parameter
+fn identity<t>(value: t) -> t {
+  value
+}
+
+#check_record
+fn boxed<t>(value: t) -> Box<t> {
+  Box::{
+    value: value
+  }
+}
+
+pub fn main() -> I32 {
+  boxed(identity(42i32)).value
+}

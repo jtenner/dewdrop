@@ -80,7 +80,7 @@ claims about the current interpreter.
 - [x] Checked scalar types at local and record-field reads.
 - [x] Scalar literal patterns across generic cast results.
 - [x] Scalar and Boolean values from generic tuple destructuring.
-- [x] Unsupported float values rejected inside generic records and options.
+- [x] Float carrier checks inside generic records and options.
 - [x] Record patterns and payload field patterns.
 - [x] Explicit bounds errors during interpretation.
 
@@ -152,24 +152,24 @@ claims about the current interpreter.
 
 These need a further language or execution design. They remain open.
 
-- [ ] Parsed expression trees for every original function body.
-- [ ] Typed expression reflection.
+- [x] Parsed expression trees for every original function body.
+- [x] Typed expression reflection through `ctx.type_of`, with original check errors.
 - [ ] Signature changes and call-site repair.
-- [ ] Syntax quotation and splicing.
-- [ ] Automatic name hygiene.
-- [ ] Transform arguments on annotations.
+- [x] Syntax quotation and expression splicing.
+- [x] Automatic name hygiene for quote-local `$name` bindings.
+- [x] Parsed syntax arguments on annotations.
 - [ ] Complete default/null reference behavior for raw arrays.
 - [ ] Generic trait evidence during interpretation.
 - [ ] Dynamic trait objects.
 - [x] First-class overloaded builtin references with a checked target.
-- [ ] Floating-point execution with Wasm rounding and traps.
+- [x] Scalar floating-point execution with Wasm rounding and traps.
 - [ ] Full text and SIMD execution.
 - [ ] Full compile-time type-query API.
-- [ ] Stable source maps through multiple generated nodes.
-- [ ] IDE view of expanded source.
-- [ ] Per-transform work and allocation reports.
+- [x] Stable declaration ranges and original function sites for generated source.
+- [x] Expanded-source JSON for editor views.
+- [x] Per-transform work and allocation reports.
 - [ ] Identical resource accounting across compiler implementations.
 - [ ] Persistent transform-result cache with dependency tracking.
 - [ ] Compact bytecode backend.
 - [ ] Parallel independent transform execution.
-- [ ] Native Wago execution checks in CI.
+- [x] Pinned native Wago request check and CI job (host speed issue remains).

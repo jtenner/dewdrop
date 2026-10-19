@@ -38,7 +38,9 @@ fn ct_validation_manifest(plan: CtPlan) -> SelfHostProgramManifest {
           }
         }
         out.append(file.clean.slice(cursor, file.clean.byte_length()))
-        if files.length() == 0u32 {
+        // Keep original declaration identities stable when the first file only
+        // supplies imports. Canonical type identities precede this helper.
+        if files.length() + 1u32 == module_.files.length() {
           out.append("\nbuiltin ".concat(plan.validation_stop).concat("() -> Never = \"unreachable\"\n").as_bytes())
         }
         files.push({
@@ -119,19 +121,34 @@ fn ct_expand_checked_plan_retaining_declarations(plan: CtPlan, default_preamble:
   if !ct_check_transform_signatures(plan, collected, lowering) {
     return Err(plan.error)
   }
+  match ct_intrinsic_declaration_contract_error(lowering) {
+    Some(error) => return Err(error)
+    None => {}
+  }
   ct_collect_type_names(plan, frozen)
   ct_collect_scalar_proofs(plan, collected, lowering, ct_validation_body(plan))
   ct_collect_pattern_proofs(plan, collected, lowering)
   ct_collect_calls(plan, collected, lowering)
   ct_collect_arrays(plan, collected, lowering)
+  ct_collect_raw_layouts(plan, collected, lowering)
+  ct_collect_expression_types(plan, default_preamble)
   ct_expand_retaining_declarations(plan, retain_transform_declarations)
 }
 
 // A request carries source bytes; import selection never asks interpreted code
 // or the host to load another payload or source file.
 fn ct_expand_checked_with_source_pool(manifest: SelfHostProgramManifest, source_pool: SelfHostProgramManifest, default_preamble: Bool) -> Result<SelfHostProgramManifest, String> {
+  ct_expand_checked_with_source_pool_reports(manifest, source_pool, default_preamble, [])
+}
+
+fn ct_expand_checked_with_source_pool_reports(manifest: SelfHostProgramManifest, source_pool: SelfHostProgramManifest, default_preamble: Bool, reports: Array<CtTransformReport>) -> Result<SelfHostProgramManifest, String> {
   if source_pool.modules.length() == 0u32 {
-    return ct_expand_checked(manifest, default_preamble)
+    let plan = ct_prepare(manifest)
+    let result = ct_expand_checked_plan(plan, default_preamble)
+    for report in plan.reports {
+ reports.push(report)
+ }
+    return result
   }
   for module_ in source_pool.modules {
     if module_.path == "dewdrop.ast" || module_.path == "dewdrop.transform" {
@@ -205,6 +222,9 @@ fn ct_expand_checked_with_source_pool(manifest: SelfHostProgramManifest, source_
       let expanded = match ct_expand_checked_plan_retaining_declarations(plan, default_preamble, true) {
         Ok(value) => value
         Err(error) => return Err(error)
+      }
+      for report in plan.reports {
+        reports.push(report)
       }
       let selected = match self_host_manifest_import_closure(expanded, source_pool) {
         Ok(value) => value

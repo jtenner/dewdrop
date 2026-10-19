@@ -1,0 +1,36 @@
+test "instruction contracts reject wrong scalar and result carriers" {
+  let machine = ct_machine(ct_test_plan(b""))
+  assert(!ct_check_intrinsic_contract(machine, "i32.add", [ct_number(1u64, "I32"), ct_number(2u64, "I32")], "String"), "wrong reference result must fail")
+  assert(machine.error.contains("result carrier mismatch"), "wrong result has a diagnostic")
+  let wide = ct_machine(ct_test_plan(b""))
+  assert(!ct_check_intrinsic_contract(wide, "i32.add", [ct_number(1u64, "I64"), ct_number(2u64, "I64")], "I32"), "wrong operand width must fail")
+  assert(wide.error.contains("operand carrier mismatch"), "wrong input has a diagnostic")
+  let valid = ct_machine(ct_test_plan(b""))
+  assert(ct_check_intrinsic_contract(valid, "i32.add", [CtValue::DefaultValue, CtValue::DefaultValue], "I32"), "generic defaults retain deferred carriers")
+  assert(ct_check_intrinsic_contract(valid, "i32.add", [ct_number(1u64, "I8"), ct_number(2u64, "U32")], "Bool"), "i32 aliases use one carrier")
+}
+
+test "instruction contracts reject float vector and field result mismatches" {
+  let floating = ct_machine(ct_test_plan(b""))
+  assert(!ct_check_intrinsic_contract(floating, "f64.add", [ct_float_f64_result(1.0f64), ct_float_f64_result(2.0f64)], "String"), "float result cannot become a reference")
+  let vector = ct_machine(ct_test_plan(b""))
+  assert(!ct_check_intrinsic_contract(vector, "i64x2.splat", [ct_number(1u64, "I64")], "String"), "vector result cannot become a reference")
+  let field = ct_machine(ct_test_plan(b""))
+  field.plan.raw_layouts.set("record:123", CtRawLayout::{
+    fields: ["value"]
+    storage: ["i32"]
+  })
+  let value = CtValue::Record("record:123", [ct_binding("value", ct_number(1u64, "I32"))])
+  assert(!ct_check_intrinsic_contract(field, "struct.get 0", [value], "I64"), "field result keeps its checked width")
+  assert(field.error.contains("checked field"), "field mismatch has a diagnostic")
+}
+
+test "checked results reject omitted float opcodes and unresolved generic results" {
+  let floating = ct_machine(ct_test_plan(b""))
+  let result = ct_float_intrinsic(floating, "f64.min", [ct_float_f64_result(1.0f64), ct_float_f64_result(2.0f64)])
+  let _ = ct_intrinsic_result(floating, result, "String")
+  assert(floating.error.contains("incompatible Wasm carrier"), "omitted opcode result keeps its physical carrier")
+  let unresolved = ct_machine(ct_test_plan(b""))
+  assert(!ct_check_intrinsic_contract(unresolved, "i32.add", [ct_number(1u64, "I32"), ct_number(2u64, "I32")], ""), "unknown generic result cannot hide a fixed scalar result")
+  assert(unresolved.error.contains("concrete checked carrier"), "generic failure is visible")
+}

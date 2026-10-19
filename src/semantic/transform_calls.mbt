@@ -1,6 +1,7 @@
 ///|
 pub struct CompileTimeCall {
   reference : Bool
+  constant : CompileTimeTransformConstant?
   module_index : Int32
   file : FileId
   offset : UInt64
@@ -44,12 +45,38 @@ pub fn compile_time_calls(
   for mi, source in program.modules {
     let inferred = analyzed.modules[mi].inferred
     for ei, expression in source.expressions {
+      if expression is HirCallExpr(_, _, _) {
+        let saved = match lowering.compile_time {
+          Some(context) => context.query_constants.get((source.module_id, ei))
+          None => None
+        }
+        let constant = match saved {
+          Some(_) => saved
+          None => transform_folded_constant(lowering.modules[mi].expressions[ei].kind)
+        }
+        if constant is Some(_) {
+          result.push({
+            reference: false,
+            constant,
+            module_index: mi,
+            file: source.expression_files[ei],
+            offset: expression.offset(),
+            target_module: -6,
+            target_file: source.expression_files[ei],
+            target_offset: 0UL,
+            result_kind: "",
+            constructor_key: "",
+          })
+          continue
+        }
+      }
       if lowering.modules[mi].expressions[ei].kind
         is PlannedModuleValueGet(selected, _) {
         if targets.get(selected)
           is Some((target_module, target_file, target_offset)) {
           result.push({
             reference: true,
+            constant: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -67,6 +94,7 @@ pub fn compile_time_calls(
           is Some((target_module, target_file, target_offset)) {
           result.push({
             reference: true,
+            constant: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -89,6 +117,7 @@ pub fn compile_time_calls(
         if transform_variant_key(program, selected) is Some(key) {
           result.push({
             reference: true,
+            constant: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -106,6 +135,7 @@ pub fn compile_time_calls(
         if transform_variant_key(program, selected) is Some(key) {
           result.push({
             reference: false,
+            constant: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -133,6 +163,7 @@ pub fn compile_time_calls(
         if kind != "" && !kind.has_prefix("array:") {
           result.push({
             reference: false,
+            constant: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -171,6 +202,7 @@ pub fn compile_time_calls(
         if location is Some((target_module, target_file, target_offset)) {
           result.push({
             reference: false,
+            constant: None,
             module_index: mi,
             file: source.expression_files[ei],
             offset: expression.offset(),
@@ -213,7 +245,9 @@ fn transform_scalar_kind(
         unwrap_function = false
         current = result
       }
-      BodyAppliedType(_, arguments) if arguments.length == 1 && !unwrap_function => {
+      BodyAppliedType(base, arguments) if arguments.length == 1 && !unwrap_function => {
+        if inferred.type_term(base) is BodyResolvedType(id) &&
+          resolved[id] is NominalType(declaration) && declaration == standard_nullable_ref_type_declaration() { return "nullable" }
         let kind = transform_scalar_kind(
           resolved,
           resolved_arguments,
@@ -231,8 +265,9 @@ fn transform_scalar_kind(
               unwrap_function = false
               resolved_type = result
             }
-            AppliedType(_, arguments) if arguments.length == 1 &&
+            AppliedType(base, arguments) if arguments.length == 1 &&
               !unwrap_function => {
+              if resolved[base] is NominalType(declaration) && declaration == standard_nullable_ref_type_declaration() { return "nullable" }
               let kind = transform_scalar_kind(
                 resolved,
                 resolved_arguments,
@@ -244,8 +279,10 @@ fn transform_scalar_kind(
             }
             PrimitiveType(primitive) =>
               return match primitive {
-                F32Type => "unsupported:F32"
-                F64Type => "unsupported:F64"
+                UnitType => "Unit"
+                NeverType => "Never"
+                F32Type => "F32"
+                F64Type => "F64"
                 BoolType => "Bool"
                 I8Type => "I8"
                 U8Type => "U8"
@@ -255,8 +292,26 @@ fn transform_scalar_kind(
                 U32Type => "U32"
                 I64Type => "I64"
                 U64Type => "U64"
+                StringType => "String"
+                BytesType => "Bytes"
+                StringViewType => "StringView"
+                StringBuilderType => "StringBuilder"
+                BytesBuilderType => "BytesBuilder"
+                V128Type
+                | I8x16Type
+                | U8x16Type
+                | I16x8Type
+                | U16x8Type
+                | I32x4Type
+                | U32x4Type
+                | I64x2Type
+                | U64x2Type
+                | F32x4Type
+                | F64x2Type => "V128"
                 _ => ""
               }
+            NominalType(declaration) =>
+              return "record:" + declaration.to_string()
             _ => return ""
           }
         }

@@ -4,9 +4,10 @@ fn Machine::render_declaration(
   value : Value,
 ) -> String raise EvalError {
   self.charge(64)
-  guard value is Variant(key, [Text(source)]) else {
+  guard value is Variant(key, [source]) else {
     raise Failed("invalid generated declaration node")
   }
+  let source = self.string(source)
   self.charge(bytes(source).length())
   guard bytes(source).length() <= 1_048_576 else {
     raise Failed("generated source size limit exceeded")
@@ -52,8 +53,8 @@ fn Machine::render_import(
   self : Machine,
   value : Value,
 ) -> String raise EvalError {
-  let path = string(field(value, "module_path"))
-  let alias = string(field(value, "alias"))
+  let path = self.string(field(value, "module_path"))
+  let alias = self.string(field(value, "alias"))
   self.charge(bytes(path).length() + bytes(alias).length())
   guard path != "" &&
     identifier(alias) &&
@@ -61,4 +62,45 @@ fn Machine::render_import(
     raise Failed("invalid generated import path or alias")
   }
   "import " + path + " as @" + alias + "\n"
+}
+
+///|
+fn Machine::seed_imports(self : Machine, mi : Int32) -> Unit {
+  for file in self.plan.files[mi] {
+    for declaration in file.declarations {
+      if declaration is @parser.Import(import_) &&
+        !import_.open_ &&
+        !import_.path.is_empty() {
+        let alias = import_.import_alias.unwrap_or(
+          import_.path[import_.path.length() - 1],
+        )
+        self.imports[(mi, alias)] = import_.path.join(".")
+      }
+    }
+  }
+}
+
+///|
+fn Machine::register_import(
+  self : Machine,
+  mi : Int32,
+  value : Value,
+) -> String? raise EvalError {
+  let rendered = self.render_import(value)
+  let path = self.string(field(value, "module_path"))
+  let alias = self.string(field(value, "alias"))
+  match self.imports.get((mi, alias)) {
+    Some(existing) => {
+      guard existing == path else {
+        raise Failed(
+          "generated import alias already names a different module: " + alias,
+        )
+      }
+      None
+    }
+    None => {
+      self.imports[(mi, alias)] = path
+      Some(rendered)
+    }
+  }
 }

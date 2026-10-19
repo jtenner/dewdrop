@@ -1,0 +1,52 @@
+pub enum CtCheckedConstant {
+  CheckedBool(Bool)
+  CheckedU32(U64)
+  CheckedStrings(Array<Bytes>)
+  CheckedUnit
+}
+
+fn ct_folded_query(kind: SelfHostPlannedExpressionKind) -> Option<CtCheckedConstant> {
+  match kind {
+    PlannedUnitConst => Some(CtCheckedConstant::CheckedUnit)
+    PlannedBoolConst(value) => Some(CtCheckedConstant::CheckedBool(value))
+    PlannedU32Const(value) => Some(CtCheckedConstant::CheckedU32(value))
+    PlannedStringArrayConst(values) => Some(CtCheckedConstant::CheckedStrings(values))
+    PlannedProductNew(span) if span.length == 0u32 => Some(CtCheckedConstant::CheckedUnit)
+    _ => None
+  }
+}
+
+fn ct_checked_constant(machine: CtMachine, value: CtCheckedConstant) -> CtValue {
+  if !ct_charge(machine, 16u32) {
+ return CtValue::Empty
+ }
+  match value {
+    CheckedBool(value) => CtValue::Boolean(value)
+    CheckedU32(value) => ct_number(value, "U32")
+    CheckedUnit => CtValue::Empty
+    CheckedStrings(values) => {
+      let result = array_new::<CtValue>()
+      for value in values {
+        if !ct_charge(machine, value.byte_length() + 16u32) {
+ return CtValue::Empty
+ }
+        if !value.is_valid_utf8() {
+ return ct_fail(machine, "checked type-query name is not UTF-8")
+ }
+        result.push(CtValue::Text(value.to_string()))
+      }
+      ct_syntax_values(machine, result)
+    }
+  }
+}
+
+fn ct_query_proof(lowering: SelfHostPlannedProgramLowering, module_id: U64, expression: U32, kind: SelfHostPlannedExpressionKind) -> Option<CtCheckedConstant> {
+  match lowering.compile_time.query_constants.get(module_id) {
+    Some(sites) => match sites.get(expression) {
+      Some(saved) => return ct_folded_query(saved)
+      None => {}
+    }
+    None => {}
+  }
+  ct_folded_query(kind)
+}

@@ -55,9 +55,15 @@ pub fn compile_time_arrays(CollectedProgram, PlannedProgramLowering) -> Array[Co
 
 pub fn compile_time_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Array[CompileTimeCall]
 
+pub fn compile_time_expression_types(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[(Int, String, UInt64, UInt64)]) -> Array[CompileTimeExpressionType]
+
 pub fn compile_time_imported_type_names(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, String, String)]
 
+pub fn compile_time_intrinsic_contract_error(PlannedProgramLowering) -> String?
+
 pub fn compile_time_pattern_proofs(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, UInt64, UInt64, String)]
+
+pub fn compile_time_raw_layouts(CollectedProgram, PlannedProgramLowering) -> Array[CompileTimeRawLayout]
 
 pub fn compile_time_scalar_operator_proofs(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Array[(Int, UInt64, UInt64, Bytes)]
 
@@ -846,6 +852,7 @@ type CompileTimeBindingKey derive(Eq, Hash, @debug.Debug)
 
 pub struct CompileTimeCall {
   reference : Bool
+  constant : CompileTimeTransformConstant?
   module_index : Int
   file : UInt64
   offset : UInt64
@@ -862,6 +869,14 @@ type CompileTimeEvidenceBudget
 
 type CompileTimeEvidenceSearch
 
+pub struct CompileTimeExpressionType {
+  module_index : Int
+  file : UInt64
+  offset : UInt64
+  kind : String
+  type_ : CompileTimeReflectedType
+} derive(Eq, @debug.Debug)
+
 pub struct CompileTimeLambdaLayout {
   closure_types : Array[Int]
   capture_fields : Array[Int]
@@ -870,11 +885,32 @@ pub struct CompileTimeLambdaLayout {
 
 type CompileTimeProgramContext
 
+pub struct CompileTimeRawLayout {
+  key : String
+  identity : String
+  fields : Array[String]
+  storage : Array[String]
+}
+
 type CompileTimeReachTask
+
+pub struct CompileTimeReflectedType {
+  identity : UInt64
+  kind : String
+  name : String
+  arguments : Array[CompileTimeReflectedType]
+} derive(Eq, @debug.Debug)
 
 type CompileTimeSpecializedBody
 
 type CompileTimeTraitWitness
+
+pub enum CompileTimeTransformConstant {
+  TransformBoolConstant(Bool)
+  TransformU32Constant(UInt64)
+  TransformStringsConstant(Array[Bytes])
+  TransformUnitConstant
+}
 
 type CompileTimeType derive(Eq, @debug.Debug)
 

@@ -1,0 +1,268 @@
+test "raw text casts retain identity and use checked field order" {
+  let machine = ct_machine(ct_test_plan(b""))
+  machine.plan.raw_layouts.set("record:123", CtRawLayout::{
+    fields: ["data", "begin", "size"]
+    storage: ["array:v128", "i32", "i32"]
+  })
+  let original = CtValue::Text("aλ🧪")
+  let view = ct_reference_cast(machine, original, "record:123")
+  assert(ct_truth(machine, ct_reference_equal(machine, original, view)), "casts retain reference identity")
+  assert(ct_truth(machine, ct_reference_equal(machine, original, ct_reference_cast(machine, view, "String"))), "round trip keeps the reference")
+  assert(ct_raw_bits(machine, ct_field(machine, view, "begin")) == 0u64, "text view starts at zero")
+  assert(ct_raw_bits(machine, ct_field(machine, view, "size")) == 7u64, "text view has its UTF-8 byte length")
+  let backing = ct_field(machine, view, "data")
+  assert(ct_truth(machine, ct_reference_equal(machine, backing, ct_field(machine, view, "data"))), "byte chunk views retain backing identity")
+  machine.plan.raw_layouts.set("record:124", CtRawLayout::{
+    fields: ["only"]
+    storage: ["i32"]
+  })
+  let _ = ct_reference_cast(machine, original, "record:124")
+  assert(machine.error.contains("heap type mismatch"), "incompatible reference casts fail")
+}
+
+test "byte vector intrinsics preserve lanes and masks" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let original = ct_vector_intrinsic(machine, "i8x16.splat", [ct_number(128u64, "U8")])
+  assert(ct_raw_bits(machine, ct_vector_intrinsic(machine, "i8x16.bitmask", [original])) == 65535u64, "all high bits are set")
+  let changed = ct_vector_intrinsic(machine, "i8x16.replace_lane 15", [original, ct_number(7u64, "U8")])
+  assert(ct_vector_byte(machine, changed, 15u32) == 7u64, "the selected lane changes")
+  assert(ct_vector_byte(machine, original, 15u32) == 128u64, "the source vector stays unchanged")
+  let equal = ct_vector_intrinsic(machine, "i8x16.eq", [original, changed])
+  assert(ct_raw_bits(machine, ct_vector_intrinsic(machine, "i8x16.bitmask", [equal])) == 32767u64, "only the changed lane differs")
+  let invalid = ct_vector_intrinsic(machine, "i8x16.splat", [ct_number(16u64, "U8")])
+  let zero = ct_vector_intrinsic(machine, "i8x16.swizzle", [original, invalid])
+  assert(ct_vector_byte(machine, zero, 0u32) == 0u64, "out of range swizzle lanes are zero")
+  assert(ct_raw_bits(machine, ct_vector_intrinsic(machine, "i8x16.extract_lane_u 15", [changed])) == 7u64, "lane extraction returns an unsigned byte")
+}
+
+
+pub fn ct_reference_probe_new() -> BytesBuilder {
+  BytesBuilder::new()
+}
+
+pub fn ct_reference_probe_append(source: BytesBuilder, byte: U8) -> Unit {
+  source.append_byte(byte)
+}
+
+pub fn ct_reference_probe_check(source: BytesBuilder) -> Bool {
+  let request = match decode_self_host_compile_request(source.finish()) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+      return false
+    }
+  }
+  match ct_expand_checked_with_source_pool(request.manifest, request.source_pool, request.default_preamble) {
+    Ok(manifest) => {
+      for module_ in manifest.modules {
+        if module_.path == "example.app" {
+          let source = ct_test_all_source(module_)
+          assert(source.contains("42i32") || source.contains("identity(x + 2i32)"), source)
+          return true
+        }
+      }
+      assert(false, "request has no example.app module")
+      false
+    }
+    Err(error) => {
+      assert(false, error)
+      false
+    }
+  }
+}
+
+test "raw text casts reject mutable and different nested storage" {
+  for storage in [["mut:array:v128", "i32", "i32"], ["array:i32", "i32", "i32"], ["record:999", "i32", "i32"], ["unsupported", "i32", "i32"]] {
+    let machine = ct_machine(ct_test_plan(b""))
+    machine.plan.raw_layouts.set("record:124", CtRawLayout::{
+      fields: ["data", "begin", "size"]
+      storage: storage
+    })
+    let _ = ct_reference_cast(machine, CtValue::Text("text"), "record:124")
+    assert(machine.error.contains("heap type mismatch"), "incompatible nested or mutable field must fail")
+  }
+}
+
+test "tuple references retain storage identity" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let values = [ct_number(1u64, "I32")]
+  assert(ct_truth(machine, ct_reference_equal(machine, CtValue::Sequence(values), CtValue::Sequence(values))), "shared tuple storage keeps identity")
+  assert(!ct_truth(machine, ct_reference_equal(machine, CtValue::Sequence(values), CtValue::Sequence([ct_number(1u64, "I32")]))), "distinct tuple storage has distinct identity")
+}
+
+test "function and closure reference identity uses the stored instance" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let function = CtValue::Function(CtCallTarget::Unsupported, [])
+  assert(ct_truth(machine, ct_reference_equal(machine, function, function)), "stored function aliases have one identity")
+  assert(!ct_truth(machine, ct_reference_equal(machine, function, CtValue::Function(CtCallTarget::Unsupported, []))), "separate function instances have separate identities")
+  let body = SelfHostBlock::{
+    items: []
+    offset: 0u32
+  }
+  let closure = CtValue::Closure(0u32, "fixture.dew", [], body, [])
+  assert(ct_truth(machine, ct_reference_equal(machine, closure, closure)), "stored closure aliases have one identity")
+  assert(!ct_truth(machine, ct_reference_equal(machine, closure, CtValue::Closure(0u32, "fixture.dew", [], body, []))), "separate closure instances have separate identities")
+  assert(!ct_truth(machine, ct_reference_equal(machine, function, closure)), "different function kinds have separate identities")
+  assert(!ct_reference_null_test(machine, function), "function reference is non-null")
+  assert(machine.error.byte_length() == 0u32, "valid function checks have no error")
+}
+
+test "null tests require a proved reference for tuple values" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let _ = ct_reference_null_test(machine, CtValue::Sequence([ct_number(1u64, "I32"), ct_number(2u64, "I32")]))
+  assert(machine.error.contains("checked reference carrier"), "unresolved tuples need positive reference proof")
+}
+
+test "generated for calls and patterns have distinct checked sites" {
+  let expression = match self_host_parse_expression_source(b"for value in values {\n  consume(value)\n}") {
+    Ok(value) => value
+    Err(_) => {
+      assert(false, "for parse failed")
+      return
+    }
+  }
+  match expression {
+    BlockExpr(block) => {
+      let iter_offset = block.items[0u32].value.offset()
+      match block.items[1u32].value {
+        WhileExpr(initial, arms, _) => {
+          assert(initial.offset() == iter_offset + 1u32, "iter and next have distinct call sites")
+          assert(arms[0u32].pattern.offset() != arms[1u32].pattern.offset(), "Some and None have distinct pattern sites")
+        }
+        _ => assert(false, "for has no lowered loop")
+      }
+    }
+    _ => assert(false, "for has no iterator block")
+  }
+}
+
+test "scalar floats keep Wasm rounding zero and conversion traps" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let even = ct_float_intrinsic(machine, "f64.nearest", [ct_float_f64_result(2.5f64)])
+  assert(ct_float_f64(machine, even) == 2.0f64, "round ties to even")
+  let negative_zero = ct_float_intrinsic(machine, "f64.nearest", [ct_float_f64_result(-0.5f64)])
+  assert(wasm_f64_to_bits(ct_float_f64(machine, negative_zero)) == 9223372036854775808u64, "negative zero is kept")
+  let rounded = ct_float_intrinsic(machine, "f32.add", [ct_float_f32_result(16777216.0f32), ct_float_f32_result(1.0f32)])
+  assert(ct_float_f32(machine, rounded) == 16777216.0f32, "round to F32 after arithmetic")
+  let saturated = ct_float_intrinsic(machine, "i64.trunc_sat_f64_u", [CtValue::Floating(4895412794951729152u64, "F64")])
+  assert(ct_raw_bits(machine, saturated) == 18446744073709551615u64, "saturating unsigned limit")
+  let _ = ct_float_intrinsic(machine, "i32.trunc_f64_s", [ct_float_f64_result(2147483648.0f64)])
+  assert(machine.error.contains("conversion trap"), "invalid conversions give a compiler error")
+}
+
+test "checked primitive operators execute float values" {
+  let machine = ct_machine(ct_test_plan(b""))
+  machine.plan.scalar_proofs.set(ct_call_key(0u32, machine.file_path, 7u32), b"primitive")
+  let value = ct_scalar_binary(machine, 0u32, 7u32, Multiply, ct_float_f64_result(6.0f64), ct_float_f64_result(7.0f64))
+  assert(ct_float_f64(machine, value) == 42.0f64, "proved float multiplication")
+  let result = ct_scalar_binary(machine, 0u32, 7u32, Equal, ct_float_f32_result(2.0f32), ct_float_f32_result(2.0f32))
+  assert(ct_truth(machine, result), "proved float comparison")
+  assert(machine.error.byte_length() == 0u32, "no integer fallback")
+}
+
+test "raw defaults distinguish scalar zero from null reference" {
+  let machine = ct_machine(ct_test_plan(b""))
+  assert(ct_intrinsic_result(machine, CtValue::DefaultValue, "nullable") is NullValue, "nullable default")
+  assert(ct_raw_bits(machine, ct_intrinsic_result(machine, CtValue::DefaultValue, "U32")) == 0u64, "integer default")
+  assert(ct_reference_is_null(machine, CtValue::NullValue), "null reference")
+  assert(!ct_reference_is_null(machine, CtValue::Text("present")), "non-null reference")
+  let _ = ct_intrinsic_result(machine, CtValue::DefaultValue, "record:1")
+  assert(machine.error.contains("null reference"), "non-null default traps")
+}
+
+test "nullable type identity cannot be forged by a ref_null result" {
+  let collected = self_host_collect_program_manifest(7200u64, {
+    modules: [{
+      path: "app"
+      files: [{
+        path: "forged.dew"
+        source: b"struct Foo<t> {}\nbuiltin absent<t>() -> Foo<t> = \"ref_null\"\n"
+        test_only: false
+      }]
+    }]
+  })
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  let module_ = lowering.modules[0u32]
+  let mut found = false
+  let mut index = 0u32
+  for type_ in module_.resolved_types.types {
+    if type_ is NominalType(_) {
+      assert(!ct_nullable_base(module_, -self_host_body_u32_to_i32(index) - 2i32), "ordinary generic Foo must not become nullable")
+      found = true
+    }
+    index = index + 1u32
+  }
+  assert(found, "forged result has a resolved nominal base")
+}
+
+test "nullable type identity matches collected canonical declaration" {
+  let validation = ct_validation_manifest(ct_prepare({
+    modules: [{
+      path: "dew.std.wasm.intrinsics"
+      files: [{
+        path: "imports.dew"
+        source: b""
+        test_only: false
+      }, {
+        path: "intrinsics.dew"
+        source: b"pub struct WasmArray<t> {}\npub struct NullableRef<t> {}\ntransform fn marker() -> Unit {}\n"
+        test_only: false
+      }]
+    }]
+  }))
+  let validated = self_host_collect_program_manifest(7200u64, validation)
+  assert(validated.modules.at(0u32).declarations[1u32].id == self_host_standard_nullable_ref_type_declaration(), "validation must preserve canonical types after an import-only file")
+  let collected = self_host_collect_program_manifest(7200u64, {
+    modules: [{
+      path: "dew.std.wasm.intrinsics"
+      files: [{
+        path: "intrinsics.dew"
+        source: b"pub struct WasmArray<t> {}\npub struct NullableRef<t> {}\n"
+        test_only: false
+      }]
+    }]
+  })
+  assert(collected.modules.at(0u32).declarations[1u32].id == self_host_standard_nullable_ref_type_declaration(), "canonical NullableRef declaration ID")
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  let module_ = lowering.modules[0u32]
+  let mut found = false
+  let mut index = 0u32
+  for type_ in module_.resolved_types.types {
+    match type_ {
+      NominalType(declaration) if declaration == self_host_standard_nullable_ref_type_declaration() => {
+        assert(ct_nullable_base(module_, -self_host_body_u32_to_i32(index) - 2i32), "canonical NullableRef base is recognized")
+        found = true
+      }
+      _ => {}
+    }
+    index = index + 1u32
+  }
+  assert(found, "canonical NullableRef base is resolved")
+}
+
+test "null tests reject invalid checked result carriers before ignored results" {
+  let plan = ct_test_plan(b"builtin wrong(value: String) -> String = \"ref_is_null\"\ntransform fn marker() -> Unit {}\n")
+  let mut found = false
+  for file in plan.files {
+    for declaration in file.declarations {
+      match declaration {
+        Builtin(builtin_) => {
+          for kind in ["String", "", "F32", "I64"] {
+            let machine = ct_machine(plan)
+            let _ = ct_typed_intrinsic(machine, builtin_, [CtValue::Text("present")], kind)
+            assert(machine.error.contains("i32 result carrier"), "bad null-test result must remain diagnostic")
+          }
+          for kind in ["Bool", "I8", "U8", "I16", "U16", "I32", "U32"] {
+            let machine = ct_machine(plan)
+            let value = ct_typed_intrinsic(machine, builtin_, [CtValue::Text("present")], kind)
+            assert(value is Boolean(false), "non-null test is false for each valid i32 carrier")
+            assert(machine.error.byte_length() == 0u32, "valid i32 carrier remains supported")
+          }
+          found = true
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(found, "parsed ref_is_null builtin is tested")
+}

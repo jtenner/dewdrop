@@ -1,0 +1,31 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.array
+open dew.std.string
+
+fn identity(value: I32) -> I32 {
+  value
+}
+
+transform fn check_types(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let sum = ctx.syntax.children[0u32]
+  let call = sum.children[0u32]
+  let callee = call.children[0u32]
+  let valid = match (ctx.type_of(call), ctx.type_of(callee), ctx.type_of(sum)) {
+    (Some(call_type), Some(callee_type), Some(sum_type)) => {
+      call_type.name == "I32" && callee_type.kind == "function" && sum_type.name == "I32"
+    }
+    _ => false
+  }
+  let answer = if valid && ctx.type_errors.length() == 0u32 {
+    42i32
+  } else {
+    0i32
+  }
+  node.with_body(@ast.integer(answer))
+}
+
+#check_types
+pub fn main() -> I32 {
+  identity(20i32) + identity(22i32)
+}

@@ -3,6 +3,7 @@ open dew.std.wasm.intrinsics
 
 pub enum ExprNode {
   Source(String)
+  Quote(Array<String>, Array<ExprNode>)
   Unit
   Integer(I32)
   Integer64(I64)
@@ -192,4 +193,25 @@ pub enum DeclarationNode {
 pub struct ImportNode {
   module_path: String
   alias: String
+}
+
+// Splices are expressions. Quote-local $names are fresh within this quote.
+pub fn quote(parts: Array<String>, splices: Array<ExprNode>) -> ExprNode {
+  ExprNode::Quote(parts, splices)
+}
+
+// Original parsed syntax. Children retain source order. Offsets are UTF-8 bytes.
+pub struct SyntaxNode {
+  kind: String
+  label: String
+  offset: U32
+  children: Array<SyntaxNode>
+  types: Array<TypeNode>
+}
+
+// Checked original-body expression types. Offsets are UTF-8 source bytes.
+pub struct ExpressionTypeNode {
+  offset: U32
+  kind: String
+  type_: TypeNode
 }

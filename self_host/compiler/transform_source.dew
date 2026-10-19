@@ -92,6 +92,8 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
               plan.error = "expected #@alias.transform_name"
             }
           }
+          let arguments = ct_scan_annotation_arguments(plan, original.source, tokens, i)
+          i = arguments.next
           if i < tokens.length() {
             if !(tokens[i].kind is Newline) {
               plan.error = "a transform annotation must occupy its own line"
@@ -106,6 +108,9 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
           clean.append(ct_blank(original.source, start, end))
           cursor = end
           pending.push({
+              arguments: arguments.values
+              arguments_source: arguments.source
+              arguments_offset: arguments.offset
               name: name
               offset: start
               target: 0u32
@@ -126,6 +131,9 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
         Keyword(0u32, _) if depth == 0u32 => {
           for annotation in pending {
             annotations.push({
+                arguments: annotation.arguments
+                arguments_source: annotation.arguments_source
+                arguments_offset: annotation.arguments_offset
                 name: annotation.name
                 offset: annotation.offset
                 target: token.offset
@@ -208,6 +216,13 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
       }
     }
   }
+  for function in functions {
+    for annotation in annotations {
+      if annotation.target >= function.declaration.offset && annotation.target < function.declaration.name_offset {
+        plan.annotated_functions.set(ct_call_key(module_index, original.path, function.declaration.offset), true)
+      }
+    }
+  }
   {
     module_index: module_index
     original: original
@@ -241,13 +256,18 @@ fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_
     active: active
     error: ""
     validation_stop: "__dew_transform_validation_stop"
-    scalar_proofs: []
-    pattern_proofs: []
+    scalar_proofs: map_empty::<String, Bytes>()
+    pattern_proofs: map_empty::<String, String>()
     calls: map_empty::<String, CtCallTarget>()
     scalar_types: map_empty::<String, String>()
     references: map_empty::<String, CtCallTarget>()
     array_literals: map_empty::<String, CtArrayLayout>()
     array_layouts: map_empty::<String, CtArrayLayout>()
+    reports: []
+    expression_types: map_empty::<String, Array<CtExpressionType>>()
+    reflection_errors: []
+    raw_layouts: map_empty::<String, CtRawLayout>()
+    annotated_functions: map_empty::<String, Bool>()
     type_names: []
   }
   if !active {

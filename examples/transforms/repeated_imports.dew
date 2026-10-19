@@ -1,0 +1,15 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import example.tools as @tools
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  ctx.import_module("example.tools", "tools")
+  node.with_body(@ast.integer(42i32))
+}
+#replace
+fn first() -> I32 {
+  0i32
+}
+#replace
+pub fn main() -> I32 {
+  first()
+}

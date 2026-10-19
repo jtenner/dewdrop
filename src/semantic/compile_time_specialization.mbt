@@ -18,6 +18,7 @@ struct CompileTimeProgramContext {
   // explicit runtime dictionary ABI. Pure queries cannot use that ABI.
   logical : Map[DeclId, Bool]
   instances : Map[String, CompileTimeSpecializedBody]
+  query_constants : Map[(ModuleId, ExprId), CompileTimeTransformConstant]
 }
 
 ///|
@@ -206,6 +207,7 @@ fn compile_time_program_context(
     sensitive,
     logical,
     instances: {},
+    query_constants: {},
   }
 }
 

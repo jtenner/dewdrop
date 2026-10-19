@@ -1,6 +1,7 @@
 open dew.std.map
 
 pub enum CtCallTarget {
+  Constant(CtCheckedConstant)
   Source(U32, String, SelfHostFunctionDeclaration, String)
   Global(U32, String, SelfHostLetDeclaration)
   Intrinsic(SelfHostBuiltinDeclaration, String)
@@ -47,14 +48,10 @@ fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostF
   if args.length() != function.parameters.length() + receivers {
     return ct_fail(machine, "checked compile-time argument count mismatch")
   }
-  for file in machine.plan.files {
-    if file.module_index == mi && file.original.path == path {
-      for candidate in file.functions {
-        if candidate.declaration.offset == function.offset && ct_is_annotated(file, candidate) {
-          return ct_fail(machine, "annotated functions cannot execute at compile time")
-        }
-      }
-    }
+  let annotation_key = ct_call_key(mi, path, function.offset)
+  let _ = ct_charge(machine, 32u32 + path.byte_length())
+  if machine.plan.annotated_functions.get(annotation_key) is Some(_) {
+    return ct_fail(machine, "annotated functions cannot execute at compile time")
   }
   let env = array_new::<CtBinding>()
   if receivers == 1u32 {
@@ -82,6 +79,7 @@ fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostF
 fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExpr, args: Array<SelfHostExpr>, env: Array<CtBinding>, types: Array<SelfHostTypeExpr>) -> CtValue {
   let _ = types
   match ct_lookup_call(machine, mi, offset) {
+    Some(Constant(value)) => ct_checked_constant(machine, value)
     Some(Source(target_mi, path, function, kind)) => {
       let values = array_new::<CtValue>()
       if function.receiver is Some(_) {
@@ -99,7 +97,7 @@ fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExp
       ct_intrinsic_result(machine, ct_source_call(machine, target_mi, path, function, values), kind)
     }
     Some(Intrinsic(builtin_, kind)) => {
-      let result = ct_intrinsic(machine, builtin_, ct_eval_values(machine, mi, args, env))
+      let result = ct_typed_intrinsic(machine, builtin_, ct_eval_values(machine, mi, args, env), kind)
       ct_intrinsic_result(machine, result, kind)
     }
     Some(Constructor(key)) => CtValue::Variant(key, ct_eval_values(machine, mi, args, env))
@@ -194,7 +192,7 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
       if ei < lowering.modules[mi].expressions.length() {
         let reference = match lowering.modules[mi].expressions[ei].kind {
           PlannedModuleValueGet(selected) => Some(ct_checked_source_target(plan, collected, selected, ""))
-          PlannedFunctionReference(selected) => Some(ct_checked_source_target(plan, collected, selected, ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, true)))
+          PlannedFunctionReference(selected) => Some(ct_checked_source_target(plan, collected, selected, ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, true)))
           _ => match lowering.modules[mi].expressions[ei].selection {
             VariantConstructionBasicExpressionSelection(selected, 2u32, _) => match ct_pattern_variant_key(collected, selected) {
               Some(key) => Some(UnitConstructor(key))
@@ -244,7 +242,7 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
       match selected {
         Some(value) => {
           let target = if scalar_read || (expression is PrefixExpr(_, _, _)) {
-            let kind = ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)
+            let kind = ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)
             if scalar_read && (kind.byte_length() == 0u32 || kind.starts_with("array:")) {
               None
             } else {
@@ -257,12 +255,20 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
                   Some(key) => Some(Constructor(key))
                   None => Some(Unsupported)
                 }
-                _ => Some(ct_checked_source_target(plan, collected, declaration, ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+                _ => Some(ct_checked_source_target(plan, collected, declaration, ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
               }
-              FunctionValueBasicCallTarget(_) => Some(FunctionValue(ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+              FunctionValueBasicCallTarget(_) => Some(FunctionValue(ct_checked_scalar_kind(plan, lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
               NoBasicCallTarget => None
               _ => Some(Unsupported)
             }
+          }
+          let target = if expression is CallExpr(_, _, _) {
+            match ct_query_proof(lowering, source.module_id, ei, lowering.modules[mi].expressions[ei].kind) {
+              Some(value) => Some(Constant(value))
+              None => target
+            }
+          } else {
+            target
           }
           match target {
             Some(target) => {
@@ -313,7 +319,7 @@ fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -
       }
       match target {
         Source(mi, path, function, kind) => ct_intrinsic_result(machine, ct_source_call(machine, mi, path, function, values), kind)
-        Intrinsic(builtin_, kind) => ct_intrinsic_result(machine, ct_intrinsic(machine, builtin_, values), kind)
+        Intrinsic(builtin_, kind) => ct_intrinsic_result(machine, ct_typed_intrinsic(machine, builtin_, values, kind), kind)
         Constructor(key) => CtValue::Variant(key, values)
         _ => ct_fail(machine, "unsupported checked function reference")
       }
@@ -395,7 +401,7 @@ fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, 
   }
 }
 
-fn ct_checked_scalar_kind(module_: SelfHostPlannedModuleLowering, root: I32, reference: Bool) -> String {
+fn ct_checked_scalar_kind(plan: CtPlan, module_: SelfHostPlannedModuleLowering, root: I32, reference: Bool) -> String {
   let mut current = root
   let mut unwrap_function = reference
   let mut resolved_type = -1i32
@@ -411,8 +417,11 @@ fn ct_checked_scalar_kind(module_: SelfHostPlannedModuleLowering, root: I32, ref
           unwrap_function = false
           continue result
         }
-        BodyAppliedType(_, arguments) if arguments.length == 1u32 && !unwrap_function => {
-          let kind = ct_checked_scalar_kind(module_, module_.inferred.type_arguments[arguments.start], false)
+        BodyAppliedType(base, arguments) if arguments.length == 1u32 && !unwrap_function => {
+          if ct_nullable_base(module_, base) {
+            return "nullable"
+          }
+          let kind = ct_checked_scalar_kind(plan, module_, module_.inferred.type_arguments[arguments.start], false)
           return if kind.byte_length() == 0u32 {
             ""
           } else {
@@ -436,8 +445,11 @@ fn ct_checked_scalar_kind(module_: SelfHostPlannedModuleLowering, root: I32, ref
         unwrap_function = false
         continue result
       }
-      AppliedType(_, arguments) if arguments.length == 1u32 && !unwrap_function => {
-        let kind = ct_checked_scalar_kind(module_, -self_host_body_u32_to_i32(module_.resolved_types.type_arguments[arguments.start]) - 2i32, false)
+      AppliedType(base, arguments) if arguments.length == 1u32 && !unwrap_function => {
+        if ct_nullable_base(module_, -self_host_body_u32_to_i32(base) - 2i32) {
+          return "nullable"
+        }
+        let kind = ct_checked_scalar_kind(plan, module_, -self_host_body_u32_to_i32(module_.resolved_types.type_arguments[arguments.start]) - 2i32, false)
         return if kind.byte_length() == 0u32 {
           ""
         } else {
@@ -445,8 +457,10 @@ fn ct_checked_scalar_kind(module_: SelfHostPlannedModuleLowering, root: I32, ref
         }
       }
       PrimitiveType(primitive) => return match primitive {
-        F32Type => "unsupported:F32"
-        F64Type => "unsupported:F64"
+        UnitType => "Unit"
+        NeverType => "Never"
+        F32Type => "F32"
+        F64Type => "F64"
         BoolType => "Bool"
         I8Type => "I8"
         U8Type => "U8"
@@ -456,8 +470,15 @@ fn ct_checked_scalar_kind(module_: SelfHostPlannedModuleLowering, root: I32, ref
         U32Type => "U32"
         I64Type => "I64"
         U64Type => "U64"
+        StringType => "String"
+        BytesType => "Bytes"
+        StringViewType => "StringView"
+        StringBuilderType => "StringBuilder"
+        BytesBuilderType => "BytesBuilder"
+        V128Type, I8x16Type, U8x16Type, I16x8Type, U16x8Type, I32x4Type, U32x4Type, I64x2Type, U64x2Type, F32x4Type, F64x2Type => "V128"
         _ => ""
       }
+      NominalType(declaration) => return "record:".concat(ct_raw_declaration_key(declaration))
       _ => return ""
     }
   }

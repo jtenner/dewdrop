@@ -1,5 +1,6 @@
 import {
   "jtenner/dewdrop/semantic",
+  "jtenner/dewdrop/transforms",
   "jtenner/dewdrop/parser",
   "moonbitlang/core/json",
   "jtenner/dewdrop/backend",
