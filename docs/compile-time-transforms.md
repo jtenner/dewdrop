@@ -32,7 +32,7 @@ transform fn answer(
   node: @ast.FnNode,
   ctx: @transform.TransformContext,
 ) -> Result<@ast.FnNode, @transform.TransformError> {
-  Result::Ok(@ast.with_body(node, @ast.integer(42i32)))
+  Result::Ok(node.with_body(@ast.integer(42i32)))
 }
 
 #answer
@@ -49,8 +49,8 @@ previous result. Expansion happens once; returned source cannot add annotations.
 
 Use `pub transform fn` to export a transform. Import its module normally, then
 write `#@alias.name`. Packages supply source through the same manifest or locked
-package mechanism as ordinary Dew packages. A transform can call ordinary free
-functions in its module or imported modules. Private helpers stay private.
+package mechanism as ordinary Dew packages. A transform can call ordinary functions and methods in its module or imported
+modules. The compiler uses the checked call target. Private helpers stay private.
 It cannot call a function that itself has transform annotations.
 
 ## Syntax values
@@ -59,7 +59,7 @@ The compiler supplies the ordinary source modules `dewdrop.ast` and
 `dewdrop.transform`. Their source is in `lib/dewdrop/`. These module names are
 reserved for that API. Their library functions use ordinary evaluation rules.
 
-`FnNode` has `name: String` and `body: ExprNode`. This first version transforms
+`FnNode` has `name: String` and `body: ExprNode`. The current API transforms
 function bodies. The name, parameters, type parameters, return type, and visibility
 remain unchanged. It does not provide typed expression reflection or declaration
 generation.
@@ -70,6 +70,13 @@ generation.
 | --- | --- |
 | `Source(String)` | A source fragment, checked before use |
 | `Integer(I32)` | An I32 literal |
+| `Unit`, `Integer64(I64)`, `Unsigned64(U64)` | Unit and wide integer values |
+| `Path(String)` | A checked qualified name, including `@alias.Type::method` |
+| `Field(ExprNode, String)`, `Index(ExprNode, ExprNode)` | Field and index access |
+| `MethodCall(ExprNode, String, Array<ExprNode>)` | A method call |
+| `Prefix(String, ExprNode)` | `!`, `-`, or `+` |
+| `Tuple(Array<ExprNode>)`, `Array(Array<ExprNode>)` | Tuple and array expressions |
+| `MutableBind(String, ExprNode)`, `Assign(ExprNode, ExprNode)` | A mutable binding and assignment |
 | `Boolean(Bool)` | A Boolean literal |
 | `Text(String)` | An escaped string literal |
 | `Name(String)` | One checked identifier |
@@ -87,8 +94,51 @@ it must still produce exactly one valid function body and pass normal checks.
 Generated names resolve in the target module and lexical scope. This version
 has no automatic name hygiene or quotation syntax. Use `ctx.fresh_name` for an
 introduced local. Do not assume a plain `Name("x")` refers to a variable in the
-transform's own module. Imported generated references can use an explicit source
-fragment and an import in the target module.
+transform's own module. Imported generated references can use
+`Path("@alias.function")` and an import in the target module.
+
+## Methods and builders
+
+Use methods to change a function:
+
+```dew
+node.with_body(@ast.integer(42i32))
+node.prepend(@ast.call(@ast.name("before"), []))
+node.append(@ast.integer(42i32))
+node.wrap(@ast.path("finish"))
+node.returning(@ast.integer(42i32))
+```
+
+`with_body` returns a replacement node. It keeps the name and changes the body.
+`prepend` puts an expression before the old body. `append` puts one after it;
+the new last expression sets the result. An explicit return in the old body
+still returns early. `wrap` calls the supplied function with the old body's
+result. `returning` replaces the body with an explicit return.
+
+Expression methods include `call`, `binary`, `field`, `index`, `method_call`,
+`returned`, `bind`, `bind_mut`, and `assign`. Free builders remain available.
+Names, paths, and operators are checked before rendering. Generated code must
+also pass the normal compiler checks.
+
+See [the full feature list](transform-features.md) for current tests and open
+work. Runnable examples are in `examples/transforms/`:
+
+| Example | Use |
+| --- | --- |
+| `methods.dew` | Mutable receivers, aliases, named functions, captured callbacks |
+| `imported_methods.dew` | A method from another module |
+| `collections.dew` | Ordinary Array methods and array literals |
+| `raw_arrays.dew` | Bounded raw arrays and overlap-safe copy |
+| `casts.dew` | Inferred cast types and default array values |
+| `builders.dew` | Array, index, mutable binding, assignment, and return builders |
+| `wrappers.dew` | Prepend and wrap the original body |
+| `syntax.dew` | Qualified calls, fields, method calls, tuples, wide integers |
+| `evaluation.dew` | Receiver and argument order, record patterns |
+| `operators.dew` | Selected custom operators and indexed reads |
+| `callbacks.dew` | A function value that returns a closure |
+| `flow.dew` | Return from a call argument |
+| `generics.dew` | Generic helper results and typed default values |
+| `defaults.dew` | Deferred zero values inside generic enum payloads |
 
 ## Context
 
@@ -110,20 +160,29 @@ Annotated bodies are replaced with checked placeholders during this pass.
 After expansion, all generated code passes the full normal compiler checks.
 A failed transform produces no successful build artifact.
 
-The initial interpreter supports integer and Boolean values, UTF-8 strings,
-records, enum payloads, tuples, array literals, local bindings and mutation,
-branches, supported patterns, functional loops, direct helper calls, and returns.
-Scalar binary operations require proof of the actual selected primitive operation.
-Custom operator implementations without that proof produce a diagnostic.
-Pattern matches use the constructor or local binding selected by normal type
-checking. Standard enum constructors use the same lookup rules as user enums.
+The interpreter supports integer and Boolean values, UTF-8 string values,
+records, enum payloads, tuples, arrays, local bindings and mutation, branches,
+checked patterns, functional loops, source functions, methods, and returns.
+Closures can capture local values, change captured mutable locals, and pass to
+ordinary source helpers. Named source functions can also pass as values.
 
-Unsupported operations are errors. These include host calls, builtin calls,
-mutable globals, closures and indirect calls, general method dispatch, indexed
-access, string patterns, and floating-point execution. Helpers may use generics
-when execution does not require unsupported type-dependent dispatch. This is not
-yet an interpreter for every Dew program. Unsupported branches are allowed if
-execution does not reach them; they must still pass normal compiler checks.
+Calls use the exact target from the normal type check. This includes static and
+instance methods, concrete trait methods, custom binary operators, and indexed
+reads. A custom operator runs its selected source body. Primitive operations use
+the checked Wasm opcode. A checked unsupported call cannot fall back to another
+function with the same name.
+
+The standard `Array` operations run their normal Dew bodies: construction,
+length, capacity, push, pop, get, set, and clear. The interpreter supplies bounded
+Wasm GC array operations and selected integer Wasm operations. It keeps checked
+scalar result types, including inferred casts and zero/false array defaults.
+Array copies preserve overlap behavior. These operations add no host calls.
+
+Unsupported operations produce errors when reached. These include host calls,
+module-level value bindings, unresolved generic trait dispatch, floating-point execution,
+SIMD execution, and general text-library operations. Generic source helpers work
+when execution needs no missing type or trait evidence. All branches must pass
+the normal source checks, including branches that execution does not reach.
 
 Each application has a 100,000-step work budget and an estimated allocation
 budget of 4 MiB. Interpreter and generated-node depth are limited to 128.

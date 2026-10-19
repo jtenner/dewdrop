@@ -115,5 +115,7 @@ fn ct_expand_checked(manifest: SelfHostProgramManifest, default_preamble: Bool) 
   ct_collect_type_names(plan, frozen)
   ct_collect_scalar_proofs(plan, collected, lowering, ct_validation_body(plan))
   ct_collect_pattern_proofs(plan, collected, lowering)
+  ct_collect_calls(plan, collected, lowering)
+  ct_collect_arrays(plan, collected, lowering)
   ct_expand(plan)
 }

@@ -1,0 +1,17 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let values = wasm_array_new::<I32>(3u32, 0i32)
+  wasm_array_set(values, 0u32, 40i32)
+  wasm_array_set(values, 1u32, 2i32)
+  wasm_array_copy(values, 1u32, values, 0u32, 2u32)
+  let answer = wasm_array_get(values, 1u32) + wasm_array_get(values, 2u32)
+  node.with_body(@ast.integer(answer))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

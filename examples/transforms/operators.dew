@@ -1,0 +1,42 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+struct Value {
+  value: I32
+}
+
+trait Add {
+  fn add(self, other: Self) -> I32
+}
+
+impl Add for Value {
+  fn add(self, other: Value) -> I32 {
+    77i32
+  }
+}
+
+impl IndexedGet<U32, I32> for Value {
+  fn indexed_get(self, index: U32) -> I32 {
+    42i32
+  }
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let left = Value::{
+    value: 1i32
+  }
+  let right = Value::{
+    value: 41i32
+  }
+  let selected = left + right
+  node.with_body(@ast.integer(if selected == 77i32 {
+    left[0u32]
+  } else {
+    7i32
+  }))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

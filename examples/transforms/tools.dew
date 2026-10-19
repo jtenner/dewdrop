@@ -9,9 +9,23 @@ pub transform fn twice(
   node: @ast.FnNode,
   ctx: @transform.TransformContext,
 ) -> @ast.FnNode {
-  @ast.with_body(node, @ast.ExprNode::Binary(
+  node.with_body(@ast.ExprNode::Binary(
     "*",
     node.body,
     @ast.integer(factor()),
   ))
+}
+
+pub struct Scale {
+  value: I32
+}
+impl Scale {
+  fn new(value: I32) -> Scale {
+    Scale::{
+      value: value
+    }
+  }
+  fn apply(self, value: I32) -> I32 {
+    value * self.value
+  }
 }

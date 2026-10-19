@@ -40,6 +40,8 @@ fn scalar_opcode(op : @parser.BinaryOperator, value : Value) -> Bytes {
     @parser.BitAnd => "and"
     @parser.BitOr => "or"
     @parser.BitXor => "xor"
+    @parser.ShiftLeft => "shl"
+    @parser.ShiftRight => "shr" + suffix
     @parser.Equal => "eq"
     @parser.NotEqual => "ne"
     @parser.Less => "lt" + suffix
@@ -67,9 +69,7 @@ fn Machine::scalar_binary(
   )
   guard proof is Some(opcode) &&
     (opcode == b"primitive" || opcode == scalar_opcode(op, left)) else {
-    return eval_fail(
-      "selected operator has no supported compile-time primitive proof",
-    )
+    return self.selected_operator(mi, offset, [left, right])
   }
-  binary(op, left, right)
+  binary(operation(op), left, right)
 }

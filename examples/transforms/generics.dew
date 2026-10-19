@@ -1,0 +1,29 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+fn keep<Bool>(value: Bool) -> Bool {
+  value
+}
+
+fn first<t>(values: WasmArray<t>) -> Option<t> {
+  Some(wasm_array_get(values, 0u32))
+}
+
+fn make<t>() -> WasmArray<t> {
+  wasm_array_new_default::<t>(1u32)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let values = make::<I32>()
+  let answer = match first(values) {
+    Some(0i32) => keep(42i32)
+    _ => 7i32
+  }
+  node.with_body(@ast.integer(answer))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

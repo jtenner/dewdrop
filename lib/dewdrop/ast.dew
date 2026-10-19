@@ -2,10 +2,22 @@ open dew.std.array
 
 pub enum ExprNode {
   Source(String)
+  Unit
   Integer(I32)
+  Integer64(I64)
+  Unsigned64(U64)
   Boolean(Bool)
   Text(String)
   Name(String)
+  Path(String)
+  Field(ExprNode, String)
+  Index(ExprNode, ExprNode)
+  MethodCall(ExprNode, String, Array<ExprNode>)
+  Prefix(String, ExprNode)
+  Tuple(Array<ExprNode>)
+  Array(Array<ExprNode>)
+  MutableBind(String, ExprNode)
+  Assign(ExprNode, ExprNode)
   Call(ExprNode, Array<ExprNode>)
   Binary(String, ExprNode, ExprNode)
   Block(Array<ExprNode>)
@@ -36,4 +48,102 @@ pub fn source(value: String) -> ExprNode {
 
 pub fn call(callee: ExprNode, arguments: Array<ExprNode>) -> ExprNode {
   ExprNode::Call(callee, arguments)
+}
+
+impl FnNode {
+  fn with_body(self, body: ExprNode) -> FnNode {
+    FnNode::{
+      name: self.name
+      body: body
+    }
+  }
+}
+
+impl FnNode {
+  fn prepend(self, expression: ExprNode) -> FnNode {
+    self.with_body(ExprNode::Block([expression, self.body]))
+  }
+  fn append(self, expression: ExprNode) -> FnNode {
+    self.with_body(ExprNode::Block([self.body, expression]))
+  }
+  fn wrap(self, callee: ExprNode) -> FnNode {
+    self.with_body(ExprNode::Call(callee, [self.body]))
+  }
+  fn returning(self, expression: ExprNode) -> FnNode {
+    self.with_body(ExprNode::Return(expression))
+  }
+}
+
+impl ExprNode {
+  fn call(self, arguments: Array<ExprNode>) -> ExprNode {
+    ExprNode::Call(self, arguments)
+  }
+  fn binary(self, operator: String, right: ExprNode) -> ExprNode {
+    ExprNode::Binary(operator, self, right)
+  }
+  fn field(self, name: String) -> ExprNode {
+    ExprNode::Field(self, name)
+  }
+  fn index(self, index: ExprNode) -> ExprNode {
+    ExprNode::Index(self, index)
+  }
+  fn method_call(self, name: String, arguments: Array<ExprNode>) -> ExprNode {
+    ExprNode::MethodCall(self, name, arguments)
+  }
+  fn returned(self) -> ExprNode {
+    ExprNode::Return(self)
+  }
+  fn bind(self, name: String) -> ExprNode {
+    ExprNode::Bind(name, self)
+  }
+  fn bind_mut(self, name: String) -> ExprNode {
+    ExprNode::MutableBind(name, self)
+  }
+  fn assign(self, value: ExprNode) -> ExprNode {
+    ExprNode::Assign(self, value)
+  }
+}
+
+pub fn unit() -> ExprNode {
+  ExprNode::Unit
+}
+
+pub fn integer64(value: I64) -> ExprNode {
+  ExprNode::Integer64(value)
+}
+
+pub fn unsigned64(value: U64) -> ExprNode {
+  ExprNode::Unsigned64(value)
+}
+
+pub fn text(value: String) -> ExprNode {
+  ExprNode::Text(value)
+}
+
+pub fn boolean(value: Bool) -> ExprNode {
+  ExprNode::Boolean(value)
+}
+
+pub fn name(value: String) -> ExprNode {
+  ExprNode::Name(value)
+}
+
+pub fn path(value: String) -> ExprNode {
+  ExprNode::Path(value)
+}
+
+pub fn array(values: Array<ExprNode>) -> ExprNode {
+  ExprNode::Array(values)
+}
+
+pub fn tuple(values: Array<ExprNode>) -> ExprNode {
+  ExprNode::Tuple(values)
+}
+
+pub fn block(values: Array<ExprNode>) -> ExprNode {
+  ExprNode::Block(values)
+}
+
+pub fn prefix(operator: String, value: ExprNode) -> ExprNode {
+  ExprNode::Prefix(operator, value)
 }

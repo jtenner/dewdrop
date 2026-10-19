@@ -1,4 +1,5 @@
 // Compile-time execution is local to the compiler. No host calls are exposed.
+open dew.std.map
 open dew.std.array
 open dew.std.string
 open dew.std.bytes
@@ -7,12 +8,16 @@ open dew.std.string_builder
 
 pub enum CtValue {
   Empty
+  DefaultValue
+  RawArray(CtRawStorage)
   Number(U64, String)
   Boolean(Bool)
   Text(String)
   Sequence(Array<CtValue>)
   Record(String, Array<CtBinding>)
   Variant(String, Array<CtValue>)
+  Function(CtCallTarget, Array<CtValue>)
+  Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, Array<CtBinding>)
 }
 
 pub struct CtBinding {
@@ -51,6 +56,10 @@ pub struct CtPlan {
   mut validation_stop: String
   scalar_proofs: Array<CtScalarProof>
   pattern_proofs: Array<CtPatternProof>
+  references: Map<String, CtCallTarget>
+  calls: Map<String, CtCallTarget>
+  array_literals: Map<String, CtArrayLayout>
+  array_layouts: Map<String, CtArrayLayout>
   type_names: Array<CtTypeName>
 }
 
@@ -127,6 +136,7 @@ fn ct_truth(machine: CtMachine, value: CtValue) -> Bool {
 
   match value {
     Boolean(value) => value
+    DefaultValue => false
     _ => {
       let _ = ct_fail(machine, "expected Bool in transform")
       false
@@ -243,4 +253,9 @@ fn ct_u64_to_i64(value: U64) -> I64 {
 
 fn ct_i64_to_u64(value: I64) -> U64 {
   unsafe_bitcast(value)
+}
+
+pub struct CtRawStorage {
+  values: Array<CtValue>
+  mut default_kind: String
 }

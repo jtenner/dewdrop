@@ -51,6 +51,10 @@ pub fn collect_program_manifest_with_standard_sources(UInt64, ProgramManifest, S
 
 pub fn collect_tokens(UInt64, Iter[@tokenizer.Token]) -> CollectedModule
 
+pub fn compile_time_arrays(CollectedProgram, PlannedProgramLowering) -> Array[CompileTimeArray]
+
+pub fn compile_time_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Array[CompileTimeCall]
+
 pub fn compile_time_imported_type_names(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, String, String)]
 
 pub fn compile_time_pattern_proofs(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, UInt64, UInt64, String)]
@@ -830,7 +834,27 @@ pub enum CollectionDiagnostic {
   InvalidUtf8ForeignExportName(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
+pub struct CompileTimeArray {
+  module_index : Int
+  file : UInt64
+  offset : UInt64
+  key : String
+  fields : Array[String]
+}
+
 type CompileTimeBindingKey derive(Eq, Hash, @debug.Debug)
+
+pub struct CompileTimeCall {
+  reference : Bool
+  module_index : Int
+  file : UInt64
+  offset : UInt64
+  target_module : Int
+  target_file : UInt64
+  target_offset : UInt64
+  result_kind : String
+  constructor_key : String
+}
 
 type CompileTimeConstant derive(Eq, @debug.Debug)
 

@@ -161,3 +161,21 @@ test "transform annotation cannot follow code on the same line" {
   let plan = ct_test_plan(b"fn before() -> I32 {\n 0i32\n} #replace\nfn after() -> I32 {\n 0i32\n}\n")
   assert(plan.error.contains("must occupy its own line"), plan.error)
 }
+
+
+test "transform paths accept checked static and imported names" {
+  assert(ct_qualified_identifier("Answer::new"), "static method path")
+  assert(ct_qualified_identifier("@tools.Answer::new"), "imported static method path")
+  assert(ct_qualified_identifier("answer"), "plain function path")
+  assert(!ct_qualified_identifier("Answer::new()"), "calls cannot appear in a path")
+  assert(!ct_qualified_identifier("@tools.Answer::"), "incomplete path must fail")
+}
+
+
+test "generic default scalar values keep zero at checked uses" {
+  let machine = ct_machine(ct_test_plan(b""))
+  assert(ct_pattern(machine, 0u32, LiteralPattern(I32Expr(0u64, 0u32), 0u32), CtValue::DefaultValue, []), "integer zero pattern")
+  assert(ct_render(machine, CtValue::Variant("dewdrop.ast::ExprNode::Integer64", [CtValue::DefaultValue]), 0u32) == "0i64", "wide zero builder")
+  assert(ct_render(machine, CtValue::Variant("dewdrop.ast::ExprNode::Boolean", [CtValue::DefaultValue]), 0u32) == "false", "Bool zero builder")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}

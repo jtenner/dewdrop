@@ -1,0 +1,34 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.array
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let values = Array::new()
+  values.push(20i32)
+  values.push(21i32)
+  if values.length() != 2u32 || values.capacity() < 2u32 {
+    return node.with_body(@ast.integer(7i32))
+  }
+  let answer = match values.get(0u32) {
+    Some(value) => value + values[1u32]
+    None => 0i32
+  }
+  values.set(0u32, answer)
+  let last = match values.pop() {
+    Some(value) => value
+    None => 0i32
+  }
+  let literal = [values[0u32], last]
+  literal.clear()
+  let empty = match literal.pop() {
+    None => 1i32
+    Some(_) => 0i32
+  }
+  literal.push(answer + empty)
+  node.with_body(@ast.integer(literal[0u32]))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

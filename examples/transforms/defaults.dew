@@ -1,0 +1,48 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+fn first_default<t>() -> Option<t> {
+  let values = wasm_array_new_default::<t>(1u32)
+  Some(wasm_array_get(values, 0u32))
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let first = match first_default::<I32>() {
+    Some(0i32) => 40i32
+    _ => 0i32
+  }
+  let value = match first_default::<I32>() {
+    Some(value) => value
+    None => 1i32
+  }
+  let flag = match first_default::<Bool>() {
+    Some(value) => !value
+    None => false
+  }
+  let wide = match first_default::<I64>() {
+    Some(value) => value
+    None => 1i64
+  }
+  let unsigned = match first_default::<U64>() {
+    Some(value) => value
+    None => 1u64
+  }
+  let signed = -value
+  let sum = value + value
+  node.with_body(@ast.block([
+    @ast.integer(value).bind("zero"),
+    @ast.integer64(wide).bind("wide"),
+    @ast.unsigned64(unsigned).bind("unsigned"),
+    @ast.integer(first + signed + sum + if flag {
+      2i32
+    } else {
+      0i32
+    }),
+  ]))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

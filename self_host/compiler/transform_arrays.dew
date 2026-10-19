@@ -1,0 +1,127 @@
+pub struct CtArrayLayout {
+  key: String
+  fields: Array<String>
+}
+
+fn ct_array_value(machine: CtMachine, mi: U32, offset: U32, values: Array<CtValue>) -> CtValue {
+  if !ct_charge(machine, values.length() * 16u32) {
+    return CtValue::Empty
+  }
+  match machine.plan.array_literals.get(ct_call_key(mi, machine.file_path, offset)) {
+    Some(layout) => CtValue::Record(layout.key, [
+    ct_binding(layout.fields[0u32], CtValue::RawArray(CtRawStorage::{
+      values: values
+      default_kind: ""
+    })),
+    ct_binding(layout.fields[1u32], ct_number(u32_into_u64(values.length()), "U32")),
+    ct_binding(layout.fields[2u32], ct_number(u32_into_u64(values.length()), "U32")),
+    ])
+    None => CtValue::Sequence(values)
+  }
+}
+
+fn ct_sequence_values(machine: CtMachine, value: CtValue) -> Array<CtValue> {
+  match value {
+    Sequence(values) => values
+    Record(key, fields) => match machine.plan.array_layouts.get(key) {
+      Some(layout) => {
+        let backing = ct_field(machine, value, layout.fields[0u32])
+        let count = ct_field(machine, value, layout.fields[1u32])
+        match (backing, count) {
+          (RawArray(storage), Number(count, kind)) if kind == "U32" && count <= u32_into_u64(storage.values.length()) => {
+            let values = storage.values
+            if !ct_charge(machine, u64_into_u32(count) * 16u32) {
+              return []
+            }
+            let result = array_new::<CtValue>()
+            let _ = while 0u32 {
+              i if u32_into_u64(i) < count => {
+                result.push(values[i])
+                continue i + 1u32
+              }
+              _ => break ()
+            }
+            result
+          }
+          _ => {
+            let _ = ct_fail(machine, "invalid interpreted array layout")
+            []
+          }
+        }
+      }
+      None => {
+        let _ = ct_fail(machine, "expected an interpreted array")
+        []
+      }
+    }
+    _ => {
+      let _ = ct_fail(machine, "expected an interpreted array")
+      []
+    }
+  }
+}
+
+fn ct_collect_arrays(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    let mut ei = 0u32
+    for expression in source.expressions {
+      let literal = match expression {
+        BlockExpr(block, _) => {
+          let items = source.blocks[block].items
+          if items.length < 2u32 {
+            false
+          } else {
+            let first = source.block_items[items.start]
+            first.kind == 0u32 && source.name(first.name).starts_with("$array_literal$")
+          }
+        }
+        _ => false
+      }
+      if literal && ei < lowering.modules[mi].expressions.length() {
+        let owner = lowering.modules[mi].expressions[ei].nominal
+        let mut oi = 0u32
+        for module_ in collected.modules.values {
+          match module_.declaration_reference(owner) {
+            Some(TopLevel(declaration)) => {
+              let fields = array_new::<String>()
+              for field in module_.fields {
+                if field.declaration == owner && field.variant is None {
+                  fields.push(module_.name(field.name))
+                }
+              }
+              assert(fields.length() == 3u32, "checked array literal must have a backing/count/capacity layout")
+              let layout = CtArrayLayout::{
+                key: collected.module_paths[oi].concat("::").concat(module_.name(declaration.name))
+                fields: fields
+              }
+              let mut fi = 0u32
+              for file_id in source.files {
+                if file_id == source.expression_files[ei] {
+                  for file in plan.files {
+                    if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                      match ct_scalar_original_offset(file, expression.offset(), 0u32) {
+                        Some(offset) => {
+                          plan.array_literals.set(ct_call_key(mi, file.original.path, offset), layout)
+                          plan.array_layouts.set(layout.key, layout)
+                        }
+                        None => {
+                        }
+                      }
+                    }
+                  }
+                }
+                fi = fi + 1u32
+              }
+            }
+            _ => {
+            }
+          }
+          oi = oi + 1u32
+        }
+      }
+      ei = ei + 1u32
+    }
+    mi = mi + 1u32
+  }
+}

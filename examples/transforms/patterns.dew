@@ -21,7 +21,7 @@ fn choose() -> I32 {
 }
 
 transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
-  @ast.with_body(node, @ast.integer(choose()))
+  node.with_body(@ast.integer(choose()))
 }
 
 #replace

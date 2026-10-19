@@ -36,6 +36,21 @@ pub fn compile_time_pattern_proofs(
     for pi, pattern in collected.patterns {
       let key = match inferred.pattern_constructors[pi] {
         NoInferredPatternConstructor => Some("")
+        StructInferredPatternConstructor(selected, _) => {
+          let mut key : String? = None
+          for owner_mi, owner in program.modules {
+            if owner.declaration(selected)
+              is Some(TopLevelReference(declaration)) {
+              key = Some(
+                program.module_paths[owner_mi] +
+                "::" +
+                owner.name(declaration.name),
+              )
+              break
+            }
+          }
+          key
+        }
         VariantInferredPatternConstructor(selected, _) =>
           transform_variant_key(program, selected)
         _ => None

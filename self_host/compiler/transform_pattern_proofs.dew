@@ -87,7 +87,6 @@ fn ct_pattern_source_targets(source: SelfHostCollectedModule, module_: SelfHostP
   targets
 }
 
-
 fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
   let _ = while 0u32 {
     mi if mi < plan.manifest.modules.length() && mi < lowering.modules.length() => {
@@ -97,7 +96,11 @@ fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, 
         pi if pi < source.patterns.length() => {
           let constructor = match targets[pi] {
             NoBasicPatternConstructor => Some("")
-            SelectedBasicPatternConstructor(selected, _, _) => ct_pattern_variant_key(collected, selected)
+            SelectedBasicPatternConstructor(selected, variant_, _) => if variant_ {
+              ct_pattern_variant_key(collected, selected)
+            } else {
+              ct_pattern_struct_key(collected, selected)
+            }
             _ => None
           }
           match constructor {
@@ -111,7 +114,8 @@ fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, 
                       if file.module_index == mi && file.original.path == source.file_paths[fi] {
                         match ct_scalar_original_offset(file, offset, 0u32) {
                           Some(original) => ct_add_pattern_proof(plan, mi, file.original.path, original, key)
-                          None => {}
+                          None => {
+                          }
                         }
                       }
                     }
@@ -122,7 +126,8 @@ fn ct_collect_pattern_proofs(plan: CtPlan, collected: SelfHostCollectedProgram, 
                 _ => break ()
               }
             }
-            None => {}
+            None => {
+            }
           }
           continue pi + 1u32
         }
@@ -145,4 +150,17 @@ fn ct_checked_pattern_key(machine: CtMachine, mi: U32, offset: U32) -> String {
   }
   let _ = ct_fail(machine, "pattern has no checked compile-time constructor or binding proof")
   ""
+}
+
+fn ct_pattern_struct_key(collected: SelfHostCollectedProgram, selected: U64) -> Option<String> {
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    match source.declaration_reference(selected) {
+      Some(TopLevel(owner)) => return Some(collected.module_paths[mi].concat("::").concat(source.name(owner.name)))
+      _ => {
+      }
+    }
+    mi = mi + 1u32
+  }
+  None
 }

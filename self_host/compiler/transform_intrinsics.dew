@@ -1,0 +1,218 @@
+fn ct_raw_bits(machine: CtMachine, value: CtValue) -> U64 {
+  match value {
+    Number(bits, kind) if kind == "I8" || kind == "I16" => unsafe_bitcast::<I64, U64>(ct_signed(bits, kind))
+    Number(bits, _) => bits
+    Boolean(value) => if value {
+      1u64
+    } else {
+      0u64
+    }
+    DefaultValue => 0u64
+    _ => {
+      let _ = ct_fail(machine, "Wasm integer intrinsic requires an integer")
+      0u64
+    }
+  }
+}
+
+fn ct_intrinsic_result(machine: CtMachine, value: CtValue, kind: String) -> CtValue {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  if kind.starts_with("unsupported:") {
+    return ct_fail(machine, "unsupported scalar type at compile time: ".concat(kind.slice(12u32, kind.byte_length())))
+  }
+  match value {
+    RawArray(storage) if kind.starts_with("array:") => {
+      storage.default_kind = kind.slice(6u32, kind.byte_length())
+      return value
+    }
+    _ => {
+    }
+  }
+  if kind == "Bool" {
+    return CtValue::Boolean(ct_raw_bits(machine, value) != 0u64)
+  }
+  for candidate in ["I8", "U8", "I16", "U16", "I32", "U32", "I64", "U64"] {
+    if kind == candidate {
+      return ct_number(ct_raw_bits(machine, value), kind)
+    }
+  }
+  value
+}
+
+fn ct_intrinsic(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration, args: Array<CtValue>) -> CtValue {
+  if !ct_charge(machine, 16u32) || machine.flow != 0u32 {
+    return CtValue::Empty
+  }
+  let opcode = builtin_.builtin_name.to_string()
+  if args.length() != builtin_.parameters.length() {
+    return ct_fail(machine, "Wasm intrinsic argument count mismatch")
+  }
+  if opcode == "unreachable" {
+    return ct_fail(machine, "unreachable executed at compile time")
+  }
+  if (opcode == "array.new_default" || opcode == "array.new") && args.length() > 0u32 {
+    let count = ct_raw_bits(machine, args[0u32])
+    if count > u32_into_u64((4194304u32 - machine.allocated) / 16u32) {
+      return ct_fail(machine, "transform allocation limit exceeded")
+    }
+    if !ct_charge(machine, u64_into_u32(count) * 16u32) {
+      return CtValue::Empty
+    }
+    let value = if args.length() == 2u32 {
+      args[1u32]
+    } else {
+      CtValue::DefaultValue
+    }
+    let result = array_new::<CtValue>()
+    let _ = while 0u32 {
+      i if u32_into_u64(i) < count => {
+        result.push(value)
+        continue i + 1u32
+      }
+      _ => break ()
+    }
+    return CtValue::RawArray(CtRawStorage::{
+      values: result
+      default_kind: ""
+    })
+  }
+  if args.length() > 0u32 {
+    match args[0u32] {
+      RawArray(storage) => {
+        let values = storage.values
+        if opcode == "array.len" {
+          return ct_number(u32_into_u64(values.length()), "U32")
+        }
+        if (opcode == "array.get" || opcode == "array.set") && args.length() >= 2u32 {
+          let index = ct_raw_bits(machine, args[1u32])
+          if index >= u32_into_u64(values.length()) {
+            return ct_fail(machine, "Wasm array index out of bounds at compile time")
+          }
+          if opcode == "array.get" {
+            let value = values[u64_into_u32(index)]
+            return if value is DefaultValue {
+              ct_intrinsic_result(machine, value, storage.default_kind)
+            } else {
+              value
+            }
+          }
+          values[u64_into_u32(index)] = args[2u32]
+          return CtValue::Empty
+        }
+        if opcode == "array.copy" && args.length() == 5u32 {
+          let target_at = ct_raw_bits(machine, args[1u32])
+          let source_at = ct_raw_bits(machine, args[3u32])
+          let count = ct_raw_bits(machine, args[4u32])
+          match args[2u32] {
+            RawArray(source_storage) => {
+              let source = source_storage.values
+              if target_at > u32_into_u64(values.length()) || count > u32_into_u64(values.length()) - target_at || source_at > u32_into_u64(source.length()) || count > u32_into_u64(source.length()) - source_at {
+                return ct_fail(machine, "Wasm array copy out of bounds at compile time")
+              }
+              if !ct_charge(machine, u64_into_u32(count) * 16u32) {
+                return CtValue::Empty
+              }
+              let copy = array_new::<CtValue>()
+              let _ = while 0u32 {
+                i if u32_into_u64(i) < count => {
+                  copy.push(source[u64_into_u32(source_at) + i])
+                  continue i + 1u32
+                }
+                _ => break ()
+              }
+              let mut i = 0u32
+              for value in copy {
+                if !ct_charge(machine, 0u32) {
+                  return CtValue::Empty
+                }
+                values[u64_into_u32(target_at) + i] = value
+                i = i + 1u32
+              }
+              return CtValue::Empty
+            }
+            _ => return ct_fail(machine, "Wasm array copy requires an array")
+          }
+        }
+      }
+      _ => {
+      }
+    }
+  }
+  let result = if args.length() == 1u32 {
+    let bits = ct_raw_bits(machine, args[0u32])
+    if opcode == "unsafe.bitcast" {
+      args[0u32]
+    } else if opcode == "i32.extend8_s" {
+      ct_number(unsafe_bitcast::<I64, U64>(unsafe_bitcast::<U64, I64>(bits) << 56i64 >> 56i64) & 4294967295u64, "I32")
+    } else if opcode == "i32.extend16_s" {
+      ct_number(unsafe_bitcast::<I64, U64>(unsafe_bitcast::<U64, I64>(bits) << 48i64 >> 48i64) & 4294967295u64, "I32")
+    } else if opcode == "i32.wrap_i64" {
+      ct_number(bits & 4294967295u64, "I32")
+    } else if opcode == "i64.extend_i32_u" {
+      ct_number(bits & 4294967295u64, "U64")
+    } else if opcode == "i64.extend_i32_s" {
+      ct_number(unsafe_bitcast::<I64, U64>(unsafe_bitcast::<U64, I64>(bits) << 32i64 >> 32i64), "I64")
+    } else if opcode == "i32.eqz" || opcode == "i64.eqz" {
+      CtValue::Boolean(bits == 0u64)
+    } else {
+      return ct_fail(machine, "unsupported Wasm intrinsic at compile time: ".concat(opcode))
+    }
+  } else if args.length() == 2u32 && (opcode.starts_with("i32.") || opcode.starts_with("i64.")) {
+    let kind = if opcode.starts_with("i64.") {
+      if opcode.ends_with("_u") {
+        "U64"
+      } else {
+        "I64"
+      }
+    } else {
+      if opcode.ends_with("_u") {
+        "U32"
+      } else {
+        "I32"
+      }
+    }
+    let left = ct_number(ct_raw_bits(machine, args[0u32]), kind)
+    let right = ct_number(ct_raw_bits(machine, args[1u32]), kind)
+    let op = if opcode.ends_with(".add") {
+      Add
+    } else if opcode.ends_with(".sub") {
+      Subtract
+    } else if opcode.ends_with(".mul") {
+      Multiply
+    } else if opcode.ends_with(".and") {
+      BitAnd
+    } else if opcode.ends_with(".or") {
+      BitOr
+    } else if opcode.ends_with(".shl") {
+      ShiftLeft
+    } else if opcode.ends_with(".shr_s") || opcode.ends_with(".shr_u") {
+      ShiftRight
+    } else if opcode.ends_with(".xor") {
+      BitXor
+    } else if opcode.ends_with(".eq") {
+      Equal
+    } else if opcode.ends_with(".ne") {
+      NotEqual
+    } else if opcode.ends_with(".lt_s") || opcode.ends_with(".lt_u") {
+      Less
+    } else if opcode.ends_with(".le_s") || opcode.ends_with(".le_u") {
+      LessEqual
+    } else if opcode.ends_with(".gt_s") || opcode.ends_with(".gt_u") {
+      Greater
+    } else if opcode.ends_with(".ge_s") || opcode.ends_with(".ge_u") {
+      GreaterEqual
+    } else if opcode.ends_with(".div_s") || opcode.ends_with(".div_u") {
+      Divide
+    } else if opcode.ends_with(".rem_s") || opcode.ends_with(".rem_u") {
+      Remainder
+    } else {
+      return ct_fail(machine, "unsupported Wasm integer intrinsic: ".concat(opcode))
+    }
+    ct_binary(machine, op, left, right)
+  } else {
+    return ct_fail(machine, "unsupported Wasm intrinsic at compile time: ".concat(opcode))
+  }
+  result
+}

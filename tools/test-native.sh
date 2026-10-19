@@ -10,7 +10,7 @@ read -r -a packages <<< "${DEW_NATIVE_TEST_PACKAGES:-tokenizer parser standard_s
 test_status=0
 for package in "${packages[@]}"; do
   targets=("src/$package")
-  if [[ ( "$package" == semantic || "$package" == backend ) && $# == 0 ]]; then
+  if [[ ( "$package" == semantic || "$package" == backend || "$package" == compiler_driver ) && $# == 0 ]]; then
     # Measure each owning file and keep its failures visible.
     mapfile -t targets < <(rg --files "src/$package" -g '*_wbtest.mbt' -g '*_test.mbt' -g '!**/*_bench_test.mbt' | sort)
   fi

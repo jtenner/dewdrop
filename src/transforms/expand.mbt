@@ -46,6 +46,76 @@ fn Machine::render(
   }
   let rendered = match (key, args[:]) {
     ("dewdrop.ast::ExprNode::Source", [Text(source)]) => source
+    ("dewdrop.ast::ExprNode::Unit", []) => "()"
+    ("dewdrop.ast::ExprNode::Integer", [DefaultValue]) => "0i32"
+    ("dewdrop.ast::ExprNode::Integer64", [DefaultValue]) => "0i64"
+    ("dewdrop.ast::ExprNode::Unsigned64", [DefaultValue]) => "0u64"
+    ("dewdrop.ast::ExprNode::Boolean", [DefaultValue]) => "false"
+    ("dewdrop.ast::ExprNode::Integer64", [Number(n, "I64")]) =>
+      signed(n, "I64").to_string() + "i64"
+    ("dewdrop.ast::ExprNode::Unsigned64", [Number(n, "U64")]) =>
+      n.to_string() + "u64"
+    ("dewdrop.ast::ExprNode::Path", [Text(path)]) => {
+      guard qualified_identifier(path) else {
+        raise Failed("invalid generated qualified path")
+      }
+      path
+    }
+    ("dewdrop.ast::ExprNode::Field", [owner, Text(name)]) => {
+      guard identifier(name) else {
+        raise Failed("invalid generated field name")
+      }
+      "(" + self.render(owner, depth + 1) + ")." + name
+    }
+    ("dewdrop.ast::ExprNode::Index", [owner, index]) =>
+      "(" +
+      self.render(owner, depth + 1) +
+      ")[" +
+      self.render(index, depth + 1) +
+      "]"
+    ("dewdrop.ast::ExprNode::MethodCall", [owner, Text(name), arguments]) => {
+      guard identifier(name) else {
+        raise Failed("invalid generated method name")
+      }
+      "(" +
+      self.render(owner, depth + 1) +
+      ")." +
+      name +
+      "(" +
+      self
+      .sequence_values(arguments)
+      .map(fn(v) { self.render(v, depth + 1) })
+      .join(", ") +
+      ")"
+    }
+    ("dewdrop.ast::ExprNode::Prefix", [Text(op), value]) => {
+      guard ["!", "-", "+"].contains(op) else {
+        raise Failed("invalid generated prefix operator")
+      }
+      op + "(" + self.render(value, depth + 1) + ")"
+    }
+    ("dewdrop.ast::ExprNode::Array", [array]) =>
+      "[" +
+      self
+      .sequence_values(array)
+      .map(fn(v) { self.render(v, depth + 1) })
+      .join(", ") +
+      "]"
+    ("dewdrop.ast::ExprNode::Tuple", [array]) => {
+      let values = self.sequence_values(array)
+      guard values.length() != 1 else {
+        raise Failed("Dew has no one-element tuple syntax")
+      }
+      "(" + values.map(fn(v) { self.render(v, depth + 1) }).join(", ") + ")"
+    }
+    ("dewdrop.ast::ExprNode::MutableBind", [Text(name), value]) => {
+      guard identifier(name) else {
+        raise Failed("invalid generated binding name")
+      }
+      "let mut " + name + " = " + self.render(value, depth + 1)
+    }
+    ("dewdrop.ast::ExprNode::Assign", [target, value]) =>
+      self.render(target, depth + 1) + " = " + self.render(value, depth + 1)
     ("dewdrop.ast::ExprNode::Integer", [Number(n, "I32")]) =>
       signed(n, "I32").to_string() + "i32"
     ("dewdrop.ast::ExprNode::Boolean", [Boolean(value)]) =>
@@ -61,9 +131,12 @@ fn Machine::render(
       }
       name
     }
-    ("dewdrop.ast::ExprNode::Call", [callee, Sequence(values)]) => {
+    ("dewdrop.ast::ExprNode::Call", [callee, arguments]) => {
       let callee = self.render(callee, depth + 1)
-      let arguments = values.map(fn(v) { self.render(v, depth + 1) }).join(", ")
+      let arguments = self
+        .sequence_values(arguments)
+        .map(fn(v) { self.render(v, depth + 1) })
+        .join(", ")
       "(" + callee + ")(" + arguments + ")"
     }
     ("dewdrop.ast::ExprNode::Binary", [Text(op), left, right]) => {
@@ -81,9 +154,12 @@ fn Machine::render(
       self.render(right, depth + 1) +
       ")"
     }
-    ("dewdrop.ast::ExprNode::Block", [Sequence(values)]) =>
+    ("dewdrop.ast::ExprNode::Block", [array]) =>
       "match () {\n_ => {\n" +
-      values.map(fn(v) { self.render(v, depth + 1) }).join("\n") +
+      self
+      .sequence_values(array)
+      .map(fn(v) { self.render(v, depth + 1) })
+      .join("\n") +
       "\n}\n}"
     ("dewdrop.ast::ExprNode::Bind", [Text(name), value]) => {
       guard identifier(name) else {
@@ -378,4 +454,34 @@ fn parameter_source(
     }
   }
   ""
+}
+
+///|
+fn qualified_identifier(name : String) -> Bool {
+  let tokens = @tokenizer.tokens(bytes(name)).collect()
+  if tokens.is_empty() {
+    return false
+  }
+  let mut i = 0
+  if tokens[0].kind() is @tokenizer.AtIdentifier(_) {
+    if tokens.length() < 3 ||
+      tokens[1].kind() != @tokenizer.Symbol(@tokenizer.Dot) ||
+      !(tokens[2].kind() is @tokenizer.Identifier(_)) {
+      return false
+    }
+    i = 3
+  } else if tokens[0].kind() is @tokenizer.Identifier(_) {
+    i = 1
+  } else {
+    return false
+  }
+  while i < tokens.length() {
+    if i + 1 >= tokens.length() ||
+      tokens[i].kind() != @tokenizer.Symbol(@tokenizer.DoubleColon) ||
+      !(tokens[i + 1].kind() is @tokenizer.Identifier(_)) {
+      return false
+    }
+    i += 2
+  }
+  true
 }

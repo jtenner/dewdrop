@@ -9,7 +9,7 @@ transform fn answer(
   node: @ast.FnNode,
   ctx: @transform.TransformContext,
 ) -> Result<@ast.FnNode, @transform.TransformError> {
-  Result::Ok(@ast.with_body(node, @ast.integer(answer_value())))
+  Result::Ok(node.with_body(@ast.integer(answer_value())))
 }
 
 #answer

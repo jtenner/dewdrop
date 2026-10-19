@@ -113,6 +113,36 @@ fn compiler_expand_transforms(
       plan.add_pattern_proof(mi, source_file.path, offset, constructor)
     }
   }
+  for literal in @semantic.compile_time_arrays(program, lowering) {
+    if program.source_file(literal.file) is Some(file) {
+      plan.add_array_layout(
+        literal.module_index,
+        file.path,
+        literal.offset,
+        literal.key,
+        literal.fields,
+      )
+    }
+  }
+  for call in @semantic.compile_time_calls(program, analyzed, lowering) {
+    if program.source_file(call.file) is Some(source) {
+      let target_path = match program.source_file(call.target_file) {
+        Some(file) => file.path
+        None => ""
+      }
+      plan.add_call_proof(
+        call.module_index,
+        source.path,
+        call.offset,
+        call.target_module,
+        target_path,
+        call.target_offset,
+        reference=call.reference,
+        result_kind=call.result_kind,
+        constructor_key=call.constructor_key,
+      )
+    }
+  }
   match plan.expand(output_module_count~) {
     Ok(modules) => Ok(transform_manifest(modules))
     Err(message) => Err(CompilerSourceError(message, []))

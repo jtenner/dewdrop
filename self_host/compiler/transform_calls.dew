@@ -1,0 +1,433 @@
+open dew.std.map
+
+pub enum CtCallTarget {
+  Source(U32, String, SelfHostFunctionDeclaration, String)
+  Intrinsic(SelfHostBuiltinDeclaration, String)
+  FunctionValue(String)
+  Unsupported
+  Constructor(String)
+  UnitConstructor(String)
+  ScalarResult(String)
+}
+
+fn ct_call_key(mi: U32, path: String, offset: U32) -> String {
+  let out = StringBuilder::new()
+  out.append_u32(mi)
+  out.append(":")
+  out.append_u32(offset)
+  out.append(":")
+  out.append(path)
+  out.finish()
+}
+
+fn ct_lookup_call(machine: CtMachine, mi: U32, offset: U32) -> Option<CtCallTarget> {
+  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+    return None
+  }
+  machine.plan.calls.get(ct_call_key(mi, machine.file_path, offset))
+}
+
+fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
+  if !ct_charge(machine, 32u32 + args.length() * 16u32) || machine.flow != 0u32 {
+    return CtValue::Empty
+  }
+  let receivers = if function.receiver is Some(_) {
+    1u32
+  } else {
+    0u32
+  }
+  if args.length() != function.parameters.length() + receivers {
+    return ct_fail(machine, "checked compile-time argument count mismatch")
+  }
+  for file in machine.plan.files {
+    if file.module_index == mi && file.original.path == path {
+      for candidate in file.functions {
+        if candidate.declaration.offset == function.offset && ct_is_annotated(file, candidate) {
+          return ct_fail(machine, "annotated functions cannot execute at compile time")
+        }
+      }
+    }
+  }
+  let env = array_new::<CtBinding>()
+  if receivers == 1u32 {
+    env.push(ct_binding("self", args[0u32]))
+  }
+  let mut i = 0u32
+  for parameter in function.parameters {
+    env.push(ct_binding(parameter.name, args[i + receivers]))
+    i = i + 1u32
+  }
+  let previous = machine.file_path
+  machine.file_path = path
+  let value = ct_block(machine, mi, function.body, env)
+  machine.file_path = previous
+  if machine.flow == 1u32 {
+    machine.flow = 0u32
+    return machine.result
+  }
+  if machine.flow != 0u32 {
+    return ct_fail(machine, "loop control escaped a compile-time function")
+  }
+  value
+}
+
+fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExpr, args: Array<SelfHostExpr>, env: Array<CtBinding>, types: Array<SelfHostTypeExpr>) -> CtValue {
+  let _ = types
+  match ct_lookup_call(machine, mi, offset) {
+    Some(Source(target_mi, path, function, kind)) => {
+      let values = array_new::<CtValue>()
+      if function.receiver is Some(_) {
+        match callee {
+          FieldExpr(owner, _, _) => values.push(ct_eval(machine, mi, owner, env))
+          _ => return ct_fail(machine, "checked receiver call requires a receiver expression")
+        }
+      }
+      for argument in args {
+        if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+          return CtValue::Empty
+        }
+        values.push(ct_eval(machine, mi, argument, env))
+      }
+      ct_intrinsic_result(machine, ct_source_call(machine, target_mi, path, function, values), kind)
+    }
+    Some(Intrinsic(builtin_, kind)) => {
+      let result = ct_intrinsic(machine, builtin_, ct_eval_values(machine, mi, args, env))
+      ct_intrinsic_result(machine, result, kind)
+    }
+    Some(Constructor(key)) => CtValue::Variant(key, ct_eval_values(machine, mi, args, env))
+    Some(FunctionValue(kind)) => {
+      let closure = ct_eval(machine, mi, callee, env)
+      let values = ct_eval_values(machine, mi, args, env)
+      ct_intrinsic_result(machine, ct_closure_call(machine, closure, values), kind)
+    }
+    Some(_) => ct_fail(machine, "checked call requires unsupported compile-time dispatch")
+    None => ct_call(machine, ct_path(machine, mi, callee), ct_eval_values(machine, mi, args, env))
+  }
+}
+
+fn ct_selected_operator(machine: CtMachine, mi: U32, offset: U32, values: Array<CtValue>) -> CtValue {
+  match ct_lookup_call(machine, mi, offset) {
+    Some(Source(target_mi, path, function, kind)) => ct_intrinsic_result(machine, ct_source_call(machine, target_mi, path, function, values), kind)
+    _ => ct_fail(machine, "selected operator has no supported compile-time source body")
+  }
+}
+
+fn ct_source_call_targets(source: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering) -> Array<SelfHostBasicCallTarget> {
+  let targets = array_new::<SelfHostBasicCallTarget>()
+  for expression in source.expressions {
+    let _ = expression
+    targets.push(ErrorBasicCallTarget)
+  }
+  for job in module_.inferred.jobs {
+    let span = match job.kind {
+      MergedBodyInferenceJob(body) => source.bodies[self_host_semantic_id_local(body)].expressions
+      MergedLambdaInferenceJob(lambda) => source.lambdas[lambda].body.expressions
+    }
+    let _ = while 0u32 {
+      i if i < span.length && i < job.call_targets.length => {
+        targets[span.start + i] = module_.inferred.call_targets[job.call_targets.start + i]
+        continue i + 1u32
+      }
+      _ => break ()
+    }
+  }
+  targets
+}
+
+fn ct_checked_source_target(plan: CtPlan, collected: SelfHostCollectedProgram, selected: U64, kind: String) -> CtCallTarget {
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    if source.module_id == self_host_semantic_id_module(selected) {
+      let offset = match source.declaration_reference(selected) {
+        Some(TopLevel(value)) => value.offset
+        Some(Method(value)) => value.offset
+        None => return Unsupported
+      }
+      let file_id = source.declaration_files[self_host_semantic_id_local(selected)]
+      let mut fi = 0u32
+      for id in source.files {
+        if id == file_id {
+          for file in plan.files {
+            if file.module_index == mi && file.original.path == source.file_paths[fi] {
+              for declaration in file.declarations {
+                match declaration {
+                  Function(f) if f.offset == offset => return Source(mi, file.original.path, f, kind)
+                  Impl(impl_) => {
+                    for f in impl_.methods {
+                      if f.offset == offset {
+                        return Source(mi, file.original.path, f, kind)
+                      }
+                    }
+                  }
+                  Builtin(b) if b.offset == offset => return Intrinsic(b, kind)
+                  _ => {
+                  }
+                }
+              }
+            }
+          }
+        }
+        fi = fi + 1u32
+      }
+    }
+    mi = mi + 1u32
+  }
+  Unsupported
+}
+
+fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    let calls = ct_source_call_targets(source, lowering.modules[mi])
+    let operators = ct_scalar_source_targets(source, lowering.modules[mi])
+    let mut ei = 0u32
+    for expression in source.expressions {
+      if ei < lowering.modules[mi].expressions.length() {
+        let reference = match lowering.modules[mi].expressions[ei].kind {
+          PlannedFunctionReference(selected) => Some(ct_checked_source_target(plan, collected, selected, ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, true)))
+          _ => match lowering.modules[mi].expressions[ei].selection {
+            VariantConstructionBasicExpressionSelection(selected, 2u32, _) => match ct_pattern_variant_key(collected, selected) {
+              Some(key) => Some(UnitConstructor(key))
+              None => None
+            }
+            _ => None
+          }
+        }
+        match reference {
+          Some(target) => {
+            let mut fi = 0u32
+            for file_id in source.files {
+              if file_id == source.expression_files[ei] {
+                for file in plan.files {
+                  if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                    match ct_scalar_original_offset(file, expression.offset(), 0u32) {
+                      Some(offset) => plan.references.set(ct_call_key(mi, file.original.path, offset), target)
+                      None => {
+                      }
+                    }
+                  }
+                }
+              }
+              fi = fi + 1u32
+            }
+          }
+          _ => {
+          }
+        }
+      }
+      let selected = match expression {
+        CallExpr(_, _, _) => Some(calls[ei])
+        PrefixExpr(_, _, _) => Some(NoBasicCallTarget)
+        BinaryExpr(_, _, _, _) => Some(operators[ei])
+        IndexExpr(_, _, _) => Some(operators[ei])
+        _ => None
+      }
+      match selected {
+        Some(value) => {
+          let target = if expression is PrefixExpr(_, _, _) {
+            Some(ScalarResult(ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+          } else {
+            match value {
+              SelectedBasicCallTarget(declaration, _) => match lowering.modules[mi].expressions[ei].selection {
+                VariantConstructionBasicExpressionSelection(selected, _, _) => match ct_pattern_variant_key(collected, selected) {
+                  Some(key) => Some(Constructor(key))
+                  None => Some(Unsupported)
+                }
+                _ => Some(ct_checked_source_target(plan, collected, declaration, ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+              }
+              FunctionValueBasicCallTarget(_) => Some(FunctionValue(ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+              NoBasicCallTarget => None
+              _ => Some(Unsupported)
+            }
+          }
+          match target {
+            Some(target) => {
+              let mut fi = 0u32
+              for file_id in source.files {
+                if file_id == source.expression_files[ei] {
+                  for file in plan.files {
+                    if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                      match ct_scalar_original_offset(file, expression.offset(), 0u32) {
+                        Some(offset) => plan.calls.set(ct_call_key(mi, file.original.path, offset), target)
+                        None => {
+                        }
+                      }
+                    }
+                  }
+                }
+                fi = fi + 1u32
+              }
+            }
+            None => {
+            }
+          }
+        }
+        None => {
+        }
+      }
+      ei = ei + 1u32
+    }
+    mi = mi + 1u32
+  }
+}
+
+fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -> CtValue {
+  if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+    return CtValue::Empty
+  }
+  match closure {
+    Function(target, bound) => {
+      let values = array_new::<CtValue>()
+      for value in bound {
+        values.push(value)
+      }
+      for value in args {
+        values.push(value)
+      }
+      match target {
+        Source(mi, path, function, kind) => ct_intrinsic_result(machine, ct_source_call(machine, mi, path, function, values), kind)
+        Intrinsic(builtin_, kind) => ct_intrinsic_result(machine, ct_intrinsic(machine, builtin_, values), kind)
+        Constructor(key) => CtValue::Variant(key, values)
+        _ => ct_fail(machine, "unsupported checked function reference")
+      }
+    }
+    Closure(mi, path, parameters, body, captured) => {
+      if parameters.length() != args.length() {
+        return ct_fail(machine, "compile-time closure argument count mismatch")
+      }
+      let env = ct_scope(machine, captured)
+      let mut i = 0u32
+      for parameter in parameters {
+        env.push(ct_binding(parameter.name, args[i]))
+        i = i + 1u32
+      }
+      let previous = machine.file_path
+      machine.file_path = path
+      let value = ct_block(machine, mi, body, env)
+      machine.file_path = previous
+      if machine.flow == 1u32 {
+        machine.flow = 0u32
+        return machine.result
+      }
+      if machine.flow != 0u32 {
+        return ct_fail(machine, "loop control escaped a compile-time closure")
+      }
+      value
+    }
+    _ => ct_fail(machine, "compile-time function value is not an interpreted closure")
+  }
+}
+
+fn ct_unit_variant(machine: CtMachine, key: String) -> CtValue {
+  for file in machine.plan.files {
+    let prefix = machine.plan.manifest.modules[file.module_index].path
+    for declaration in file.declarations {
+      if !ct_charge(machine, 0u32) {
+        return CtValue::Empty
+      }
+      match declaration {
+        Enum(enum_) => {
+          for variant in enum_.variants {
+            match variant {
+              UnitVariant(name, _, _) if key == prefix.concat("::").concat(enum_.name).concat("::").concat(name) => return CtValue::Variant(key, [])
+              _ => {
+              }
+            }
+          }
+        }
+        _ => {
+        }
+      }
+    }
+  }
+  ct_fail(machine, "expression does not name a checked unit enum variant")
+}
+
+fn ct_function_reference(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Array<CtBinding>) -> CtValue {
+  match machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) {
+    Some(target) => {
+      if target is UnitConstructor(key) {
+        return CtValue::Variant(key, [])
+      }
+      let bound = array_new::<CtValue>()
+      match (target, expression) {
+        (Source(_, _, function, _), FieldExpr(owner, _, _)) => if function.receiver is Some(_) {
+          bound.push(ct_eval(machine, mi, owner, env))
+        }
+        _ => {
+        }
+      }
+      CtValue::Function(target, bound)
+    }
+    None => ct_fail(machine, "global value has no checked function reference")
+  }
+}
+
+fn ct_checked_scalar_kind(module_: SelfHostPlannedModuleLowering, root: I32, reference: Bool) -> String {
+  let mut current = root
+  let mut unwrap_function = reference
+  let mut resolved_type = -1i32
+  let _ = while current {
+    type_ => if type_ < -1i32 {
+      resolved_type = -type_ - 2i32
+      break ()
+    } else if type_ < 0i32 {
+      return ""
+    } else {
+      match module_.inferred.types[self_host_body_i32_to_u32(type_)] {
+        BodyFunctionType(_, result) if unwrap_function => {
+          unwrap_function = false
+          continue result
+        }
+        BodyAppliedType(_, arguments) if arguments.length == 1u32 && !unwrap_function => {
+          let kind = ct_checked_scalar_kind(module_, module_.inferred.type_arguments[arguments.start], false)
+          return if kind.byte_length() == 0u32 {
+            ""
+          } else {
+            "array:".concat(kind)
+          }
+        }
+        BodyResolvedType(id) => {
+          resolved_type = self_host_body_u32_to_i32(id)
+          break ()
+        }
+        _ => return ""
+      }
+    }
+  }
+  if resolved_type < 0i32 {
+    return ""
+  }
+  let _ = while self_host_body_i32_to_u32(resolved_type) {
+    type_ => match module_.resolved_types.types[type_] {
+      FunctionType(_, result) if unwrap_function => {
+        unwrap_function = false
+        continue result
+      }
+      AppliedType(_, arguments) if arguments.length == 1u32 && !unwrap_function => {
+        let kind = ct_checked_scalar_kind(module_, -self_host_body_u32_to_i32(module_.resolved_types.type_arguments[arguments.start]) - 2i32, false)
+        return if kind.byte_length() == 0u32 {
+          ""
+        } else {
+          "array:".concat(kind)
+        }
+      }
+      PrimitiveType(primitive) => return match primitive {
+        F32Type => "unsupported:F32"
+        F64Type => "unsupported:F64"
+        BoolType => "Bool"
+        I8Type => "I8"
+        U8Type => "U8"
+        I16Type => "I16"
+        U16Type => "U16"
+        I32Type => "I32"
+        U32Type => "U32"
+        I64Type => "I64"
+        U64Type => "U64"
+        _ => ""
+      }
+      _ => return ""
+    }
+  }
+  ""
+}

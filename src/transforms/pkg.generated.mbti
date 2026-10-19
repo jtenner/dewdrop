@@ -18,9 +18,13 @@ type EvalError
 // Types and methods
 type Annotation
 
+type CallTarget
+
 type Cell
 
 type Machine
+
+type Operation
 
 type ParsedFile
 
@@ -32,7 +36,13 @@ pub struct Plan {
   scalar_proofs : Map[(Int, Int, Int), Bytes]
   pattern_proofs : Map[(Int, Int, Int), String]
   type_names : Map[(Int, String), String]
+  references : Map[(Int, Int, Int), CallTarget]
+  calls : Map[(Int, Int, Int), CallTarget]
+  array_literals : Map[(Int, Int, Int), (String, Array[String])]
+  array_layouts : Map[String, Array[String]]
 }
+pub fn Plan::add_array_layout(Self, Int, String, UInt64, String, Array[String]) -> Unit
+pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String) -> Unit
 pub fn Plan::add_checked_module(Self, SourceModule) -> Result[Unit, String]
 pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
 pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes) -> Unit
@@ -40,6 +50,8 @@ pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
 pub fn Plan::expand(Self, output_module_count? : Int) -> Result[Array[SourceModule], String]
 pub fn Plan::validation_sources(Self) -> Array[SourceModule]
+
+type RawStorage
 
 pub(all) struct SourceFile {
   path : String

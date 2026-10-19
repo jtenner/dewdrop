@@ -1,12 +1,22 @@
 ///|
 enum Value {
   Unit
+  DefaultValue
+  RawArray(RawStorage)
   Number(UInt64, String)
   Boolean(Bool)
   Text(String)
   Sequence(Array[Value])
   Record(String, Map[String, Value])
   Variant(String, Array[Value])
+  Function(CallTarget, Array[Value])
+  Closure(
+    Int32,
+    Int32,
+    Array[@parser.FnParameter],
+    @parser.Block,
+    Map[String, Cell]
+  )
 }
 
 ///|
@@ -51,6 +61,7 @@ fn eval_fail(message : String) -> Value raise EvalError {
 fn truth(value : Value) -> Bool raise EvalError {
   match value {
     Boolean(value) => value
+    DefaultValue => false
     _ => raise Failed("expected Bool in transform")
   }
 }
@@ -346,41 +357,92 @@ fn signed(bits : UInt64, kind : String) -> Int64 {
 }
 
 ///|
-fn binary(
-  op : @parser.BinaryOperator,
-  left : Value,
-  right : Value,
-) -> Value raise EvalError {
+fn binary(op : Operation, left : Value, right : Value) -> Value raise EvalError {
+  let left = if left is DefaultValue {
+    match right {
+      Number(_, kind) => normalized(0UL, kind)
+      Boolean(_) => Boolean(false)
+      _ => left
+    }
+  } else {
+    left
+  }
+  let right = if right is DefaultValue {
+    match left {
+      Number(_, kind) => normalized(0UL, kind)
+      Boolean(_) => Boolean(false)
+      _ => right
+    }
+  } else {
+    right
+  }
   match (left, right) {
+    (DefaultValue, DefaultValue) =>
+      match op {
+        Equal | LessEqual | GreaterEqual => Boolean(true)
+        NotEqual | Less | Greater => Boolean(false)
+        Add
+        | Subtract
+        | Multiply
+        | BitAnd
+        | BitOr
+        | BitXor
+        | ShiftLeft
+        | ShiftRight => DefaultValue
+        Divide | Remainder =>
+          eval_fail("integer division by zero at compile time")
+      }
     (Boolean(a), Boolean(b)) =>
       match op {
-        @parser.Equal => Boolean(a == b)
-        @parser.NotEqual => Boolean(a != b)
+        Equal => Boolean(a == b)
+        NotEqual => Boolean(a != b)
         _ => eval_fail("unsupported Bool operator at compile time")
       }
-    (Number(a, kind), Number(b, other)) if kind == other => {
+    (Number(a, kind), Number(b, other)) if kind == other ||
+      op is ShiftLeft ||
+      op is ShiftRight => {
       let sa = signed(a, kind)
       let sb = signed(b, kind)
       let is_signed = kind.has_prefix("I")
       match op {
-        @parser.Add => normalized(a + b, kind)
-        @parser.Subtract => normalized(a - b, kind)
-        @parser.Multiply => normalized(a * b, kind)
-        @parser.BitAnd => normalized(a & b, kind)
-        @parser.BitOr => normalized(a | b, kind)
-        @parser.BitXor => normalized(a ^ b, kind)
-        @parser.Equal => Boolean(a == b)
-        @parser.NotEqual => Boolean(a != b)
-        @parser.Less => Boolean(if is_signed { sa < sb } else { a < b })
-        @parser.LessEqual => Boolean(if is_signed { sa <= sb } else { a <= b })
-        @parser.Greater => Boolean(if is_signed { sa > sb } else { a > b })
-        @parser.GreaterEqual =>
-          Boolean(if is_signed { sa >= sb } else { a >= b })
-        @parser.Divide | @parser.Remainder => {
+        Add => normalized(a + b, kind)
+        Subtract => normalized(a - b, kind)
+        Multiply => normalized(a * b, kind)
+        BitAnd => normalized(a & b, kind)
+        BitOr => normalized(a | b, kind)
+        BitXor => normalized(a ^ b, kind)
+        ShiftLeft =>
+          normalized(
+            a <<
+            (
+              b.to_int() &
+              (if kind == "I64" || kind == "U64" { 63 } else { 31 })
+            ),
+            kind,
+          )
+        ShiftRight => {
+          let amount = b.to_int() &
+            (if kind == "I64" || kind == "U64" { 63 } else { 31 })
+          normalized(
+            if is_signed {
+              (sa >> amount).reinterpret_as_uint64()
+            } else {
+              a >> amount
+            },
+            kind,
+          )
+        }
+        Equal => Boolean(a == b)
+        NotEqual => Boolean(a != b)
+        Less => Boolean(if is_signed { sa < sb } else { a < b })
+        LessEqual => Boolean(if is_signed { sa <= sb } else { a <= b })
+        Greater => Boolean(if is_signed { sa > sb } else { a > b })
+        GreaterEqual => Boolean(if is_signed { sa >= sb } else { a >= b })
+        Divide | Remainder => {
           guard b != 0UL else {
             return eval_fail("division by zero in transform")
           }
-          guard !(op is @parser.Divide &&
+          guard !(op is Divide &&
             is_signed &&
             sb == -1L &&
             (
@@ -391,14 +453,14 @@ fn binary(
           }
           normalized(
             if is_signed {
-              (if op is @parser.Divide {
+              (if op is Divide {
                 sa / sb
               } else if sb == -1L {
                 0L
               } else {
                 sa % sb
               }).reinterpret_as_uint64()
-            } else if op is @parser.Divide {
+            } else if op is Divide {
               a / b
             } else {
               a % b
@@ -434,6 +496,13 @@ fn Machine::block(
           return eval_fail("assignment requires a mutable compile-time local")
         }
         cell.value = self.eval(mi, value, env)
+      }
+      @parser.AssignmentItem(@parser.FieldExpr(owner, name, _), value, _) => {
+        let owner = fields(self.eval(mi, owner, env))
+        guard owner.contains(name) else {
+          return eval_fail("unknown mutable record field")
+        }
+        owner[name] = self.eval(mi, value, env)
       }
       @parser.TypeBindingItem(_, _, _) => ()
       _ => return eval_fail("unsupported assignment at compile time")
@@ -494,14 +563,22 @@ fn Machine::eval_inner(
     @parser.NameExpr(name, _) =>
       match env.get(name) {
         Some(cell) => cell.value
-        None =>
-          eval_fail(
-            "compile-time globals and function values are not supported: " +
-            name,
-          )
+        None => self.function_reference(mi, expr, env)
       }
-    @parser.ArrayExpr(items, _) | @parser.ProductExpr(items, _) =>
-      Sequence(items.map(fn(item) { self.eval(mi, item, env) }))
+    @parser.LambdaExpr(parameters, _, body, _) =>
+      Closure(mi, self.file_index, parameters, body, self.scope(env))
+    @parser.ArrayExpr(items, offset) =>
+      self.array_value(
+        mi,
+        offset,
+        items.map(fn(item) { self.eval(mi, item, env) }),
+      )
+    @parser.ProductExpr(items, _) =>
+      if items.is_empty() {
+        Unit
+      } else {
+        Sequence(items.map(fn(item) { self.eval(mi, item, env) }))
+      }
     @parser.BlockExpr(block) => self.block(mi, block, env)
     @parser.ObjectExpr(items, _) => {
       let values : Map[String, Value] = Map::default()
@@ -518,7 +595,22 @@ fn Machine::eval_inner(
       }
       Record(key, values)
     }
-    @parser.FieldExpr(owner, name, _) => field(self.eval(mi, owner, env), name)
+    @parser.QualifiedExpr(_, _, _) =>
+      if self.plan.references.contains(
+          (mi, self.file_index, expr.offset().to_int()),
+        ) {
+        self.function_reference(mi, expr, env)
+      } else {
+        self.unit_variant(self.path(mi, expr))
+      }
+    @parser.FieldExpr(owner, name, _) =>
+      if self.plan.references.contains(
+          (mi, self.file_index, expr.offset().to_int()),
+        ) {
+        self.function_reference(mi, expr, env)
+      } else {
+        field(self.eval(mi, owner, env), name)
+      }
     @parser.ProductFieldExpr(owner, index, _, _) => {
       guard self.eval(mi, owner, env) is Sequence(values) &&
         index >= 0 &&
@@ -527,8 +619,6 @@ fn Machine::eval_inner(
       }
       values[index]
     }
-    @parser.IndexExpr(_, _, _) =>
-      eval_fail("indexed access is not supported at compile time")
     @parser.IfExpr(condition, yes, no, _) =>
       if truth(self.eval(mi, condition, env)) {
         self.block(mi, yes, env)
@@ -538,11 +628,15 @@ fn Machine::eval_inner(
           None => Unit
         }
       }
-    @parser.CallExpr(callee, args, _)
-    | @parser.ExplicitTypeCallExpr(callee, _, args, _) => {
-      let key = self.path(mi, callee)
-      self.call(key, args.map(fn(arg) { self.eval(mi, arg, env) }))
-    }
+    @parser.CallExpr(callee, args, offset) =>
+      self.checked_call(mi, offset, callee, args, env)
+    @parser.ExplicitTypeCallExpr(callee, types, args, offset) =>
+      self.checked_call(mi, offset, callee, args, env, type_arguments=types)
+    @parser.IndexExpr(owner, index, offset) =>
+      self.selected_operator(mi, offset, [
+        self.eval(mi, owner, env),
+        self.eval(mi, index, env),
+      ])
     @parser.BinaryExpr(@parser.LogicalAnd, left, right, _) =>
       Boolean(
         truth(self.eval(mi, left, env)) && truth(self.eval(mi, right, env)),
@@ -559,9 +653,18 @@ fn Machine::eval_inner(
         self.eval(mi, left, env),
         self.eval(mi, right, env),
       )
-    @parser.PrefixExpr(op, value, _) => {
+    @parser.PrefixExpr(op, value, offset) => {
       let value = self.eval(mi, value, env)
+      let value = if value is DefaultValue {
+        match self.plan.calls.get((mi, self.file_index, offset.to_int())) {
+          Some(ScalarResult(kind)) => intrinsic_kind(value, kind)
+          _ => value
+        }
+      } else {
+        value
+      }
       match (op, value) {
+        (@parser.LogicalNot, DefaultValue) => Boolean(true)
         (@parser.LogicalNot, Boolean(v)) => Boolean(!v)
         (@parser.Negative, Number(n, kind)) => normalized(0UL - n, kind)
         (@parser.Positive, Number(_, _)) => value
@@ -621,7 +724,13 @@ fn Machine::eval_inner(
         Unit
       }
     }
-    _ => eval_fail("expression is not supported by the transform interpreter")
+    _ =>
+      eval_fail(
+        "expression is not supported by the transform interpreter at " +
+        self.plan.files[mi][self.file_index].file.path +
+        ":" +
+        expr.offset().to_string(),
+      )
   }
 }
 
@@ -669,6 +778,9 @@ fn Machine::pattern_inner(
       raise Failed("string patterns are not supported at compile time")
     @parser.LiteralPattern(expr, _) => equal(self.eval(mi, expr, env), value)
     @parser.ProductPattern(patterns, _) => {
+      if patterns.is_empty() && (value is Unit || value is DefaultValue) {
+        return true
+      }
       guard value is Sequence(values) && values.length() == patterns.length() else {
         return false
       }
@@ -685,6 +797,36 @@ fn Machine::pattern_inner(
         raise Failed("expected a checked enum constructor pattern")
       }
       value is Variant(key, values) && key == constructor && values.is_empty()
+    }
+    @parser.StructPattern(_, patterns, _, offset) => {
+      guard value is Record(key, values) else { return false }
+      let expected = self.pattern_key(mi, offset)
+      if !key.is_empty() && key != expected {
+        return false
+      }
+      for pattern in patterns {
+        guard values.get(pattern.name) is Some(item) else { return false }
+        if !self.pattern(mi, pattern.pattern, item, env) {
+          return false
+        }
+      }
+      true
+    }
+    @parser.AlternativePattern(first, rest, _) => {
+      let choices = [first]
+      for choice in rest {
+        choices.push(choice)
+      }
+      for choice in choices {
+        let scope = self.scope(env)
+        if self.pattern(mi, choice, value, scope) {
+          for name, cell in scope {
+            env[name] = cell
+          }
+          return true
+        }
+      }
+      false
     }
     @parser.TuplePattern(_, patterns, _) => {
       guard value is Variant(key, values) &&
@@ -747,9 +889,61 @@ fn Machine::pattern_path_inner(
 ///|
 fn equal(a : Value, b : Value) -> Bool raise EvalError {
   match (a, b) {
+    (DefaultValue, Number(n, _)) | (Number(n, _), DefaultValue) => n == 0UL
+    (DefaultValue, Boolean(v)) | (Boolean(v), DefaultValue) => !v
+    (DefaultValue, DefaultValue) => true
     (Number(a, k), Number(b, l)) => a == b && k == l
     (Boolean(a), Boolean(b)) => a == b
     (Text(a), Text(b)) => a == b
     _ => raise Failed("unsupported equality in compile-time pattern")
   }
+}
+
+///|
+enum Operation {
+  ShiftLeft
+  ShiftRight
+  Add
+  BitAnd
+  BitOr
+  BitXor
+  Divide
+  Equal
+  Greater
+  GreaterEqual
+  Less
+  LessEqual
+  Multiply
+  NotEqual
+  Remainder
+  Subtract
+}
+
+///|
+fn operation(op : @parser.BinaryOperator) -> Operation raise EvalError {
+  match op {
+    @parser.ShiftLeft => ShiftLeft
+    @parser.ShiftRight => ShiftRight
+    @parser.Add => Add
+    @parser.BitAnd => BitAnd
+    @parser.BitOr => BitOr
+    @parser.BitXor => BitXor
+    @parser.Divide => Divide
+    @parser.Equal => Equal
+    @parser.Greater => Greater
+    @parser.GreaterEqual => GreaterEqual
+    @parser.Less => Less
+    @parser.LessEqual => LessEqual
+    @parser.Multiply => Multiply
+    @parser.NotEqual => NotEqual
+    @parser.Remainder => Remainder
+    @parser.Subtract => Subtract
+    _ => raise Failed("unsupported primitive operator at compile time")
+  }
+}
+
+///|
+struct RawStorage {
+  values : Array[Value]
+  mut default_kind : String
 }

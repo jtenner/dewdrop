@@ -45,6 +45,10 @@ pub struct Plan {
   scalar_proofs : Map[(Int32, Int32, Int32), Bytes]
   pattern_proofs : Map[(Int32, Int32, Int32), String]
   type_names : Map[(Int32, String), String]
+  references : Map[(Int32, Int32, Int32), CallTarget]
+  calls : Map[(Int32, Int32, Int32), CallTarget]
+  array_literals : Map[(Int32, Int32, Int32), (String, Array[String])]
+  array_layouts : Map[String, Array[String]]
 }
 
 ///|
@@ -304,6 +308,10 @@ pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
       scalar_proofs: {},
       pattern_proofs: {},
       type_names: {},
+      calls: {},
+      references: {},
+      array_literals: {},
+      array_layouts: {},
     })
   }
   let modules = modules.copy()
@@ -351,6 +359,10 @@ pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
     scalar_proofs: {},
     pattern_proofs: {},
     type_names: {},
+    calls: {},
+    references: {},
+    array_literals: {},
+    array_layouts: {},
   })
 }
 

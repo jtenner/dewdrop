@@ -6,10 +6,10 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record; do
-  args=(examples/transforms/local.dew)
-  if [[ "$kind" == imported ]]; then
-    args=(examples/transforms/imported.dew --module example.tools examples/transforms/tools.dew)
+for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults; do
+  args=("examples/transforms/$kind.dew")
+  if [[ "$kind" == imported || "$kind" == imported_methods ]]; then
+    args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)
   elif [[ "$kind" == patterns ]]; then
     args=(examples/transforms/patterns.dew)
   elif [[ "$kind" == record ]]; then
@@ -53,6 +53,9 @@ DEW
 cat > "$work/host-call.dew" <<'DEW'
 import dewdrop.ast as @ast
 import dewdrop.transform as @transform
+fn ping() -> I32 {
+  42i32
+}
 foreign import "env" as Host {
   pub fn ping() -> I32 = "ping"
 }
@@ -65,12 +68,79 @@ pub fn main() -> I32 {
 }
 DEW
 
-for kind in bad-signature sibling-declaration host-call; do
+for kind in array-bounds array-budget invalid-field; do
+  expression='wasm_array_get(wasm_array_new_default::<I32>(1u32), 1u32)'
+  if [[ "$kind" == array-budget ]]; then
+    expression='wasm_array_get(wasm_array_new_default::<I32>(4294967295u32), 0u32)'
+  elif [[ "$kind" == invalid-field ]]; then
+    expression='0i32'
+  fi
+  body="node.with_body(@ast.integer($expression))"
+  if [[ "$kind" == invalid-field ]]; then
+    body='node.with_body(@ast.name("value").field("x) + 1"))'
+  fi
+  cat > "$work/$kind.dew" <<DEW
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  $body
+}
+#wrong
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+done
+
+cat > "$work/float-default.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+fn first<t>() -> Option<t> {
+  Some(wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32))
+}
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let value = match first::<F32>() {
+    Some(value) => value
+    None => 1.0f32
+  }
+  node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(-value)))
+}
+#wrong
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+
+cat > "$work/float-cast.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let value = wasm_unsafe_bitcast::<I32, F32>(1065353216i32)
+  node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(-value)))
+}
+#wrong
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+
+for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast; do
   expected='invalid transform signature'
   if [[ "$kind" == sibling-declaration ]]; then
     expected='transform must produce one valid function body'
   elif [[ "$kind" == host-call ]]; then
-    expected='compile-time calls require a direct function or enum constructor'
+    expected='checked call requires unsupported compile-time dispatch'
+  elif [[ "$kind" == array-bounds ]]; then
+    expected='array index out of bounds'
+  elif [[ "$kind" == array-budget ]]; then
+    expected='allocation limit exceeded'
+  elif [[ "$kind" == invalid-field ]]; then
+    expected='invalid generated field name'
+  elif [[ "$kind" == float-default || "$kind" == float-cast ]]; then
+    expected='unsupported scalar type'
   fi
   rm -f "$work/$kind.wasm"
   self_host_measure "transform rejection request: $kind" \

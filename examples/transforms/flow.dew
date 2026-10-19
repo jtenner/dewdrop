@@ -1,0 +1,19 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+fn keep(value: I32) -> I32 {
+  value
+}
+
+fn early() -> I32 {
+  keep(return 42i32)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(early()))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

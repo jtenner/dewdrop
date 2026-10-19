@@ -1,0 +1,46 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+struct Counter {
+  mut value: I32
+}
+
+impl Counter {
+  fn receiver(self) -> Counter {
+    self.value = self.value + 1i32
+    self
+  }
+  fn tick(self) -> I32 {
+    self.value = self.value + 1i32
+    self.value
+  }
+  fn combine(self, left: I32, right: I32) -> I32 {
+    self.value * 100i32 + left * 10i32 + right
+  }
+}
+
+fn identity<t>(value: t) -> t {
+  value
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let counter = identity(Counter::{
+    value: 0i32
+  })
+  let answer = counter.receiver().combine(counter.tick(), counter.tick())
+  let count = match counter {
+    Counter {
+      value: value
+    } => value
+  }
+  node.with_body(@ast.integer(if answer == 323i32 && count == 3i32 {
+    42i32
+  } else {
+    7i32
+  }))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

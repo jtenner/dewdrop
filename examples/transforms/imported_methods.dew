@@ -1,0 +1,13 @@
+import example.tools as @tools
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let scale = @tools.Scale::new(2i32)
+  node.with_body(@ast.integer(scale.apply(21i32)))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

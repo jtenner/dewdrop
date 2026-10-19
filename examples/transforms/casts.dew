@@ -1,0 +1,38 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+fn convert(callback: fn(U32) -> I32) -> I32 {
+  callback(0u32)
+}
+
+fn zero() -> I32 {
+  return wasm_array_get(wasm_array_new_default::<I32>(1u32), 0u32)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let cast = wasm_unsafe_bitcast(0u32)
+  let first = match cast {
+    0i32 => 40i32
+    _ => 0i32
+  }
+  let second = match convert(wasm_unsafe_bitcast) {
+    0i32 => 1i32
+    _ => 0i32
+  }
+  let third = match wasm_array_get(wasm_array_new_default::<I32>(1u32), 0u32) {
+    0i32 => 1i32
+    _ => 0i32
+  }
+  let flag = !wasm_array_get(wasm_array_new_default::<Bool>(1u32), 0u32)
+  node.with_body(@ast.integer(if flag { 
+    first + second + third + zero()
+  } else {
+    0i32
+  }))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

@@ -18,7 +18,6 @@ fn ct_member(machine: CtMachine, mi: U32, name: String, exported: Bool) -> Optio
         if !ct_charge(machine, 16u32) {
           return None
         }
-
         let unsupported = match declaration {
           Let(value) => Some((value.name, value.visibility))
           Trait(value) => Some((value.name, value.visibility))
@@ -32,7 +31,8 @@ fn ct_member(machine: CtMachine, mi: U32, name: String, exported: Bool) -> Optio
             let _ = ct_fail(machine, "unsupported compile-time declaration shadows name: ".concat(name))
             return None
           }
-          _ => {}
+          _ => {
+          }
         }
         let candidate = match declaration {
           Function(value) => Some((value.name, value.visibility))
@@ -72,7 +72,6 @@ fn ct_resolve(machine: CtMachine, mi: U32, name: String, alias_: Option<String>)
             if !ct_charge(machine, 16u32) {
               return ""
             }
-
             match declaration {
               Import(import_) if !import_.open_ => {
                 let alias_value = match import_.import_alias {
@@ -121,7 +120,6 @@ fn ct_resolve(machine: CtMachine, mi: U32, name: String, alias_: Option<String>)
         if !ct_charge(machine, 16u32) {
           return ""
         }
-
         match declaration {
           Import(import_) if import_.open_ => {
             if import_.wildcard {
@@ -152,7 +150,8 @@ fn ct_resolve(machine: CtMachine, mi: U32, name: String, alias_: Option<String>)
   }
   match ct_imported_type_name(machine, mi, name) {
     Some(key) => return key
-    None => {}
+    None => {
+    }
   }
   let _ = ct_fail(machine, "unknown or unsupported compile-time name: ".concat(name))
   ""
@@ -188,7 +187,6 @@ fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
       if !ct_charge(machine, 16u32) {
         return CtValue::Empty
       }
-
       match declaration {
         Function(function) if key == module_name.concat("::").concat(function.name) => {
           if function.receiver is Some(_) {
@@ -243,14 +241,36 @@ fn ct_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, righ
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return CtValue::Empty
   }
-
   match (left, right) {
+    (DefaultValue, DefaultValue) => match op {
+      Equal => CtValue::Boolean(true)
+      LessEqual => CtValue::Boolean(true)
+      GreaterEqual => CtValue::Boolean(true)
+      NotEqual => CtValue::Boolean(false)
+      Less => CtValue::Boolean(false)
+      Greater => CtValue::Boolean(false)
+      Add => CtValue::DefaultValue
+      Subtract => CtValue::DefaultValue
+      Multiply => CtValue::DefaultValue
+      BitAnd => CtValue::DefaultValue
+      BitOr => CtValue::DefaultValue
+      BitXor => CtValue::DefaultValue
+      ShiftLeft => CtValue::DefaultValue
+      ShiftRight => CtValue::DefaultValue
+      Divide => ct_fail(machine, "integer division by zero at compile time")
+      Remainder => ct_fail(machine, "integer division by zero at compile time")
+      _ => ct_fail(machine, "unsupported untyped default operator at compile time")
+    }
+    (DefaultValue, Number(_, kind)) => return ct_binary(machine, op, ct_number(0u64, kind), right)
+    (Number(_, kind), DefaultValue) => return ct_binary(machine, op, left, ct_number(0u64, kind))
+    (DefaultValue, Boolean(_)) => return ct_binary(machine, op, CtValue::Boolean(false), right)
+    (Boolean(_), DefaultValue) => return ct_binary(machine, op, left, CtValue::Boolean(false))
     (Boolean(a), Boolean(b)) => match op {
       Equal => CtValue::Boolean(a == b)
       NotEqual => CtValue::Boolean(a != b)
       _ => ct_fail(machine, "unsupported Bool operator at compile time")
     }
-    (Number(a, kind), Number(b, other)) if kind == other => {
+    (Number(a, kind), Number(b, other)) if kind == other || (op is ShiftLeft) || (op is ShiftRight) => {
       let sa = ct_signed(a, kind)
       let sb = ct_signed(b, kind)
       let signed_ = kind.starts_with("I")
@@ -261,27 +281,44 @@ fn ct_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, righ
         BitAnd => ct_number(a & b, kind)
         BitOr => ct_number(a | b, kind)
         BitXor => ct_number(a ^ b, kind)
+        ShiftLeft => ct_number(a << (b & if kind == "I64" || kind == "U64" {
+          63u64
+        } else {
+          31u64
+        }), kind)
+        ShiftRight => {
+          let amount = b & if kind == "I64" || kind == "U64" {
+            63u64
+          } else {
+            31u64
+          }
+          ct_number(if signed_ {
+            unsafe_bitcast::<I64, U64>(sa >> unsafe_bitcast::<U64, I64>(amount))
+          } else {
+            a >> amount
+          }, kind)
+        }
         Equal => CtValue::Boolean(a == b)
         NotEqual => CtValue::Boolean(a != b)
         Less => CtValue::Boolean(if signed_ {
-            sa < sb
-          } else {
-            a < b
+          sa < sb
+        } else {
+          a < b
         })
         LessEqual => CtValue::Boolean(if signed_ {
-            sa <= sb
-          } else {
-            a <= b
+          sa <= sb
+        } else {
+          a <= b
         })
         Greater => CtValue::Boolean(if signed_ {
-            sa > sb
-          } else {
-            a > b
+          sa > sb
+        } else {
+          a > b
         })
         GreaterEqual => CtValue::Boolean(if signed_ {
-            sa >= sb
-          } else {
-            a >= b
+          sa >= sb
+        } else {
+          a >= b
         })
         Divide => {
           if b == 0u64 {
@@ -291,24 +328,24 @@ fn ct_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, righ
             return ct_fail(machine, "signed division overflow in transform")
           }
           ct_number(if signed_ {
-              ct_i64_to_u64(sa / sb)
-            } else {
-              a / b
-            }, kind)
+            ct_i64_to_u64(sa / sb)
+          } else {
+            a / b
+          }, kind)
         }
         Remainder => {
           if b == 0u64 {
             return ct_fail(machine, "division by zero in transform")
           }
           ct_number(if signed_ {
-              if sb == -1i64 {
-                0u64
-              } else {
-                ct_i64_to_u64(sa % sb)
-              }
+            if sb == -1i64 {
+              0u64
             } else {
-              a % b
-            }, kind)
+              ct_i64_to_u64(sa % sb)
+            }
+          } else {
+            a % b
+          }, kind)
         }
         _ => ct_fail(machine, "unsupported integer operator at compile time")
       }
@@ -328,9 +365,9 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBi
     if item.kind == 0u32 {
       let value = ct_eval(machine, mi, item.value, env)
       env.push({
-          name: item.name
-          value: value
-          mutable_: item.mutable_
+        name: item.name
+        value: value
+        mutable_: item.mutable_
       })
     } else if item.kind == 3u32 {
       result = ct_eval(machine, mi, item.value, env)
@@ -341,6 +378,21 @@ fn ct_block(machine: CtMachine, mi: U32, block: SelfHostBlock, outer: Array<CtBi
             cell.value = ct_eval(machine, mi, item.value, env)
           }
           _ => return ct_fail(machine, "assignment requires a mutable compile-time local")
+        }
+        FieldExpr(owner, name, _) => {
+          let target = ct_eval(machine, mi, owner, env)
+          if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+            return result
+          }
+          match target {
+            Record(_, fields) => match ct_lookup(machine, fields, name) {
+              Some(field) => {
+                field.value = ct_eval(machine, mi, item.value, env)
+              }
+              None => return ct_fail(machine, "unknown mutable record field")
+            }
+            _ => return ct_fail(machine, "field assignment requires a record")
+          }
         }
         _ => return ct_fail(machine, "unsupported assignment at compile time")
       }
@@ -406,14 +458,28 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Arr
     }
     NameExpr(name, _) => match ct_lookup(machine, env, name) {
       Some(cell) => cell.value
-      None => ct_fail(machine, "compile-time globals and function values are not supported: ".concat(name))
+      None => ct_function_reference(machine, mi, expression, env)
     }
-    ArrayExpr(items, _) => CtValue::Sequence(ct_eval_values(machine, mi, items, env))
-    ProductExpr(items, _) => CtValue::Sequence(ct_eval_values(machine, mi, items, env))
+    LambdaExpr(parameters, _, body, _) => CtValue::Closure(mi, machine.file_path, parameters, body, ct_scope(machine, env))
+    ArrayExpr(items, offset) => ct_array_value(machine, mi, offset, ct_eval_values(machine, mi, items, env))
+    ProductExpr(items, _) => if items.length() == 0u32 {
+      CtValue::Empty
+    } else {
+      CtValue::Sequence(ct_eval_values(machine, mi, items, env))
+    }
     BlockExpr(block) => ct_block(machine, mi, block, env)
     ObjectExpr(items, _) => CtValue::Record("", ct_eval_fields(machine, mi, items, env))
     ConstructExpr(type_, items, _) => CtValue::Record(ct_path(machine, mi, type_), ct_eval_fields(machine, mi, items, env))
-    FieldExpr(owner, name, _) => ct_field(machine, ct_eval(machine, mi, owner, env), name)
+    QualifiedExpr(_, _, _) => if machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) is Some(_) {
+      ct_function_reference(machine, mi, expression, env)
+    } else {
+      ct_unit_variant(machine, ct_path(machine, mi, expression))
+    }
+    FieldExpr(owner, name, _) => if machine.plan.references.get(ct_call_key(mi, machine.file_path, expression.offset())) is Some(_) {
+      ct_function_reference(machine, mi, expression, env)
+    } else {
+      ct_field(machine, ct_eval(machine, mi, owner, env), name)
+    }
     ProductFieldExpr(owner, index, _, _) => {
       let value = ct_eval(machine, mi, owner, env)
       if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
@@ -434,17 +500,27 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: Arr
         }
       }
     }
-    CallExpr(callee, args, _) => ct_call(machine, ct_path(machine, mi, callee), ct_eval_values(machine, mi, args, env))
-    ExplicitTypeCallExpr(callee, _, args, _) => ct_call(machine, ct_path(machine, mi, callee), ct_eval_values(machine, mi, args, env))
+    CallExpr(callee, args, offset) => ct_checked_call(machine, mi, offset, callee, args, env, [])
+    ExplicitTypeCallExpr(callee, types, args, offset) => ct_checked_call(machine, mi, offset, callee, args, env, types)
+    IndexExpr(owner, index, offset) => ct_selected_operator(machine, mi, offset, [ct_eval(machine, mi, owner, env), ct_eval(machine, mi, index, env)])
     BinaryExpr(LogicalAnd, left, right, _) => CtValue::Boolean(ct_truth(machine, ct_eval(machine, mi, left, env)) && ct_truth(machine, ct_eval(machine, mi, right, env)))
     BinaryExpr(LogicalOr, left, right, _) => CtValue::Boolean(ct_truth(machine, ct_eval(machine, mi, left, env)) || ct_truth(machine, ct_eval(machine, mi, right, env)))
     BinaryExpr(op, left, right, offset) => ct_scalar_binary(machine, mi, offset, op, ct_eval(machine, mi, left, env), ct_eval(machine, mi, right, env))
-    PrefixExpr(op, expression, _) => {
-      let value = ct_eval(machine, mi, expression, env)
+    PrefixExpr(op, expression, offset) => {
+      let raw = ct_eval(machine, mi, expression, env)
+      let value = if raw is DefaultValue {
+        match ct_lookup_call(machine, mi, offset) {
+          Some(ScalarResult(kind)) => ct_intrinsic_result(machine, raw, kind)
+          _ => raw
+        }
+      } else {
+        raw
+      }
       if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
         return CtValue::Empty
       }
       match (op, value) {
+        (LogicalNot, DefaultValue) => CtValue::Boolean(true)
         (LogicalNot, Boolean(value)) => CtValue::Boolean(!value)
         (Negative, Number(value, kind)) => ct_number(0u64 - value, kind)
         (Positive, Number(_, _)) => value
@@ -515,6 +591,8 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
       }
     }
     LiteralPattern(expression, _) => match (ct_eval(machine, mi, expression, env), value) {
+      (Number(number, _), DefaultValue) => number == 0u64
+      (Boolean(flag), DefaultValue) => !flag
       (Number(a, k), Number(b, l)) => a == b && k == l
       (Boolean(a), Boolean(b)) => a == b
       _ => {
@@ -523,6 +601,8 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
       }
     }
     ProductPattern(patterns, _) => match value {
+      Empty if patterns.length() == 0u32 => true
+      DefaultValue if patterns.length() == 0u32 => true
       Sequence(values) if values.length() == patterns.length() => {
         let mut index = 0u32
         for item in patterns {
@@ -538,6 +618,40 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
     QualifiedPattern(_, _, _) => match value {
       Variant(key, values) => key == ct_pattern_path(machine, mi, pattern) && values.length() == 0u32
       _ => false
+    }
+    StructPattern(_, patterns, _, offset) => match value {
+      Record(key, values) => {
+        let expected = ct_checked_pattern_key(machine, mi, offset)
+        if machine.error.byte_length() != 0u32 || (key.byte_length() != 0u32 && key != expected) {
+          return false
+        }
+        for pattern in patterns {
+          match ct_lookup(machine, values, pattern.name) {
+            Some(item) => if !ct_pattern(machine, mi, pattern.pattern, item.value, env) {
+              return false
+            }
+            None => return false
+          }
+        }
+        true
+      }
+      _ => false
+    }
+    AlternativePattern(first, rest, _) => {
+      let choices = [first]
+      for choice in rest {
+        choices.push(choice)
+      }
+      for choice in choices {
+        let scope = ct_scope(machine, env)
+        if ct_pattern(machine, mi, choice, value, scope) {
+          for binding in scope {
+            env.push(binding)
+          }
+          return true
+        }
+      }
+      false
     }
     TuplePattern(_, patterns, _) => match value {
       Variant(key, values) if key == ct_pattern_path(machine, mi, pattern) && values.length() == patterns.length() => {

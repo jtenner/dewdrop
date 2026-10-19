@@ -385,6 +385,8 @@ fn ct_scalar_expected_opcode(op: SelfHostBinaryOperator, value: CtValue) -> Byte
     BitAnd => "and"
     BitOr => "or"
     BitXor => "xor"
+    ShiftLeft => "shl"
+    ShiftRight => "shr".concat(suffix)
     Equal => "eq"
     NotEqual => "ne"
     Less => "lt".concat(suffix)
@@ -413,5 +415,5 @@ fn ct_scalar_binary(machine: CtMachine, mi: U32, offset: U32, op: SelfHostBinary
       break ()
     }
   }
-  ct_fail(machine, "selected operator has no supported compile-time primitive proof")
+  ct_selected_operator(machine, mi, offset, [left, right])
 }

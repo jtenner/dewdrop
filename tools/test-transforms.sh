@@ -12,10 +12,11 @@ test_args=("$work/tests.raw.wasm" self_host.compiler
 for source in "${compiler_sources[@]}" self_host/compiler/transform_test.dew; do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")
 done
+self_host_measure 'transform native generator build' moon build --target native --release src/dew_test_gen
 self_host_measure 'transform interpreter test generation' env DEW_STD_ROOT="$PWD" \
-  moon run --target native src/dew_test_gen -- "${test_args[@]}"
+  moon run --target native --release src/dew_test_gen -- "${test_args[@]}"
 self_host_measure 'transform time provider' wasm-tools parse tools/moonbit-time-provider.wat -o "$work/time.wasm"
-self_host_measure 'transform test link' moon run --target native src/self_host_link_fixture -- \
+self_host_measure 'transform test link' moon run --target native --release src/self_host_link_fixture -- \
   "$work/tests.raw.wasm" starshine-mb/dist/ffi/starshine-ffi.wasm \
   fixtures/facet/facet-adapter.wasm "$work/time.wasm" "$work/tests.wasm" --single-validation
 self_host_measure 'transform interpreter tests' node tools/dew-test/run.mjs --wasm "$work/tests.wasm" \

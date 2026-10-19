@@ -90,15 +90,15 @@ test "custom scalar operators cannot silently use primitive transform behavior" 
       @semantic.StandardLibrarySources::bootstrap(),
       CompilerPipelineOptions::production(5100UL, 0, false),
     ) {
-    Err(error) =>
+    Err(error) => fail(error.message())
+    Ok(compiled) => {
+      let module_ = compiled.program.modules[0]
       assert_true(
-        error
-        .message()
-        .contains(
-          "selected operator has no supported compile-time primitive proof",
-        ),
+        module_.file_sources.any(fn(source) {
+          source == b"pub fn main() -> I32 {\n77i32\n}"
+        }),
       )
-    Ok(_) => fail("custom Add must not produce 3 at compile time")
+    }
   }
 }
 

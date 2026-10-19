@@ -1,0 +1,54 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+struct Answer {
+  value: I32
+}
+
+impl Answer {
+  fn new(value: I32) -> Answer {
+    Answer::{
+      value: value
+    }
+  }
+  fn plus(self, extra: I32) -> I32 {
+    self.value + extra
+  }
+}
+
+transform fn empty(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.append(@ast.unit())
+}
+
+#empty
+fn prepare() -> Unit {
+  ()
+}
+
+transform fn returning(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.returning(@ast.integer(2i32))
+}
+
+#returning
+fn extra() -> I32 {
+  0i32
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let signed = @ast.integer64(-1i64)
+  let unsigned = @ast.unsigned64(18446744073709551615u64)
+  node.with_body(@ast.block([
+    @ast.name("prepare").call([]),
+    @ast.path("Answer::new").call([@ast.integer(40i32)]).bind("answer"),
+    @ast.name("answer").field("value").bind("original"),
+    @ast.tuple([signed, unsigned]).bind("wide"),
+    @ast.prefix("!", @ast.boolean(false)).bind("ready"),
+    @ast.text("source transform").bind("label"),
+    @ast.name("answer").method_call("plus", [@ast.name("extra").call([])]).returned(),
+  ]))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

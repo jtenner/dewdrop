@@ -1,0 +1,45 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+struct Counter {
+  mut value: I32
+}
+
+impl Counter {
+  fn new(value: I32) -> Counter {
+    Counter::{
+      value: value
+    }
+  }
+  fn add(self, amount: I32) -> Unit {
+    self.value = self.value + amount
+  }
+  fn answer(self) -> I32 {
+    self.value
+  }
+}
+
+fn twice(value: I32) -> I32 {
+  value * 2i32
+}
+
+fn apply(value: I32, callback: fn(I32) -> I32) -> I32 {
+  callback(value)
+}
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let counter = Counter::new(apply(10i32, twice))
+  let alias = counter
+  alias.add(20i32)
+  let mut extra = 1i32
+  let callback = fn(value: I32) -> I32 {
+    extra = extra + 1i32
+    return value + extra
+  }
+  node.with_body(@ast.integer(apply(counter.answer(), callback)))
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}

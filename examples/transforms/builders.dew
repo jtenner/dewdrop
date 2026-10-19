@@ -1,0 +1,20 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let items = @ast.array([@ast.integer(40i32), @ast.integer(2i32)])
+  let first = @ast.name("items").index(@ast.source("0u32"))
+  let second = @ast.name("items").index(@ast.source("1u32"))
+  let body = @ast.block([
+    items.bind("items"),
+    @ast.integer(0i32).bind_mut("answer"),
+    @ast.name("answer").assign(first.binary("+", second)),
+    @ast.name("answer").returned(),
+  ])
+  node.with_body(body)
+}
+
+#replace
+pub fn main() -> I32 {
+  0i32
+}
