@@ -1383,6 +1383,12 @@ fn self_host_program_specialization_scan_one_body(
         reachable_seen,
         expression,
       )
+      match expression.kind {
+        PlannedModuleValueGet(declaration) => {
+          let _ = self_host_program_specialization_add_reachable(reachable, reachable_seen, declaration)
+        }
+        _ => {}
+      }
       match self_host_program_specialization_call_recipe(expression) {
         Some(recipe) => {
           let evidence_target = self_host_program_specialization_evidence_target(
@@ -1862,48 +1868,27 @@ fn self_host_program_specialization_scan_reachable_declaration(
 ) -> Unit {
   match lowering.index.declaration_owner(declaration) {
     Some(owner) => {
-      self_host_assert_array_index(
-        owner,
-        lowering.modules.length(),
-        "compiler specialization declaration owner is outside the module arena",
-      )
+      self_host_assert_array_index(owner, lowering.modules.length(), "specialization root lost module owner")
       let module_ = lowering.modules[owner]
-      match self_host_program_specialization_callable(module_, declaration) {
-        Some(callable) => if self_host_u32_equal(
-          self_host_program_specialization_callable_generics(callable).length,
-          0u32,
-        ) {
-          match self_host_program_specialization_callable_body(callable) {
-            Some(body_id) => if !scanned_bodies.contains_key(body_id) {
-              match self_host_program_specialization_body(module_, body_id) {
-                Some(body) => {
-                  self_host_program_specialization_scan_body(
-                    lowering,
-                    owner,
-                    body,
-                    Some(callable),
-                    4294967295u32,
-                    {
-                      start: 0u32
-                      length: 0u32
-                    },
-                    reachable,
-                    reachable_seen,
-                    requests,
-                    shapes,
-                    request_head_by_declaration,
-                    request_next,
-                    calls,
-                  )
-                  scanned_bodies.set(body_id, true)
-                }
-                None => {}
-              }
-            }
-            None => {}
-          }
+      let callable = self_host_program_specialization_callable(module_, declaration)
+      match callable {
+        Some(value) if self_host_program_specialization_callable_generics(value).length != 0u32 => return
+        _ => {}
+      }
+      match self_host_program_root_body(module_, declaration) {
+        Some(body) if !scanned_bodies.contains_key(body.body) => {
+          self_host_program_specialization_scan_body(
+            lowering, owner, body, callable, 4294967295u32,
+            {
+              start: 0u32
+              length: 0u32
+            },
+            reachable, reachable_seen, requests, shapes,
+            request_head_by_declaration, request_next, calls,
+          )
+          scanned_bodies.set(body.body, true)
         }
-        None => {}
+        _ => {}
       }
     }
     None => {}
@@ -1979,6 +1964,14 @@ fn self_host_plan_program_specialization(
   lowering: SelfHostPlannedProgramLowering,
   emit_tests: Bool,
 ) -> SelfHostProgramSpecializationPlan {
+  self_host_plan_program_specialization_roots(lowering, emit_tests, None)
+}
+
+fn self_host_plan_program_specialization_roots(
+  lowering: SelfHostPlannedProgramLowering,
+  emit_tests: Bool,
+  declaration_roots: Option<Map<U64, Bool>>,
+) -> SelfHostProgramSpecializationPlan {
   let lowering = self_host_compile_time_planning_lowering(lowering)
   let reachable = []
   let reachable_seen = self_host_program_specialization_seen()
@@ -2005,10 +1998,13 @@ fn self_host_plan_program_specialization(
           let callable = self_host_planned_callable_identity(
             functions.callables[current],
           )
-          let callable_root = if callable.visibility is Public {
-            true
-          } else {
-            !callable.compiler_owned
+          let callable_root = match declaration_roots {
+            Some(roots) => roots.contains_key(callable.declaration)
+            None => if callable.visibility is Public {
+              true
+            } else {
+              !callable.compiler_owned
+            }
           }
           let enabled = if callable.is_test {
             emit_tests
@@ -2033,7 +2029,7 @@ fn self_host_plan_program_specialization(
       let _ = while initializer_step_index {
         current => if current < module_.initialization.steps.length() {
           let step = module_.initialization.steps[current]
-        if !step.test_only || emit_tests {
+        if declaration_roots is None && (!step.test_only || emit_tests) {
           match step.kind {
             PlannedInitializeModuleValue(_, body_id, _) => match self_host_program_specialization_body(
               module_,

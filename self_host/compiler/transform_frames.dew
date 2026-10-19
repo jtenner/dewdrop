@@ -98,7 +98,66 @@ fn ct_frame_query_proof(lowering: SelfHostPlannedProgramLowering, module_id: U64
   ct_query_proof(lowering, module_id, expression, kind)
 }
 
+fn ct_transform_frame_roots(plan: CtPlan, collected: SelfHostCollectedProgram) -> Map<U64, Bool> {
+  let entries = map_empty::<String, U64>()
+  for file in plan.files {
+    let source = collected.modules.at(file.module_index)
+    let mut file_id = 18446744073709551615u64
+    let mut fi = 0u32
+    for path in source.file_paths {
+      if path == file.original.path {
+        file_id = source.files[fi]
+      }
+      fi = fi + 1u32
+    }
+    for function in file.functions {
+      if function.transform_ {
+        let mut found = false
+        for declaration in source.declarations {
+          if declaration.kind is FunctionDecl && declaration.offset == function.declaration.offset && source.declaration_files[self_host_semantic_id_local(declaration.id)] == file_id {
+            entries.set(plan.manifest.modules[file.module_index].path.concat("::").concat(function.declaration.name), declaration.id)
+            found = true
+          }
+        }
+        self_host_assert_compiler_invariant(found, "checked transform root lost its declaration")
+      }
+    }
+  }
+  let machine = ct_machine(plan)
+  let roots = map_empty::<U64, Bool>()
+  for file in plan.files {
+    for function in file.functions {
+      if !function.transform_ {
+        for annotation in file.annotations {
+          if annotation.target >= function.start && annotation.target < function.declaration.name_offset {
+            machine.steps = 100000u32
+            machine.allocated = 0u32
+            let key = ct_annotation_key(machine, file.module_index, annotation.name)
+            if machine.error.byte_length() != 0u32 {
+              plan.error = machine.error
+              return roots
+            }
+            match entries.get(key) {
+              Some(declaration) => roots.set(declaration, true)
+              None => {
+                plan.error = "annotation must name a transform fn"
+                return roots
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  roots
+}
+
 fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original: SelfHostPlannedProgramLowering) -> Unit {
+  let original = self_host_compile_time_planning_lowering(original)
+  let roots = ct_transform_frame_roots(plan, collected)
+  if plan.error.byte_length() != 0u32 {
+    return
+  }
   for module_ in original.modules {
     for callable in module_.functions.callables {
       if self_host_program_specialization_callable_generics(callable).length > 0u32 {
@@ -107,7 +166,8 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
     }
   }
   original.compile_time.transform_limited = true
-  let selected = self_host_plan_program_specialization(original, false)
+  original.compile_time.transform_instance_budget = 1048576u32
+  let selected = self_host_plan_program_specialization_roots(original, false, Some(roots))
   if selected.lowering.compile_time.transform_instance_error.byte_length() != 0u32 {
     plan.error = selected.lowering.compile_time.transform_instance_error
     return

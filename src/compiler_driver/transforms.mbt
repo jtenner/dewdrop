@@ -139,6 +139,18 @@ fn compiler_expand_transforms(
     Ok(_) => ()
     Err(message) => return Err(CompilerSourceError(message, []))
   }
+  let entries = match plan.annotation_entries(output_module_count~) {
+    Ok(value) => value
+    Err(message) => return Err(CompilerSourceError(message, []))
+  }
+  let frame_roots : Array[@semantic.DeclId] = []
+  for (mi, name) in entries {
+    for declaration in program.modules[mi].value_declarations(name) {
+      if lowering.modules[mi].functions.callable_of(declaration) is Some(_) {
+        frame_roots.push(declaration)
+      }
+    }
+  }
   for
     (mi, file, offset, opcode) in @semantic.compile_time_scalar_operator_proofs(
       program, analyzed, lowering,
@@ -175,7 +187,7 @@ fn compiler_expand_transforms(
     )
   }
   let frame_calls = match
-    @semantic.compile_time_frame_calls(program, analyzed, lowering) {
+    @semantic.compile_time_frame_calls(program, analyzed, lowering, frame_roots) {
     Ok(value) => value
     Err(message) => return Err(CompilerSourceError(message, []))
   }

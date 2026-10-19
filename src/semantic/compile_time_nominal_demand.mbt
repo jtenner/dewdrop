@@ -3,6 +3,7 @@
 // no signatures, function indices, or physical carrier requests.
 fn compile_time_demand_instances(
   lowering : PlannedProgramLowering,
+  declaration_roots~ : Map[DeclId, Bool]? = None,
 ) -> Map[DeclId, Array[PlannedModuleLowering]] {
   let selected : Map[DeclId, Array[PlannedModuleLowering]] = {}
   let context = match lowering.compile_time {
@@ -15,12 +16,17 @@ fn compile_time_demand_instances(
   let work : Array[(PlannedModuleLowering, PlannedBodyLowering, String)] = []
   let seen : Map[String, Bool] = {}
   let temporary : Array[String] = []
+  let queued_bodies : Map[BodyId, Bool] = {}
   for module_ in lowering.modules {
     for body in module_.bodies {
+      if declaration_roots is Some(roots) && !roots.contains(body.declaration) {
+        continue
+      }
       if module_.functions.callable_of(body.declaration) is Some(callable) &&
         program_callable_generic_parameters(callable).length > 0 {
         continue
       }
+      queued_bodies[body.body] = true
       work.push((module_, body, ""))
     }
   }
@@ -28,10 +34,28 @@ fn compile_time_demand_instances(
     let (module_, body, caller_key) = work.pop().unwrap()
     for id in compile_time_owned_expressions(module_, body) {
       let expression = module_.expressions[id]
+      if declaration_roots is Some(_) && expression.kind is PlannedModuleValueGet(value, _) {
+        if lowering.index.declaration_owner(value) is Some(owner) &&
+          program_root_body(lowering.modules[owner], value) is Some(initializer) &&
+          !queued_bodies.contains(initializer.body) {
+          queued_bodies[initializer.body] = true
+          work.push((lowering.modules[owner], initializer, ""))
+        }
+      }
       let (declaration, arguments) = match
         program_evidence_target_and_arguments(expression) {
         Some(value) => value
         None => continue
+      }
+      if declaration_roots is Some(_) {
+        if lowering.index.declaration_owner(declaration) is Some(owner) &&
+          lowering.modules[owner].functions.callable_of(declaration) is Some(callable) &&
+          program_callable_generic_parameters(callable).length == 0 &&
+          program_root_body(lowering.modules[owner], declaration) is Some(helper) &&
+          !queued_bodies.contains(helper.body) {
+          queued_bodies[helper.body] = true
+          work.push((lowering.modules[owner], helper, ""))
+        }
       }
       if !context.sensitive.contains(declaration) ||
         context.targets.contains(declaration) {
@@ -148,9 +172,13 @@ fn compile_time_demand_expressions(
   lowering : PlannedProgramLowering,
   module_ : PlannedModuleLowering,
   selected : Map[DeclId, Array[PlannedModuleLowering]],
+  declaration_roots~ : Map[DeclId, Bool]? = None,
 ) -> Array[PlannedExpression] {
   let result = []
   for body in module_.bodies {
+    if declaration_roots is Some(roots) && !roots.contains(body.declaration) {
+      continue
+    }
     for
       instance in compile_time_demand_modules(
         lowering,

@@ -77,6 +77,7 @@ pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
 pub fn Plan::add_raw_layout(Self, String, String, Array[String], Array[String]) -> Unit
 pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes, frame? : String) -> Unit
 pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
+pub fn Plan::annotation_entries(Self, output_module_count? : Int) -> Result[Array[(Int, String)], String]
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
 pub fn Plan::expand(Self, output_module_count? : Int, retain_transform_declarations? : Bool) -> Result[Array[SourceModule], String]
 pub fn Plan::reflection_sources(Self) -> Array[SourceModule]

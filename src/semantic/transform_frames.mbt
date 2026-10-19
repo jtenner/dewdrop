@@ -33,10 +33,23 @@ pub fn compile_time_frame_calls(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
+  roots : Array[DeclId],
 ) -> Result[Array[CompileTimeFrameCall], String] {
   let context = match lowering.compile_time {
     Some(value) => value
     None => return Ok([])
+  }
+  let context = {
+    ..context,
+    logical: context.logical.copy(),
+    sensitive: context.sensitive.copy(),
+    instances: Map([]),
+    query_constants: context.query_constants.copy(),
+  }
+  let lowering = { ..lowering, compile_time: Some(context), }
+  let declaration_roots : Map[DeclId, Bool] = {}
+  for declaration in roots {
+    declaration_roots[declaration] = true
   }
   // This lowering is private to transform validation. Ask the normal planner
   // for logical instances of every selected generic helper, including helpers
@@ -57,6 +70,7 @@ pub fn compile_time_frame_calls(
     -1,
     Array::make(lowering.modules.length(), None),
     fn(_, _) { () },
+    declaration_roots=Some(declaration_roots),
   )
   context.transform_instance_budget = -1
   if context.transform_instance_exhausted {

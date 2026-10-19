@@ -151,6 +151,7 @@ fn program_reachable_callable_roots(
   lowering : PlannedProgramLowering,
   emit_tests : Bool,
   selected : Map[DeclId, Array[PlannedModuleLowering]],
+  declaration_roots~ : Map[DeclId, Bool]? = None,
 ) -> Map[DeclId, Bool] {
   let module_lookup = lowering.index.module_lookup
   let reachable : Map[DeclId, Bool] = Map::default()
@@ -160,7 +161,11 @@ fn program_reachable_callable_roots(
       let elided_trait_wrapper = lowering.elided_trait_wrappers.contains(
         callable.declaration,
       )
-      if (callable.visibility == Public || !callable.compiler_owned) &&
+      let root = match declaration_roots {
+        Some(roots) => roots.contains(callable.declaration)
+        None => callable.visibility == Public || !callable.compiler_owned
+      }
+      if root &&
         !elided_trait_wrapper &&
         (!callable.is_test || emit_tests) {
         reachable[callable.declaration] = true
@@ -170,6 +175,9 @@ fn program_reachable_callable_roots(
   }
   for module_ in lowering.modules {
     for step in module_.initialization.steps {
+      if declaration_roots is Some(_) {
+        continue
+      }
       if step.test_only && !emit_tests {
         continue
       }
@@ -210,21 +218,17 @@ fn program_reachable_callable_roots(
       module_ in compile_time_demand_modules(
         lowering, module_, declaration, selected,
       ) {
-      let callable = match module_.functions.callable_of(declaration) {
+      let body = match program_root_body(module_, declaration) {
         Some(value) => value
         None => continue
       }
-      let body_id = match callable.kind {
-        PlannedFunctionCallable(body)
-        | PlannedImplMethodCallable(_, Some(body)) => body
-        _ => continue
-      }
-      let body_index = semantic_id_local(body_id)
-      if body_index < 0 || body_index >= module_.bodies.length() {
-        continue
-      }
-      let body = module_.bodies[body_index]
       for expression in compile_time_owned_expressions(module_, body) {
+        if declaration_roots is Some(_) &&
+          module_.expressions[expression].kind is PlannedModuleValueGet(value, _) &&
+          !reachable.contains(value) {
+          reachable[value] = true
+          work.push(value)
+        }
         program_enqueue_expression_evidence(
           lowering, module_, expression, reachable, work,
         )
@@ -2948,6 +2952,7 @@ fn plan_program_wasmgc_fragments_for_root(
   erased_fallback_module_index : Int32,
   cached_modules : Array[PlannedModuleWasmGCFragments?],
   store_fresh : (Int32, PlannedModuleWasmGCFragments) -> Unit,
+  declaration_roots~ : Map[DeclId, Bool]? = None,
 ) -> PlannedProgramSpecializationPlan {
   match check_program_module_index_table(lowering.index, lowering.modules) {
     Ok(_) => ()
@@ -3013,12 +3018,13 @@ fn plan_program_wasmgc_fragments_for_root(
       }
     }
   }
-  let selected_demand = compile_time_demand_instances(lowering)
+  let selected_demand = compile_time_demand_instances(lowering, declaration_roots~)
   let program_roots = program_reachable_callable_roots(
     analyzed,
     lowering,
     options.emit_tests,
     selected_demand,
+    declaration_roots~,
   )
   let generic_enum_instantiations = program_generic_enum_instantiations(
     analyzed, lowering,
@@ -3028,6 +3034,11 @@ fn plan_program_wasmgc_fragments_for_root(
     for
       expression in compile_time_demand_expressions(
         lowering, module_, selected_demand,
+        declaration_roots=if declaration_roots is Some(_) {
+          Some(program_roots)
+        } else {
+          None
+        },
       ) {
       match expression.kind {
         PlannedFunctionReference(declaration, _) =>
@@ -3136,7 +3147,8 @@ fn plan_program_wasmgc_fragments_for_root(
       if generic_bodies.contains(body.body) {
         continue
       }
-      if module_.functions.callable_of(body.declaration) is Some(_) &&
+      if (declaration_roots is Some(_) ||
+          module_.functions.callable_of(body.declaration) is Some(_)) &&
         !program_roots.contains(body.declaration) {
         continue
       }

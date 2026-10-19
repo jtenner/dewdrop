@@ -57,7 +57,7 @@ pub fn compile_time_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedPro
 
 pub fn compile_time_expression_types(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[(Int, String, UInt64, UInt64)]) -> Array[CompileTimeExpressionType]
 
-pub fn compile_time_frame_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Result[Array[CompileTimeFrameCall], String]
+pub fn compile_time_frame_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[UInt64]) -> Result[Array[CompileTimeFrameCall], String]
 
 pub fn compile_time_imported_type_names(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, String, String)]
 
