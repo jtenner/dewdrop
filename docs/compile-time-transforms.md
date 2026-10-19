@@ -139,6 +139,7 @@ work. Runnable examples are in `examples/transforms/`:
 | `flow.dew` | Return from a call argument |
 | `generics.dew` | Generic helper results and typed default values |
 | `defaults.dew` | Deferred zero values inside generic enum payloads |
+| `scalar_values.dew` | Checked values in generic records, options, and tuples |
 
 ## Context
 
@@ -176,11 +177,14 @@ The standard `Array` operations run their normal Dew bodies: construction,
 length, capacity, push, pop, get, set, and clear. The interpreter supplies bounded
 Wasm GC array operations and selected integer Wasm operations. It keeps checked
 scalar result types, including inferred casts and zero/false array defaults.
-Array copies preserve overlap behavior. These operations add no host calls.
+Checked types also apply when reading local values and record fields. Tuple
+values use normal destructuring, such as `let (value, flag) = pair`. Unsupported
+floating-point values cannot enter integer execution through a generic record
+or optional value. Array copies preserve overlap behavior. These operations add no host calls.
 
 Unsupported operations produce errors when reached. These include host calls,
-module-level value bindings, unresolved generic trait dispatch, floating-point execution,
-SIMD execution, and general text-library operations. Generic source helpers work
+module-level value bindings, unresolved generic trait dispatch, floating-point
+execution, SIMD execution, and general text-library operations. Generic source helpers work
 when execution needs no missing type or trait evidence. All branches must pass
 the normal source checks, including branches that execution does not reach.
 

@@ -122,43 +122,59 @@ and neutral review request are in `.tmp/transforms-v2/review/`. No credential
 or authentication setting was changed.
 
 
+## Final scalar-value fix
+
+An unsafe cast in a generic helper can retain the input Number carrier until a
+concrete expression uses it. The checked type must therefore apply at local and
+record-field reads as well as call results. Both interpreters now keep scalar
+read and prefix proofs in a separate table from call targets. Lowered nodes can
+share a source position; a scalar proof must not replace a call target at that
+position. Hidden tuple projections are excluded from this table. Their checked
+binding reads retain the concrete scalar type after normal tuple destructuring.
+Literal patterns also normalize an integer or Boolean carrier using the checked
+literal type.
+
+The saved pre-fix Dew compiler produced -1065353216 for an encoded F32 negation;
+correct F32 negation would require -1082130432. `float-red.log` records that
+output. `boxed-float-red.log` reproduces the same wrong result through a generic
+Option payload in the native compiler. Checked F32/F64 kinds now produce an
+explicit unsupported-scalar diagnostic before integer execution. Regressions
+cover direct casts, default negation, boxed prefixes, and record-field binary
+operations. `scalar_values.dew` checks valid integer and Boolean values through
+records, options, literal patterns, and tuple destructuring.
+
+The first old-compiler float attempt hit a cached missing-tool failure. The
+successful red run used the pinned tool and the direct Node facet runner.
+
 ## Final validation
 
-The final sequential run is `.tmp/transforms-v2/final-validation.sh`.
+The final sequential run is `.tmp/transforms-v2/final-scalar-checks.sh`. It
+finished with exit status zero.
 
-- `native-verified.log`: 61 focused native tests passed. The earlier full native
-  lane passed 1,587 tests and the integration lane passed 272 tests.
-- `dew-verified.log`: 12 focused Dew interpreter tests passed. The earlier broad
-  Dew lane passed 1,035 tests and its emission/semantic probes.
-- `requests-verified.log`: all 18 real compiler requests produced validated
-  output with `main() = 42`. All eight invalid requests kept their required
+- `native-final-scalar.log`: 64 focused native tests passed. The earlier full
+  native lane passed 1,587 tests and the integration lane passed 272 tests.
+- `dew-final-scalar.log`: 12 focused Dew interpreter tests passed. The earlier
+  broad Dew lane passed 1,035 tests and its emission/semantic probes.
+- `requests-final-scalar.log`: all 19 real compiler requests produced validated
+  output with `main() = 42`. All ten invalid requests kept their required
   diagnostic and wrote no output file.
-- `public-all.log` plus `defaults-verified.log`: all 18 native public examples
-  produced `main() = 42`.
-- `bootstrap-verified.log`: clean A/B/C self-build passed. Final linked and raw
-  B/C SHA-256 is
-  `fc6104a484866f0245aecf7bd223b16341c3da67bfef73111054f2bbd2fb22a6`.
-  A's source build took 18.936 seconds. A compiled B in 16.155 seconds, and B
-  compiled C in 16.239 seconds. The final sequential run avoids the MoonBit
-  file-lock delay seen in the earlier 51.421-second bootstrap-6 source build.
-- Final release test generation took 5.067 seconds, linking 1.135 seconds, and
-  execution 0.071 seconds. Generated-source and public-API checks passed.
+- `public-all.log`, `defaults-verified.log`, and `scalar-values-final.log`: all
+  19 native public examples produced `main() = 42`. The final new example built
+  in 2.002 seconds and executed in 0.026 seconds.
+- `bootstrap-final-scalar.log`: clean A/B/C self-build passed. Final linked and
+  raw B/C SHA-256 is
+  `0b7cbb0c2c0471e66bd75642d641821bd54686cddd141847f4eab577ff935ae0`.
+  A's source build took 17.423 seconds. A compiled B in 15.996 seconds, and B
+  compiled C in 16.040 seconds. This sequential run avoids the MoonBit file-lock
+  delay seen in the earlier 51.421-second bootstrap-6 source build.
+- Final release test generation took 4.938 seconds, linking 1.129 seconds, and
+  execution 0.069 seconds. Generated-source and public-API checks passed.
 
-The final deferred-default case explicitly adds two defaults. The Dew primitive
-path needed the scalar zero rules for that case; both VMs now preserve zero for
-integer arithmetic and retain zero-divisor errors. The source regression covers
-that path in both real compiler implementations.
-
-A further safety check reproduced float bits entering integer execution through
-an unsafe cast. The saved pre-fix Dew compiler produced -1065353216, whereas
-negating the encoded F32 value would require -1082130432. `float-red.log` records
-that output. Checked F32/F64 result kinds now cause an explicit unsupported
-scalar diagnostic before integer execution. Both deferred-float negation and
-ordinary float-cast execution have native and real Dew rejection regressions.
-The first old-compiler attempt hit a cached missing-tool failure; the successful
-red run used the pinned tool and the direct Node facet runner.
+The broad native, integration, and Dew lanes predate the last scalar-read fix.
+The final focused tests, real requests, and clean self-build cover that delta.
+These results do not establish a runtime-speed gain or a hard memory bound.
 
 `native-default-closure-review.md` closes the generic default finding for checked
-integer/Bool uses. Its scope predates the final float-cast check and does not
+integer/Bool uses. Its scope predates the final scalar-read fix and does not
 claim a full audit of floating or null-reference execution. No final Claude
 assessment is claimed; its session-limit failure remains as recorded above.

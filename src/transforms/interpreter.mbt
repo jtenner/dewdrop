@@ -530,7 +530,17 @@ fn Machine::eval(
     }
   }
   self.depth -= 1
-  result
+  match expr {
+    @parser.NameExpr(_, _) | @parser.FieldExpr(_, _, _) =>
+      match
+        self.plan.scalar_types.get(
+          (mi, self.file_index, expr.offset().to_int()),
+        ) {
+        Some(kind) => intrinsic_kind(result, kind)
+        _ => result
+      }
+    _ => result
+  }
 }
 
 ///|
@@ -655,13 +665,17 @@ fn Machine::eval_inner(
       )
     @parser.PrefixExpr(op, value, offset) => {
       let value = self.eval(mi, value, env)
-      let value = if value is DefaultValue {
-        match self.plan.calls.get((mi, self.file_index, offset.to_int())) {
-          Some(ScalarResult(kind)) => intrinsic_kind(value, kind)
-          _ => value
+      let value = match
+        self.plan.scalar_types.get((mi, self.file_index, offset.to_int())) {
+        Some(kind) => {
+          guard kind != "" else {
+            return eval_fail(
+              "prefix operation needs concrete scalar type evidence at compile time",
+            )
+          }
+          intrinsic_kind(value, kind)
         }
-      } else {
-        value
+        _ => value
       }
       match (op, value) {
         (@parser.LogicalNot, DefaultValue) => Boolean(true)
@@ -892,8 +906,17 @@ fn equal(a : Value, b : Value) -> Bool raise EvalError {
     (DefaultValue, Number(n, _)) | (Number(n, _), DefaultValue) => n == 0UL
     (DefaultValue, Boolean(v)) | (Boolean(v), DefaultValue) => !v
     (DefaultValue, DefaultValue) => true
-    (Number(a, k), Number(b, l)) => a == b && k == l
+    (Number(a, k), Number(_, _)) =>
+      match intrinsic_kind(b, k) {
+        Number(bits, _) => a == bits
+        _ => false
+      }
     (Boolean(a), Boolean(b)) => a == b
+    (Boolean(a), Number(_, _)) =>
+      match intrinsic_kind(b, "Bool") {
+        Boolean(value) => a == value
+        _ => false
+      }
     (Text(a), Text(b)) => a == b
     _ => raise Failed("unsupported equality in compile-time pattern")
   }

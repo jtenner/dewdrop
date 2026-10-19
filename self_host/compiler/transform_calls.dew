@@ -27,6 +27,13 @@ fn ct_lookup_call(machine: CtMachine, mi: U32, offset: U32) -> Option<CtCallTarg
   machine.plan.calls.get(ct_call_key(mi, machine.file_path, offset))
 }
 
+fn ct_lookup_scalar_type(machine: CtMachine, mi: U32, offset: U32) -> Option<String> {
+  if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
+    return None
+  }
+  machine.plan.scalar_types.get(ct_call_key(mi, machine.file_path, offset))
+}
+
 fn ct_source_call(machine: CtMachine, mi: U32, path: String, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
   if !ct_charge(machine, 32u32 + args.length() * 16u32) || machine.flow != 0u32 {
     return CtValue::Empty
@@ -215,17 +222,31 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
           }
         }
       }
-      let selected = match expression {
-        CallExpr(_, _, _) => Some(calls[ei])
-        PrefixExpr(_, _, _) => Some(NoBasicCallTarget)
-        BinaryExpr(_, _, _, _) => Some(operators[ei])
-        IndexExpr(_, _, _) => Some(operators[ei])
-        _ => None
+      let scalar_read = match expression {
+        NameExpr(_, _) => true
+        FieldExpr(_, _, _) => true
+        _ => false
+      }
+      let selected = if scalar_read {
+        Some(NoBasicCallTarget)
+      } else {
+        match expression {
+          CallExpr(_, _, _) => Some(calls[ei])
+          PrefixExpr(_, _, _) => Some(NoBasicCallTarget)
+          BinaryExpr(_, _, _, _) => Some(operators[ei])
+          IndexExpr(_, _, _) => Some(operators[ei])
+          _ => None
+        }
       }
       match selected {
         Some(value) => {
-          let target = if expression is PrefixExpr(_, _, _) {
-            Some(ScalarResult(ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)))
+          let target = if scalar_read || (expression is PrefixExpr(_, _, _)) {
+            let kind = ct_checked_scalar_kind(lowering.modules[mi], lowering.modules[mi].expressions[ei].type_, false)
+            if scalar_read && (kind.byte_length() == 0u32 || kind.starts_with("array:")) {
+              None
+            } else {
+              Some(ScalarResult(kind))
+            }
           } else {
             match value {
               SelectedBasicCallTarget(declaration, _) => match lowering.modules[mi].expressions[ei].selection {
@@ -248,7 +269,10 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
                   for file in plan.files {
                     if file.module_index == mi && file.original.path == source.file_paths[fi] {
                       match ct_scalar_original_offset(file, expression.offset(), 0u32) {
-                        Some(offset) => plan.calls.set(ct_call_key(mi, file.original.path, offset), target)
+                        Some(offset) => match target {
+                          ScalarResult(kind) => plan.scalar_types.set(ct_call_key(mi, file.original.path, offset), kind)
+                          _ => plan.calls.set(ct_call_key(mi, file.original.path, offset), target)
+                        }
                         None => {
                         }
                       }

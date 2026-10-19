@@ -318,3 +318,49 @@ test "float bitcasts cannot execute as integer values" {
     Ok(_) => fail("float values must not use integer execution")
   }
 }
+
+///|
+test "generic boxed floats keep their checked prefix type" {
+  match
+    compile_transform_source(
+      b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\nfn boxed_cast<a, b>(value: a) -> Option<b> {\n  Some(wasm_unsafe_bitcast::<a, b>(value))\n}\ntransform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let value = match boxed_cast::<I32, F32>(1065353216i32) {\n    Some(value) => value\n    None => 0.0f32\n  }\n  node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(-value)))\n}\n#wrong\npub fn main() -> I32 {\n  0i32\n}\n",
+    ) {
+    Err(error) =>
+      assert_true(
+        error.message().contains("unsupported scalar type"),
+        msg=error.message(),
+      )
+    Ok(_) => fail("boxed float must not use integer prefix execution")
+  }
+}
+
+///|
+test "generic scalar values retain checked types in records tuples and patterns" {
+  match
+    compile_transform_source(
+      b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\n\nstruct Box<t> {\n  value: t\n}\n\nfn boxed_record<a, b>(value: a) -> Box<b> {\n  Box::{\n    value: wasm_unsafe_bitcast::<a, b>(value)\n  }\n}\n\nfn boxed_option<a, b>(value: a) -> Option<b> {\n  Some(wasm_unsafe_bitcast::<a, b>(value))\n}\n\nfn boxed_tuple<a, b>(value: a) -> (b, Bool) {\n  (wasm_unsafe_bitcast::<a, b>(value), true)\n}\n\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let first = match boxed_option::<U32, I32>(0u32) {\n    Some(0i32) => 2i32\n    _ => 0i32\n  }\n  let data = boxed_record::<U32, I32>(40u32)\n  let (tuple_value, tuple_flag) = boxed_tuple::<U32, I32>(0u32)\n  let flag = match boxed_option::<U32, Bool>(1u32) {\n    Some(value) => value\n    None => false\n  }\n  node.with_body(@ast.integer(if flag && tuple_flag {\n    data.value + tuple_value + first\n  } else {\n    0i32\n  }))\n}\n\n#replace\npub fn main() -> I32 {\n  0i32\n}\n",
+    ) {
+    Ok(compiled) =>
+      assert_true(
+        compiled.program.modules[0].file_sources.any(fn(source) {
+          source == b"pub fn main() -> I32 {\n42i32\n}"
+        }),
+      )
+    Err(error) => fail(error.message())
+  }
+}
+
+///|
+test "generic float fields cannot execute integer binary operations" {
+  match
+    compile_transform_source(
+      b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.wasm.intrinsics\nstruct Box<t> {\n  value: t\n}\nfn boxed<a, b>(value: a) -> Box<b> {\n  Box::{\n    value: wasm_unsafe_bitcast::<a, b>(value)\n  }\n}\ntransform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let data = boxed::<I32, F32>(1065353216i32)\n  node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(data.value + data.value)))\n}\n#wrong\npub fn main() -> I32 {\n  0i32\n}\n",
+    ) {
+    Err(error) =>
+      assert_true(
+        error.message().contains("unsupported scalar type"),
+        msg=error.message(),
+      )
+    Ok(_) => fail("float fields must not use integer execution")
+  }
+}

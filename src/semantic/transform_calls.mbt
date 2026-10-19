@@ -99,6 +99,32 @@ pub fn compile_time_calls(
           continue
         }
       }
+      let scalar_read = match expression {
+        HirNameExpr(_, _) | HirFieldExpr(_, _, _) => true
+        _ => false
+      }
+      if scalar_read {
+        let kind = transform_scalar_kind(
+          lowering.modules[mi].resolved_types,
+          lowering.modules[mi].resolved_type_arguments,
+          inferred,
+          inferred.expression_types[ei],
+          false,
+        )
+        if kind != "" && !kind.has_prefix("array:") {
+          result.push({
+            reference: false,
+            module_index: mi,
+            file: source.expression_files[ei],
+            offset: expression.offset(),
+            target_module: -5,
+            target_file: source.expression_files[ei],
+            target_offset: 0UL,
+            result_kind: kind,
+            constructor_key: "",
+          })
+        }
+      }
       let target = match expression {
         HirCallExpr(_, _, _) => Some(inferred.call_targets[ei])
         HirPrefixExpr(_, _, _) => Some(NoInferredCallTarget)

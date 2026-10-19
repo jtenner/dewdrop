@@ -49,7 +49,7 @@ claims about the current interpreter.
 - [x] Boolean literals.
 - [x] UTF-8 string literals.
 - [x] Array literals.
-- [x] Tuple literals and tuple fields.
+- [x] Tuple literals and tuple destructuring.
 - [x] Integer arithmetic with selected primitive proofs.
 - [x] Signed division traps.
 - [x] Signed remainder edge cases.
@@ -73,6 +73,10 @@ claims about the current interpreter.
 - [x] Deferred scalar defaults inside generic enum payloads.
 - [x] Checked prefix result types for deferred scalar defaults.
 - [x] Float results cannot enter integer execution through unsafe casts.
+- [x] Checked scalar types at local and record-field reads.
+- [x] Scalar literal patterns across generic cast results.
+- [x] Scalar and Boolean values from generic tuple destructuring.
+- [x] Unsupported float values rejected inside generic records and options.
 - [x] Record patterns and payload field patterns.
 - [x] Explicit bounds errors during interpretation.
 

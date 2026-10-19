@@ -6,7 +6,7 @@ compiler=${1:?usage: tools/test-transform-requests.sh COMPILER.wasm [node-facet|
 runtime=${2:-node-facet}
 work=.tmp/transform-requests
 mkdir -p "$work"
-for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults; do
+for kind in local imported patterns record methods builders collections imported_methods raw_arrays wrappers casts syntax evaluation operators callbacks flow generics defaults scalar_values; do
   args=("examples/transforms/$kind.dew")
   if [[ "$kind" == imported || "$kind" == imported_methods ]]; then
     args=("examples/transforms/$kind.dew" --module example.tools examples/transforms/tools.dew)
@@ -127,7 +127,49 @@ pub fn main() -> I32 {
 }
 DEW
 
-for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast; do
+cat > "$work/boxed-float.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+fn boxed_cast<a, b>(value: a) -> Option<b> {
+  Some(wasm_unsafe_bitcast::<a, b>(value))
+}
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let value = match boxed_cast::<I32, F32>(1065353216i32) {
+    Some(value) => value
+    None => 0.0f32
+  }
+  node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(-value)))
+}
+#wrong
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+
+cat > "$work/float-field.dew" <<'DEW'
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+struct Box<t> {
+  value: t
+}
+fn boxed<a, b>(value: a) -> Box<b> {
+  Box::{
+    value: wasm_unsafe_bitcast::<a, b>(value)
+  }
+}
+transform fn wrong(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let data = boxed::<I32, F32>(1065353216i32)
+  node.with_body(@ast.integer(wasm_unsafe_bitcast::<F32, I32>(data.value + data.value)))
+}
+#wrong
+pub fn main() -> I32 {
+  0i32
+}
+DEW
+
+for kind in bad-signature sibling-declaration host-call array-bounds array-budget invalid-field float-default float-cast boxed-float float-field; do
   expected='invalid transform signature'
   if [[ "$kind" == sibling-declaration ]]; then
     expected='transform must produce one valid function body'
@@ -139,7 +181,7 @@ for kind in bad-signature sibling-declaration host-call array-bounds array-budge
     expected='allocation limit exceeded'
   elif [[ "$kind" == invalid-field ]]; then
     expected='invalid generated field name'
-  elif [[ "$kind" == float-default || "$kind" == float-cast ]]; then
+  elif [[ "$kind" == float-default || "$kind" == float-cast || "$kind" == boxed-float || "$kind" == float-field ]]; then
     expected='unsupported scalar type'
   fi
   rm -f "$work/$kind.wasm"

@@ -38,6 +38,7 @@ pub struct Plan {
   type_names : Map[(Int, String), String]
   references : Map[(Int, Int, Int), CallTarget]
   calls : Map[(Int, Int, Int), CallTarget]
+  scalar_types : Map[(Int, Int, Int), String]
   array_literals : Map[(Int, Int, Int), (String, Array[String])]
   array_layouts : Map[String, Array[String]]
 }

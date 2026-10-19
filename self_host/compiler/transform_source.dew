@@ -240,6 +240,7 @@ fn ct_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
     scalar_proofs: []
     pattern_proofs: []
     calls: map_empty::<String, CtCallTarget>()
+    scalar_types: map_empty::<String, String>()
     references: map_empty::<String, CtCallTarget>()
     array_literals: map_empty::<String, CtArrayLayout>()
     array_layouts: map_empty::<String, CtArrayLayout>()

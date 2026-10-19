@@ -58,6 +58,7 @@ pub struct CtPlan {
   pattern_proofs: Array<CtPatternProof>
   references: Map<String, CtCallTarget>
   calls: Map<String, CtCallTarget>
+  scalar_types: Map<String, String>
   array_literals: Map<String, CtArrayLayout>
   array_layouts: Map<String, CtArrayLayout>
   type_names: Array<CtTypeName>

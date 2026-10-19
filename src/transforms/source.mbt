@@ -47,6 +47,7 @@ pub struct Plan {
   type_names : Map[(Int32, String), String]
   references : Map[(Int32, Int32, Int32), CallTarget]
   calls : Map[(Int32, Int32, Int32), CallTarget]
+  scalar_types : Map[(Int32, Int32, Int32), String]
   array_literals : Map[(Int32, Int32, Int32), (String, Array[String])]
   array_layouts : Map[String, Array[String]]
 }
@@ -309,6 +310,7 @@ pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
       pattern_proofs: {},
       type_names: {},
       calls: {},
+      scalar_types: {},
       references: {},
       array_literals: {},
       array_layouts: {},
@@ -360,6 +362,7 @@ pub fn prepare(modules : Array[SourceModule]) -> Result[Plan, String] {
     pattern_proofs: {},
     type_names: {},
     calls: {},
+    scalar_types: {},
     references: {},
     array_literals: {},
     array_layouts: {},

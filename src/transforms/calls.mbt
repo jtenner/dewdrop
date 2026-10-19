@@ -6,7 +6,6 @@ enum CallTarget {
   Unsupported
   Constructor(String)
   UnitConstructor(String)
-  ScalarResult(String)
 }
 
 ///|
@@ -30,6 +29,10 @@ pub fn Plan::add_call_proof(
       continue
     }
     let site = (mi, fi, offset.to_int())
+    if target_module == -5 {
+      self.scalar_types[site] = result_kind
+      return
+    }
     let sites = if reference { self.references } else { self.calls }
     if target_module < 0 {
       sites[site] = if target_module == -2 {
@@ -38,8 +41,6 @@ pub fn Plan::add_call_proof(
         Constructor(constructor_key)
       } else if target_module == -4 {
         UnitConstructor(constructor_key)
-      } else if target_module == -5 {
-        ScalarResult(result_kind)
       } else {
         Unsupported
       }
