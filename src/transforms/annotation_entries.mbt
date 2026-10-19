@@ -30,6 +30,7 @@ pub fn Plan::annotation_entries(
     globals: {},
     initializing: {},
     text_storage: {},
+    memory: None,
     bytecode_enabled: true,
     bytecode: {},
     bytecode_compile_work: 1048576,

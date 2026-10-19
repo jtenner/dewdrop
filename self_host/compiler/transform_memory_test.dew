@@ -1,0 +1,208 @@
+fn ct_memory_test_code(opcode: String) -> CtMemoryOpcode {
+  match ct_memory_opcode(opcode) {
+    Some(code) => code
+    None => {
+      assert(false, "missing test memory opcode")
+      CtMemoryOpcode::{
+        mode: 0u32
+        size: 4u32
+        lane: 0u32
+        signed_: false
+        kind: "I32"
+      }
+    }
+  }
+}
+
+test "memory is lazy, bounded and charged before allocation" {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  let code = ct_memory_test_code("i32.load8_u")
+  assert(machine.memory is None, "memory starts absent")
+  let last = ct_memory_instruction(machine, code, [CtValue::Number(65535u64, "U32")])
+  assert(last is Number(0u64, "I32"), "last byte starts zero")
+  assert(machine.allocated == 65536u32, "one page charged")
+  let again = ct_memory_instruction(machine, code, [CtValue::Number(65535u64, "U32")])
+  assert(again is Number(0u64, "I32"), "last byte remains zero")
+  assert(machine.allocated == 65536u32, "no second page charge")
+  let (limited, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  limited.allocated = 4194304u32 - 65536u32 + 1u32
+  let _ = ct_memory_instruction(limited, code, [CtValue::Number(0u64, "U32")])
+  assert(limited.error == "transform allocation limit exceeded", "page allocation limit visible")
+  assert(limited.memory is None, "limit checked before allocation")
+}
+
+test "failed memory stores do not write bytes" {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  let store = ct_memory_test_code("i32.store")
+  let load = ct_memory_test_code("i32.load")
+  let _ = ct_memory_instruction(machine, store, [CtValue::Number(65532u64, "U32"), CtValue::Number(42u64, "U32")])
+  for address in [65533u64, 65536u64, 4294967295u64, 18446744073709551615u64] {
+    let _ = ct_memory_instruction(machine, store, [CtValue::Number(address, "U32"), CtValue::Number(123u64, "U32")])
+    assert(machine.error == "Wasm memory access out of bounds at compile time", "out of bounds trap")
+    machine.error = ""
+    let value = ct_memory_instruction(machine, load, [CtValue::Number(65532u64, "U32")])
+    assert(value is Number(42u64, "I32"), "failed store kept bytes")
+  }
+  assert(ct_memory_opcode("v128.load8_lane 16") is None, "lane out of bounds rejected")
+  assert(ct_memory_opcode("v128.load8_lane 01") is None, "noncanonical lane rejected")
+  assert(ct_memory_opcode("v128.store64_lane 2") is None, "store lane out of bounds rejected")
+  assert(ct_memory_opcode("user.load") is None, "name fragment is not an opcode")
+}
+
+test "memory carriers and arity are checked before allocation" {
+  for args in [[], [CtValue::Number(0u64, "I64")], [CtValue::Number(0u64, "U32"), CtValue::Number(1u64, "I32")]] {
+    let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+    let _ = ct_memory_instruction(machine, ct_memory_test_code("i32.load"), args)
+    let expected = if args.length() == 1u32 {
+      "Wasm memory address requires an i32 carrier"
+    } else {
+      "Wasm memory instruction argument count mismatch"
+    }
+    assert(machine.error == expected, machine.error)
+    assert(machine.memory is None, "invalid operands cannot allocate memory")
+  }
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  let _ = ct_memory_instruction(machine, ct_memory_test_code("f32.store"), [CtValue::Number(0u64, "U32"), CtValue::Number(1u64, "I32")])
+  assert(machine.error == "Wasm memory value has an incompatible carrier", "wrong float store carrier")
+  assert(machine.memory is None, "wrong store value cannot allocate memory")
+}
+fn ct_memory_boundary_case(opcode: String, width: U32, extra: Option<CtValue>) -> Unit {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", true)
+  let code = ct_memory_test_code(opcode)
+  let args = [CtValue::Number(u32_into_u64(65536u32 - width), "U32")]
+  if extra is Some(value) {
+    args.push(value)
+  }
+  let _ = ct_memory_instruction(machine, code, args)
+  assert(machine.error.byte_length() == 0u32, machine.error)
+  let memory = match machine.memory {
+    Some(value) => value
+    None => {
+      assert(false, "missing memory after valid edge access")
+      return
+    }
+  }
+  let before = array_new::<U8>()
+  let _ = while 0u32 {
+    i if i < 16u32 => {
+      before.push(wasm_array_get(memory, 65520u32 + i))
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  if extra is Some(value) {
+    args[1u32] = match value {
+      Number(_, kind) => CtValue::Number(0u64, kind)
+      Floating(_, kind) => CtValue::Floating(0u64, kind)
+      Vector(_, _) => CtValue::Vector(0u64, 0u64)
+      _ => {
+        assert(false, "invalid memory test value")
+        return
+      }
+    }
+  }
+  for address in [u32_into_u64(65537u32 - width), 4294967295u64] {
+    args[0u32] = CtValue::Number(address, "U32")
+    let _ = ct_memory_instruction(machine, code, args)
+    assert(machine.error == "Wasm memory access out of bounds at compile time", opcode)
+    machine.error = ""
+    let _ = while 0u32 {
+      i if i < 16u32 => {
+        assert(wasm_array_get(memory, 65520u32 + i) == before[i], "failed access must keep bytes")
+        continue i + 1u32
+      }
+      _ => break ()
+    }
+  }
+}
+
+test "all memory instructions keep their exact page edge" {
+  ct_memory_boundary_case("i32.load", 4u32, None)
+  ct_memory_boundary_case("i32.load8_s", 1u32, None)
+  ct_memory_boundary_case("i32.load8_u", 1u32, None)
+  ct_memory_boundary_case("i32.load16_s", 2u32, None)
+  ct_memory_boundary_case("i32.load16_u", 2u32, None)
+  ct_memory_boundary_case("i64.load", 8u32, None)
+  ct_memory_boundary_case("f32.load", 4u32, None)
+  ct_memory_boundary_case("f64.load", 8u32, None)
+  ct_memory_boundary_case("i32.store", 4u32, Some(CtValue::Number(287454020u64, "I32")))
+  ct_memory_boundary_case("i32.store8", 1u32, Some(CtValue::Number(287454020u64, "I32")))
+  ct_memory_boundary_case("i32.store16", 2u32, Some(CtValue::Number(287454020u64, "I32")))
+  ct_memory_boundary_case("i64.store", 8u32, Some(CtValue::Number(1234605616436508552u64, "I64")))
+  ct_memory_boundary_case("f32.store", 4u32, Some(CtValue::Floating(287454020u64, "F32")))
+  ct_memory_boundary_case("f64.store", 8u32, Some(CtValue::Floating(1234605616436508552u64, "F64")))
+  ct_memory_boundary_case("v128.load", 16u32, None)
+  ct_memory_boundary_case("v128.store", 16u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_splat", 1u32, None)
+  ct_memory_boundary_case("v128.load8_lane 0", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 0", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 1", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 1", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 2", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 2", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 3", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 3", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 4", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 4", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 5", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 5", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 6", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 6", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 7", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 7", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 8", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 8", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 9", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 9", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 10", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 10", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 11", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 11", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 12", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 12", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 13", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 13", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 14", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 14", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8_lane 15", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store8_lane 15", 1u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_splat", 2u32, None)
+  ct_memory_boundary_case("v128.load16_lane 0", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 0", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 1", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 1", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 2", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 2", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 3", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 3", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 4", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 4", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 5", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 5", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 6", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 6", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load16_lane 7", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store16_lane 7", 2u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load32_splat", 4u32, None)
+  ct_memory_boundary_case("v128.load32_lane 0", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store32_lane 0", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load32_lane 1", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store32_lane 1", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load32_lane 2", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store32_lane 2", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load32_lane 3", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store32_lane 3", 4u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load64_splat", 8u32, None)
+  ct_memory_boundary_case("v128.load64_lane 0", 8u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store64_lane 0", 8u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load64_lane 1", 8u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.store64_lane 1", 8u32, Some(CtValue::Vector(578437695752307201u64, 1157159078456920585u64)))
+  ct_memory_boundary_case("v128.load8x8_s", 8u32, None)
+  ct_memory_boundary_case("v128.load8x8_u", 8u32, None)
+  ct_memory_boundary_case("v128.load16x4_s", 8u32, None)
+  ct_memory_boundary_case("v128.load16x4_u", 8u32, None)
+  ct_memory_boundary_case("v128.load32x2_s", 8u32, None)
+  ct_memory_boundary_case("v128.load32x2_u", 8u32, None)
+  ct_memory_boundary_case("v128.load32_zero", 4u32, None)
+  ct_memory_boundary_case("v128.load64_zero", 8u32, None)
+}

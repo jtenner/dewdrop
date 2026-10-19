@@ -316,6 +316,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       machine.initializing.clear()
       machine.steps = 100000u32
       machine.allocated = 0u32
+      machine.memory = None
       let key = ct_annotation_key(machine, file.module_index, annotation.name)
       let mut is_transform = false
       for source in machine.plan.files {

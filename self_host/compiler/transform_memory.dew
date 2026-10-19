@@ -1,0 +1,756 @@
+open dew.std.wasm.intrinsics
+
+struct CtMemoryOpcode {
+  mode: U32
+  size: U32
+  lane: U32
+  signed_: Bool
+  kind: String
+}
+
+fn ct_memory_opcode(opcode: String) -> Option<CtMemoryOpcode> {
+  match opcode {
+    "i32.load" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "I32"
+    })
+    "i32.load8_s" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 1u32
+      lane: 0u32
+      signed_: true
+      kind: "I32"
+    })
+    "i32.load8_u" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 1u32
+      lane: 0u32
+      signed_: false
+      kind: "I32"
+    })
+    "i32.load16_s" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 2u32
+      lane: 0u32
+      signed_: true
+      kind: "I32"
+    })
+    "i32.load16_u" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 2u32
+      lane: 0u32
+      signed_: false
+      kind: "I32"
+    })
+    "i64.load" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "I64"
+    })
+    "f32.load" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "F32"
+    })
+    "f64.load" => Some(CtMemoryOpcode::{
+      mode: 0u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "F64"
+    })
+    "i32.store" => Some(CtMemoryOpcode::{
+      mode: 1u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "I32"
+    })
+    "i32.store8" => Some(CtMemoryOpcode::{
+      mode: 1u32
+      size: 1u32
+      lane: 0u32
+      signed_: false
+      kind: "I32"
+    })
+    "i32.store16" => Some(CtMemoryOpcode::{
+      mode: 1u32
+      size: 2u32
+      lane: 0u32
+      signed_: false
+      kind: "I32"
+    })
+    "i64.store" => Some(CtMemoryOpcode::{
+      mode: 1u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "I64"
+    })
+    "f32.store" => Some(CtMemoryOpcode::{
+      mode: 1u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "F32"
+    })
+    "f64.store" => Some(CtMemoryOpcode::{
+      mode: 1u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "F64"
+    })
+    "v128.load" => Some(CtMemoryOpcode::{
+      mode: 2u32
+      size: 16u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store" => Some(CtMemoryOpcode::{
+      mode: 3u32
+      size: 16u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_splat" => Some(CtMemoryOpcode::{
+      mode: 4u32
+      size: 1u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 0" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 0" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 1" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 1" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 2" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 2u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 2" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 2u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 3" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 3u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 3" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 3u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 4" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 4u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 4" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 4u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 5" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 5u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 5" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 5u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 6" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 6u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 6" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 6u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 7" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 7u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 7" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 7u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 8" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 8u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 8" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 8u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 9" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 9u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 9" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 9u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 10" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 10u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 10" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 10u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 11" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 11u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 11" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 11u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 12" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 12u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 12" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 12u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 13" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 13u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 13" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 13u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 14" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 14u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 14" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 14u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8_lane 15" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 1u32
+      lane: 15u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store8_lane 15" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 1u32
+      lane: 15u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_splat" => Some(CtMemoryOpcode::{
+      mode: 4u32
+      size: 2u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 0" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 0" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 1" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 1" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 2" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 2u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 2" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 2u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 3" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 3u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 3" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 3u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 4" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 4u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 4" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 4u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 5" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 5u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 5" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 5u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 6" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 6u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 6" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 6u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16_lane 7" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 2u32
+      lane: 7u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store16_lane 7" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 2u32
+      lane: 7u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32_splat" => Some(CtMemoryOpcode::{
+      mode: 4u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32_lane 0" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store32_lane 0" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32_lane 1" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 4u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store32_lane 1" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 4u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32_lane 2" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 4u32
+      lane: 2u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store32_lane 2" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 4u32
+      lane: 2u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32_lane 3" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 4u32
+      lane: 3u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store32_lane 3" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 4u32
+      lane: 3u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load64_splat" => Some(CtMemoryOpcode::{
+      mode: 4u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load64_lane 0" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store64_lane 0" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load64_lane 1" => Some(CtMemoryOpcode::{
+      mode: 7u32
+      size: 8u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.store64_lane 1" => Some(CtMemoryOpcode::{
+      mode: 8u32
+      size: 8u32
+      lane: 1u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load8x8_s" => Some(CtMemoryOpcode::{
+      mode: 5u32
+      size: 1u32
+      lane: 0u32
+      signed_: true
+      kind: "V128"
+    })
+    "v128.load8x8_u" => Some(CtMemoryOpcode::{
+      mode: 5u32
+      size: 1u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load16x4_s" => Some(CtMemoryOpcode::{
+      mode: 5u32
+      size: 2u32
+      lane: 0u32
+      signed_: true
+      kind: "V128"
+    })
+    "v128.load16x4_u" => Some(CtMemoryOpcode::{
+      mode: 5u32
+      size: 2u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32x2_s" => Some(CtMemoryOpcode::{
+      mode: 5u32
+      size: 4u32
+      lane: 0u32
+      signed_: true
+      kind: "V128"
+    })
+    "v128.load32x2_u" => Some(CtMemoryOpcode::{
+      mode: 5u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load32_zero" => Some(CtMemoryOpcode::{
+      mode: 6u32
+      size: 4u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    "v128.load64_zero" => Some(CtMemoryOpcode::{
+      mode: 6u32
+      size: 8u32
+      lane: 0u32
+      signed_: false
+      kind: "V128"
+    })
+    _ => None
+  }
+}
+
+fn ct_memory_instruction(machine: CtMachine, code: CtMemoryOpcode, args: Array<CtValue>) -> CtValue {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+    return CtValue::Empty
+  }
+  let store = code.mode == 1u32 || code.mode == 3u32 || code.mode == 8u32
+  let arity = if store || code.mode == 7u32 {
+    2u32
+  } else {
+    1u32
+  }
+  if args.length() != arity {
+    return ct_fail(machine, "Wasm memory instruction argument count mismatch")
+  }
+  if ct_contract_value_carrier(args[0u32]) != "i32" {
+    return ct_fail(machine, "Wasm memory address requires an i32 carrier")
+  }
+  if arity == 2u32 && ct_contract_value_carrier(args[1u32]) != ct_contract_kind_carrier(code.kind) {
+    return ct_fail(machine, "Wasm memory value has an incompatible carrier")
+  }
+  let size = if code.mode == 5u32 {
+    8u32
+  } else {
+    code.size
+  }
+  let address = ct_raw_bits(machine, args[0u32]) & 4294967295u64
+  if address > 65536u64 || u32_into_u64(size) > 65536u64 - address {
+    return ct_fail(machine, "Wasm memory access out of bounds at compile time")
+  }
+  let memory = match machine.memory {
+    Some(value) => value
+    None => {
+      if !ct_charge(machine, 65536u32) {
+        return CtValue::Empty
+      }
+      let value = wasm_array_new_default::<U8>(65536u32)
+      machine.memory = Some(value)
+      value
+    }
+  }
+  let at = u64_into_u32(address)
+  if store {
+    let bits = if code.mode == 1u32 {
+      match args[1u32] {
+        Floating(bits, _) => bits
+        value => ct_raw_bits(machine, value)
+      }
+    } else {
+      0u64
+    }
+    let _ = while 0u32 {
+      i if i < size => {
+        let byte = if code.mode == 1u32 {
+          u64_into_u8(bits >> u32_into_u64(i * 8u32))
+        } else {
+          let lane = if code.mode == 8u32 {
+            code.lane * size
+          } else {
+            0u32
+          }
+          u64_into_u8(ct_vector_byte(machine, args[1u32], lane + i))
+        }
+        wasm_array_set(memory, at + i, byte)
+        continue i + 1u32
+      }
+      _ => break ()
+    }
+    return CtValue::Empty
+  }
+  if code.mode == 0u32 {
+    let mut bits = 0u64
+    let _ = while 0u32 {
+      i if i < size => {
+        bits = bits | (u8_into_u64(wasm_array_get(memory, at + i)) << u32_into_u64(i * 8u32))
+        continue i + 1u32
+      }
+      _ => break ()
+    }
+    if code.signed_ && (bits & (1u64 << u32_into_u64(size * 8u32 - 1u32))) != 0u64 {
+      bits = bits | (18446744073709551615u64 << u32_into_u64(size * 8u32))
+    }
+    if code.kind == "F32" || code.kind == "F64" {
+      return CtValue::Floating(bits, code.kind)
+    }
+    return ct_number(bits, code.kind)
+  }
+  let mut result = if code.mode == 7u32 {
+    args[1u32]
+  } else {
+    CtValue::Vector(0u64, 0u64)
+  }
+  let count = if code.mode == 7u32 || code.mode == 6u32 {
+    size
+  } else {
+    16u32
+  }
+  let _ = while 0u32 {
+    i if i < count => {
+      let byte = if code.mode == 4u32 {
+        wasm_array_get(memory, at + i % size)
+      } else if code.mode == 5u32 {
+        let lane = i / (code.size * 2u32)
+        let index = i % (code.size * 2u32)
+        if index < code.size {
+          wasm_array_get(memory, at + lane * code.size + index)
+        } else if code.signed_ && (u8_into_u32(wasm_array_get(memory, at + (lane + 1u32) * code.size - 1u32)) & 128u32) != 0u32 {
+          255u8
+        } else {
+          0u8
+        }
+      } else {
+        wasm_array_get(memory, at + i)
+      }
+      let lane = if code.mode == 7u32 {
+        code.lane * size
+      } else {
+        0u32
+      }
+      result = ct_vector_replace(machine, result, lane + i, u8_into_u64(byte))
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  result
+}

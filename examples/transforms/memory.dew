@@ -1,0 +1,36 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+builtin store_word(address: U32, value: U32) -> Unit = "i32.store"
+builtin read_byte(address: U32) -> U32 = "i32.load8_u"
+builtin read_signed_byte(address: U32) -> I32 = "i32.load8_s"
+builtin load_vector(address: U32) -> V128 = "v128.load"
+builtin load_splat(address: U32) -> V128 = "v128.load8_splat"
+builtin load_extended(address: U32) -> V128 = "v128.load8x8_s"
+builtin store_lane(address: U32, value: V128) -> Unit = "v128.store32_lane 1"
+builtin extract_word(value: V128) -> U32 = "i32x4.extract_lane 0"
+builtin extract_second_word(value: V128) -> U32 = "i32x4.extract_lane 1"
+builtin extract_half(value: V128) -> I32 = "i16x8.extract_lane_s 0"
+
+fn compute() -> I32 {
+  store_word(7u32, 4294967168u32)
+  let repeated = load_splat(7u32)
+  store_lane(100u32, repeated)
+  let vector = load_vector(96u32)
+  let packed32 = swar32_add_i8(swar32_splat_i8(20i8), swar32_splat_i8(1i8))
+  let packed64 = swar64_add_i16(swar64_splat_i16(20i16), swar64_splat_i16(1i16))
+  if read_byte(7u32) == 128u32 && read_signed_byte(7u32) == -128i32 && extract_word(repeated) == 2155905152u32 && extract_second_word(vector) == 2155905152u32 && extract_half(load_extended(7u32)) == -128i32 && swar32_extract_i8_s(packed32, 3u8) == 21i8 && swar64_extract_i16_s(packed64, 3u8) == 21i16 {
+    42i32
+  } else {
+    0i32
+  }
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(compute()))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

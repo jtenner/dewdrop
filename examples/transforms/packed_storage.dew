@@ -1,0 +1,39 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+open dew.std.wasm.intrinsics
+
+struct Packed {
+  low: Swar32
+  high: Swar64
+}
+builtin read_low(value: Packed) -> Swar32 = "struct.get 0"
+builtin read_high(value: Packed) -> Swar64 = "struct.get 1"
+
+fn default_value<t>() -> t {
+  wasm_array_get(wasm_array_new_default::<t>(1u32), 0u32)
+}
+
+fn compute() -> Bool {
+  let values = wasm_array_new_default::<Swar32>(2u32)
+  let zero = wasm_array_get(values, 0u32)
+  wasm_array_set(values, 1u32, swar32_from_bits(42u32))
+  let record = Packed::{
+    low: wasm_array_get(values, 1u32)
+    high: swar64_from_bits(42u64)
+  }
+  let array = [record.low, zero]
+  swar32_to_bits(read_low(record)) == 42u32 && swar64_to_bits(read_high(record)) == 42u64 && swar32_to_bits(array[0u32]) == 42u32 && swar32_to_bits(array[1u32]) == 0u32 && swar32_to_bits(default_value::<Swar32>()) == 0u32 && swar64_to_bits(default_value::<Swar64>()) == 0u64
+}
+
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(if compute() {
+    42i32
+  } else {
+    0i32
+  }))
+}
+
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

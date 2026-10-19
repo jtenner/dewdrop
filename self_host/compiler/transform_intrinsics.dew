@@ -133,6 +133,9 @@ fn ct_intrinsic_values(machine: CtMachine, builtin_: SelfHostBuiltinDeclaration,
     return CtValue::Empty
   }
   let opcode = builtin_.builtin_name.to_string()
+  if ct_memory_opcode(opcode) is Some(code) {
+    return ct_memory_instruction(machine, code, args)
+  }
   if ct_float_opcode(opcode) {
     return ct_float_intrinsic(machine, opcode, args)
   }

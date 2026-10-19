@@ -255,6 +255,7 @@ fn Machine::apply(
     self.initializing.clear()
     self.steps = 100_000
     self.allocated = 0
+    self.memory = None
     self.text_storage.clear()
     let key = self.annotation_key(function.module_, annotation.name)
     let mut is_transform = false
@@ -429,6 +430,7 @@ pub fn Plan::expand(
     globals: {},
     initializing: {},
     text_storage: {},
+    memory: None,
     bytecode_enabled: true,
     bytecode: {},
     bytecode_compile_work: 1048576,

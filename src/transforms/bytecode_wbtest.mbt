@@ -26,6 +26,7 @@ fn bytecode_machine(
     file_index: 0,
     frame: "",
     text_storage: {},
+    memory: None,
   }
   (machine, plan.files[0][0].functions[0].declaration)
 }

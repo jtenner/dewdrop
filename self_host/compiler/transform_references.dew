@@ -44,10 +44,10 @@ fn ct_raw_declaration_key(declaration: U64) -> String {
 fn ct_raw_storage_kind(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, type_: U32) -> String {
   match module_.resolved_types.types[type_] {
     PrimitiveType(primitive) => match primitive {
-      BoolType, I32Type, U32Type => "i32"
+      BoolType, I32Type, U32Type, Swar32Type => "i32"
       I8Type, U8Type => "i8"
       I16Type, U16Type => "i16"
-      I64Type, U64Type => "i64"
+      I64Type, U64Type, Swar64Type => "i64"
       F32Type => "f32"
       F64Type => "f64"
       V128Type, I8x16Type, U8x16Type, I16x8Type, U16x8Type, I32x4Type, U32x4Type, I64x2Type, U64x2Type, F32x4Type, F64x2Type => "v128"

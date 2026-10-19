@@ -1,0 +1,16 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+transform fn reset(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let value = u32_load(0u32)
+  u32_store(0u32, 7u32)
+  node.with_body(@ast.integer(if value == 0u32 {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#reset
+#reset
+pub fn main() -> I32 {
+  0i32
+}

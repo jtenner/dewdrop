@@ -54,6 +54,7 @@ struct Machine {
   mut file_index : Int32
   mut frame : String
   text_storage : Map[String, Bytes]
+  mut memory : FixedArray[Byte]?
   bytecode_enabled : Bool
   bytecode : Map[String, Map[(Int32, Int32, Int32), BytecodeFunction?]]
   mut bytecode_compile_work : Int32

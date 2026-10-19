@@ -12,6 +12,7 @@ fn builder_machine() -> Machine raise {
     globals: {},
     initializing: {},
     text_storage: {},
+    memory: None,
     bytecode_enabled: true,
     bytecode: {},
     bytecode_compile_work: 1048576,

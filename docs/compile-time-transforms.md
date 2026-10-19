@@ -228,8 +228,7 @@ application. Mutable module bindings remain unavailable. Initializer cycles,
 escaped control flow, and host calls produce errors.
 
 Unsupported operations produce errors when reached. These include host calls,
-mutable module bindings, dynamic trait objects, and vector instructions
-that access linear memory. Scalar floats and standard text methods execute
+mutable module bindings, and dynamic trait objects. Scalar floats and standard text methods execute
 through checked Wasm operations and ordinary Dew source. Generic source helpers keep selected type instances and checked trait witnesses.
 Unsupported dynamic trait dispatch still produces an error. All branches must pass
 the normal source checks, including branches that execution does not reach.
@@ -556,3 +555,26 @@ allocation, output-size or depth limits. The code-cache byte budget is a weighte
 estimate, not a measured total-heap limit. See
 [the bytecode notes](research/transform-bytecode.md) and
 `examples/transforms/bytecode.dew`.
+
+
+## Memory and packed integers
+
+The current scalar and vector memory instruction catalog runs at compile time.
+It includes scalar loads and stores, full vector loads and stores, splat and
+extending loads, zero loads, and checked lane loads and stores. Lane immediates
+must have the exact form accepted by the normal compiler.
+
+Each transform gets a private, zeroed 64 KiB page on its first memory access.
+It shares that page with its helpers and starts fresh for the next transform,
+including the next annotation in a stack. The page uses 64 KiB of allocation
+work. Every access checks its whole range before reading or writing. A failed
+store keeps the old bytes. Memory growth and operations outside the normal
+instruction catalog remain unsupported. The page does not expose host memory.
+
+`Swar32` and `Swar64` use the existing integer execution rules. All 55 packed
+integer helpers run through their Dew source. Type queries retain the source
+type, so a packed type is still distinct from a plain integer. Packed record
+fields, raw arrays, default values, and array literals are also supported.
+
+Try `examples/transforms/memory.dew`, `memory_state.dew`,
+`packed_integers.dew`, and `packed_storage.dew`. Each main returns `42`.

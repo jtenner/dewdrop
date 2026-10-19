@@ -170,7 +170,7 @@ Unchecked items need further implementation. Checked items have code and tests.
 - [ ] Dynamic trait objects.
 - [x] First-class overloaded builtin references with a checked target.
 - [x] Scalar floating-point execution with Wasm rounding and traps.
-- [ ] Full text and SIMD execution.
+- [x] Full text, packed integers, and the current SIMD/memory instruction catalog.
 - [x] Full compile-time type-query API.
 - [x] Stable declaration ranges and original function sites for generated source.
 - [x] Expanded-source JSON for editor views.

@@ -87,6 +87,9 @@ fn Machine::intrinsic(
   let opcode = text(builtin.builtin_name)
   let args = intrinsic_arguments(builtin, args)
   self.check_intrinsic_contract(opcode, args, result_kind)
+  if memory_opcode(opcode) is Some(code) {
+    return self.memory_instruction(code, args)
+  }
   if float_opcode(opcode) {
     return float_intrinsic(opcode, args)
   }

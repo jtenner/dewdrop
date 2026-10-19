@@ -368,6 +368,8 @@ fn transform_scalar_kind(
                 U8Type => "U8"
                 I16Type => "I16"
                 U16Type => "U16"
+                Swar32Type => "U32"
+                Swar64Type => "U64"
                 I32Type => "I32"
                 U32Type => "U32"
                 I64Type => "I64"

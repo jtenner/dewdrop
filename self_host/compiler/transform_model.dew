@@ -97,6 +97,7 @@ pub struct CtMachine {
   initializing: Map<String, Bool>
   mut file_path: String
   mut frame: String
+  mut memory: Option<WasmArray<U8>>
   bytecode_enabled: Bool
   bytecode: Map<String, Map<U64, Option<CtBytecodeFunction>>>
   mut bytecode_compile_work: U32
@@ -126,6 +127,7 @@ fn ct_machine_with_bytecode(plan: CtPlan, enabled: Bool) -> CtMachine {
     initializing: map_empty::<String, Bool>()
     file_path: ""
     frame: ""
+    memory: None
     bytecode_enabled: enabled
     bytecode: map_empty::<String, Map<U64, Option<CtBytecodeFunction>>>()
     bytecode_compile_work: 1048576u32

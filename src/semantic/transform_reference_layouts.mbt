@@ -14,10 +14,10 @@ fn transform_raw_storage(
   match module_.resolved_types[type_] {
     PrimitiveType(primitive) =>
       match primitive {
-        BoolType | I32Type | U32Type => "i32"
+        BoolType | I32Type | U32Type | Swar32Type => "i32"
         I8Type | U8Type => "i8"
         I16Type | U16Type => "i16"
-        I64Type | U64Type => "i64"
+        I64Type | U64Type | Swar64Type => "i64"
         F32Type => "f32"
         F64Type => "f64"
         V128Type
