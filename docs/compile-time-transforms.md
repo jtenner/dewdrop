@@ -449,14 +449,17 @@ you inspect generated code that has a type error.
 ## Native Wago check
 
 ```sh
-mise exec wasm-tools@1.262.0 -- tools/test-transform-wago.sh .tmp/self-host-bootstrap/a/compiler.wasm
+mise exec wasm-tools@1.262.0 -- tools/test-transform-wago.sh .tmp/self-host-bootstrap/b/compiler.wasm
 ```
 
 This checks a real transform request with a pinned native Wago host and the
 existing Facet bindings. The CI job uses a Linux x64 project runner with the
-`dewdrop` label. Native Wago currently takes about 116 seconds for the small
-request; this is an open host speed issue. See
-`docs/research/native-wago-transform-check-2026-10-19.md` for measured limits.
+`dewdrop` label. The host build applies a small reference-root repair to the
+pinned Wago source in a private directory. See the
+[host build notes](../tools/wago-transform-host/README.md). The self-built
+compiler passes cold and saved-result requests with this host. Runs still take
+more than 30 seconds; host speed remains an open issue. See
+[cache evidence](research/transform-result-cache-2026-10-20.md) for measured limits.
 
 ## Scalar floats and selected function values
 
@@ -659,7 +662,7 @@ tools/test-transform-cache.sh --native
 tools/test-transform-cache.sh .tmp/self-host-bootstrap/b/compiler.wasm
 ```
 
-The second command uses Node. On pinned Wago, use the Native-built compiler at
-`.tmp/self-host-bootstrap/a/compiler.wasm`. Its cold and cache-hit requests pass.
-The self-built B has a pre-existing cast or invariant fault on that Wago pin,
-including with caching off. See [cache evidence and limits](research/transform-result-cache-2026-10-20.md).
+The second command uses Node. For Wago, use the patched pinned host built by
+`tools/build-wago-transform-host.py`. Both cold and saved-result requests pass
+with the self-built compiler. The unpatched pin has a reference-root fault.
+See [cache evidence and limits](research/transform-result-cache-2026-10-20.md).

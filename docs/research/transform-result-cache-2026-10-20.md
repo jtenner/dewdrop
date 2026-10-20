@@ -112,7 +112,7 @@ Native and 11,021 B in Dew; no cross-engine code-size equality is claimed. Reque
 samples are in `.tmp/transform-cache/run-6kppcvcq/` and `run-2riama__/`. The final
 additional source-error controls are in `run-cze44fgb/` and `run-yl6v_jls/`.
 
-## Pinned Wago limitation under investigation
+## Pinned Wago fault and bounded repair
 
 The self-built B fails in ordinary lowering on pinned Wago 2dd978ccda6f, with a
 cast trap. The prior pre-cache B also fails in the same helper with caching off.
@@ -124,12 +124,57 @@ A read-only review found a later Wago reference-root repair at commit
 14e81db2a9a9e57ef5cba347f93474fdaa151378, but did not link it to this trap.
 A private host build at that revision cannot compile with Facet v0.1.0 because
 its HostFunc API has changed. The repository pins and the separate dirty Wago
-checkout remain unchanged. A three-file backport is prepared in a private copy
-for a later controlled test. Native-built A passes the cold and cache-hit requests on that pinned host.
+checkout remain unchanged. Native-built A passes the cold and cache-hit requests on the unpatched pin.
 Cold: 171.319063 s, peak RSS 2,466,204 KiB. Hit: 56.104615 s, peak RSS 2,503,916 KiB.
 Both outputs validate and return 42. The Wasm outputs and artifacts are
 byte-identical between runs; the artifact also matches the Node B control.
 The full command takes 231.497 s. These remain performance faults. One cold and
 one hit sample are not a general Wago performance claim. Evidence is in
 `.tmp/transform-cache/wago-6p58pa2i/` and `cache-wago-a.log`.
-The B fault remains open; no dependency update is included in the cache change.
+Those A timing samples did not isolate Wago's native artifact cache. The hit may
+reuse native code as well as transformed source; the difference is not an
+isolated transform-cache speed gain. No dependency update was included in the
+cache commit.
+
+The follow-up keeps the same Wago and Facet pins and backports only three
+reference-root source changes from that commit. The old exact-liveness pass
+removes dead frame locals, but a reference loaded from one of those locals can
+remain live on the operand stack. Retaining the original reference-local type
+list lets `TracksLocal` classify that load correctly. Compact safepoint masks
+remain unchanged. The separate newer direct-getter optimization is excluded.
+
+The reduced decoder-tuple test fails on the original pin with a reference field
+type mismatch (9.500 s). With the three-file patch it passes, along with the
+frame-root, loaded-child, serialized-code, pressure, and invalid-parent tests
+(8.084 s). Tests accept only the pinned helper's exact known errors for forged,
+wrong-type, and i31 parent references, or the specified typed trap. Null still
+requires its typed null trap. The plan footprint assertion passes at 160 B,
+up from 136 B. A compacted plan also retains its original source-local array.
+This is a known static memory cost, not a measured memory improvement.
+
+The exact current B compiler then passes both real cache requests in the patched
+host. Each process uses a different new absolute `WAGO_HOME`, so neither can
+reuse the other's native artifact. Cold: 87.915754 s, peak RSS 3,263,896 KiB.
+Hit: 32.899978 s, peak RSS 3,292,456 KiB. Both outputs validate and return 42;
+their Wasm bytes and cache artifacts match each other and the Node cache
+artifact. Total: 124.532 s. These are performance faults. These single samples
+were on a shared linux/amd64 host with other Go activity; they are not a general
+speed claim or an isolated heap measurement. No ARM64 runtime test was run.
+
+`tools/build-wago-transform-host.py` now extracts a checksum-verified pinned Go
+module into a new private directory, applies the checked-in code and exact test
+patch, optionally runs those tests, and builds the host. It writes an identity
+record. The patch hash is part of the host's native artifact cache identity.
+The Go module cache and the separate Wago checkout stay unchanged. The public
+`tools/test-transform-wago.sh` command uses this build with safety tests and a
+fresh host cache, then checks B's real output. It passes in 99.141 s total;
+the host execution is 83.981 s. CI now tests self-built B instead of A.
+
+Read-only independent review found no remaining defect in the three source
+changes or exact adapted tests. Claude review was unavailable due to the weekly
+usage limit. Evidence:
+
+- `.tmp/transform-cache/wago-root-control-wsytffno/` (red/green and build identity);
+- `.tmp/transform-cache/wago-root-fixed-_zkl_5fy/` (cold/hit requests);
+- `.tmp/transforms-v5/resources/wago-root-public-command.log`;
+- `.tmp/transforms-v5/resources/cache-review/root-only-final.md`.

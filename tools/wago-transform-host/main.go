@@ -9,6 +9,9 @@ import (
 	"os"
 )
 
+// Set by build-wago-transform-host.py. A plain Go build stays visibly unpatched.
+var runtimePatchIdentity = "unpatched"
+
 func main() {
 	data, err := os.ReadFile("wago-lock.json")
 	if err != nil {
@@ -39,6 +42,6 @@ func main() {
 		s.ID = id
 		selections = append(selections, s)
 	}
-	fmt.Fprintln(os.Stderr, "Wago 2dd978ccda6f; Facet v0.1.0; locked project bindings")
-	runtime.MainWithPluginSet("dewdrop-transform-check", "dewdrop-2dd978ccda6f-facet-v0.1.0", wago.PluginSet{Providers: facet.Providers(), Selections: selections})
+	fmt.Fprintln(os.Stderr, "Wago 2dd978ccda6f; patch "+runtimePatchIdentity+"; Facet v0.1.0; locked project bindings")
+	runtime.MainWithPluginSet("dewdrop-transform-check", "dewdrop-2dd978ccda6f-facet-v0.1.0-"+runtimePatchIdentity, wago.PluginSet{Providers: facet.Providers(), Selections: selections})
 }

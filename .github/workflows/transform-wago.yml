@@ -29,4 +29,4 @@ jobs:
       - name: Build the compiler and check self-hosting
         run: mise exec wasm-tools@1.262.0 -- tools/check-self-host-bootstrap.sh --fast --through-b
       - name: Run a source transform in native Wago
-        run: mise exec wasm-tools@1.262.0 -- tools/test-transform-wago.sh .tmp/self-host-bootstrap/a/compiler.wasm
+        run: mise exec wasm-tools@1.262.0 -- tools/test-transform-wago.sh .tmp/self-host-bootstrap/b/compiler.wasm
