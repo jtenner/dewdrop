@@ -1,0 +1,16 @@
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+fn make(value: I32) -> fn() -> I32 {
+  fn() -> I32 {
+    value
+  }
+}
+pub fn main() -> I32 {
+  let first = make(40i32)
+  let second = make(2i32)
+  let again = make(40i32)
+  if !same(first, second) && !same(first, again) && first() + second() == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}

@@ -8837,6 +8837,7 @@ fn self_host_linked_source_or_inferred_item_shape(
 
 fn self_host_emit_linked_i32_expression(
   link: SelfHostPlannedProgramWasmGCLink,
+  function_reference_singletons: SelfHostFunctionReferenceSingletonPlan,
   canonical_body_plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   function_value_signatures: Array<SelfHostLinkedFunctionValueSignature>,
   module_: SelfHostPlannedModuleLowering,
@@ -11540,7 +11541,7 @@ fn self_host_emit_linked_i32_expression(
               }
             }
             PlannedFunctionReference(declaration) => {
-              match self_host_emit_planned_function_reference(link, canonical_body_plan, expression, declaration, destination) {
+              match self_host_emit_planned_function_reference(link, function_reference_singletons, canonical_body_plan, expression, declaration, destination) {
                 Some(error) => return Some(error)
                 None => {}
               }
@@ -21464,6 +21465,11 @@ fn build_self_host_linked_i32_module(
     )
   }
   self_host_assert_frozen_body_plan(body_plan)
+  let function_reference_singletons = match self_host_plan_function_reference_singletons(link, body_plan) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let needs_startup = link.initializers.length() > 0u32 || function_reference_singletons.values.length() > 0u32
   let root_function_candidate = self_host_linked_i32_main_function_index(
     link,
     root_module,
@@ -21586,7 +21592,7 @@ fn build_self_host_linked_i32_module(
       }
       let initializer_type_index = self_host_linked_function_value_type_base(link) +
         function_value_signatures.length() * 2u32
-      if self_host_u32_greater(link.initializers.length(), 0u32) {
+      if needs_startup {
         self_host_linked_append_function_value_type(
           rec_types,
           StarshineFfi.ffi_ffi_bridge_val_types_new(),
@@ -21623,6 +21629,9 @@ fn build_self_host_linked_i32_module(
             break self_host_semantic_unit()
           }
         }
+      }
+      for _ in function_reference_singletons.values {
+        StarshineFfi.ffi_ffi_bridge_GlobalBuilder_push(globals, 5i32)
       }
       let mut body_emit_function_index = 0u32
       let _ = while body_emit_function_index {
@@ -21671,6 +21680,7 @@ fn build_self_host_linked_i32_module(
             let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
+              function_reference_singletons,
               canonical_body_plan,
               function_value_signatures,
               lowering_module,
@@ -21742,6 +21752,7 @@ fn build_self_host_linked_i32_module(
             let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
+              function_reference_singletons,
               canonical_body_plan,
               function_value_signatures,
               lowering_module,
@@ -21772,7 +21783,7 @@ fn build_self_host_linked_i32_module(
           break self_host_semantic_unit()
         }
       }
-      if self_host_u32_greater(link.initializers.length(), 0u32) {
+      if needs_startup {
         let mut initializer_position = 0u32
         let _ = while initializer_position {
           current => if current < link.initializers.length() {
@@ -21806,6 +21817,7 @@ fn build_self_host_linked_i32_module(
             let initializer_instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
+              function_reference_singletons,
               self_host_program_wasm_body_plan_for_identity(body_plan, lowering_module.module_id, body.body, 4294967295u32),
               function_value_signatures,
               lowering_module,
@@ -21842,6 +21854,7 @@ fn build_self_host_linked_i32_module(
           }
         }
         let start_instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
+        self_host_emit_function_reference_singleton_initializers(function_reference_singletons, start_instructions)
         let mut start_call = 0u32
         let _ = while start_call {
           current => if current < link.initializers.length() {
@@ -21897,10 +21910,7 @@ fn build_self_host_linked_i32_module(
         StarshineFfi.ffi_ffi_bridge_module_with_default_memory(coded_module),
         globals,
       )
-      let started_module = if self_host_u32_greater(
-        link.initializers.length(),
-        0u32,
-      ) {
+      let started_module = if needs_startup {
         StarshineFfi.ffi_ffi_bridge_module_with_start_function(
           global_module,
           self_host_u32_to_i32(

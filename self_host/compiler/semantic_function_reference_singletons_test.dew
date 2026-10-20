@@ -1,0 +1,157 @@
+open dew.std.option
+open dew.std.bytes
+open dew.std.map
+open dew.std.testing
+
+fn self_host_singleton_test_link(source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
+  let collected = self_host_collect_program_manifest(5100u64, {
+    modules: [{
+      path: "app.main"
+      files: [{
+        path: "main.dew"
+        source: source
+        test_only: false
+      }]
+    }]
+  })
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(lowering, false)), false)
+}
+
+test "named reference singleton plan shares only exact physical targets" {
+  let link = self_host_singleton_test_link(b"fn identity<t>(value: t) -> t {\n  value\n}\nfn signed() -> fn(I32) -> I32 {\n  identity\n}\nfn unsigned() -> fn(U32) -> U32 {\n  identity\n}\nfn narrow() -> fn(I8) -> I8 {\n  identity\n}\nlet callback = signed()\npub fn main() -> I32 {\n  let _ = unsigned()\n  let _ = narrow()\n  signed()(42i32)\n}\n")
+  assert(link.diagnostics.length() == 0u32, "clean physical link")
+  let bodies = self_host_plan_program_wasm_bodies(link)
+  assert(bodies.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, bodies))
+  let plan = match self_host_plan_function_reference_singletons(link, bodies) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+  assert(link.global_count == 1u32, "source callback has its own global")
+  assert(plan.values.length() == 2u32, "I32 and U32 share; narrow I8 keeps its physical target")
+  let mut signed = 4294967295u32
+  let mut unsigned = 4294967295u32
+  let mut narrow = 4294967295u32
+  for body in bodies.bodies {
+    let name = self_host_linked_declaration_name(link, body.declaration)
+    let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, body.module_index, body.specialization)
+    for expression in body.expressions {
+      match module_.expressions[expression.expression].kind {
+        PlannedFunctionReference(_) => {
+          if name == b"signed" {
+            signed = expression.call_function_index
+          }
+          if name == b"unsigned" {
+            unsigned = expression.call_function_index
+          }
+          if name == b"narrow" {
+            narrow = expression.call_function_index
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(signed != 4294967295u32 && signed == unsigned && signed != narrow,
+    "site targets retain the existing exact ABI selection")
+  assert(plan.by_function.get(signed) is Some(_), "shared target has one singleton")
+  assert(plan.by_function.get(narrow) is Some(_), "narrow target has a separate singleton")
+  let mut slot = 0u32
+  for value in plan.values {
+    assert(value.global_index == link.global_count + slot, "singleton slots follow source globals")
+    assert(value.function_index < link.functions.length(), "each singleton owns a real function")
+    assert(value.declaration == link.functions[value.function_index].declaration, "exact declaration owner")
+    assert(value.specialization == link.functions[value.function_index].specialization, "exact specialization owner")
+    slot = slot + 1u32
+  }
+}
+
+test "capturing lambda values never enter the named reference singleton table" {
+  let link = self_host_singleton_test_link(b"fn make(value: I32) -> fn() -> I32 {\n  fn() -> I32 {\n    value\n  }\n}\npub fn main() -> I32 {\n  let first = make(40i32)\n  let second = make(2i32)\n  first() + second()\n}\n")
+  let bodies = self_host_plan_program_wasm_bodies(link)
+  assert(bodies.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, bodies))
+  let plan = match self_host_plan_function_reference_singletons(link, bodies) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+  assert(plan.values.length() == 0u32, "a fresh lambda is not a named declaration value")
+  let mut captures = 0u32
+  for body in bodies.bodies {
+    for recipe in body.closure_constructions {
+      captures = captures + recipe.captures.length
+    }
+  }
+  assert(captures > 0u32, "fixture must have an actual runtime capture")
+}
+
+fn self_host_singleton_test_target(source: SelfHostPlannedPhysicalExpressionCarrier, target: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
+  {
+    expression: source.expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
+    call_function_index: target
+  }
+}
+
+test "named reference emission reports a missing singleton table entry" {
+  let link = self_host_singleton_test_link(b"fn identity(value: I32) -> I32 {\n  value\n}\nfn get() -> fn(I32) -> I32 {\n  identity\n}\npub fn main() -> I32 {\n  get()(42i32)\n}\n")
+  let bodies = self_host_plan_program_wasm_bodies(link)
+  assert(bodies.diagnostics.length() == 0u32, "valid singleton diagnostic fixture")
+  let empty_plan = SelfHostFunctionReferenceSingletonPlan::{
+    values: []
+    by_function: empty()
+  }
+  let mut checked = false
+  for body in bodies.frozen_bodies {
+    let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, body.module_index, body.specialization)
+    for expression in body.expressions {
+      match module_.expressions[expression.expression].kind {
+        PlannedFunctionReference(declaration) => {
+          let error = self_host_emit_planned_function_reference(link, empty_plan, Some(body), expression.expression, declaration, StarshineFfi.ffi_ffi_bridge_instructions_new())
+          assert(error is Some("function reference has no planned singleton global"), "missing table entry stays visible")
+          checked = true
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(checked, "fixture must emit a named reference")
+}
+
+test "named reference singleton planning rejects an invalid exact target" {
+  let link = self_host_singleton_test_link(b"fn identity(value: I32) -> I32 {\n  value\n}\nfn get() -> fn(I32) -> I32 {\n  identity\n}\npub fn main() -> I32 {\n  get()(42i32)\n}\n")
+  let bodies = self_host_plan_program_wasm_bodies(link)
+  assert(bodies.diagnostics.length() == 0u32, "valid target diagnostic fixture")
+  let mut changed = false
+  for body in bodies.frozen_bodies {
+    let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, body.module_index, body.specialization)
+    let mut index = 0u32
+    for expression in body.expressions {
+      if module_.expressions[expression.expression].kind is PlannedFunctionReference(_) {
+        body.expressions[index] = self_host_singleton_test_target(expression, 4294967295u32)
+        changed = true
+      }
+      index = index + 1u32
+    }
+  }
+  assert(changed, "fixture must corrupt a real reference target")
+  assert(self_host_plan_function_reference_singletons(link, bodies) is Err("function reference singleton has no exact physical target"), "invalid target stays visible")
+}

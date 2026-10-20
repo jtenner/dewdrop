@@ -1,0 +1,17 @@
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+fn identity(value: I32) -> I32 {
+  value
+}
+fn get() -> fn(I32) -> I32 {
+  identity
+}
+pub fn main() -> I32 {
+  let direct = identity
+  let first = get()
+  let second = get()
+  if same(direct, first) && same(first, second) && first(40i32) + second(2i32) == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}

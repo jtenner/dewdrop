@@ -1,0 +1,26 @@
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+struct State {
+  mut count: I32
+}
+let state = State::{
+  count: 0i32
+}
+fn identity(value: I32) -> I32 {
+  value
+}
+fn initialize() -> fn(I32) -> I32 {
+  state.count = state.count + 1i32
+  identity
+}
+let callback = initialize()
+fn current() -> fn(I32) -> I32 {
+  identity
+}
+pub fn main() -> I32 {
+  let direct = current()
+  if state.count == 1i32 && same(callback, direct) && direct(42i32) == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}

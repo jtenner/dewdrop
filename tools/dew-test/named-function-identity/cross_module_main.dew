@@ -1,0 +1,11 @@
+import example.helper as @helper
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+pub fn main() -> I32 {
+  let direct = @helper.identity
+  let returned = @helper.get()
+  if same(direct, returned) && direct(40i32) + returned(2i32) == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}

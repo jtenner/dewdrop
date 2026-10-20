@@ -1,0 +1,30 @@
+builtin same<a, b>(left: a, right: b) -> Bool = "ref.eq"
+struct Reader {
+  value: I32
+}
+impl Reader {
+  fn read(self) -> I32 {
+    self.value
+  }
+}
+fn bind(value: Reader) -> fn() -> I32 {
+  fn() -> I32 {
+    value.read()
+  }
+}
+pub fn main() -> I32 {
+  let left = Reader::{
+    value: 40i32
+  }
+  let right = Reader::{
+    value: 2i32
+  }
+  let first = bind(left)
+  let repeated = bind(left)
+  let other = bind(right)
+  if !same(first, repeated) && !same(first, other) && first() + other() == 42i32 {
+    42i32
+  } else {
+    0i32
+  }
+}

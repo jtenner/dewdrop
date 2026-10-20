@@ -1,0 +1,79 @@
+open dew.std.map
+open dew.std.option
+
+// The physical function index includes the selected declaration, specialization,
+// checked witness and physical call ABI. Never recover it from carrier shapes.
+struct SelfHostFunctionReferenceSingleton {
+  function_index: U32
+  declaration: U64
+  specialization: U32
+  closure_type_index: U32
+  global_index: U32
+}
+
+struct SelfHostFunctionReferenceSingletonPlan {
+  values: Array<SelfHostFunctionReferenceSingleton>
+  by_function: Map<U32, U32>
+}
+
+fn self_host_plan_function_reference_singletons(
+  link: SelfHostPlannedProgramWasmGCLink,
+  bodies: SelfHostPlannedProgramWasmBodyPlan,
+) -> Result<SelfHostFunctionReferenceSingletonPlan, String> {
+  let result = SelfHostFunctionReferenceSingletonPlan::{
+    values: []
+    by_function: empty()
+  }
+  // Include selected module-value initializer bodies as well as functions and
+  // nested lambda bodies. The body plan already owns their exact call targets.
+  for body in bodies.frozen_bodies {
+    let module_ = self_host_program_function_lowering(
+      link.fragments.specialization.lowering, body.module_index, body.specialization)
+    for expression in body.expressions {
+      match module_.expressions[expression.expression].kind {
+        PlannedFunctionReference(declaration) => {
+          let target = expression.call_function_index
+          if target == 4294967295u32 ||
+            !self_host_linked_function_declaration_module_matches(link, target, declaration) {
+            return Err("function reference singleton has no exact physical target")
+          }
+          if !result.by_function.contains_key(target) {
+            let closure_type = match self_host_linked_closure_base_type_index(link, body.module_index) {
+              Some(value) => value
+              None => return Err("function reference singleton has no closure base type")
+            }
+            let global = u32_into_u64(link.global_count) + u32_into_u64(result.values.length())
+            self_host_assert_compiler_invariant(global < 4294967295u64,
+              "function reference singleton global index limit exceeded")
+            result.by_function.set(target, result.values.length())
+            result.values.push({
+              function_index: target
+              declaration: declaration
+              specialization: link.functions[target].specialization
+              closure_type_index: closure_type
+              global_index: u64_into_u32(global)
+            })
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+  Ok(result)
+}
+
+fn self_host_emit_function_reference_singleton_initializers(
+  plan: SelfHostFunctionReferenceSingletonPlan,
+  destination: StarshineInstructions,
+) -> Unit {
+  for value in plan.values {
+    let target = self_host_linked_emitted_function_index(
+      self_host_linked_physical_function_index(value.function_index))
+    StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+      StarshineFfi.ffi_lib_Instruction_ref_func(StarshineFfi.ffi_lib_FuncIdx_new(self_host_u32_to_i32(target))))
+    StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+      StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(value.closure_type_index))))
+    StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+      StarshineFfi.ffi_lib_Instruction_global_set(StarshineFfi.ffi_lib_GlobalIdx_new(self_host_u32_to_i32(value.global_index))))
+  }
+}

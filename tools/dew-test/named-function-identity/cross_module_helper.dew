@@ -1,0 +1,6 @@
+pub fn identity(value: I32) -> I32 {
+  value
+}
+pub fn get() -> fn(I32) -> I32 {
+  identity
+}
