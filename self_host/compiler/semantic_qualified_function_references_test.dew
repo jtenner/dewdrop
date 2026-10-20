@@ -1,0 +1,216 @@
+open dew.std.testing
+
+fn self_host_qualified_reference_test_infer(
+  frozen: SelfHostFrozenSignatureProgram,
+) -> (SelfHostCollectedModule, SelfHostBasicInferredModuleBodies) {
+  assert(frozen.import_diagnostics.length() == 0u32, "qualified reference imports")
+  let mut index = 0u32
+  while index {
+    current if current < frozen.collected.modules.length() => {
+      assert(frozen.collected.modules.at(current).diagnostics.length() == 0u32, "qualified reference collection")
+      continue current + 1u32
+    }
+    _ => break ()
+  }
+  let collected = frozen.collected.modules.at(0u32)
+  let imports = self_host_resolve_module_imports(frozen.interfaces.at(0u32).resolved_types, frozen.import_scopes.at(0u32))
+  assert(imports.resolved.diagnostics.length() == 0u32, "qualified reference signatures")
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  assert(names.diagnostics.length() == 0u32, "qualified reference names")
+  (collected, self_host_infer_program_module_bodies(collected, imports, names))
+}
+
+fn self_host_qualified_reference_test_selected(
+  collected: SelfHostCollectedModule,
+  inferred: SelfHostBasicInferredModuleBodies,
+  declarations: Array<U64>,
+  argument_count: U32,
+) -> Unit {
+  let mut selected = 0u32
+  for hir_body in collected.bodies {
+    let body = match inferred.body(hir_body.id) {
+      Some(value) => value
+      None => {
+        assert(false, "missing qualified reference body")
+        unreachable()
+      }
+    }
+    assert(body.diagnostics.length() == 0u32, "qualified reference inference")
+    let end = hir_body.expressions.start + hir_body.expressions.length
+    let _ = while hir_body.expressions.start {
+      expression if expression < end => {
+        if collected.expressions[expression] is QualifiedExpr(_, _, _) {
+          match body.call_target(hir_body, expression) {
+            SelectedBasicCallTarget(declaration, arguments) => {
+              assert(selected < declarations.length(), "extra qualified reference")
+              assert(declaration == declarations[selected], "checked imported declaration")
+              assert(arguments.length == argument_count, "checked reference type arguments")
+              selected = selected + 1u32
+            }
+            _ => assert(false, "qualified reference has no checked function target")
+          }
+        }
+        continue expression + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(selected == declarations.length(), "all qualified references selected")
+}
+
+test "qualified imported function references retain exact checked declarations" {
+  for consumer in [
+    b"import app.library as @lib\npub fn run() -> I64 {\n  let callback = @lib.read\n  callback(42i64)\n}\n",
+    b"import app.library as @lib\npub fn factory() -> fn(I64) -> I64 {\n  @lib.read\n}\n",
+    b"import app.library as @lib\nfn apply(callback: fn(I64) -> I64) -> I64 {\n  callback(42i64)\n}\npub fn run() -> I64 {\n  apply(@lib.read)\n}\n",
+  ] {
+    let fixture = self_host_imported_semantics_fixture(consumer, b"fn hidden(value: I32) -> I32 {\n  value\n}\npub fn read(value: I64) -> I64 {\n  value\n}\n")
+    let (collected, inferred) = self_host_qualified_reference_test_infer(fixture.frozen)
+    let library = fixture.frozen.collected.modules.at(1u32)
+    let declaration = self_host_test_unwrap_declaration(library.lookup_value("read"), "exported read")
+    self_host_qualified_reference_test_selected(collected, inferred, [declaration], 0u32)
+    let lowering = self_host_plan_program_lowering(fixture.frozen)
+    assert(self_host_validate_program_lowering(lowering) is None, "qualified reference lowering")
+    let mut references = 0u32
+    for expression in lowering.modules[0u32].expressions {
+      match expression.kind {
+        PlannedFunctionReference(actual) if actual == declaration => {
+            references = references + 1u32
+          }
+        _ => {}
+      }
+    }
+    assert(references == 1u32, "qualified reference reaches lowering")
+  }
+}
+
+test "qualified generic function references retain expected type arguments" {
+  let generic = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\npub fn factory() -> fn(I64) -> I64 {\n  @lib.read\n}\n",
+    b"pub fn read<t>(value: t) -> t {\n  value\n}\n",
+  )
+  let (collected, inferred) = self_host_qualified_reference_test_infer(generic.frozen)
+  let declaration = generic.frozen.collected.modules.at(1u32).callables[0u32].declaration
+  self_host_qualified_reference_test_selected(collected, inferred, [declaration], 1u32)
+}
+
+test "qualified overloaded function references use expected signatures" {
+  let overloaded = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\npub fn factory() -> fn(I64) -> I64 {\n  @lib.read\n}\n",
+    b"pub builtin read(value: I32) -> I32 = \"i32.clz\"\npub builtin read(value: I64) -> I64 = \"i64.clz\"\n",
+  )
+  let (collected, inferred) = self_host_qualified_reference_test_infer(overloaded.frozen)
+  let declaration = overloaded.frozen.collected.modules.at(1u32).callables[1u32].declaration
+  self_host_qualified_reference_test_selected(collected, inferred, [declaration], 0u32)
+}
+
+test "qualified imported overload references report no match and ambiguity" {
+  for (source, ambiguous) in [
+    (b"pub builtin read(value: I32) -> I32 = \"i32.clz\"\npub builtin read(value: I64) -> I64 = \"i64.clz\"\n", false),
+    (b"pub builtin read<t>(value: t) -> t = \"unsafe.bitcast\"\npub builtin read<u>(value: u) -> u = \"unsafe.bitcast\"\n", true),
+  ] {
+    let fixture = self_host_imported_semantics_fixture(b"import app.library as @lib\npub fn factory() -> fn(Bool) -> Bool {\n  @lib.read\n}\n", source)
+    let (_, inferred) = self_host_qualified_reference_test_infer(fixture.frozen)
+    let mut found = false
+    for body in inferred.bodies {
+      for diagnostic in body.diagnostics {
+        match diagnostic {
+          NoMatchingFunctionReference(_, _, _) if !ambiguous => {
+            found = true
+          }
+          AmbiguousFunctionReference(_, _, first, second, 2u32, _) if ambiguous && first != second => {
+            found = true
+          }
+          _ => {}
+        }
+      }
+    }
+    assert(found, "qualified overload reference failure stays diagnostic")
+  }
+}
+
+test "qualified private function references stay unavailable" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\npub fn factory() -> fn(I64) -> I64 {\n  @lib.hidden\n}\n",
+    b"fn hidden(value: I64) -> I64 {\n  value\n}\n",
+  )
+  let (_, inferred) = self_host_qualified_reference_test_infer(fixture.frozen)
+  let mut unsupported = 0u32
+  for body in inferred.bodies {
+    for diagnostic in body.diagnostics {
+      if diagnostic is UnsupportedExpressionInference(_, _) {
+        unsupported = unsupported + 1u32
+      }
+    }
+    for target in body.call_targets {
+      assert(!(target is SelectedBasicCallTarget(_, _)), "private function is not selected")
+    }
+  }
+  assert(unsupported > 0u32, "private qualified reference is rejected")
+}
+
+test "qualified module data retains priority over callable reference lookup" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\npub fn factory() -> fn(I32) -> I32 {\n  @lib.callback\n}\n",
+    b"pub let callback = identity\npub fn identity(value: I32) -> I32 {\n  value\n}\n",
+  )
+  let (collected, inferred) = self_host_qualified_reference_test_infer(fixture.frozen)
+  let declaration = fixture.frozen.collected.modules.at(1u32).lets[0u32].declaration
+  let mut reads = 0u32
+  for hir_body in collected.bodies {
+    let body = match inferred.body(hir_body.id) {
+      Some(value) => value
+      None => {
+        assert(false, "module data body")
+        unreachable()
+      }
+    }
+    assert(body.diagnostics.length() == 0u32, "module data inference")
+    for selection in body.expression_selections {
+      match selection {
+        ImportedModuleValueBasicExpressionSelection(actual) if actual == declaration => {
+            reads = reads + 1u32
+          }
+        _ => {}
+      }
+    }
+  }
+  assert(reads == 1u32, "module data keeps its checked read selection")
+}
+
+test "qualified references distinguish modules with equal logical file paths" {
+  let collected = self_host_collect_program_manifest(7352u64, {
+    modules: [
+      {
+        path: "app.consumer"
+        files: [{
+          path: "shared.dew"
+          source: b"import app.left as @left\nimport app.right as @right\npub fn run() -> I64 {\n  let first = @left.read\n  let second = @right.read\n  first(second(42i64))\n}\n"
+          test_only: false
+        }]
+      },
+      {
+        path: "app.left"
+        files: [{
+          path: "shared.dew"
+          source: b"pub fn read(value: I64) -> I64 {\n  value\n}\n"
+          test_only: false
+        }]
+      },
+      {
+        path: "app.right"
+        files: [{
+          path: "shared.dew"
+          source: b"pub fn read(value: I64) -> I64 {\n  value\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+  let frozen = self_host_freeze_program_signature_interfaces(collected)
+  let (consumer, inferred) = self_host_qualified_reference_test_infer(frozen)
+  self_host_qualified_reference_test_selected(consumer, inferred, [
+    frozen.collected.modules.at(1u32).callables[0u32].declaration,
+    frozen.collected.modules.at(2u32).callables[0u32].declaration,
+  ], 0u32)
+}

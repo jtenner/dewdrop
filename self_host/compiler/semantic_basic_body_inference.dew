@@ -1857,6 +1857,117 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  // Alias lookup proves the namespace. Complete signatures select among its
+  // public top-level callables; source names alone do not prove identity.
+  fn imported_function_reference_candidate_matches(
+    self,
+    reference: SelfHostResolvedImportedCallable,
+    candidate: SelfHostResolvedImportedCallable,
+  ) -> Bool {
+    let top_level = match candidate.kind {
+      FrozenFunctionCallable => true
+      FrozenBuiltinCallable(_) => true
+      _ => false
+    }
+    if !top_level || self_host_semantic_id_module(reference.declaration) != self_host_semantic_id_module(candidate.declaration) ||
+      !self_host_basic_string_equal(reference.name, candidate.name) {
+      return false
+    }
+    match self.imported.scope {
+      Some(scope) => match scope.binding_for_declaration(candidate.declaration) {
+        Some(_) => true
+        None => false
+      }
+      None => false
+    }
+  }
+
+  fn select_qualified_imported_function_reference(
+    self,
+    expression: U32,
+    name: U32,
+    offset: U32,
+    declaration: U64,
+    final: Bool,
+  ) -> Bool {
+    let reference = match self.imported_callable(declaration) {
+      Some(value) => value
+      None => return false
+    }
+    let mut candidate_count = 0u32
+    let mut candidate_index = 0u32
+    let _ = while candidate_index {
+      current if current < self.imported.callables.length() => {
+        let candidate = self_host_resolved_imported_callable_at(self.imported.callables, current)
+        if self.imported_function_reference_candidate_matches(reference, candidate) {
+          candidate_count = candidate_count + 1u32
+        }
+        continue current + 1u32
+      }
+      _ => break ()
+    }
+    if candidate_count == 0u32 {
+      return false
+    }
+    let origin = self_host_expression_type_origin(expression, offset)
+    if candidate_count == 1u32 {
+      match self.imported_callable_function_type(declaration, expression, true) {
+        Some(type_) => self.constrain(self.expression_type(expression), type_, origin)
+        None => return false
+      }
+      return true
+    }
+    // Body constraints supply expected signatures before the final reference
+    // pass. Reuse that pass; add no deferred queue or candidate array.
+    if !final || self.solver.has_unresolved_variable(self.expression_type(expression)) {
+      return true
+    }
+    let mut count = 0u32
+    let mut selected = 0u32
+    let mut first = 0u64
+    let mut second = 0u64
+    let mut index = 0u32
+    let _ = while index {
+      current if current < self.imported.callables.length() => {
+        let candidate = self_host_resolved_imported_callable_at(self.imported.callables, current)
+        if self.imported_function_reference_candidate_matches(reference, candidate) {
+          let snapshot = self.solver.snapshot()
+          self.begin_imported_signature_instantiation(candidate)
+          let signature = self.instantiate_signature_type(candidate.function_type)
+          let viable = self.solver.unify(self.expression_type(expression), signature, origin)
+          self.solver.rollback(snapshot)
+          if viable {
+            count = count + 1u32
+            if count == 1u32 {
+              selected = current
+              first = candidate.declaration
+            } else if count == 2u32 {
+              second = candidate.declaration
+            }
+          }
+        }
+        continue current + 1u32
+      }
+      _ => break ()
+    }
+    if count == 1u32 {
+      let candidate = self_host_resolved_imported_callable_at(self.imported.callables, selected)
+      self.begin_imported_signature_instantiation(candidate)
+      let signature = self.instantiate_signature_type(candidate.function_type)
+      assert(self.solver.unify(self.expression_type(expression), signature, origin), "SPC-303 selected imported function reference changed after rollback")
+      self.record_function_reference(expression, first)
+    } else {
+      self.store_call_target(expression, ErrorBasicCallTarget, 0u32)
+      self.solver.poison_type(self.expression_type(expression))
+      if count == 0u32 {
+        self.diagnostics.push(NoMatchingFunctionReference(name, expression, offset))
+      } else {
+        self.diagnostics.push(AmbiguousFunctionReference(name, expression, first, second, count, offset))
+      }
+    }
+    true
+  }
+
   fn imported_variant_owner_visible(self, declaration: U64) -> Bool {
     match self.imported.scope {
       Some(scope) => scope.declaration_bindings.contains_key(declaration)
@@ -1983,6 +2094,17 @@ impl SelfHostBasicBodyInferencer {
                     self.diagnostics.push(AmbiguousFunctionReference(name, expression, first, second, count, offset))
                   }
                 }
+              }
+              _ => {}
+            }
+          }
+          QualifiedExpr(base, name, offset) if self.collected.expressions[base] is ImportAliasExpr(_, _) => {
+            match (self.names.expression_references[base], self.imported.scope) {
+              (ImportedModuleNameReference(interface_index), Some(scope)) => match scope.lookup_module_value(interface_index, self.collected.name(name)) {
+                Some(binding) => {
+                  let _ = self.select_qualified_imported_function_reference(expression, name, offset, binding.declaration, true)
+                }
+                None => {}
               }
               _ => {}
             }
@@ -6455,7 +6577,14 @@ impl SelfHostBasicBodyInferencer {
     }
     let type_ = match self.imported.module_value_types.get(binding.declaration) {
       Some(value) => value
-      None => return false
+      None => {
+        if !self.select_qualified_imported_function_reference(expression, name, offset, binding.declaration, false) {
+          return false
+        }
+        self.consumed_member_roots[self.expression_index(base)] = true
+        self.consume_unsupported_root(base)
+        return true
+      }
     }
     self.constrain(
       self.expression_type(expression),

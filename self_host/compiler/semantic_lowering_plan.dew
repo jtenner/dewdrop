@@ -481,6 +481,8 @@ fn self_host_lowering_expression_kind(
       )
       _ => {}
     }
+  }
+  if collected.expressions[expression] is NameExpr(_, _) || collected.expressions[expression] is QualifiedExpr(_, _, _) {
     match call_target {
       SelectedBasicCallTarget(declaration, _) => return PlannedFunctionReference(declaration)
       _ => {}
