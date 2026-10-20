@@ -142,7 +142,7 @@ claims about the current interpreter.
 - [x] Recursion depth limit.
 - [x] Work limit.
 - [x] Estimated allocation-work limit.
-- [x] No second Wasm instance.
+- [x] No separate Wasm payload for transform code.
 - [x] Native compiler implementation.
 - [x] Dew compiler implementation.
 - [x] Real compile-request tests.
@@ -178,5 +178,5 @@ Unchecked items need further implementation. Checked items have code and tests.
 - [x] Identical resource accounting across compiler implementations.
 - [x] Persistent transform-result cache with dependency tracking.
 - [x] Compact bytecode backend.
-- [ ] Parallel independent transform execution.
+- [x] Parallel independent transform execution (opt-in local Wago host; other hosts stay serial).
 - [x] Pinned native Wago request check and CI job (host speed issue remains).

@@ -1,0 +1,366 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.fixed_array
+open dew.std.map
+open dew.std.option
+open dew.std.result
+open dew.std.wasm.intrinsics
+
+foreign import "dewdrop.transform.workers" as CtWorkerHost {
+  fn capacity() -> U32 = "capacity"
+  fn run_batch(input: WasmArray<U8>, output: WasmArray<U8>) -> U32 = "run_batch"
+  fn input_size() -> U32 = "input_size"
+  fn input(target: WasmArray<U8>) -> Unit = "input"
+  fn output(value: WasmArray<U8>) -> Unit = "output"
+}
+
+struct CtWorkerApplication {
+  file: U32
+  function: U32
+}
+
+fn ct_worker_key() -> Bytes {
+  b"0123456789abcdef0123456789abcdef"
+}
+
+fn ct_worker_array(bytes: Bytes) -> WasmArray<U8> {
+  let target = wasm_array_new::<U8>(bytes.byte_length(), 0u8)
+  let _ = while 0u32 {
+    index if index < bytes.byte_length() => {
+      wasm_array_set(target, index, bytes.byte_at(index))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  target
+}
+
+fn ct_worker_bytes(array: WasmArray<U8>, length: U32) -> Bytes {
+  let out = BytesBuilder::with_capacity(length)
+  let _ = while 0u32 {
+    index if index < length => {
+      out.append_byte(wasm_array_get(array, index))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  out.finish()
+}
+
+fn ct_worker_reader(bytes: Bytes) -> CtCacheReader {
+  {
+    bytes: bytes
+    offset: 0u32
+    failed: false
+  }
+}
+
+fn ct_worker_job(snapshot: Bytes, site: CtWorkerApplication, preamble: Bool) -> Bytes {
+  let out = BytesBuilder::with_capacity(snapshot.byte_length() + 24u32)
+  out.append(b"DWWJ")
+  ct_cache_u32(out, 1u32)
+  ct_cache_u32(out, site.file)
+  ct_cache_u32(out, site.function)
+  ct_cache_u32(out, if preamble {
+    1u32
+  } else {
+    0u32
+  })
+  ct_cache_u32(out, snapshot.byte_length())
+  out.append(snapshot)
+  out.finish()
+}
+
+fn ct_worker_result(status: U32, payload: Bytes) -> Bytes {
+  let out = BytesBuilder::with_capacity(payload.byte_length() + 12u32)
+  out.append(b"DWWX")
+  ct_cache_u32(out, 1u32)
+  ct_cache_u32(out, status)
+  out.append(payload)
+  out.finish()
+}
+
+// Worker API modules must match the exact compiler-supplied source. Preparation
+// checks each supplied trusted index against its library, path, and bytes.
+fn ct_worker_prepare(manifest: SelfHostProgramManifest) -> CtPlan {
+  let trusted = []
+  let _ = while 0u32 {
+    index if index < manifest.modules.length() => {
+      let path = manifest.modules[index].path
+      if path == "dewdrop.ast" || path == "dewdrop.transform" {
+        trusted.push(index)
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  ct_prepare_with_trusted_libraries(manifest, trusted)
+}
+
+fn ct_worker_execute(bytes: Bytes) -> Result<Bytes, String> {
+  if bytes.byte_length() > 16777216u32 || bytes.byte_length() < 24u32 {
+    return Err("invalid transform worker job size")
+  }
+  let reader = ct_worker_reader(bytes)
+  if ct_cache_read_u32(reader) != 1247237956u32 || ct_cache_read_u32(reader) != 1u32 {
+    return Err("invalid transform worker job header")
+  }
+  let fi = ct_cache_read_u32(reader)
+  let function_index = ct_cache_read_u32(reader)
+  let preamble = ct_cache_read_u32(reader)
+  let length = ct_cache_read_u32(reader)
+  if reader.failed || preamble > 1u32 || length != bytes.byte_length() - 24u32 {
+    return Err("invalid transform worker job fields")
+  }
+  let snapshot = match ct_cache_decode(bytes.view(24u32, length), ct_worker_key()) {
+    Some(value) => value
+    None => return Err("invalid transform worker source snapshot")
+  }
+  if snapshot.reports.length() != 0u32 {
+    return Err("transform worker input must contain source only")
+  }
+  let plan = ct_worker_prepare(snapshot.manifest)
+  // Semantic errors can depend on declarations from a prior application. Let
+  // the parent repeat such a round serially, with no candidate reports saved.
+  match ct_check_plan(plan, preamble == 1u32) {
+    Err(_) => return Ok(ct_worker_result(1u32, b""))
+    Ok(_) => {}
+  }
+  if fi >= plan.files.length() || function_index >= plan.files[fi].functions.length() {
+    return Err("transform worker function site is outside the source snapshot")
+  }
+  let file = plan.files[fi]
+  let function = file.functions[function_index]
+  if function.transform_ || !ct_is_annotated(file, function) {
+    return Err("transform worker site is not an annotated function")
+  }
+  let machine = ct_machine(plan)
+  ct_seed_imports(machine, file.module_index)
+  let value = ct_apply(machine, file, function)
+  if machine.error.byte_length() != 0u32 || value.changed || value.bridge is Some(_) || value.imports.byte_length() != 0u32 || value.declarations.byte_length() != 0u32 {
+    return Ok(ct_worker_result(1u32, b""))
+  }
+  let source = ct_render_applied(machine, value, [])
+  if machine.error.byte_length() != 0u32 {
+    return Ok(ct_worker_result(1u32, b""))
+  }
+  let output = SelfHostProgramManifest::{
+    modules: [{
+      path: plan.manifest.modules[file.module_index].path
+      files: [{
+        path: file.original.path
+        source: source.as_bytes()
+        test_only: file.original.test_only
+      }]
+    }]
+  }
+  match ct_cache_encode(ct_worker_key(), output, plan.reports) {
+    Some(payload) if payload.byte_length() <= 16777204u32 => Ok(ct_worker_result(0u32, payload))
+    _ => Ok(ct_worker_result(1u32, b""))
+  }
+}
+
+pub fn __dew_transform_worker_run() -> Unit {
+  let length = CtWorkerHost.input_size()
+  assert(length <= 16777216u32, "transform worker input exceeds its byte limit")
+  let input = wasm_array_new::<U8>(length, 0u8)
+  CtWorkerHost.input(input)
+  let result = match ct_worker_execute(ct_worker_bytes(input, length)) {
+    Ok(value) => value
+    Err(error) => {
+      let payload = BytesBuilder::new()
+      ct_cache_text(payload, error)
+      ct_worker_result(2u32, payload.finish())
+    }
+  }
+  CtWorkerHost.output(ct_worker_array(result))
+}
+
+fn ct_worker_applications(plan: CtPlan) -> Array<CtWorkerApplication> {
+  let applications = []
+  let _ = while 0u32 {
+    fi if fi < plan.files.length() => {
+      let file = plan.files[fi]
+      let _ = while 0u32 {
+        function_index if function_index < file.functions.length() => {
+          let function = file.functions[function_index]
+          if !function.transform_ && ct_is_annotated(file, function) {
+            applications.push({
+              file: fi
+              function: function_index
+            })
+          }
+          continue function_index + 1u32
+        }
+        _ => break ()
+      }
+      continue fi + 1u32
+    }
+    _ => break ()
+  }
+  applications
+}
+
+fn ct_worker_decode_result(plan: CtPlan, site: CtWorkerApplication, bytes: Bytes) -> Result<Option<CtCacheDecoded>, String> {
+  if bytes.byte_length() < 12u32 || bytes.byte_length() > 16777216u32 {
+    return Err("invalid transform worker result size")
+  }
+  let reader = ct_worker_reader(bytes)
+  if ct_cache_read_u32(reader) != 1482118980u32 || ct_cache_read_u32(reader) != 1u32 {
+    return Err("invalid transform worker result header")
+  }
+  let status = ct_cache_read_u32(reader)
+  if status == 1u32 && reader.offset == bytes.byte_length() {
+    return Ok(None)
+  }
+  if status == 2u32 {
+    let error = ct_cache_read_text(reader, 4096u32)
+    if !reader.failed && reader.offset == bytes.byte_length() {
+      return Err("transform worker: ".concat(error))
+    }
+  }
+  if status != 0u32 {
+    return Err("invalid transform worker result status")
+  }
+  let result = match ct_cache_decode(bytes.view(12u32, bytes.byte_length() - 12u32), ct_worker_key()) {
+    Some(value) => value
+    None => return Err("invalid transform worker result payload")
+  }
+  let file = plan.files[site.file]
+  let function = file.functions[site.function]
+  if result.manifest.modules.length() != 1u32 {
+    return Err("transform worker result changed its module count")
+  }
+  let module_ = result.manifest.modules[0u32]
+  if module_.path != plan.manifest.modules[file.module_index].path || module_.files.length() != 1u32 || module_.files[0u32].path != file.original.path || module_.files[0u32].test_only != file.original.test_only || module_.files[0u32].source.byte_length() > 1048576u32 || result.reports.length() != function.annotation_count {
+    return Err("transform worker result lost its checked function site")
+  }
+  let machine = ct_machine(plan)
+  let source = module_.files[0u32].source
+  if !ct_validate_function_source(machine, source) {
+    return Err("transform worker: ".concat(machine.error))
+  }
+  // Independent jobs may replace only the body. Keep the exact checked header.
+  let events = self_host_parse_module(source).events
+  match events[0u32] {
+    Declaration(Function(returned), _) => {
+      let original_header = ct_part(file.clean, function.start, function.declaration.body.offset)
+      let returned_header = source.view(0u32, returned.body.offset).to_string()
+      if original_header != returned_header {
+        return Err("transform worker changed its checked function header")
+      }
+    }
+    _ => return Err("transform worker lost its checked function declaration")
+  }
+  ct_seed_imports(machine, file.module_index)
+  let _ = while 0u32 {
+    index if index < function.annotation_count => {
+      let annotation = file.annotations[function.annotation_start + index]
+      let report = result.reports[index]
+      let name = ct_annotation_key(machine, file.module_index, annotation.name)
+      if machine.error.byte_length() != 0u32 || report.module_name != module_.path || report.file_name != file.original.path || report.function_name != function.declaration.name || report.transform_name != name || report.offset != annotation.offset {
+        return Err("transform worker report lost its checked annotation site")
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  Ok(Some(result))
+}
+
+fn ct_worker_apply_results(plan: CtPlan, applications: Array<CtWorkerApplication>, bytes: Bytes) -> Result<Option<Map<U64, CtAppliedFunction>>, String> {
+  let reader = ct_worker_reader(bytes)
+  if bytes.byte_length() > 33554432u32 || ct_cache_read_u32(reader) != 1381455684u32 || ct_cache_read_u32(reader) != 1u32 || ct_cache_read_u32(reader) != applications.length() {
+    return Err("invalid transform worker batch result")
+  }
+  let results = []
+  let mut independent = true
+  for site in applications {
+    let payload = ct_cache_blob(reader, 16777216u32)
+    if reader.failed {
+      return Err("truncated transform worker batch result")
+    }
+    match ct_worker_decode_result(plan, site, payload) {
+      Ok(Some(result)) => results.push(result)
+      Ok(None) => {
+        independent = false
+      }
+      Err(error) => return Err(error)
+    }
+  }
+  if reader.failed || reader.offset != bytes.byte_length() {
+    return Err("trailing transform worker batch result bytes")
+  }
+  if !independent {
+    return Ok(None)
+  }
+  let applied = map_empty::<U64, CtAppliedFunction>()
+  let _ = while 0u32 {
+    index if index < applications.length() => {
+      let site = applications[index]
+      let file = plan.files[site.file]
+      let function = file.functions[site.function]
+      let result = results[index]
+      applied.set(ct_site_key(plan, file.module_index, file.original.path, function.declaration.offset), {
+        file: file
+        function: function
+        node: CtValue::Empty
+        original_source: CtValue::Empty
+        signature: ""
+        changed: false
+        bridge: None
+        imports: ""
+        declarations: ""
+        steps: 0u32
+        allocated: 0u32
+        rendered: Some(result.manifest.modules[0u32].files[0u32].source.to_string())
+      })
+      for report in result.reports {
+        plan.reports.push(report)
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  Ok(Some(applied))
+}
+
+fn ct_parallel_apply(plan: CtPlan) -> Result<Option<Map<U64, CtAppliedFunction>>, String> {
+  if !plan.worker_ready {
+    return Ok(None)
+  }
+  let applications = ct_worker_applications(plan)
+  if applications.length() < 2u32 || applications.length() > 64u32 || CtWorkerHost.capacity() < 2u32 {
+    return Ok(None)
+  }
+  let snapshot = match ct_cache_encode(ct_worker_key(), plan.manifest, []) {
+    Some(value) if value.byte_length() <= 16777192u32 => value
+    _ => return Ok(None)
+  }
+  let size = 12u64 + u32_into_u64(applications.length()) * (28u64 + u32_into_u64(snapshot.byte_length()))
+  let mut output_size = 12u64
+  for site in applications {
+    let function = plan.files[site.file].functions[site.function]
+    // One 1 MiB function plus bounded codec and site metadata.
+    output_size = output_size + 1056768u64 + u32_into_u64(function.annotation_count) * 16416u64
+  }
+  if size > 33554432u64 || output_size > 33554432u64 {
+    return Ok(None)
+  }
+  let batch = BytesBuilder::with_capacity(u64_into_u32(size))
+  batch.append(b"DWWB")
+  ct_cache_u32(batch, 1u32)
+  ct_cache_u32(batch, applications.length())
+  for site in applications {
+    let job = ct_worker_job(snapshot, site, plan.worker_preamble)
+    ct_cache_u32(batch, job.byte_length())
+    batch.append(job)
+  }
+  let output = wasm_array_new::<U8>(u64_into_u32(output_size), 0u8)
+  let length = CtWorkerHost.run_batch(ct_worker_array(batch.finish()), output)
+  if length > wasm_array_len(output) {
+    return Err("transform worker host returned an invalid output length")
+  }
+  ct_worker_apply_results(plan, applications, ct_worker_bytes(output, length))
+}

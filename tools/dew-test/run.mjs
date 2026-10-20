@@ -130,6 +130,7 @@ async function instantiateWithWasi(module) {
   let instance = null;
   let stdout = [];
   const imports = {
+    "dewdrop.transform.workers": { capacity: () => 0 },
     wasi_snapshot_preview1: {
       fd_write(fd, iovs, iovsLength, written) {
         if (instance === null) throw new Error("WASI write during instantiation");

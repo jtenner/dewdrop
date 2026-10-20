@@ -21933,12 +21933,17 @@ fn build_self_host_linked_i32_module(
       } else {
         global_module
       }
+      let exported_module = StarshineFfi.ffi_ffi_bridge_module_with_compiler_exports(
+        started_module,
+        self_host_u32_to_i32(root_function_index),
+      )
+      let exported_module = match self_host_linked_public_function_exports(link, root_module, root_function_index, exported_module) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
       self_host_encode_linked_i32_module(
         StarshineFfi.ffi_ffi_bridge_module_with_declarative_functions(
-          StarshineFfi.ffi_ffi_bridge_module_with_compiler_exports(
-            started_module,
-            self_host_u32_to_i32(root_function_index),
-          ),
+          exported_module,
           function_references,
         ),
         link,
@@ -21960,4 +21965,48 @@ pub fn build_self_host_linked_root_i32_module(
   } else {
     build_self_host_linked_i32_module(link, modules[root_index].module_id)
   }
+}
+
+
+// Use ordinary root-module visibility. No compiler entry spelling or module
+// path selects export behavior. Generic specializations keep their checked ABI.
+fn self_host_linked_public_function_exports(link: SelfHostPlannedProgramWasmGCLink, root_module: U64, main_index: U32, module_: StarshineModule) -> Result<StarshineModule, String> {
+  let builder = StarshineFfi.ffi_ffi_bridge_function_export_builder_new()
+  let names = map_empty::<String, Bool>()
+  names.set("main", true)
+  names.set("memory", true)
+  let targets = map_empty::<U64, U32>()
+  for function in link.functions {
+    if function.specialization == 4294967295u32 && function.lambda == 4294967295u32 && !function.imported && link.fragments.specialization.lowering.modules[function.module_index].module_id == root_module {
+      targets.set(function.declaration, function.function_index)
+    }
+  }
+  for source in link.fragments.specialization.lowering.modules {
+    if source.module_id == root_module {
+      for callable in source.functions.callables {
+        if callable.visibility is Public && callable.kind is PlannedFunctionCallable(_) && callable.generic_parameters.length == 0u32 && callable.owner_generic_parameters.length == 0u32 {
+          let target = match targets.get(callable.declaration) {
+            Some(value) => value
+            None => return Err("public function export lost its checked target")
+          }
+          if target != main_index {
+            let name = callable.name.to_string()
+            if names.contains_key(name) {
+              return Err("ambiguous public function export name: ".concat(name))
+            }
+            names.set(name, true)
+            let _ = while 0u32 {
+              index if index < callable.name.byte_length() => {
+                StarshineFfi.ffi_ffi_bridge_FunctionExportBuilder_push_name_byte(builder, u8_into_i32(callable.name.byte_at(index)))
+                continue index + 1u32
+              }
+              _ => break ()
+            }
+            StarshineFfi.ffi_ffi_bridge_FunctionExportBuilder_push(builder, self_host_u32_to_i32(target))
+          }
+        }
+      }
+    }
+  }
+  Ok(StarshineFfi.ffi_ffi_bridge_module_with_additional_function_exports(module_, builder))
 }

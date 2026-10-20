@@ -69,6 +69,8 @@ pub struct CtPlan {
   site_files: Map<U32, Map<String, U32>>
   mut next_site_file: U32
   active: Bool
+  mut worker_ready: Bool
+  mut worker_preamble: Bool
   mut error: String
   mut validation_stop: String
   mut raw_array_declarations: Map<U64, Bool>

@@ -500,6 +500,10 @@
     "Instruction::i64_trunc_sat_f32s",
     "Instruction::i64_trunc_sat_f32u",
     "Instruction::i64_trunc_sat_f64s",
-    "Instruction::i64_trunc_sat_f64u"
+    "Instruction::i64_trunc_sat_f64u",
+    "ffi_bridge::function_export_builder_new",
+    "FunctionExportBuilder::push_name_byte",
+    "FunctionExportBuilder::push",
+    "ffi_bridge::module_with_additional_function_exports"
   ]
 }

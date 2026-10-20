@@ -1,0 +1,77 @@
+open dew.std.bytes
+open dew.std.map
+open dew.std.option
+
+fn ct_worker_export_test_leb(reader: CtCacheReader) -> U32 {
+  let mut value = 0u32
+  let _ = while 0u32 {
+    shift if shift < 35u32 => {
+      assert(reader.offset < reader.bytes.byte_length(), "Wasm LEB must fit its section")
+      let byte = u8_into_u32(reader.bytes.byte_at(reader.offset))
+      reader.offset = reader.offset + 1u32
+      value = value | ((byte & 127u32) << shift)
+      if byte < 128u32 {
+        break ()
+      }
+      continue shift + 7u32
+    }
+    _ => {
+      assert(false, "Wasm LEB must fit U32")
+      break ()
+    }
+  }
+  value
+}
+
+fn ct_worker_export_test_names(bytes: Bytes) -> Map<String, U32> {
+  let reader = ct_worker_reader(bytes)
+  reader.offset = 8u32
+  let exports = map_empty::<String, U32>()
+  let _ = while reader.offset {
+    offset if offset < bytes.byte_length() => {
+      let kind = bytes.byte_at(reader.offset)
+      reader.offset = reader.offset + 1u32
+      let length = ct_worker_export_test_leb(reader)
+      let end = reader.offset + length
+      assert(end <= bytes.byte_length(), "Wasm section must fit the module")
+      if kind == 7u8 {
+        let count = ct_worker_export_test_leb(reader)
+        let _ = while 0u32 {
+          index if index < count => {
+            let length = ct_worker_export_test_leb(reader)
+            let name = bytes.view(reader.offset, length).to_string()
+            reader.offset = reader.offset + length
+            let export_kind = bytes.byte_at(reader.offset)
+            reader.offset = reader.offset + 1u32
+            let target = ct_worker_export_test_leb(reader)
+            if export_kind == 0u8 {
+              assert(!exports.contains_key(name), "function export names are unique")
+              exports.set(name, target)
+            }
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+      reader.offset = end
+      continue end
+    }
+    _ => break ()
+  }
+  exports
+}
+
+test "Dew backend preserves public function entries for compiler workers" {
+  let lowering = self_host_type_demand_test_lowering(b"fn hidden(value: I64) -> I64 {\nvalue + 2i64\n}\npub fn exported(value: I64) -> I64 {\nhidden(value)\n}\npub fn launch() -> Unit {\n()\n}\npub fn main() -> I32 {\n42i32\n}\n")
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(self_host_plan_program_runtime_specialization(lowering, 0u32, false)), false)
+  match build_self_host_linked_root_i32_module(link, 0u32) {
+    Ok(bytes) => {
+      let exports = ct_worker_export_test_names(bytes)
+      assert(exports.contains_key("main"), "main stays exported")
+      assert(exports.contains_key("exported"), "ordinary public function stays exported")
+      assert(exports.contains_key("launch"), "Unit worker-style entry stays exported")
+      assert(!exports.contains_key("hidden"), "private helper is not exported")
+    }
+    Err(error) => assert(false, error)
+  }
+}

@@ -432,6 +432,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> CtApplied
     function: function
     node: node
     original_source: original_source
+    rendered: None
     signature: signature
     changed: changed
     bridge: bridge
@@ -448,6 +449,7 @@ fn ct_failed_applied(file: CtFile, function: CtFunction) -> CtAppliedFunction {
     function: function
     node: CtValue::Empty
     original_source: CtValue::Empty
+    rendered: None
     signature: ""
     changed: false
     bridge: None
@@ -459,6 +461,13 @@ fn ct_failed_applied(file: CtFile, function: CtFunction) -> CtAppliedFunction {
 }
 
 fn ct_render_applied(machine: CtMachine, applied: CtAppliedFunction, repairs: Array<CtSourceRepair>) -> String {
+  match applied.rendered {
+    Some(source) => {
+      assert(repairs.length() == 0u32, "worker result cannot contain signature repairs")
+      return source
+    }
+    None => {}
+  }
   let file = applied.file
   let function = applied.function
   let fn_ = function.declaration
@@ -498,35 +507,7 @@ fn ct_render_applied(machine: CtMachine, applied: CtAppliedFunction, repairs: Ar
     }
     None => {}
   }
-  if source.byte_length() > 1048576u32 {
-    let _ = ct_fail(machine, "generated source size limit exceeded")
-    return ""
-  }
-  let mut depth = 0u32
-  for token in self_host_tokenize(source.as_bytes()) {
-    let symbol = token.symbol_code
-    if symbol == 0u32 || symbol == 2u32 || symbol == 4u32 {
-      depth = depth + 1u32
-    } else if symbol == 1u32 || symbol == 3u32 || symbol == 5u32 {
-      if depth == 0u32 {
-        let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
-        return ""
-      }
-      depth = depth - 1u32
-    }
-    if depth > 128u32 {
-      let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
-      return ""
-    }
-  }
-  let events = self_host_parse_module(source.as_bytes()).events
-  let valid = if events.length() == 1u32 {
-    events[0u32] is Declaration(Function(_), _)
-  } else {
-    false
-  }
-  if !valid {
-    let _ = ct_fail(machine, "transform must produce one valid function body")
+  if !ct_validate_function_source(machine, source.as_bytes()) {
     return ""
   }
   let imports = applied.imports
@@ -552,14 +533,31 @@ fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations:
   if !plan.active {
     return Ok(plan.manifest)
   }
+  let parallel = match ct_parallel_apply(plan) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  ct_expand_applied(plan, retain_transform_declarations, parallel)
+}
+
+fn ct_expand_applied(plan: CtPlan, retain_transform_declarations: Bool, parallel: Option<Map<U64, CtAppliedFunction>>) -> Result<SelfHostProgramManifest, String> {
   let machine = ct_machine(plan)
-  let applied = map_empty::<U64, CtAppliedFunction>()
+  let applied = match parallel {
+    Some(value) => value
+    None => map_empty::<U64, CtAppliedFunction>()
+  }
   let bridges = map_empty::<U64, String>()
   for file in plan.files {
     ct_seed_imports(machine, file.module_index)
     for function in file.functions {
       if !function.transform_ && ct_is_annotated(file, function) {
-        let value = ct_apply(machine, file, function)
+        let value = match parallel {
+          Some(_) => match applied.get(ct_site_key(plan, file.module_index, file.original.path, function.declaration.offset)) {
+            Some(value) => value
+            None => return Err("worker result lost its original function site")
+          }
+          None => ct_apply(machine, file, function)
+        }
         if machine.error.byte_length() != 0u32 {
           return Err(file.original.path.concat(": error: transform on ").concat(function.declaration.name).concat(": ").concat(machine.error))
         }
@@ -703,6 +701,46 @@ fn ct_qualified_identifier(name: String) -> Bool {
       continue at + 2u32
     }
     _ => break ()
+  }
+  true
+}
+
+// Used for local rendering and for copied worker output before admission.
+fn ct_validate_function_source(machine: CtMachine, source: Bytes) -> Bool {
+  if !source.is_valid_utf8() {
+    let _ = ct_fail(machine, "generated function source must be valid UTF-8")
+    return false
+  }
+  if source.byte_length() > 1048576u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return false
+  }
+  let mut depth = 0u32
+  for token in self_host_tokenize(source) {
+    let symbol = token.symbol_code
+    if symbol == 0u32 || symbol == 2u32 || symbol == 4u32 {
+      depth = depth + 1u32
+    } else if symbol == 1u32 || symbol == 3u32 || symbol == 5u32 {
+      if depth == 0u32 {
+        let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
+        return false
+      }
+      depth = depth - 1u32
+    }
+    if depth > 128u32 {
+      let _ = ct_fail(machine, "generated syntax nesting limit exceeded")
+      return false
+    }
+  }
+  let events = self_host_parse_module(source).events
+  let valid = if events.length() == 1u32 {
+    events[0u32] is Declaration(Function(_), _)
+  } else {
+    false
+  }
+  if !valid {
+    let _ = ct_fail(machine, "transform must produce one valid function body")
+    return false
   }
   true
 }

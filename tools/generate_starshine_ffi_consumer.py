@@ -174,6 +174,11 @@ CARRIER_ASSERTIONS += tuple(
                                    ("EncodedModule::byte_at", "parameter", 0))),
         ("StarshineGlobalBuilder", (("ffi_bridge::global_builder_new", "result", 0),
                                    ("GlobalBuilder::push", "parameter", 0))),
+        ("StarshineFunctionExportBuilder", (
+            ("ffi_bridge::function_export_builder_new", "result", 0),
+            ("FunctionExportBuilder::push_name_byte", "parameter", 0),
+            ("FunctionExportBuilder::push", "parameter", 0),
+            ("ffi_bridge::module_with_additional_function_exports", "parameter", 1))),
         ("StarshineFunctionReferenceBuilder", (
             ("ffi_bridge::function_reference_builder_new", "result", 0),
             ("FunctionReferenceBuilder::push", "parameter", 0))),

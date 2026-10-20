@@ -1,7 +1,9 @@
 # Compile-time function transforms
 
 Function transforms run Dew code inside the compiler. They use an interpreter;
-they do not start a process, create another Wasm instance, or call host APIs.
+they do not start a process or call host APIs. The optional Wago worker host
+runs copies of the compiler interpreter. It does not compile transform code
+to another Wasm program.
 The native compiler and the compiler written in Dew use the same source API.
 
 ## Try it
@@ -681,3 +683,47 @@ Try `examples/transforms/dynamic_traits.dew`; its `main` returns `42`.
 The Native and Dew transform interpreters support this example. The compiler
 written in Dew currently rejects live runtime trait objects with a clear error.
 Keep these trait values inside transform code when you use that compiler.
+
+## Optional Wago workers
+
+The local host can run independent function applications on two workers. Each
+worker uses the same compiled compiler and its source interpreter. Its normal
+Wasm start function initializes its private instance. Source and
+result bytes are copied between instances. Compiler objects are not shared.
+Stacked annotations stay together and run in source order. Results and resource
+reports return in source order too.
+
+Workers are off by default. Build and check the local host with:
+
+```sh
+mise exec go@1.27.2 wasm-tools@1.262.0 -- python3 tools/build-wago-transform-host.py .tmp/wago-host --test
+tools/test-transform-workers.sh .tmp/self-host-bootstrap/b/compiler.wasm .tmp/wago-host
+```
+
+The check uses `examples/transforms/parallel.dew`. It requires equal Wasm and
+cache bytes in serial and parallel modes, and `main() = 42` in both. Build the
+Dew compiler first with `tools/check-self-host-bootstrap.sh --fast` if needed.
+The check uses a 512 MiB heap and 64 MiB nursery per instance. Set
+`DEW_TRANSFORM_GC_HEAP` or `DEW_TRANSFORM_GC_NURSERY` to change those test settings.
+
+For a compiler request, adapt the compiler with
+`tools/prepare-wago-compiler.py`, then set `DEW_TRANSFORM_WORKERS=2` when you run
+the local host. Keep the existing Facet and Wago lock files. Node and the Native
+compiler use serial execution.
+
+The host accepts at most 64 applications and 32 MiB of input or results in a
+batch, with 16 MiB per application and a 120-second batch timeout. The current
+compiler reserves output space before a batch, so it uses serial execution for
+rounds above 31 simple applications or for any round that exceeds a byte bound.
+It rejects nested workers and busy pools. Each worker has at most 16 MiB of linear memory.
+Its managed heap uses the caller's Wago GC settings. This linear-memory cap is
+not a total process-memory cap.
+
+Only plain body changes use worker results. Signature changes, call adapters,
+added imports, added declarations, and application errors repeat the whole round
+serially. Candidate reports are discarded first. Host traps, cancellation,
+timeouts, and invalid messages remain visible errors. Final generated source
+still passes the normal compiler checks before output or cache publication.
+
+Workers repeat semantic preparation in each instance. They can cost more time
+and memory for small transforms. Keep them off unless you need to test this path.

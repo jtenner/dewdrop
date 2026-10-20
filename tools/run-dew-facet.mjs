@@ -279,6 +279,7 @@ const facet = {
 try {
   const module = await WebAssembly.compile(fs.readFileSync(wasmPath));
   instance = await WebAssembly.instantiate(module, {
+    "dewdrop.transform.workers": hostModuleWithFallback("dewdrop.transform.workers", { capacity: () => 0 }),
     facet: hostModuleWithFallback("facet", facet),
     __moonbit_fs_unstable: hostModuleWithFallback("__moonbit_fs_unstable"),
     __moonbit_time_unstable: {

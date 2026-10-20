@@ -18,6 +18,7 @@ pub struct CtAppliedFunction {
   function: CtFunction
   node: CtValue
   original_source: CtValue
+  rendered: Option<String>
   signature: String
   changed: Bool
   bridge: Option<String>

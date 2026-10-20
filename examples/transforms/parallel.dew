@@ -1,0 +1,53 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+trait Answer {
+  fn answer(self) -> I32
+}
+
+impl Answer for I32 {
+  fn answer(self) -> I32 {
+    self
+  }
+}
+
+fn erase<t: Answer>(value: t) -> Answer {
+  value
+}
+
+fn read(value: Answer) -> I32 {
+  value.answer()
+}
+
+struct State {
+  mut value: I32
+}
+
+let state = State::{
+  value: 18i32
+}
+
+transform fn fresh(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  state.value = state.value + 1i32
+  node.with_body(@ast.integer(read(erase(state.value))))
+}
+
+transform fn add_two(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(node.body.binary("+", @ast.integer(2i32)))
+}
+
+#fresh
+#add_two
+fn left() -> I32 {
+  0i32
+}
+
+#fresh
+#add_two
+fn right() -> I32 {
+  0i32
+}
+
+pub fn main() -> I32 {
+  left() + right()
+}

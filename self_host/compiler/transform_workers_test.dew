@@ -1,0 +1,249 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.map
+open dew.std.option
+open dew.std.result
+
+fn ct_worker_test_plan(source: Bytes) -> CtPlan {
+  let root = SelfHostProgramManifest::{
+    modules: [{
+path: "example.app"
+      files: [{
+path: "main.dew"
+source: source
+test_only: false
+}]
+    }]
+  }
+  let pool = ct_frames_test_source_pool()
+  let first = match self_host_manifest_import_closure_deferred(root, pool, ["dewdrop.ast", "dewdrop.transform"]) {
+    Ok(value) => ct_prepare(value)
+    Err(error) => {
+      assert(false, error)
+return ct_prepare(root)
+    }
+  }
+  let complete = match self_host_manifest_import_closure(first.manifest, pool) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+return first
+    }
+  }
+  ct_worker_prepare(complete)
+}
+
+fn ct_worker_test_checked(source: Bytes) -> CtPlan {
+  let plan = ct_worker_test_plan(source)
+  match ct_check_plan(plan, true) {
+    Ok(_) => {}
+    Err(error) => assert(false, error)
+  }
+  plan
+}
+
+fn ct_worker_test_source() -> Bytes {
+  b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nstruct State {\n  mut value: I32\n}\nlet state = State::{\n  value: 19i32\n}\ntransform fn first(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  state.value = state.value + 1i32\n  node.with_body(@ast.integer(state.value))\n}\ntransform fn second(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.source(\"42i32\"))\n}\n#first\n#second\npub fn left() -> I32 {\n  0i32\n}\n#first\npub fn right() -> I32 {\n  0i32\n}\n"
+}
+
+fn ct_worker_test_result(plan: CtPlan, site: CtWorkerApplication) -> Bytes {
+  let snapshot = ct_worker_test_encode(plan.manifest, [])
+  match ct_worker_execute(ct_worker_job(snapshot, site, true)) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+b""
+    }
+  }
+}
+
+fn ct_worker_test_batch(results: Array<Bytes>) -> Bytes {
+  let out = BytesBuilder::new()
+  out.append(b"DWWR")
+  ct_cache_u32(out, 1u32)
+  ct_cache_u32(out, results.length())
+  for result in results {
+    ct_cache_u32(out, result.byte_length())
+    out.append(result)
+  }
+  out.finish()
+}
+
+test "worker results match serial source reports and stacked state" {
+  let plan = ct_worker_test_checked(ct_worker_test_source())
+  let sites = ct_worker_applications(plan)
+  assert(sites.length() == 2u32, "two independent functions")
+  let results = []
+  for site in sites {
+    results.push(ct_worker_test_result(plan, site))
+  }
+  assert(plan.reports.length() == 0u32, "workers do not change the parent reports")
+  let applied = match ct_worker_apply_results(plan, sites, ct_worker_test_batch(results)) {
+    Ok(Some(value)) => value
+    Ok(None) => {
+      assert(false, "plain bodies are independent")
+      return
+    }
+    Err(error) => {
+      assert(false, error)
+return
+    }
+  }
+  let expanded = match ct_expand_applied(plan, false, Some(applied)) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+return
+    }
+  }
+  let serial = ct_worker_test_checked(ct_worker_test_source())
+  let expected = match ct_expand_retaining_declarations(serial, false) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+return
+    }
+  }
+  assert(ct_worker_test_encode(expanded, plan.reports).equals(ct_worker_test_encode(expected, serial.reports)), "all source and report fields match serial")
+  assert(plan.reports.length() == 3u32, "stack remains in one application")
+  let source = ct_test_all_source(expanded.modules[0u32])
+  assert(source.contains("42i32") && source.contains("20i32"), source)
+}
+
+test "worker fallback keeps no partial reports" {
+  let plan = ct_worker_test_checked(ct_worker_test_source())
+  let sites = ct_worker_applications(plan)
+  let success = ct_worker_test_result(plan, sites[0u32])
+  let fallback = ct_worker_result(1u32, b"")
+  match ct_worker_apply_results(plan, sites, ct_worker_test_batch([success, fallback])) {
+    Ok(None) => {}
+    _ => assert(false, "whole round must repeat serially")
+  }
+  assert(plan.reports.length() == 0u32, "no candidate report escapes fallback")
+}
+
+test "worker result codec rejects corrupt headers sites reports and trailing bytes" {
+  let plan = ct_worker_test_plan(ct_worker_test_source())
+  let sites = ct_worker_applications(plan)
+  let fallback = ct_worker_result(1u32, b"")
+  for data in [b"", b"DWWXbadversion", fallback.concat(b"x"), ct_worker_result(3u32, b"")] {
+    assert(ct_worker_decode_result(plan, sites[0u32], data) is Err(_), "bad result rejected")
+  }
+  let site = sites[0u32]
+  let file = plan.files[site.file]
+  let function = file.functions[site.function]
+  let machine = ct_machine(plan)
+  ct_seed_imports(machine, file.module_index)
+  let reports = []
+  let _ = while 0u32 {
+    index if index < function.annotation_count => {
+      let annotation = file.annotations[function.annotation_start + index]
+      reports.push(CtTransformReport::{
+        module_name: "example.app"
+        file_name: "main.dew"
+        function_name: function.declaration.name
+        transform_name: ct_annotation_key(machine, file.module_index, annotation.name)
+        offset: annotation.offset
+        work: 1u32
+        allocation_work: 1u32
+      })
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let header = ct_part(file.clean, function.start, function.declaration.body.offset)
+  let valid_source = header.concat("{\n42i32\n}").as_bytes()
+  let output = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: valid_source
+        test_only: false
+      }]
+    }]
+  }
+  let valid = ct_worker_result(0u32, ct_worker_test_encode(output, reports))
+  assert(ct_worker_decode_result(plan, site, valid) is Ok(Some(_)), "valid source and report sites")
+  let invalid_text = BytesBuilder::new()
+  invalid_text.append_byte(255u8)
+  for source in [b"", invalid_text.finish(), b"pub fn renamed() -> I32 {\n42i32\n}", valid_source.concat(b"\nfn added() -> I32 {\n0i32\n}")] {
+    output.modules[0u32].files[0u32] = {
+      path: "main.dew"
+      source: source
+      test_only: false
+    }
+    assert(ct_worker_decode_result(plan, site, ct_worker_result(0u32, ct_worker_test_encode(output, reports))) is Err(_), "invalid function source rejected before reports")
+  }
+  output.modules[0u32].files[0u32] = {
+    path: "wrong.dew"
+    source: valid_source
+    test_only: false
+  }
+  assert(ct_worker_decode_result(plan, site, ct_worker_result(0u32, ct_worker_test_encode(output, reports))) is Err(_), "wrong source site rejected")
+  output.modules[0u32].files[0u32] = {
+    path: "main.dew"
+    source: valid_source
+    test_only: false
+  }
+  let first = reports[0u32]
+  reports[0u32] = {
+    module_name: first.module_name
+    file_name: first.file_name
+    function_name: first.function_name
+    transform_name: "wrong"
+    offset: first.offset
+    work: first.work
+    allocation_work: first.allocation_work
+  }
+  assert(ct_worker_decode_result(plan, site, ct_worker_result(0u32, ct_worker_test_encode(output, reports))) is Err(_), "wrong checked report rejected")
+  let batch = ct_worker_test_batch([fallback, fallback])
+  assert(ct_worker_apply_results(plan, sites, batch.concat(b"x")) is Err(_), "batch must end exactly")
+  assert(plan.reports.length() == 0u32, "invalid batch has no reports")
+}
+
+test "worker job codec rejects malformed source and function sites" {
+  for data in [b"", b"DWWJ", ct_worker_result(0u32, b"invalid source")] {
+    assert(ct_worker_execute(data) is Err(_), "bad job rejected")
+  }
+  let plan = ct_worker_test_plan(ct_worker_test_source())
+  let job = ct_worker_job(b"invalid checksum", {
+file: 0u32
+function: 0u32
+}, true)
+  assert(ct_worker_execute(job) is Err(_), "bad source snapshot rejected")
+  let snapshot = ct_worker_test_encode(plan.manifest, [])
+  assert(ct_worker_execute(ct_worker_job(snapshot, {
+file: 4294967295u32
+function: 0u32
+}, true)) is Err(_), "site must be in source")
+}
+
+fn ct_worker_test_encode(manifest: SelfHostProgramManifest, reports: Array<CtTransformReport>) -> Bytes {
+  match ct_cache_encode(ct_worker_key(), manifest, reports) {
+    Some(value) => value
+    None => {
+      assert(false, "test snapshot must fit the worker source codec")
+      b""
+    }
+  }
+}
+
+test "worker declaration and signature changes select serial replay" {
+  let sources = [
+    b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn change(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_return_type(@ast.named_type(\"I64\")).with_body(@ast.source(\"42i64\"))\n}\n#change\npub fn main() -> I32 {\n0i32\n}\n",
+    b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn change(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let _ = ctx.add_function(\"fn helper() -> I32 {\\n42i32\\n}\")\n  node.with_body(@ast.integer(42i32))\n}\n#change\npub fn main() -> I32 {\n0i32\n}\n",
+    b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn change(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let _ = ctx.import_module(\"dew.std.array\", \"items\")\n  node.with_body(@ast.integer(42i32))\n}\n#change\npub fn main() -> I32 {\n0i32\n}\n",
+  ]
+  for source in sources {
+    let plan = ct_worker_test_checked(source)
+    let sites = ct_worker_applications(plan)
+    let result = ct_worker_test_result(plan, sites[0u32])
+    match ct_worker_decode_result(plan, sites[0u32], result) {
+      Ok(None) => {}
+      _ => assert(false, "dependent changes require serial replay")
+    }
+    assert(plan.reports.length() == 0u32, "no worker report escapes replay")
+  }
+}

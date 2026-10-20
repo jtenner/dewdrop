@@ -7,7 +7,11 @@ on:
     paths:
       - 'lib/dewdrop/**'
       - 'self_host/compiler/**'
+      - 'self_host/starshine/**'
+      - 'starshine-mb'
       - 'src/**'
+      - 'std/**'
+      - 'examples/transforms/**'
       - 'tools/**'
       - 'wago*.json'
       - '.github/workflows/transform-wago.yml'
@@ -25,8 +29,10 @@ jobs:
         with:
           submodules: recursive
       - name: Check the host adapter
-        run: mise exec wasm-tools@1.262.0 -- python3 tools/test-wago-adapter.py
+        run: |
+          mise exec wasm-tools@1.262.0 -- python3 tools/test-wago-adapter.py
+          python3 tools/test-wago-compiler-adapter.py
       - name: Build the compiler and check self-hosting
         run: mise exec wasm-tools@1.262.0 -- tools/check-self-host-bootstrap.sh --fast --through-b
-      - name: Run a source transform in native Wago
-        run: mise exec wasm-tools@1.262.0 -- tools/test-transform-wago.sh .tmp/self-host-bootstrap/b/compiler.wasm
+      - name: Compare serial and worker transforms in native Wago
+        run: mise exec wasm-tools@1.262.0 -- tools/test-transform-workers.sh .tmp/self-host-bootstrap/b/compiler.wasm

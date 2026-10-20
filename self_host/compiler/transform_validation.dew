@@ -77,11 +77,18 @@ fn ct_expand_checked_plan(plan: CtPlan, default_preamble: Bool) -> Result<SelfHo
 }
 
 fn ct_expand_checked_plan_retaining_declarations(plan: CtPlan, default_preamble: Bool, retain_transform_declarations: Bool) -> Result<SelfHostProgramManifest, String> {
+  match ct_check_plan(plan, default_preamble) {
+    Err(error) => Err(error)
+    Ok(_) => ct_expand_retaining_declarations(plan, retain_transform_declarations)
+  }
+}
+
+fn ct_check_plan(plan: CtPlan, default_preamble: Bool) -> Result<Unit, String> {
   if plan.error.byte_length() != 0u32 {
     return Err(plan.error)
   }
   if !plan.active {
-    return Ok(plan.manifest)
+    return Ok(())
   }
   let validation_manifest = ct_validation_manifest(plan)
   if plan.error.byte_length() != 0u32 {
@@ -146,7 +153,12 @@ fn ct_expand_checked_plan_retaining_declarations(plan: CtPlan, default_preamble:
   ct_collect_arrays(plan, collected, lowering)
   ct_collect_raw_layouts(plan, collected, lowering)
   ct_collect_expression_types(plan, default_preamble)
-  ct_expand_retaining_declarations(plan, retain_transform_declarations)
+  if plan.error.byte_length() != 0u32 {
+    return Err(plan.error)
+  }
+  plan.worker_ready = true
+  plan.worker_preamble = default_preamble
+  Ok(())
 }
 
 // A request carries source bytes; import selection never asks interpreted code

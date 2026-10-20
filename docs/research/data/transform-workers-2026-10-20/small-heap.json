@@ -1,0 +1,89 @@
+{
+  "identity": {
+    "compiler": "/home/dev/Projects/dewdrop/.tmp/self-host-bootstrap/b/compiler.wasm",
+    "compiler_sha256": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186",
+    "adapted_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "compiler_bytes": 2724036,
+    "host": "/home/dev/Projects/dewdrop/.tmp/transforms-v5/worker-host-start/host",
+    "host_sha256": "b5948a864a7700396b7d0c40720ac6f59d23f004f47be99d7e88cb06cfced487",
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "harness_sha256": "ac3cd5f46252039ed6df1f9dd93cb3dd2ff641fa18a5e183deab63ce0c9fbb83",
+    "gc_heap": "512MiB",
+    "gc_nursery": "64MiB"
+  },
+  "host_identity": {
+    "module": "github.com/wago-org/wago",
+    "version": "v0.0.0-20260915172549-2dd978ccda6f",
+    "module_sum": "h1:dFBzMhoW0lupYuCXLJqVppzIwOuPRw30/glZGpD/ywQ=",
+    "patch_sha256": "8bc69b2815397860d254bd2c46c02662750841d73fa96139797e2c182d877a27",
+    "patches": {
+      "cli-module-lifetime.patch": "ab923611800eb2ff2a38bd415854f1e1c3378633f32d76a11f5eb6e43f445103",
+      "gc-frame-reference-liveness.patch": "0b21a9d106ee312cf7a570a5cef59fb4e37f0a8513498077ae28f8bc3bf800e8",
+      "managed-isolated-fork.patch": "4c72054f8f9c1330ee8ebd08fd3186709b16881d3009069558c79b35c4616008"
+    },
+    "host_sha256": "b5948a864a7700396b7d0c40720ac6f59d23f004f47be99d7e88cb06cfced487",
+    "tests_run": true,
+    "private_source": "/home/dev/Projects/dewdrop/.tmp/wago-transform-host/build-y_uuvb8q/wago",
+    "host_source_sha256": "13ecf8ac6df34b10b6901f2c3f315c28555b7a0255be0066d36f9cd45df388e4"
+  },
+  "samples": [
+    {
+      "label": "serial",
+      "command": [
+        "/home/dev/Projects/dewdrop/.tmp/transforms-v5/worker-host-start/host",
+        "run",
+        "-p8",
+        "--core",
+        "3",
+        "--local",
+        "--locked",
+        "--no-input",
+        "--gc-heap",
+        "512MiB",
+        "--gc-nursery",
+        "64MiB",
+        "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+        ".tmp/transform-workers/run-rvr6ozve/serial.bin"
+      ],
+      "seconds": 93.30342454899801,
+      "rss_kib": 1340032,
+      "exit": 0,
+      "workers": "0",
+      "request_sha256": "96d4c8e00ef95b84c24b0e89a9e9f78baf088c368a5367a33df03993a0e72789",
+      "output_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+      "cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240"
+    },
+    {
+      "label": "parallel",
+      "command": [
+        "/home/dev/Projects/dewdrop/.tmp/transforms-v5/worker-host-start/host",
+        "run",
+        "-p8",
+        "--core",
+        "3",
+        "--local",
+        "--locked",
+        "--no-input",
+        "--gc-heap",
+        "512MiB",
+        "--gc-nursery",
+        "64MiB",
+        "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+        ".tmp/transform-workers/run-rvr6ozve/parallel.bin"
+      ],
+      "seconds": 169.7498982809775,
+      "rss_kib": 2217528,
+      "exit": 0,
+      "workers": "2",
+      "request_sha256": "0648e3a5d71b865f82c1d0155695af9599b6da8a7f84db7c19f67e65a2db65f7",
+      "output_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+      "cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240"
+    }
+  ],
+  "limits": [
+    "One cold process per mode on a shared Linux AMD64 host.",
+    "Both samples include native compiler-code compilation in a fresh absolute WAGO_HOME.",
+    "This is not an isolated guest-time or retained-heap measurement.",
+    "No ARM64 runtime measurements."
+  ]
+}
