@@ -190,7 +190,7 @@ pub enum InferredCallTarget {
 pub enum InferredTraitObjectCoercion {
   NoInferredTraitObjectCoercion
   ErrorInferredTraitObjectCoercion
-  SelectedInferredTraitObjectCoercion(DeclId, Int32)
+  SelectedInferredTraitObjectCoercion(DeclId, Int32, BodyTypeId)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|

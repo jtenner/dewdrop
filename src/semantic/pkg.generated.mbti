@@ -59,7 +59,7 @@ pub fn compile_time_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedPro
 
 pub fn compile_time_expression_types(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[(Int, String, UInt64, UInt64)]) -> Array[CompileTimeExpressionType]
 
-pub fn compile_time_frame_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[UInt64]) -> Result[Array[CompileTimeFrameCall], String]
+pub fn compile_time_frame_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[UInt64], trait_objects? : Array[CompileTimeTraitObject]) -> Result[Array[CompileTimeFrameCall], String]
 
 pub fn compile_time_imported_type_names(CollectedProgram, AnalyzedProgramSemantics) -> Array[(Int, String, String)]
 
@@ -920,6 +920,26 @@ pub struct CompileTimeReflectedType {
 
 type CompileTimeSpecializedBody
 
+type CompileTimeTraitIndex
+
+pub struct CompileTimeTraitMethod {
+  requirement : UInt64
+  slot : Int
+  module_index : Int
+  file : UInt64
+  offset : UInt64
+  frame : String
+}
+
+pub struct CompileTimeTraitObject {
+  module_index : Int
+  file : UInt64
+  offset : UInt64
+  frame : String
+  trait_declaration : UInt64
+  methods : Array[CompileTimeTraitMethod]
+}
+
 type CompileTimeTraitWitness
 
 pub enum CompileTimeTransformConstant {
@@ -1509,7 +1529,7 @@ pub enum InferredTraitEvidenceKind {
 pub enum InferredTraitObjectCoercion {
   NoInferredTraitObjectCoercion
   ErrorInferredTraitObjectCoercion
-  SelectedInferredTraitObjectCoercion(UInt64, Int)
+  SelectedInferredTraitObjectCoercion(UInt64, Int, Int)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct LambdaCapture {

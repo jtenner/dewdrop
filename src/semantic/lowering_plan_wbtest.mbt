@@ -110,7 +110,7 @@ test "lowering freezes runtime trait coercions and dynamic slots" {
   }
   let item = collected.expression_children[source_arguments.start]
   match planned.expressions[item].trait_object_coercion {
-    SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+    SelectedInferredTraitObjectCoercion(trait_, evidence, _) => {
       assert_eq(trait_, collected.declarations[0].id)
       assert_true(evidence >= 0)
     }

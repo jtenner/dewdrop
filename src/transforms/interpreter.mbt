@@ -8,6 +8,7 @@ enum Value {
   TextChunks(Value, Bytes)
   TextReference(Value)
   ReferenceView(Value, FieldNames)
+  TraitObject(TraitObjectValue)
   Floating(UInt64, String)
   Number(UInt64, String)
   Boolean(Bool)
@@ -470,7 +471,7 @@ fn Machine::eval(
     }
   }
   self.depth -= 1
-  match expr {
+  let result = match expr {
     @parser.NameExpr(_, _) | @parser.FieldExpr(_, _, _) =>
       match
         self.scalar_type_proof((mi, self.file_index, expr.offset().to_int())) {
@@ -478,6 +479,10 @@ fn Machine::eval(
         _ => result
       }
     _ => result
+  }
+  match self.trait_object_proof((mi, self.file_index, expr.offset().to_int())) {
+    Some(proof) => self.trait_object(result, proof)
+    None => result
   }
 }
 

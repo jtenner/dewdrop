@@ -966,7 +966,7 @@ test "closed generic trait coercion forwarding erases dynamic artifacts" {
     expression in erase_body.expressions.start..<(erase_body.expressions.start +
     erase_body.expressions.length) {
     match lowering.modules[0].expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) =>
+      SelectedInferredTraitObjectCoercion(_, evidence, _) =>
         match lowering.modules[0].trait_evidence[evidence].kind {
           BoundInferredTraitEvidence(0) => bound_coercions += 1
           _ => ()
@@ -1820,7 +1820,7 @@ test "runtime trait flow joins retain differing implementation evidence" {
       _ => ()
     }
     match expression.trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
+      SelectedInferredTraitObjectCoercion(_, _, _) => coercions += 1
       _ => ()
     }
   }
@@ -1864,7 +1864,7 @@ test "public runtime trait summaries discard total effect-free preludes" {
   let mut coercions = 0
   for expression in lowering.modules[0].expressions {
     match expression.trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
+      SelectedInferredTraitObjectCoercion(_, _, _) => coercions += 1
       _ => ()
     }
   }
@@ -1903,7 +1903,7 @@ test "public runtime trait summaries retain trapping preludes" {
   let mut coercions = 0
   for expression in lowering.modules[0].expressions {
     match expression.trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, _) => coercions += 1
+      SelectedInferredTraitObjectCoercion(_, _, _) => coercions += 1
       _ => ()
     }
   }
@@ -1956,7 +1956,7 @@ test "runtime trait link executes imported traits and implementations" {
   let mut evidence_index = -1
   for expression in consumer.expressions {
     match expression.trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+      SelectedInferredTraitObjectCoercion(trait_, evidence, _) => {
         trait_declaration = trait_
         evidence_index = evidence
       }

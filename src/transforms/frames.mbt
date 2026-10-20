@@ -4,12 +4,19 @@ struct ExecutionFrame {
   calls : Map[(Int32, Int32, Int32), CallTarget]
   references : Map[(Int32, Int32, Int32), FunctionReferenceProof]
   scalar_types : Map[(Int32, Int32, Int32), String]
+  trait_objects : Map[(Int32, Int32, Int32), TraitObjectProof]
 }
 
 ///|
 fn Plan::execution_frame(self : Plan, key : String) -> ExecutionFrame {
   self.frames.get_or_init(key, fn() {
-    { scalar_proofs: {}, calls: {}, references: {}, scalar_types: {}, }
+    {
+      scalar_proofs: {},
+      calls: {},
+      references: {},
+      scalar_types: {},
+      trait_objects: {},
+    }
   })
 }
 

@@ -441,7 +441,7 @@ test "runtime trait values retain coercion evidence and dynamic method slots" {
   }
   let item = collected.expression_children[arguments.start]
   match inferred.trait_object_coercions[item] {
-    SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+    SelectedInferredTraitObjectCoercion(trait_, evidence, _) => {
       assert_eq(trait_, collected.declarations[0].id)
       match inferred.trait_evidence[evidence].kind {
         ConcreteInferredTraitEvidence(implementation, arguments) => {
@@ -464,7 +464,7 @@ test "generic trait values coerce at explicit and tail return boundaries" {
   let mut bound_coercions = 0
   for coercion in inferred.trait_object_coercions {
     match coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) =>
+      SelectedInferredTraitObjectCoercion(_, evidence, _) =>
         match inferred.trait_evidence[evidence].kind {
           BoundInferredTraitEvidence(_) => bound_coercions += 1
           _ => fail("expected generic-bound runtime trait evidence")

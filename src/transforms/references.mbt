@@ -218,6 +218,7 @@ fn reference_equal(left : Value, right : Value) -> Bool raise EvalError {
     (RawArray(a), RawArray(b)) => physical_equal(a, b)
     (TextChunks(a, _), TextChunks(b, _)) => physical_equal(a, b)
     (Record(_, a), Record(_, b)) => physical_equal(a, b)
+    (TraitObject(a), TraitObject(b)) => physical_equal(a, b)
     (Text(_), Text(_)) | (ByteText(_), ByteText(_)) =>
       physical_equal(left, right)
     (Variant(_, a), Variant(_, b)) | (Sequence(a), Sequence(b)) =>

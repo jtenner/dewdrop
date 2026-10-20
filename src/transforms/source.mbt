@@ -56,6 +56,9 @@ pub struct Plan {
   references : Map[(Int32, Int32, Int32), FunctionReferenceProof]
   calls : Map[(Int32, Int32, Int32), CallTarget]
   scalar_types : Map[(Int32, Int32, Int32), String]
+  trait_objects : Map[(Int32, Int32, Int32), TraitObjectProof]
+  mut trait_dictionaries : Map[String, TraitObjectProof]?
+  mut trait_source_methods : Map[(Int32, String, UInt64), CallTarget]?
   array_literals : Map[(Int32, Int32, Int32), (String, Array[String])]
   array_layouts : Map[String, Array[String]]
   raw_layouts : Map[String, RawLayout]
@@ -92,6 +95,7 @@ pub fn Plan::add_checked_module(
     }
   }
   self.source_lookup = None
+  self.trait_source_methods = None
   self.modules.push(module_)
   self.files.push(parsed)
   Ok(())
@@ -379,6 +383,9 @@ pub fn prepare(
       type_names: {},
       calls: {},
       scalar_types: {},
+      trait_objects: {},
+      trait_dictionaries: None,
+      trait_source_methods: None,
       references: {},
       array_literals: {},
       array_layouts: {},
@@ -460,6 +467,9 @@ pub fn prepare(
     type_names: {},
     calls: {},
     scalar_types: {},
+    trait_objects: {},
+    trait_dictionaries: None,
+    trait_source_methods: None,
     references: {},
     array_literals: {},
     array_layouts: {},

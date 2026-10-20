@@ -9,6 +9,7 @@ fn reference_is_null(value : Value) -> Bool raise EvalError {
     | ByteText(_)
     | TextReference(_)
     | ReferenceView(_, _)
+    | TraitObject(_)
     | TextChunks(_, _)
     | Sequence(_)
     | Function(_, _, _)

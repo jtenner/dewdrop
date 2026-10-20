@@ -63,6 +63,25 @@ fn compile_time_bound_method_arguments(
   } else {
     CtApplied(CtTrait(trait_declaration), trait_arguments)
   }
+  let method_arguments = []
+  for index in trait_count..<arguments.length() {
+    method_arguments.push(arguments[index])
+  }
+  compile_time_implementation_arguments(
+    lowering, implementation, receiver_type, trait_type, method_arguments,
+  )
+}
+
+///|
+// Bind the already checked implementation to exact logical source types.
+fn compile_time_implementation_arguments(
+  lowering : PlannedProgramLowering,
+  implementation : DeclId,
+  receiver_type : CompileTimeType,
+  trait_type : CompileTimeType,
+  method_arguments : Array[CompileTimeType],
+) -> Array[CompileTimeType] {
+  let context = lowering.compile_time.unwrap()
   let implementation_owner = context.declaration_module(implementation)
   let collected = context.program.modules[implementation_owner]
   let implementation_module = lowering.modules[implementation_owner]
@@ -119,8 +138,8 @@ fn compile_time_bound_method_arguments(
         )
     }
   }
-  for index in trait_count..<arguments.length() {
-    result.push(arguments[index])
+  for argument in method_arguments {
+    result.push(argument)
   }
   result
 }

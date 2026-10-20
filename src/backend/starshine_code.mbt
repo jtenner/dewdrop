@@ -1748,14 +1748,18 @@ fn starshine_append_precise_nominal_local_cast(
   // defaultable exact reference local still needs its nullable heap cast.
   match
     starshine_body_value_type(
-      lowering, planned, program, planned_local.type_, planned_local.shape,
+      lowering,
+      planned,
+      program,
+      planned_local.type_,
+      planned_local.shape,
     ) {
-    Some(
-      @lib.RefTypeValType(@lib.HeapTypeRefType(true, false, heap)),
-    ) if heap is @lib.HeapType(_) => {
+    Some(@lib.RefTypeValType(@lib.HeapTypeRefType(true, false, heap))) if heap
+      is @lib.HeapType(_) => {
       if source_expression >= 0 &&
         source_expression < lowering.expressions.length() &&
-        lowering.expressions[source_expression].kind is @semantic.PlannedWasmRefNull {
+        lowering.expressions[source_expression].kind
+        is @semantic.PlannedWasmRefNull {
         return
       }
       output.push(@lib.Instruction::ref_cast(true, heap))
@@ -5149,7 +5153,7 @@ fn starshine_emit_body_instructions(
       EmitStarshineExpression(expression) => {
         let source = lowering.expressions[expression]
         match source.trait_object_coercion {
-          @semantic.SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+          @semantic.SelectedInferredTraitObjectCoercion(trait_, evidence, _) => {
             tasks.push(FinishStarshineTraitObjectCoercion(trait_, evidence))
             tasks.push(EmitStarshineRawExpression(expression))
           }

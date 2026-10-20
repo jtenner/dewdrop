@@ -211,6 +211,8 @@ pub fn compile_time_calls(
               }
             SelectedFunctionValueCallTarget(_) =>
               Some((-2, source.expression_files[ei], 0UL))
+            SelectedDynamicTraitCallTarget(_, requirement, _, _) =>
+              Some((-8, source.expression_files[ei], requirement))
             NoInferredCallTarget => None
             _ => Some((-1, source.expression_files[ei], 0UL))
           }
@@ -226,7 +228,13 @@ pub fn compile_time_calls(
             target_module,
             target_file,
             target_offset,
-            constructor_key: if target_module == -3 {
+            constructor_key: if target_module == -8 {
+              match target {
+                SelectedDynamicTraitCallTarget(trait_, _, slot, _) =>
+                  trait_.to_string() + ":" + slot.to_string()
+                _ => ""
+              }
+            } else if target_module == -3 {
               transform_variant_key(program, target_offset).unwrap_or("")
             } else {
               ""
@@ -257,7 +265,9 @@ fn transform_product_kind(kinds : Array[String]) -> String {
   let result = StringBuilder::new()
   result.write_string("(")
   for kind in kinds {
-    if kind.has_prefix("unsupported:") { return kind }
+    if kind.has_prefix("unsupported:") {
+      return kind
+    }
   }
   for kind in kinds {
     if kind == "Unit" {
@@ -280,7 +290,7 @@ fn transform_scalar_kind(
   root : BodyTypeId,
   reference : Bool,
   raw_arrays~ : Map[DeclId, Bool] = {},
-  budget~ : TransformKindBudget = { remaining: 65536 },
+  budget~ : TransformKindBudget = { remaining: 65536, },
   depth~ : Int32 = 0,
 ) -> String {
   if budget.remaining <= 0 || depth >= 128 {
@@ -289,12 +299,19 @@ fn transform_scalar_kind(
   budget.remaining -= 1
   let nested = fn(type_) {
     transform_scalar_kind(
-      resolved, resolved_arguments, inferred, type_, false,
-      raw_arrays~, budget~, depth=depth + 1,
+      resolved,
+      resolved_arguments,
+      inferred,
+      type_,
+      false,
+      raw_arrays~,
+      budget~,
+      depth=depth + 1,
     )
   }
   let nominal = fn(declaration, arguments : Array[BodyTypeId]) {
-    if declaration == standard_nullable_ref_type_declaration() && arguments.length() == 1 {
+    if declaration == standard_nullable_ref_type_declaration() &&
+      arguments.length() == 1 {
       "nullable"
     } else if raw_arrays.contains(declaration) && arguments.length() == 1 {
       "array:" + nested(arguments[0])
@@ -323,11 +340,12 @@ fn transform_scalar_kind(
           inferred.type_arguments[arguments.start + index]
         })
         return match inferred.type_term(base) {
-          BodyResolvedType(id) => match resolved[id] {
-            NominalType(declaration) => nominal(declaration, arguments)
-            TraitType(declaration) => "trait:" + declaration.to_string()
-            _ => ""
-          }
+          BodyResolvedType(id) =>
+            match resolved[id] {
+              NominalType(declaration) => nominal(declaration, arguments)
+              TraitType(declaration) => "trait:" + declaration.to_string()
+              _ => ""
+            }
           _ => ""
         }
       }
@@ -343,7 +361,9 @@ fn transform_scalar_kind(
             ProductType(arguments) => {
               let kinds = []
               for offset in 0..<arguments.length {
-                kinds.push(nested(-resolved_arguments[arguments.start + offset] - 2))
+                kinds.push(
+                  nested(-resolved_arguments[arguments.start + offset] - 2),
+                )
               }
               return transform_product_kind(kinds)
             }

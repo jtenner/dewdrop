@@ -591,7 +591,7 @@ fn generic_parameter_selector(
   let (trait_declaration, evidence_slot) = match
     module_.expressions[root_expression].trait_object_coercion {
     NoInferredTraitObjectCoercion => (0UL, -1)
-    SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+    SelectedInferredTraitObjectCoercion(trait_, evidence, _) =>
       if evidence >= 0 && evidence < module_.trait_evidence.length() {
         match module_.trait_evidence[evidence].kind {
           BoundInferredTraitEvidence(slot) => (trait_, slot)
@@ -675,6 +675,7 @@ fn rewrite_generic_parameter_selector_call(
     SelectedInferredTraitObjectCoercion(
       selector.trait_declaration,
       module_.trait_evidence_roots[roots.start + selector.evidence_slot],
+      module_.expressions[expression].type_,
     )
   } else {
     NoInferredTraitObjectCoercion
@@ -1141,7 +1142,7 @@ fn analyze_runtime_trait_body_flows(
     let local_index = expression - body.expressions.start
     flows[local_index] = match
       module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+      SelectedInferredTraitObjectCoercion(trait_, evidence, _) =>
         if evidence >= 0 && evidence < module_.trait_evidence.length() {
           ExactRuntimeTraitFlow(
             trait_,
@@ -1204,7 +1205,7 @@ fn analyze_runtime_trait_body_flows(
       expression in body.expressions.start..<(body.expressions.start +
       body.expressions.length) {
       match module_.expressions[expression].trait_object_coercion {
-        SelectedInferredTraitObjectCoercion(_, _)
+        SelectedInferredTraitObjectCoercion(_, _, _)
         | ErrorInferredTraitObjectCoercion => continue
         NoInferredTraitObjectCoercion => ()
       }
@@ -1577,7 +1578,7 @@ fn runtime_trait_mark_flow_demand(
     }
     demanded_expressions[local_index] = true
     match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, _) => continue
+      SelectedInferredTraitObjectCoercion(_, _, _) => continue
       _ => ()
     }
     match module_.expressions[expression].kind {
@@ -1688,7 +1689,7 @@ fn runtime_trait_flow_path_is_safe(
     }
     visited[index] = true
     match module_.expressions[current].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, _) => continue
+      SelectedInferredTraitObjectCoercion(_, _, _) => continue
       _ => ()
     }
     match module_.expressions[current].kind {

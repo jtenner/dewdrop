@@ -1,7 +1,8 @@
 // Opcodes: 1 constant, 2 load, 3 store, 4 binary, 5 charge, 6 enter,
 // 7 leave, 8 jump, 9 jump-false, 10 jump-true, 11 call, 12 typed read,
 // 13 prefix, 14 field read, 15 field write (+ owner word), 16 return,
-// 17 restore loop depth, 18 truth, 19 simple pattern, 20 literal compare.
+// 17 restore loop depth, 18 truth, 19 simple pattern, 20 literal compare,
+// 21 checked trait-object coercion.
 
 ///|
 /// Opcodes occupy the low byte; the remaining 24 bits hold an unsigned operand.
@@ -15,6 +16,7 @@ struct BytecodeFunction {
   prefixes : Array[(@parser.PrefixOperator, String?)]
   names : Array[String]
   kinds : Array[String]
+  trait_objects : Array[TraitObjectProof]
   slots : Int32
   estimated_bytes : Int32
 }
@@ -53,6 +55,7 @@ struct BytecodeBuilder {
   prefixes : Array[(@parser.PrefixOperator, String?)]
   names : Array[String]
   kinds : Array[String]
+  trait_objects : Array[TraitObjectProof]
   mutable_slots : Array[Bool]
   mut visits : Int32
   mut depth : Int32
@@ -229,6 +232,18 @@ fn BytecodeBuilder::call(
         if !self.supported {
           return
         }
+        self.expr(arg, env, loop_)
+        slots.push(self.save())
+      }
+    }
+    Some(DynamicTrait(_, _, _)) => {
+      guard callee is @parser.FieldExpr(owner, _, _) else {
+        self.supported = false
+        return
+      }
+      self.expr(owner, env, loop_)
+      slots.push(self.save())
+      for arg in arguments {
         self.expr(arg, env, loop_)
         slots.push(self.save())
       }
@@ -474,6 +489,17 @@ fn BytecodeBuilder::expr(
       self.type_read(offset)
     _ => ()
   }
+  if self.machine.trait_object_proof(
+      (self.module_, self.machine.file_index, expr.offset().to_int()),
+    )
+    is Some(proof) {
+    if !self.reserve(8) {
+      return
+    }
+    let index = self.trait_objects.length()
+    self.trait_objects.push(proof)
+    let _ = self.emit(21U, index)
+  }
 }
 
 ///|
@@ -492,6 +518,7 @@ fn Machine::compile_bytecode(
     prefixes: [],
     names: [],
     kinds: [],
+    trait_objects: [],
     mutable_slots: [],
     visits: 0,
     depth: 0,
@@ -518,6 +545,7 @@ fn Machine::compile_bytecode(
     prefixes: builder.prefixes,
     names: builder.names,
     kinds: builder.kinds,
+    trait_objects: builder.trait_objects,
     slots: builder.mutable_slots.length(),
     estimated_bytes: builder.estimated_bytes,
   })
@@ -533,6 +561,8 @@ fn Machine::bytecode_target(
   let (target, frame) = unframe_call(Some(target))
   match target {
     Some(Constant(value)) => self.checked_constant(value)
+    Some(DynamicTrait(requirement, key, kind)) =>
+      self.dynamic_trait_call(requirement, key, kind, values)
     Some(Source(mi, fi, function, kind)) =>
       self.typed_value(self.source_call(mi, fi, function, values, frame~), kind)
     Some(Intrinsic(builtin_, kind)) =>
@@ -698,6 +728,7 @@ fn Machine::run_bytecode_inner(
         }
       }
       20U => value = Boolean(equal(value, slots[arg]))
+      21U => value = self.trait_object(value, code.trait_objects[arg])
       _ => return eval_fail("invalid bytecode instruction")
     }
   }

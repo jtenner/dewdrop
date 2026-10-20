@@ -682,9 +682,41 @@ fn BasicBodyInferencer::begin_trait_object_requirement(
     { start: 0, length: self.call_generic_count(requirement), }
   }
   self.call_scratch.candidate_type_arguments.clear()
-  for
-    _ in 0..<(self.call_scratch.instantiation_generics.length +
-    self.call_scratch.instantiation_method_generics.length) {
+  let owner_arguments = []
+  if self.call_scratch.instantiation_generics.length > 0 {
+    match
+      self.solver.type_term(self.solver.representative_type(receiver_type)) {
+      BodyAppliedType(_, arguments) =>
+        for index in 0..<arguments.length {
+          owner_arguments.push(
+            self.solver.type_arguments[arguments.start + index],
+          )
+        }
+      BodyResolvedType(type_) =>
+        match self.resolved.types[type_] {
+          AppliedType(_, arguments) =>
+            for index in 0..<arguments.length {
+              owner_arguments.push(
+                self.solver.resolved_type(
+                  self.resolved.type_arguments[arguments.start + index],
+                ),
+              )
+            }
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  for index in 0..<self.call_scratch.instantiation_generics.length {
+    self.call_scratch.candidate_type_arguments.push(
+      if index < owner_arguments.length() {
+        owner_arguments[index]
+      } else {
+        self.solver.fresh_variable()
+      },
+    )
+  }
+  for _ in 0..<self.call_scratch.instantiation_method_generics.length {
     self.call_scratch.candidate_type_arguments.push(
       self.solver.fresh_variable(),
     )

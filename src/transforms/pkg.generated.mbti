@@ -45,6 +45,15 @@ pub(all) enum CheckedConstant {
   CheckedUnit
 }
 
+pub(all) struct CheckedTraitMethod {
+  requirement : UInt64
+  slot : Int
+  module_index : Int
+  path : String
+  offset : UInt64
+  frame : String
+}
+
 type ExecutionFrame
 
 type FieldNames
@@ -75,6 +84,9 @@ pub struct Plan {
   references : Map[(Int, Int, Int), FunctionReferenceProof]
   calls : Map[(Int, Int, Int), CallTarget]
   scalar_types : Map[(Int, Int, Int), String]
+  trait_objects : Map[(Int, Int, Int), TraitObjectProof]
+  mut trait_dictionaries : Map[String, TraitObjectProof]?
+  mut trait_source_methods : Map[(Int, String, UInt64), CallTarget]?
   array_literals : Map[(Int, Int, Int), (String, Array[String])]
   array_layouts : Map[String, Array[String]]
   raw_layouts : Map[String, RawLayout]
@@ -100,6 +112,7 @@ pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
 pub fn Plan::add_raw_layout(Self, String, String, Array[String], Array[String]) -> Unit
 pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes, frame? : String) -> Unit
 pub fn Plan::add_signature_call(Self, Int, String, UInt64, Int, String, UInt64) -> Unit
+pub fn Plan::add_trait_object_proof(Self, Int, String, UInt64, UInt64, Array[CheckedTraitMethod], frame? : String) -> Unit
 pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
 pub fn Plan::annotation_entries(Self, output_module_count? : Int) -> Result[Array[(Int, String)], String]
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
@@ -143,6 +156,10 @@ pub(all) struct SourceModule {
 type SourceModuleIndex
 
 type SourceRepair
+
+type TraitObjectProof
+
+type TraitObjectValue
 
 pub(all) struct TransformReport {
   module_name : String

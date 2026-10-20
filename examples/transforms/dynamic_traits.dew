@@ -1,0 +1,43 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+trait Answer {
+  fn answer(self) -> I32
+}
+struct Counter {
+  mut value: I32
+}
+impl Answer for Counter {
+  fn answer(self) -> I32 {
+    self.value = self.value + 1i32
+    self.value
+  }
+}
+impl Answer for I32 {
+  fn answer(self) -> I32 {
+    self + 2i32
+  }
+}
+fn read(value: Answer) -> I32 {
+  value.answer()
+}
+fn erase<t: Answer>(value: t) -> Answer {
+  value
+}
+transform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let counter = Counter::{
+    value: 18i32
+  }
+  let first = read(counter)
+  let erased = erase(counter)
+  let second = read(erased)
+  let third = read(20i32)
+  node.with_body(@ast.integer(if first == 19i32 && second == 20i32 && counter.value == 20i32 && third == 22i32 {
+    42i32
+  } else {
+    0i32
+  }))
+}
+#calculate
+pub fn main() -> I32 {
+  0i32
+}

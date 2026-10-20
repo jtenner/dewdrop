@@ -114,8 +114,12 @@ test "compile time selected else keeps both coercion boundaries and source ident
   }
   // Conversion identities are deliberately different; this is an IR rewrite
   // test, not an attempt to emit these synthetic trait declarations.
-  let outer = SelectedInferredTraitObjectCoercion(1UL, 0)
-  let inner = SelectedInferredTraitObjectCoercion(2UL, 1)
+  let outer = SelectedInferredTraitObjectCoercion(1UL, 0, source.type_)
+  let inner = SelectedInferredTraitObjectCoercion(
+    2UL,
+    1,
+    module_.expressions[alternative].type_,
+  )
   module_.expressions[expression] = { ..source, trait_object_coercion: outer, }
   module_.expressions[alternative] = {
     ..module_.expressions[alternative],

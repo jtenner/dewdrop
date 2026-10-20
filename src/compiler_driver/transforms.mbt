@@ -188,10 +188,40 @@ fn compiler_expand_transforms(
       layout.storage,
     )
   }
+  let trait_objects : Array[@semantic.CompileTimeTraitObject] = []
   let frame_calls = match
-    @semantic.compile_time_frame_calls(program, analyzed, lowering, frame_roots) {
+    @semantic.compile_time_frame_calls(
+      program,
+      analyzed,
+      lowering,
+      frame_roots,
+      trait_objects~,
+    ) {
     Ok(value) => value
     Err(message) => return Err(CompilerSourceError(message, []))
+  }
+  for proof in trait_objects {
+    if program.source_file(proof.file) is Some(source) {
+      let methods = proof.methods.map(method_ => @transforms.CheckedTraitMethod::{
+        requirement: method_.requirement,
+        slot: method_.slot,
+        module_index: method_.module_index,
+        path: program
+        .source_file(method_.file)
+        .map(file => file.path)
+        .unwrap_or(""),
+        offset: method_.offset,
+        frame: method_.frame,
+      })
+      plan.add_trait_object_proof(
+        proof.module_index,
+        source.path,
+        proof.offset,
+        proof.trait_declaration,
+        methods,
+        frame=proof.frame,
+      )
+    }
   }
   let checked_calls = @semantic.compile_time_calls(program, analyzed, lowering)
   compiler_register_signature_calls(

@@ -1,4 +1,80 @@
 ///|
+test "module inference cache rejects a trait target outside the resolved arena" {
+  let program = @semantic.collect_program_manifest(
+    23803UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("trait.cache", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"trait Read {\n fn read(self) -> I32\n}\nstruct Value {}\nimpl Read for Value {\n fn read(self) -> I32 {\n 42i32\n }\n}\nfn invoke(value: Read) -> I32 {\n value.read()\n}\nfn main() -> I32 {\n invoke(Value::{})\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let module_ = analyzed.modules[0]
+  let resolved = analyzed.frozen.interfaces[0].resolved_types
+  assert_eq(module_.inferred.diagnostics, [])
+  let mut found = false
+  for coercion in module_.inferred.trait_object_coercions {
+    if coercion
+      is @semantic.SelectedInferredTraitObjectCoercion(
+        trait_,
+        evidence,
+        expected
+      ) {
+      found = true
+      for bad in [-resolved.types.length() - 2, -2147483648] {
+        let token = fn(type_) {
+          let writer = @cache_binary.Writer::new()
+          writer.write_byte(2)
+          writer.write_u64_le(trait_)
+          writer.write_zigzag_int(evidence)
+          writer.write_zigzag_int(type_)
+          writer.to_bytes()
+        }
+        let original = token(expected)
+        let encoded = @semantic.serialize_inferred_module_bodies(
+          module_.inferred,
+        ).unwrap()
+        let matches = []
+        for start in 0..<(encoded.length() - original.length() + 1) {
+          let mut same = true
+          for index in 0..<original.length() {
+            if encoded[start + index] != original[index] {
+              same = false
+              break
+            }
+          }
+          if same {
+            matches.push(start)
+          }
+        }
+        assert_eq(matches.length(), 1)
+        let changed = @cache_binary.Writer::new()
+        changed.write_raw(encoded[:matches[0]].to_owned())
+        changed.write_raw(token(bad))
+        changed.write_raw(encoded[matches[0] + original.length():].to_owned())
+        // Negative IDs need the resolved arena, which the raw codec does not own.
+        let decoded = @semantic.deserialize_inferred_module_bodies(
+          changed.to_bytes(),
+        ).unwrap()
+        assert_true(
+          validate_cached_inferred_module(
+            program.modules[0],
+            resolved,
+            module_.imports,
+            module_.names,
+            decoded,
+          )
+          is Err(_),
+        )
+      }
+    }
+  }
+  assert_true(found)
+}
+
+///|
 test "body-inference cache envelope verifies checksum and provenance" {
   let key = @crypto.sha256(b"key")
   let source = @crypto.sha256(b"source")

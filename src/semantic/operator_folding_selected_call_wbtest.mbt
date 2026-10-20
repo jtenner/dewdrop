@@ -183,7 +183,7 @@ test "constant folding and intrinsic forwarding retain a result trait coercion" 
   assert_true(
     module_.expressions.any(expression => {
       expression.trait_object_coercion
-      is SelectedInferredTraitObjectCoercion(_, _)
+      is SelectedInferredTraitObjectCoercion(_, _, _)
     }),
   )
   let builtins : Map[DeclId, Bytes] = {}

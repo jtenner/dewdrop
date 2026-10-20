@@ -6,6 +6,7 @@ enum CallTarget {
   Global(Int32, Int32, @parser.LetDeclaration)
   Intrinsic(@parser.BuiltinDeclaration, String)
   FunctionValue(String)
+  DynamicTrait(UInt64, String, String)
   Unsupported
   Constructor(String)
   UnitConstructor(String)
@@ -58,7 +59,9 @@ pub fn Plan::add_call_proof(
       None => FunctionInstance
     }
     if target_module < 0 {
-      let target = if target_module == -2 {
+      let target = if target_module == -8 {
+        DynamicTrait(target_offset, constructor_key, result_kind)
+      } else if target_module == -2 {
         FunctionValue(result_kind)
       } else if target_module == -3 {
         Constructor(constructor_key)
@@ -185,6 +188,16 @@ fn Machine::checked_call(
   )
   match selected {
     Some(Constant(value)) => self.checked_constant(value)
+    Some(DynamicTrait(requirement, key, kind)) => {
+      guard callee is @parser.FieldExpr(owner, _, _) else {
+        return eval_fail("checked dynamic trait call requires a receiver")
+      }
+      let values = [self.eval(mi, owner, env)]
+      for arg in args {
+        values.push(self.eval(mi, arg, env))
+      }
+      self.dynamic_trait_call(requirement, key, kind, values)
+    }
     Some(Source(target_mi, target_fi, function, kind)) => {
       let values : Array[Value] = []
       if function.receiver is Some(_) {

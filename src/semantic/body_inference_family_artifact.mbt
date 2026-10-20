@@ -650,8 +650,10 @@ fn body_inference_job_type_graph_is_valid(
   }
   for coercion in job.trait_object_coercions {
     match coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) if evidence < 0 ||
-        evidence >= job.trait_evidence.length() => return false
+      SelectedInferredTraitObjectCoercion(_, evidence, expected) if evidence < 0 ||
+        evidence >= job.trait_evidence.length() ||
+        !body_family_type_is_valid(expected, type_length, resolved_length) =>
+        return false
       _ => ()
     }
   }

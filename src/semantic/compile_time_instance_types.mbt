@@ -239,9 +239,19 @@ fn materialize_compile_time_instance_types(
         continue
       }
       let type_ = materialize(expression.type_)
+      let trait_object_coercion = match expression.trait_object_coercion {
+        SelectedInferredTraitObjectCoercion(trait_, evidence, expected) =>
+          SelectedInferredTraitObjectCoercion(
+            trait_,
+            evidence,
+            materialize(expected),
+          )
+        other => other
+      }
       instance.expressions[id] = {
         ..expression,
         type_,
+        trait_object_coercion,
         shape: shape(type_, expression.shape),
         nominal: nominal(type_, expression.nominal),
       }

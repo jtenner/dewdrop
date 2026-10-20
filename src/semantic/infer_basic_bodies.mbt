@@ -1243,7 +1243,7 @@ fn BasicBodyInferencer::constrain_expression_assignable(
           self.solver.diagnostics.truncate(diagnostic_start)
           self.ensure_trait_object_coercions()
           self.trait_object_coercions[self.expression_index(expression)] = SelectedInferredTraitObjectCoercion(
-            trait_declaration, evidence,
+            trait_declaration, evidence, expected,
           )
         }
         None => {
@@ -3970,10 +3970,11 @@ fn merge_body_inference_jobs(
       for index in 0..<body.expressions.length {
         trait_object_coercions[body.expressions.start + index] = match
           job.trait_object_coercions[index] {
-          SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+          SelectedInferredTraitObjectCoercion(trait_, evidence, expected) =>
             SelectedInferredTraitObjectCoercion(
               trait_,
               job_evidence_start + evidence,
+              remap_job_type(expected, type_start),
             )
           NoInferredTraitObjectCoercion => NoInferredTraitObjectCoercion
           ErrorInferredTraitObjectCoercion => ErrorInferredTraitObjectCoercion
@@ -4199,10 +4200,11 @@ fn merge_body_inference_jobs(
       for index in 0..<lambda.body.expressions.length {
         trait_object_coercions[lambda.body.expressions.start + index] = match
           job.trait_object_coercions[index] {
-          SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+          SelectedInferredTraitObjectCoercion(trait_, evidence, expected) =>
             SelectedInferredTraitObjectCoercion(
               trait_,
               job_evidence_start + evidence,
+              remap_job_type(expected, type_start),
             )
           NoInferredTraitObjectCoercion => NoInferredTraitObjectCoercion
           ErrorInferredTraitObjectCoercion => ErrorInferredTraitObjectCoercion

@@ -180,7 +180,7 @@ fn program_collect_runtime_trait_support_dependencies(
       }
     }
     match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) =>
+      SelectedInferredTraitObjectCoercion(_, evidence, _) =>
         match
           program_external_runtime_evidence_class(
             module_, evidence, parameter_classes,

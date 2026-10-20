@@ -1752,10 +1752,11 @@ fn ib_write_coercion(
   match value {
     NoInferredTraitObjectCoercion => writer.write_byte(0)
     ErrorInferredTraitObjectCoercion => writer.write_byte(1)
-    SelectedInferredTraitObjectCoercion(d, e) => {
+    SelectedInferredTraitObjectCoercion(d, e, t) => {
       writer.write_byte(2)
       ib_write_id(writer, d)
       ib_write_int(writer, e)
+      ib_write_int(writer, t)
     }
   }
 }
@@ -1771,6 +1772,7 @@ fn ib_read_coercion(
     2 =>
       SelectedInferredTraitObjectCoercion(
         ib_read_id(reader, field),
+        ib_read_int(reader, field),
         ib_read_int(reader, field),
       )
     _ => {
@@ -2391,8 +2393,9 @@ fn ib_validate_module_bodies(value : InferredModuleBodies) -> Bool {
   }
   for coercion in value.trait_object_coercions {
     match coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) if evidence < 0 ||
-        evidence >= value.trait_evidence.length() => return false
+      SelectedInferredTraitObjectCoercion(_, evidence, expected) if evidence < 0 ||
+        evidence >= value.trait_evidence.length() ||
+        !ib_type_valid(expected, value.types.length()) => return false
       _ => ()
     }
   }

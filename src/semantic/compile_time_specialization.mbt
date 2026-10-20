@@ -22,6 +22,7 @@ struct CompileTimeProgramContext {
   logical : Map[DeclId, Bool]
   instances : Map[String, CompileTimeSpecializedBody]
   query_constants : Map[(ModuleId, ExprId), CompileTimeTransformConstant]
+  trait_method_frames : Map[(ModuleId, ExprId, String, DeclId), (DeclId, String)]
 }
 
 ///|
@@ -213,6 +214,7 @@ fn compile_time_program_context(
     logical,
     instances: {},
     query_constants: {},
+    trait_method_frames: {},
   }
 }
 

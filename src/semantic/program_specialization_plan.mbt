@@ -98,7 +98,8 @@ fn program_enqueue_expression_evidence(
     pending.push(module_.trait_evidence_roots[roots.start + index])
   }
   match module_.expressions[expression].trait_object_coercion {
-    SelectedInferredTraitObjectCoercion(_, evidence) => pending.push(evidence)
+    SelectedInferredTraitObjectCoercion(_, evidence, _) =>
+      pending.push(evidence)
     _ => ()
   }
   let seen : Map[Int32, Bool] = {}
@@ -165,9 +166,7 @@ fn program_reachable_callable_roots(
         Some(roots) => roots.contains(callable.declaration)
         None => callable.visibility == Public || !callable.compiler_owned
       }
-      if root &&
-        !elided_trait_wrapper &&
-        (!callable.is_test || emit_tests) {
+      if root && !elided_trait_wrapper && (!callable.is_test || emit_tests) {
         reachable[callable.declaration] = true
         work.push(callable.declaration)
       }
@@ -182,7 +181,8 @@ fn program_reachable_callable_roots(
         continue
       }
       let (declaration, body_id) = match step.kind {
-        PlannedInitializeModuleValue(declaration, body, _) => (declaration, body)
+        PlannedInitializeModuleValue(declaration, body, _) =>
+          (declaration, body)
         PlannedCyclicModuleValues(_) => continue
       }
       let body_index = semantic_id_local(body_id)
@@ -227,7 +227,8 @@ fn program_reachable_callable_roots(
       }
       for expression in compile_time_owned_expressions(module_, body) {
         if declaration_roots is Some(_) &&
-          module_.expressions[expression].kind is PlannedModuleValueGet(value, _) &&
+          module_.expressions[expression].kind
+          is PlannedModuleValueGet(value, _) &&
           !reachable.contains(value) {
           reachable[value] = true
           work.push(value)
@@ -1665,6 +1666,9 @@ fn materialize_program_expression_call(
     lowering, caller_module_index, caller_key,
   )
   let source = owner.expressions[expression]
+  materialize_compile_time_trait_methods(
+    analyzed, lowering, modules, module_lookup, caller_module_index, caller, expression,
+  )
   match source.kind {
     PlannedFunctionReference(target, arguments) if arguments.length > 0 => {
       // Function references need the caller's generic substitution even when
@@ -2190,7 +2194,7 @@ fn materialize_program_specialization_trait_dictionaries(
     body.expressions.length) {
     let (trait_declaration, source_evidence) = match
       owner.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+      SelectedInferredTraitObjectCoercion(trait_, evidence, _) =>
         (trait_, evidence)
       _ => continue
     }
@@ -2490,7 +2494,7 @@ fn program_collect_external_runtime_trait_uses(
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
     match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(trait_, evidence) =>
+      SelectedInferredTraitObjectCoercion(trait_, evidence, _) =>
         if evidence >= 0 && evidence < module_.trait_evidence.length() {
           match module_.trait_evidence[evidence].kind {
             GuardedInferredTraitEvidence(_, _) => ()
@@ -2798,7 +2802,7 @@ fn program_runtime_trait_fallback_evidence(
       }
     }
     match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(trait_, evidence) => {
+      SelectedInferredTraitObjectCoercion(trait_, evidence, _) => {
         if evidence < 0 || evidence >= module_.trait_evidence.length() {
           return None
         }
@@ -3018,7 +3022,10 @@ fn plan_program_wasmgc_fragments_for_root(
       }
     }
   }
-  let selected_demand = compile_time_demand_instances(lowering, declaration_roots~)
+  let selected_demand = compile_time_demand_instances(
+    lowering,
+    declaration_roots~,
+  )
   let program_roots = program_reachable_callable_roots(
     analyzed,
     lowering,
@@ -3033,7 +3040,9 @@ fn plan_program_wasmgc_fragments_for_root(
   for module_ in lowering.modules {
     for
       expression in compile_time_demand_expressions(
-        lowering, module_, selected_demand,
+        lowering,
+        module_,
+        selected_demand,
         declaration_roots=if declaration_roots is Some(_) {
           Some(program_roots)
         } else {
@@ -3147,8 +3156,10 @@ fn plan_program_wasmgc_fragments_for_root(
       if generic_bodies.contains(body.body) {
         continue
       }
-      if (declaration_roots is Some(_) ||
-          module_.functions.callable_of(body.declaration) is Some(_)) &&
+      if (
+          declaration_roots is Some(_) ||
+          module_.functions.callable_of(body.declaration) is Some(_)
+        ) &&
         !program_roots.contains(body.declaration) {
         continue
       }

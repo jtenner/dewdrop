@@ -1025,8 +1025,7 @@ fn wasmgc_mark_body_nominal_declarations(
     }
   }
   for
-    pattern in body.patterns.start..<(body.patterns.start +
-    body.patterns.length) {
+    pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
     if lowering.patterns[pattern].elided {
       continue
     }
@@ -2827,7 +2826,7 @@ fn wasmgc_runtime_trait_declarations(
   let traits : Array[DeclId] = []
   for expression in lowering.expressions {
     let trait_ = match expression.trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(value, _) => value
+      SelectedInferredTraitObjectCoercion(value, _, _) => value
       _ =>
         match expression.kind {
           PlannedDynamicTraitCall(value, _, _, _, _, _) => value
@@ -4115,7 +4114,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   let dictionary_keys : Map[String, Bool] = Map::default()
   for expression in lowering.expressions {
     let (trait_declaration, evidence) = match expression.trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(trait_, node) => (trait_, node)
+      SelectedInferredTraitObjectCoercion(trait_, node, _) => (trait_, node)
       _ => continue
     }
     let implementation = match

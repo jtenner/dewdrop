@@ -12,6 +12,16 @@ fn BasicBodyInferencer::sort_diagnostics(self : BasicBodyInferencer) -> Unit {
 
 ///|
 fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
+  for index, coercion in self.trait_object_coercions {
+    if coercion
+      is SelectedInferredTraitObjectCoercion(trait_, evidence, expected) {
+      self.trait_object_coercions[index] = SelectedInferredTraitObjectCoercion(
+        trait_,
+        evidence,
+        self.solver.zonk_type(expected),
+      )
+    }
+  }
   let freeze_diagnostic_start = self.solver.diagnostics.length()
   for index in self.solver_diagnostic_start..<self.solver_diagnostic_end {
     self.diagnostics.push(
@@ -253,6 +263,11 @@ fn BasicBodyInferencer::mark_compact_type(
 
 ///|
 fn BasicBodyInferencer::mark_compact_roots(self : BasicBodyInferencer) -> Unit {
+  for coercion in self.trait_object_coercions {
+    if coercion is SelectedInferredTraitObjectCoercion(_, _, expected) {
+      self.mark_compact_type(expected)
+    }
+  }
   self.mark_compact_type(self.result_type)
   for type_ in self.expression_types {
     self.mark_compact_type(type_)
@@ -314,6 +329,12 @@ fn BasicBodyInferencer::compact_type_id(
 fn BasicBodyInferencer::has_positive_compact_root(
   self : BasicBodyInferencer,
 ) -> Bool {
+  for coercion in self.trait_object_coercions {
+    if coercion is SelectedInferredTraitObjectCoercion(_, _, expected) &&
+      expected > 0 {
+      return true
+    }
+  }
   if self.result_type > 0 {
     return true
   }
@@ -500,6 +521,16 @@ fn BasicBodyInferencer::remap_diagnostics(self : BasicBodyInferencer) -> Unit {
 ///|
 fn BasicBodyInferencer::compact_results(self : BasicBodyInferencer) -> Unit {
   self.build_compact_types()
+  for index, coercion in self.trait_object_coercions {
+    if coercion
+      is SelectedInferredTraitObjectCoercion(trait_, evidence, expected) {
+      self.trait_object_coercions[index] = SelectedInferredTraitObjectCoercion(
+        trait_,
+        evidence,
+        self.compact_type_id(expected),
+      )
+    }
+  }
   self.result_type = self.compact_type_id(self.result_type)
   for index in 0..<self.expression_types.length() {
     self.expression_types[index] = self.compact_type_id(

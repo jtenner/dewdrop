@@ -35,6 +35,7 @@ pub fn compile_time_frame_calls(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   roots : Array[DeclId],
+  trait_objects~ : Array[CompileTimeTraitObject] = [],
 ) -> Result[Array[CompileTimeFrameCall], String] {
   let context = match lowering.compile_time {
     Some(value) => value
@@ -48,6 +49,7 @@ pub fn compile_time_frame_calls(
     sensitive: context.sensitive.copy(),
     instances: Map([]),
     query_constants: context.query_constants.copy(),
+    trait_method_frames: {},
   }
   let lowering = { ..lowering, compile_time: Some(context), }
   let declaration_roots : Map[DeclId, Bool] = {}
@@ -110,6 +112,21 @@ pub fn compile_time_frame_calls(
     }
   }
   let intrinsics = program_fold_operator_intrinsics(lowering.modules)
+  let trait_indexes : Map[ModuleId, CompileTimeTraitIndex] = {}
+  for mi, module_ in lowering.modules {
+    compile_time_trait_objects(
+      program,
+      mi,
+      module_,
+      selected.modules[mi],
+      "",
+      None,
+      targets,
+      context.trait_method_frames,
+      trait_indexes,
+      trait_objects,
+    )
+  }
   let result = []
   // Export all reads and folded queries owned by an instance, not the rest of
   // its copied module. Multiple instances must not overwrite each other.
@@ -125,7 +142,20 @@ pub fn compile_time_frame_calls(
       }
     }
     guard selected_body is Some(body) else { continue }
-    for ei in compile_time_owned_expressions(module_, body) {
+    let owned_expressions = compile_time_owned_expressions(module_, body)
+    compile_time_trait_objects(
+      program,
+      mi,
+      module_,
+      selected.modules[mi],
+      frame,
+      Some(owned_expressions),
+      targets,
+      context.trait_method_frames,
+      trait_indexes,
+      trait_objects,
+    )
+    for ei in owned_expressions {
       let original = source.expressions[ei]
       let file = source.expression_files[ei]
       let offset = original.offset()
@@ -288,8 +318,12 @@ pub fn compile_time_frame_calls(
         reference,
         constant: None,
         function_identity: transform_specialized_function_identity(
-          lowering, call.target, call.target_specialization_abi_key,
-          runtime_logical, runtime_sensitive, function_identities,
+          lowering,
+          call.target,
+          call.target_specialization_abi_key,
+          runtime_logical,
+          runtime_sensitive,
+          function_identities,
         ),
         module_index: mi,
         file,
