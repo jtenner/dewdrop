@@ -1,4 +1,5 @@
 open dew.std.array
+open dew.std.option
 open dew.std.wasm.intrinsics
 
 pub enum ExprNode {
@@ -32,12 +33,16 @@ pub enum ExprNode {
 pub struct FnNode {
   name: String
   body: ExprNode
+  signature: SignatureNode
+  call_adapter: Option<ExprNode>
 }
 
 pub fn with_body(node: FnNode, body: ExprNode) -> FnNode {
   FnNode::{
     name: node.name
     body: body
+    signature: node.signature
+    call_adapter: node.call_adapter
   }
 }
 
@@ -62,6 +67,8 @@ impl FnNode {
     FnNode::{
       name: self.name
       body: body
+      signature: self.signature
+      call_adapter: self.call_adapter
     }
   }
 }
@@ -219,4 +226,102 @@ pub struct ExpressionTypeNode {
   offset: U32
   kind: String
   type_: TypeNode
+}
+
+// A changed signature is checked with the generated body after expansion.
+pub struct SignatureNode {
+  parameters: Array<ParameterNode>
+  return_type: TypeNode
+}
+
+pub fn parameter(name: String, type_: TypeNode) -> ParameterNode {
+  ParameterNode::{
+    name: name
+    type_: type_
+  }
+}
+
+pub fn qualified_type(name: String) -> TypeNode {
+  TypeNode::{
+    kind: "qualified"
+    name: name
+    arguments: []
+  }
+}
+
+pub fn tuple_type(fields: Array<TypeNode>) -> TypeNode {
+  TypeNode::{
+    kind: "tuple"
+    name: ""
+    arguments: fields
+  }
+}
+
+pub fn applied_type(base: TypeNode, arguments: Array<TypeNode>) -> TypeNode {
+  let values = [base]
+  for argument in arguments {
+    values.push(argument)
+  }
+  TypeNode::{
+    kind: "applied"
+    name: ""
+    arguments: values
+  }
+}
+
+pub fn function_type(parameters: Array<TypeNode>, result: TypeNode) -> TypeNode {
+  let values = array_new::<TypeNode>()
+  for parameter in parameters {
+    values.push(parameter)
+  }
+  values.push(result)
+  TypeNode::{
+    kind: "function"
+    name: ""
+    arguments: values
+  }
+}
+
+impl ParameterNode {
+  fn with_type(self, type_: TypeNode) -> ParameterNode {
+    parameter(self.name, type_)
+  }
+  fn renamed(self, name: String) -> ParameterNode {
+    parameter(name, self.type_)
+  }
+}
+
+impl TypeNode {
+  fn applied(self, arguments: Array<TypeNode>) -> TypeNode {
+    applied_type(self, arguments)
+  }
+}
+
+impl FnNode {
+  fn with_signature(self, parameters: Array<ParameterNode>, result: TypeNode) -> FnNode {
+    FnNode::{
+      name: self.name
+      body: self.body
+      signature: SignatureNode::{
+        parameters: parameters
+        return_type: result
+      }
+      call_adapter: self.call_adapter
+    }
+  }
+  fn with_parameters(self, parameters: Array<ParameterNode>) -> FnNode {
+    self.with_signature(parameters, self.signature.return_type)
+  }
+  fn with_return_type(self, result: TypeNode) -> FnNode {
+    self.with_signature(self.signature.parameters, result)
+  }
+  // This body has the old parameters and result. Calls in it use the new function.
+  fn repair_calls_with(self, body: ExprNode) -> FnNode {
+    FnNode::{
+      name: self.name
+      body: self.body
+      signature: self.signature
+      call_adapter: Some(body)
+    }
+  }
 }

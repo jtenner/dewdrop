@@ -19,7 +19,7 @@ tools/dew build --root example.app \
 Both exported `main` functions return `42`.
 
 ```sh
-node -e 'const fs=require("fs"); WebAssembly.instantiate(fs.readFileSync(".tmp/local-transform.wasm")).then(({instance})=>console.log(instance.exports.main()))'
+node -e 'const fs=require("fs"); WebAssembly.instantiate(fs.readFileSync(".tmp/local-transform.wasm")).then(({instance})=>{instance.exports.__dew_init?.(); console.log(instance.exports.main())})'
 ```
 
 ## Define a transform
@@ -59,10 +59,11 @@ The compiler supplies the ordinary source modules `dewdrop.ast` and
 `dewdrop.transform`. Their source is in `lib/dewdrop/`. These module names are
 reserved for that API. Their library functions use ordinary evaluation rules.
 
-`FnNode` has `name: String` and `body: ExprNode`. The current API transforms
-function bodies. The name, parameters, type parameters, return type, and visibility
-remain unchanged. The context supplies checked types for original expressions.
-A transform can add declarations and imports through the context.
+`FnNode` has `name`, `body`, `signature`, and `call_adapter` fields.
+`signature` has structured `parameters` and `return_type` fields. Transforms can
+change the body, parameters, and result type. The original name, type parameters,
+bounds, and visibility stay the same. The context supplies checked types for
+original expressions. A transform can also add declarations and imports.
 
 `ExprNode` has these variants:
 
@@ -120,6 +121,38 @@ Expression methods include `call`, `binary`, `field`, `index`, `method_call`,
 Names, paths, and operators are checked before rendering. Generated code must
 also pass the normal compiler checks.
 
+## Change a function signature
+
+Use `node.with_parameters(parameters)`, `node.with_return_type(type_)`, or
+`node.with_signature(parameters, result)`. Body builders keep these changes.
+Use `@ast.parameter(name, type_)` to make a parameter. Type builders include
+`named_type`, `qualified_type`, `tuple_type`, `applied_type`, and `function_type`.
+
+To keep existing calls, supply an explicit adapter with `repair_calls_with`:
+
+```dew
+transform fn add_bonus(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let parameters = [@ast.parameter("value", @ast.named_type("I32")), @ast.parameter("bonus", @ast.named_type("I32"))]
+  let changed = node.with_parameters(parameters)
+  let body = changed.with_body(@ast.name("value").binary("+", @ast.name("bonus")))
+  body.repair_calls_with(@ast.name(node.name).call([@ast.name("value"), @ast.integer(2i32)]))
+}
+```
+
+The adapter body uses the old parameter names and result type. Its call to the
+changed function uses the new signature. The compiler adds a separate function
+with the old signature. Existing checked calls and function values use it,
+including imported references. Same-named local values keep their own targets.
+Without an adapter, all calls must pass the final normal type check themselves.
+
+New calls can use the new signature directly. An original call that failed the
+first check is left for the final check. A new generated body also uses the new
+signature. If you keep `node.body` inside a wrapper, its original checked calls
+are repaired. A fresh `@ast.source(...)` is new code, even if its text is the
+same as the old body. The context always describes the original signature.
+
+See `examples/transforms/signatures.dew`. Its `main` returns `42`.
+
 See [the full feature list](transform-features.md) for current tests and open
 work. Runnable examples are in `examples/transforms/`:
 
@@ -141,6 +174,7 @@ work. Runnable examples are in `examples/transforms/`:
 | `defaults.dew` | Deferred zero values inside generic enum payloads |
 | `scalar_values.dew` | Checked values in generic records, options, and tuples |
 | `signature_info.dew` | Structured parameter names and source types |
+| `signatures.dew` | Add a parameter and keep an old function value through an adapter |
 | `type_info.dew` | Generic bounds, tuple types, function types, applied types |
 | `declarations.dew` | Generated imports, types, functions, and implementations |
 | `constants.dew` | Local module constants and dependent initializers |
@@ -195,6 +229,9 @@ arrays and `dew.std.string` to match their names against string literals.
 
 Before execution, transforms and helpers pass normal name and type checks.
 Annotated bodies are replaced with checked placeholders during this pass.
+Ordinary bodies can wait for the final type check so they can use a changed
+signature. A body with a saved type error cannot run at compile time, even if
+its bad branch would not run. This also applies to cached helpers and constants.
 After expansion, all generated code passes the full normal compiler checks.
 A failed transform produces no successful build artifact.
 
@@ -245,8 +282,9 @@ limit can pass in one and fail in the other. Name and proof lookup also counts a
 work, so large source modules can reach the limit sooner. The limits protect the
 compiler; they are not a portable measure of transform cost.
 
-Transform result caching and a bytecode backend are future work. Ordinary
-compiler artifact caches still apply to the expanded program. Performance work
+Persistent transform result caching is future work. A compact bytecode backend
+is available, with interpreter fallback for other forms. Ordinary compiler
+artifact caches still apply to the expanded program. Performance work
 must preserve the interpreter's checks and deterministic behavior.
 
 ## Tests

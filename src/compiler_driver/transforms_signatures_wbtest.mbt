@@ -2,7 +2,7 @@
 test "transform entry signatures use canonical resolved types" {
   let cases = [
     (
-      b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn answer(node: I32, ctx: I32) -> @ast.FnNode {\n @ast.FnNode::{\n name: \"main\"\n body: @ast.integer(42i32)\n }\n}\n#answer\npub fn main() -> I32 {\n 0i32\n}\n",
+      b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn answer(node: I32, ctx: I32) -> @ast.FnNode {\n @ast.FnNode::{\n name: \"main\"\n body: @ast.integer(42i32)\n signature: @ast.SignatureNode::{\n parameters: []\n return_type: @ast.named_type(\"I32\")\n }\n call_adapter: None\n }\n}\n#answer\npub fn main() -> I32 {\n 0i32\n}\n",
       false,
     ),
     (

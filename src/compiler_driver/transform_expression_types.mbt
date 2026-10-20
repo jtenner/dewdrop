@@ -37,6 +37,16 @@ fn compiler_collect_transform_expression_types(
   )
   let analyzed = @semantic.analyze_program_semantics(program)
   let lowering = @semantic.plan_unoptimized_program_lowering(program, analyzed)
+  let diagnostics = @semantic.collect_compiler_frontend_diagnostics(
+    program, analyzed, lowering,
+  )
+  compiler_register_signature_calls(
+    plan,
+    program,
+    analyzed,
+    @semantic.compile_time_calls(program, analyzed, lowering),
+    diagnostics,
+  )
   if compiler_frontend_error(program, analyzed, lowering) is Some(error) {
     plan.set_reflection_error(error.message())
     return

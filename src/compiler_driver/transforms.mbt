@@ -105,8 +105,10 @@ fn compiler_expand_transforms(
   )
   let analyzed = @semantic.analyze_program_semantics(program)
   let lowering = @semantic.plan_unoptimized_program_lowering(program, analyzed)
-  if compiler_frontend_error(program, analyzed, lowering) is Some(error) {
-    return Err(error)
+  let diagnostics = match
+    compiler_transform_body_check(plan, program, analyzed, lowering) {
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   if @semantic.compile_time_intrinsic_contract_error(lowering) is Some(error) {
     return Err(CompilerSourceError(error, []))
@@ -191,9 +193,11 @@ fn compiler_expand_transforms(
     Ok(value) => value
     Err(message) => return Err(CompilerSourceError(message, []))
   }
-  let calls = @semantic.compile_time_calls(program, analyzed, lowering).map(call => {
-    ("", "", call)
-  })
+  let checked_calls = @semantic.compile_time_calls(program, analyzed, lowering)
+  compiler_register_signature_calls(
+    plan, program, analyzed, checked_calls, diagnostics,
+  )
+  let calls = checked_calls.map(call => ("", "", call))
   for framed in frame_calls {
     calls.push((framed.frame, framed.target_frame, framed.call))
   }
@@ -243,7 +247,9 @@ fn compiler_expand_transforms(
         reference=call.reference,
         result_kind=call.result_kind,
         constructor_key=call.constructor_key,
-        function_specialization=call.function_identity.map(identity => identity.specialization).unwrap_or(None),
+        function_specialization=call.function_identity
+          .map(identity => identity.specialization)
+          .unwrap_or(None),
         function_declaration=call.function_identity.map(identity => {
           identity.declaration
         }),

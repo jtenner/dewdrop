@@ -1,0 +1,234 @@
+fn ct_signature_test_recheck(manifest: SelfHostProgramManifest) -> Unit {
+  let collected = self_host_collect_program_manifest(7200u64, self_host_manifest_with_default_preamble(manifest, true))
+  assert(collected.diagnostics.length() == 0u32, "generated manifest diagnostics")
+  for source in collected.modules.values {
+    assert(source.diagnostic_count() == 0u32, "generated source diagnostics")
+  }
+  let frozen = self_host_freeze_program_signature_interfaces(collected)
+  assert(frozen.import_diagnostics.length() == 0u32 && frozen.path_diagnostics.length() == 0u32, "generated import diagnostics")
+  let lowering = self_host_plan_program_lowering(frozen)
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => assert(false, error)
+    None => {}
+  }
+  match self_host_validate_program_lowering(lowering) {
+    Some(error) => assert(false, error)
+    None => {}
+  }
+}
+
+test "transform signatures add a parameter and repair function values" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\n\n// Add a parameter. Existing calls get an explicit default through the adapter.\ntransform fn add_bonus(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let parameters = [@ast.parameter(\"value\", @ast.named_type(\"I32\")), @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))]\n  let changed = node.with_signature(parameters, @ast.named_type(\"I32\"))\n  let body = changed.with_body(@ast.name(\"value\").binary(\"+\", @ast.name(\"bonus\")))\n  body.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(2i32)]))\n}\n\n#add_bonus\nfn answer(value: I32) -> I32 {\n  value\n}\n\npub fn main() -> I32 {\n  let callback = answer\n  callback(40i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let mut bridge = false
+      for file in expanded.modules[0u32].files {
+        if file.source.to_string().contains("__dew_transform_adapter_") {
+          bridge = true
+        }
+      }
+      assert(bridge, "missing signature adapter")
+      ct_signature_test_recheck(expanded)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform signatures change result type with an explicit adapter" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn predicate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.ExprNode::If(@ast.name(node.name).call([]), @ast.integer(42i32), @ast.integer(0i32)))\n}\n#predicate\nfn answer() -> I32 {\n  0i32\n}\npub fn main() -> I32 {\n  answer()\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let mut bridge = false
+      for file in expanded.modules[0u32].files {
+        if file.source.to_string().contains("__dew_transform_adapter_") {
+          bridge = true
+        }
+      }
+      assert(bridge, "missing signature adapter")
+      ct_signature_test_recheck(expanded)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform signatures repair retained recursive source through wrappers" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let parameters = [ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))]\n  let changed = node.with_parameters(parameters).prepend(@ast.unit())\n  changed.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(2i32)]))\n}\n#extend\nfn answer(value: I32) -> I32 {\n  if value == 0i32 {\n    40i32\n  } else {\n    answer(0i32) + 2i32\n  }\n}\npub fn main() -> I32 {\n  answer(1i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let mut bridge = false
+      for file in expanded.modules[0u32].files {
+        if file.source.to_string().contains("__dew_transform_adapter_") {
+          bridge = true
+        }
+      }
+      assert(bridge, "missing signature adapter")
+      ct_signature_test_recheck(expanded)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform signatures leave same named locals unchanged" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_parameters([ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))])\n  changed.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(0i32)]))\n}\n#extend\nfn answer(value: I32) -> I32 {\n  value\n}\npub fn main() -> I32 {\n  let answer = fn(value: I32) -> I32 {\n    value + 2i32\n  }\n  answer(40i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let mut bridge = false
+      for file in expanded.modules[0u32].files {
+        if file.source.to_string().contains("__dew_transform_adapter_") {
+          bridge = true
+        }
+      }
+      assert(bridge, "missing signature adapter")
+      ct_signature_test_recheck(expanded)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform signatures reject duplicate generated parameter names" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn bad(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_parameters([@ast.parameter(\"value\", @ast.named_type(\"I32\")), @ast.parameter(\"value\", @ast.named_type(\"I32\"))])\n}\n#bad\npub fn main() -> I32 {\n  42i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid transform signature was accepted")
+    Err(error) => assert(error.contains("invalid or duplicate generated parameter name"), error)
+  }
+}
+
+test "transform signatures reject invalid generated type names" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn bad(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_return_type(@ast.named_type(\"I32; fn injected()\"))\n}\n#bad\npub fn main() -> I32 {\n  42i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid transform signature was accepted")
+    Err(error) => assert(error.contains("invalid generated named type"), error)
+  }
+}
+
+test "transform signatures reject deep source adapters" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn bad(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.source(\"(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((42i32)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))\"))\n}\n#bad\nfn answer() -> I32 {\n  42i32\n}\npub fn main() -> I32 {\n  answer()\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid transform signature was accepted")
+    Err(error) => assert(error.contains("generated syntax nesting limit exceeded"), error)
+  }
+}
+
+test "transform signatures generic parameter preserved" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_parameters([ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))])\n  changed.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(0i32)]))\n}\n#extend\nfn answer<t>(value: t) -> t {\n  value\n}\npub fn main() -> I32 {\n  answer(42i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform signatures stack preserves changed signature and adapter" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_parameters([ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))])\n  changed.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(0i32)]))\n}\ntransform fn keep(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.prepend(@ast.unit())\n}\n#extend\n#keep\nfn answer(value: I32) -> I32 {\n  value\n}\npub fn main() -> I32 {\n  answer(42i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform signatures repair earlier imported calls and references" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import helper as @h\npub fn main() -> I32 {\n  let callback = @h.answer\n  callback(40i32) + @h.answer(2i32)\n}\n"
+        test_only: false
+      }]
+    }, SelfHostManifestModule::{
+      path: "helper"
+      files: [SelfHostManifestFile::{
+        path: "helper.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_parameters([ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))])\n  changed.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(0i32)]))\n}\n#extend\npub fn answer(value: I32) -> I32 {\n  value\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      assert(ct_test_all_source(expanded.modules[0u32]).contains("@h.__dew_transform_adapter_"), "import alias was lost")
+      ct_signature_test_recheck(expanded)
+    }
+    Err(error) => assert(false, error)
+  }
+}

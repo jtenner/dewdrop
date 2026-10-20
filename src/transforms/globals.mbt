@@ -5,6 +5,7 @@ fn Machine::global_value(
   fi : Int32,
   declaration : @parser.LetDeclaration,
 ) -> Value raise EvalError {
+  self.check_body(mi, fi, declaration.offset)
   guard !declaration.mutable_ else {
     return eval_fail("mutable module bindings cannot execute at compile time")
   }

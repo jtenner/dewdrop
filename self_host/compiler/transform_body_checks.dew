@@ -1,0 +1,235 @@
+// Deferred bodies are never interpreted, even if their bad path is not taken.
+fn ct_check_body(machine: CtMachine, mi: U32, path: String, offset: U32) -> Bool {
+  match machine.plan.body_errors.get(ct_site_key(machine.plan, mi, path, offset)) {
+    Some(message) => {
+      let _ = ct_fail(machine, "compile-time helper failed source checking:\n".concat(message))
+      false
+    }
+    None => true
+  }
+}
+
+fn ct_defer_inference_errors(plan: CtPlan, lowering: SelfHostPlannedProgramLowering) -> Bool {
+  let mut mi = 0u32
+  for module_ in lowering.modules {
+    // Signature and name resolution failures remain fatal in this phase.
+    if module_.resolved_types.diagnostics.length() != 0u32 || module_.name_diagnostics.length() != 0u32 {
+      return false
+    }
+    let source = lowering.collected.modules.at(mi)
+    let covered = map_empty::<U32, Bool>()
+    for job in module_.inferred.jobs {
+      if job.diagnostics.length != 0u32 {
+        let body_id = match job.kind {
+          MergedBodyInferenceJob(body) => body
+          MergedLambdaInferenceJob(lambda) => source.lambdas[lambda].root_body
+        }
+        let body = source.bodies[self_host_semantic_id_local(body_id)]
+        let declaration = body.declaration
+        let offset = match source.declaration_reference(declaration) {
+          Some(TopLevel(value)) => value.offset
+          Some(Method(value)) => value.offset
+          None => return false
+        }
+        let file_id = source.declaration_files[self_host_semantic_id_local(declaration)]
+        let mut found = false
+        let mut fi = 0u32
+        for id in source.files {
+          if id == file_id {
+            for file in plan.files {
+              if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                let message = StringBuilder::new()
+                let _ = while 0u32 {
+                  index if index < job.diagnostics.length => {
+                    let di = job.diagnostics.start + index
+                    let diagnostic = module_.inferred.diagnostics[di]
+                    covered.set(di, true)
+                    message.append(self_host_inference_diagnostic_name(diagnostic))
+                    message.append(" at byte ")
+                    message.append_u32(diagnostic.offset())
+                    message.append("\n")
+                    continue index + 1u32
+                  }
+                  _ => break ()
+                }
+                let key = ct_site_key(plan, mi, file.original.path, offset)
+                if !plan.body_errors.contains_key(key) {
+                  plan.body_errors.set(key, message.finish())
+                }
+                found = true
+              }
+            }
+          }
+          fi = fi + 1u32
+        }
+        if !found {
+          return false
+        }
+      }
+    }
+    if covered.length() != module_.inferred.diagnostics.length() {
+      return false
+    }
+    mi = mi + 1u32
+  }
+  true
+}
+
+// The view shares checked arenas. Only its inference diagnostic list differs.
+fn ct_inference_validation_view(lowering: SelfHostPlannedProgramLowering) -> SelfHostPlannedProgramLowering {
+  let modules = array_new::<SelfHostPlannedModuleLowering>()
+  for module_ in lowering.modules {
+    let inferred = module_.inferred
+    let checked = SelfHostMergedModuleInference::{
+      module_id: inferred.module_id
+      jobs: inferred.jobs
+      types: inferred.types
+      type_arguments: inferred.type_arguments
+      expression_types: inferred.expression_types
+      local_types: inferred.local_types
+      capture_types: inferred.capture_types
+      block_types: inferred.block_types
+      pattern_types: inferred.pattern_types
+      control_state_types: inferred.control_state_types
+      control_result_types: inferred.control_result_types
+      call_targets: inferred.call_targets
+      operator_targets: inferred.operator_targets
+      expression_selections: inferred.expression_selections
+      object_field_targets: inferred.object_field_targets
+      pattern_constructors: inferred.pattern_constructors
+      call_type_arguments: inferred.call_type_arguments
+      expression_type_arguments: inferred.expression_type_arguments
+      pattern_type_arguments: inferred.pattern_type_arguments
+      unsupported_expressions: inferred.unsupported_expressions
+      diagnostics: []
+    }
+    modules.push(SelfHostPlannedModuleLowering::{
+      local_initializer_sources: module_.local_initializer_sources
+      module_id: module_.module_id
+      names: module_.names
+      name_diagnostics: module_.name_diagnostics
+      resolved_types: module_.resolved_types
+      type_layouts: module_.type_layouts
+      initialization: module_.initialization
+      functions: module_.functions
+      bodies: module_.bodies
+      lambdas: module_.lambdas
+      locals: module_.locals
+      captures: module_.captures
+      expressions: module_.expressions
+      blocks: module_.blocks
+      block_items: module_.block_items
+      object_fields: module_.object_fields
+      named_fields: module_.named_fields
+      named_variants: module_.named_variants
+      patterns: module_.patterns
+      pattern_fields: module_.pattern_fields
+      pattern_arms: module_.pattern_arms
+      expression_children: module_.expression_children
+      pattern_children: module_.pattern_children
+      arm_children: module_.arm_children
+      inferred: checked
+      evidence: module_.evidence
+      flow_diagnostics: module_.flow_diagnostics
+    })
+  }
+  SelfHostPlannedProgramLowering::{
+    raw_arrays: lowering.raw_arrays
+    collected: lowering.collected
+    modules: modules
+    index: lowering.index
+    graph: lowering.graph
+    elided_trait_wrappers: lowering.elided_trait_wrappers
+    compile_time: lowering.compile_time
+  }
+}
+
+// Keep invalid new-signature call sites out of old-signature repair. A normal
+// final check must select these calls with the expanded signature instead.
+fn ct_invalid_signature_sites(plan: CtPlan, lowering: SelfHostPlannedProgramLowering) -> Map<U64, Bool> {
+  let invalid = map_empty::<U64, Bool>()
+  let mut mi = 0u32
+  for module_ in lowering.modules {
+    let source = lowering.collected.modules.at(mi)
+    let errors = map_empty::<U64, Map<U32, Bool>>()
+    for job in module_.inferred.jobs {
+      if job.diagnostics.length != 0u32 {
+        let body_id = match job.kind {
+          MergedBodyInferenceJob(body) => body
+          MergedLambdaInferenceJob(lambda) => source.lambdas[lambda].root_body
+        }
+        let owned = match job.kind {
+          MergedBodyInferenceJob(body) => source.bodies[self_host_semantic_id_local(body)].expressions
+          MergedLambdaInferenceJob(lambda) => module_.lambdas[lambda].expressions
+        }
+        let declaration = source.bodies[self_host_semantic_id_local(body_id)].declaration
+        let file_id = source.declaration_files[self_host_semantic_id_local(declaration)]
+        let offsets = match errors.get(file_id) {
+          Some(value) => value
+          None => {
+            let value = map_empty::<U32, Bool>()
+            errors.set(file_id, value)
+            value
+          }
+        }
+        let _ = while 0u32 {
+          index if index < job.diagnostics.length => {
+            let diagnostic = module_.inferred.diagnostics[job.diagnostics.start + index]
+            offsets.set(diagnostic.offset(), true)
+            // The diagnostic location can be a header or return keyword.
+            // Restrict value IDs to this job; empty returns can use a body ID.
+            match diagnostic {
+              BodyConstraintDiagnostic(local) => {
+                let origin = match local {
+                  LocalTypeMismatch(_, _, value) => value
+                  InfiniteLocalType(_, _, value) => value
+                  InvalidLocalMemberProjection(_, _, value) => value
+                }
+                let expression_origin = match origin.kind {
+                  ExpressionTypeConstraint, ReturnTypeConstraint, CallTypeConstraint, OperatorTypeConstraint => true
+                  _ => false
+                }
+                if expression_origin && origin.source >= owned.start && origin.source - owned.start < owned.length {
+                  offsets.set(source.expressions[origin.source].offset(), true)
+                }
+              }
+              _ => {}
+            }
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+    }
+    let mut ei = 0u32
+    for expression in source.expressions {
+      let file_id = source.expression_files[ei]
+      match errors.get(file_id) {
+        Some(offsets) => {
+          let offset = expression.offset()
+          let callee_offset = match expression {
+            CallExpr(callee, _, _) => source.expressions[callee].offset()
+            _ => offset
+          }
+          if offsets.contains_key(offset) || offsets.contains_key(callee_offset) {
+            let mut fi = 0u32
+            for id in source.files {
+              if id == file_id {
+                for file in plan.files {
+                  if file.module_index == mi && file.original.path == source.file_paths[fi] {
+                    invalid.set(ct_site_key(plan, mi, file.original.path, callee_offset), true)
+                  }
+                }
+              }
+              fi = fi + 1u32
+            }
+          }
+        }
+        None => {}
+      }
+      ei = ei + 1u32
+    }
+    mi = mi + 1u32
+  }
+  invalid
+}

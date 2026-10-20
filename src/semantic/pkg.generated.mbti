@@ -53,6 +53,8 @@ pub fn collect_tokens(UInt64, Iter[@tokenizer.Token]) -> CollectedModule
 
 pub fn compile_time_arrays(CollectedProgram, PlannedProgramLowering) -> Array[CompileTimeArray]
 
+pub fn compile_time_body_diagnostics(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[CompilerSourceDiagnostic]) -> Array[(Int, Int, UInt64, UInt64)]
+
 pub fn compile_time_calls(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Array[CompileTimeCall]
 
 pub fn compile_time_expression_types(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, Array[(Int, String, UInt64, UInt64)]) -> Array[CompileTimeExpressionType]

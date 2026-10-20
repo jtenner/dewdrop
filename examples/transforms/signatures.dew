@@ -1,0 +1,20 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+// Add a parameter. Existing calls get an explicit default through the adapter.
+transform fn add_bonus(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  let parameters = [@ast.parameter("value", @ast.named_type("I32")), @ast.parameter("bonus", @ast.named_type("I32"))]
+  let changed = node.with_signature(parameters, @ast.named_type("I32"))
+  let body = changed.with_body(@ast.name("value").binary("+", @ast.name("bonus")))
+  body.repair_calls_with(@ast.name(node.name).call([@ast.name("value"), @ast.integer(2i32)]))
+}
+
+#add_bonus
+fn answer(value: I32) -> I32 {
+  value
+}
+
+pub fn main() -> I32 {
+  let callback = answer
+  callback(20i32) + answer(18i32, 2i32)
+}

@@ -57,7 +57,12 @@ fn Machine::render(
     args
   }
   let rendered = match (key, args[:]) {
-    ("dewdrop.ast::ExprNode::Source", [Text(source)]) => source
+    ("dewdrop.ast::ExprNode::Source", [Text(source)]) =>
+      if reference_equal(value, self.render_source) {
+        self.render_replacement
+      } else {
+        source
+      }
     ("dewdrop.ast::ExprNode::Bytes", [value]) => self.render_bytes(value)
     ("dewdrop.ast::ExprNode::Quote", [parts, splices]) =>
       self.render_quote(parts, splices, depth)
@@ -228,13 +233,17 @@ fn Machine::apply(
   self : Machine,
   function : SourceFunction,
   file : ParsedFile,
-) -> String raise EvalError {
+) -> AppliedFunction raise EvalError {
+  self.steps = 100_000
+  self.allocated = 0
   let fn_ = function.declaration
   let generated_imports : Array[String] = []
   let generated_declarations : Array[String] = []
   let mut generated_bytes = 0
   let mut node = record("dewdrop.ast::FnNode", [
     ("name", Text(fn_.name)),
+    ("signature", self.signature_node(fn_)),
+    ("call_adapter", Variant("dew.std.option::Option::None", [])),
     (
       "body",
       Variant("dewdrop.ast::ExprNode::Source", [
@@ -246,6 +255,8 @@ fn Machine::apply(
       ]),
     ),
   ])
+  let original_source = field(node, "body")
+  let original_signature = self.render_signature(field(node, "signature"))
   for annotation in file.annotations {
     if annotation.target < function.start ||
       annotation.target >= fn_.name_offset.to_int() {
@@ -338,7 +349,7 @@ fn Machine::apply(
       )
     }
     guard self.string(field(node, "name")) == fn_.name else {
-      raise Failed("body transforms must preserve the function name")
+      raise Failed("function transforms must preserve the function name")
     }
     for item in self.sequence_values(field(context, "imports")) {
       if self.register_import(function.module_, item) is Some(rendered) {
@@ -367,11 +378,89 @@ fn Machine::apply(
       allocation_work: self.allocated.to_uint(),
     })
   }
-  let body = self.render(field(node, "body"), 0)
-  let source = part(file.clean, function.start, fn_.body.offset.to_int()) +
-    "{\n" +
-    body +
+  let signature = self.render_signature(field(node, "signature"))
+  let changed = signature != original_signature
+  let bridge = match field(node, "call_adapter") {
+    Variant("dew.std.option::Option::None", []) => None
+    Variant("dew.std.option::Option::Some", [_]) => {
+      guard changed else {
+        raise Failed("call adapter requires a changed function signature")
+      }
+      Some(self.adapter_name(function))
+    }
+    _ => raise Failed("invalid function call adapter")
+  }
+  {
+    function,
+    file,
+    node,
+    original_source,
+    signature,
+    changed,
+    bridge,
+    imports: generated_imports,
+    declarations: generated_declarations,
+    steps: self.steps,
+    allocated: self.allocated,
+  }
+}
+
+///|
+fn Machine::render_applied(
+  self : Machine,
+  applied : AppliedFunction,
+  repairs : Array[SourceRepair],
+) -> String raise EvalError {
+  let function = applied.function
+  let file = applied.file
+  let fn_ = function.declaration
+  let node = applied.node
+  self.steps = applied.steps
+  self.allocated = applied.allocated
+  self.render_source = applied.original_source
+  self.render_replacement = "match () {\n_ => " +
+    repaired_part(file.clean, fn_.body.offset.to_int(), function.end, repairs) +
     "\n}"
+  let generated_imports = applied.imports
+  let generated_declarations = applied.declarations.copy()
+  let body = self.render(field(node, "body"), 0)
+  let header = if applied.changed {
+    part(
+      file.clean,
+      function.start,
+      signature_parameters_start(file.clean, fn_),
+    ) +
+    applied.signature +
+    " "
+  } else {
+    part(file.clean, function.start, fn_.body.offset.to_int())
+  }
+  let source = header + "{\n" + body + "\n}"
+  if applied.bridge is Some(bridge) {
+    // This is generated code: its calls deliberately use the new signature.
+    self.render_source = DefaultValue
+    let adapter = match field(node, "call_adapter") {
+      Variant("dew.std.option::Option::Some", [value]) => self.render(value, 0)
+      _ => raise Failed("checked call adapter lost its body")
+    }
+    let bridge_header = part(
+        file.clean,
+        function.start,
+        fn_.name_offset.to_int(),
+      ) +
+      bridge +
+      part(
+        file.clean,
+        fn_.name_offset.to_int() + bytes(fn_.name).length(),
+        fn_.body.offset.to_int(),
+      )
+    let declaration = bridge_header + "{\n" + adapter + "\n}"
+    generated_declarations.push(
+      self.render_declaration(
+        Variant("dewdrop.ast::DeclarationNode::Function", [Text(declaration)]),
+      ),
+    )
+  }
   guard bytes(source).length() <= 1_048_576 else {
     raise Failed("generated source size limit exceeded")
   }
@@ -415,6 +504,9 @@ pub fn Plan::expand(
   output_module_count~ : Int32 = -1,
   retain_transform_declarations~ : Bool = false,
 ) -> Result[Array[SourceModule], String] {
+  if self.signature_error != "" {
+    return Err(self.signature_error)
+  }
   if !self.active {
     return Ok(self.modules)
   }
@@ -431,10 +523,52 @@ pub fn Plan::expand(
     initializing: {},
     text_storage: {},
     memory: None,
+    render_source: DefaultValue,
+    render_replacement: "",
     bytecode_enabled: true,
     bytecode: {},
     bytecode_compile_work: 1048576,
     bytecode_bytes_left: 8388608,
+  }
+  let applied : Map[(Int32, Int32, Int32), AppliedFunction] = {}
+  let bridges : Map[(Int32, Int32, UInt64), String] = {}
+  for mi, files in self.files {
+    if output_module_count >= 0 && mi >= output_module_count {
+      break
+    }
+    machine.seed_imports(mi)
+    for fi, file in files {
+      for function in file.functions {
+        if !function.transform &&
+          file.annotations.any(fn(a) {
+            a.target >= function.start &&
+            a.target < function.declaration.name_offset.to_int()
+          }) {
+          let value = machine.apply(function, file) catch {
+            Failed(message) =>
+              return Err(
+                file.file.path +
+                ": error: transform on " +
+                function.declaration.name +
+                ": " +
+                message,
+              )
+            _ =>
+              return Err(
+                file.file.path + ": error: invalid control flow in transform",
+              )
+          }
+          applied[(mi, fi, function.start)] = value
+          if value.bridge is Some(name) {
+            bridges[(mi, fi, function.declaration.offset)] = name
+          }
+        }
+      }
+    }
+  }
+  let repairs = self.source_repairs(bridges) catch {
+    Failed(message) => return Err(message)
+    _ => return Err("invalid signature repair control flow")
   }
   let modules : Array[SourceModule] = []
   for mi, module_ in self.modules {
@@ -444,7 +578,8 @@ pub fn Plan::expand(
     machine.seed_imports(mi)
     let files : Array[SourceFile] = []
     let generated : Array[SourceFile] = []
-    for file in self.files[mi] {
+    for fi, file in self.files[mi] {
+      let file_repairs = repairs.get((mi, fi)).unwrap_or([])
       let out = @buffer.new()
       let mut cursor = 0
       for function in file.functions {
@@ -454,7 +589,9 @@ pub fn Plan::expand(
           out.write_bytes(file.file.source[cursor:function.end])
           cursor = function.end
         } else if function.transform {
-          out.write_bytes(file.clean[cursor:function.start])
+          out.write_string_utf8(
+            repaired_part(file.clean, cursor, function.start, file_repairs),
+          )
           let removed = file.clean[function.start:function.end]
             .to_owned()
             .to_fixedarray()
@@ -465,8 +602,13 @@ pub fn Plan::expand(
             a.target >= function.start &&
             a.target < function.declaration.name_offset.to_int()
           }) {
-          out.write_bytes(file.clean[cursor:function.start])
-          let source = machine.apply(function, file) catch {
+          out.write_string_utf8(
+            repaired_part(file.clean, cursor, function.start, file_repairs),
+          )
+          let source = machine.render_applied(
+            applied[(mi, fi, function.start)],
+            file_repairs,
+          ) catch {
             Failed(message) =>
               return Err(
                 file.file.path +
@@ -498,7 +640,9 @@ pub fn Plan::expand(
           cursor = function.end
         }
       }
-      out.write_bytes(file.clean[cursor:])
+      out.write_string_utf8(
+        repaired_part(file.clean, cursor, file.clean.length(), file_repairs),
+      )
       files.push({ path: file.file.path, source: out.to_bytes(), })
     }
     for file in generated {

@@ -1,0 +1,362 @@
+fn ct_site_file_index(plan: CtPlan, mi: U32, path: String) -> U32 {
+  u64_into_u32(ct_site_key(plan, mi, path, 0u32) >> 32u64)
+}
+
+pub struct CtSignatureTarget {
+  key: U64
+  name: String
+}
+
+pub struct CtSourceRepair {
+  start: U32
+  end: U32
+  name: String
+}
+
+pub struct CtAppliedFunction {
+  file: CtFile
+  function: CtFunction
+  node: CtValue
+  original_source: CtValue
+  signature: String
+  changed: Bool
+  bridge: Option<String>
+  imports: String
+  declarations: String
+  steps: U32
+  allocated: U32
+}
+
+fn ct_signature_target(plan: CtPlan, collected: SelfHostCollectedProgram, selected: U64) -> Option<CtSignatureTarget> {
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    if source.module_id == self_host_semantic_id_module(selected) {
+      let declaration = match source.declaration_reference(selected) {
+        Some(TopLevel(value)) => value
+        _ => return None
+      }
+      let file_id = source.declaration_files[self_host_semantic_id_local(selected)]
+      let mut fi = 0u32
+      for id in source.files {
+        if id == file_id {
+          let path = source.file_paths[fi]
+          match plan.validation_targets.get(ct_call_key(mi, path, 0u32)) {
+            Some(value) => return Some(value)
+            None => {}
+          }
+          for file in plan.files {
+            if file.module_index == mi && file.original.path == path {
+              for function in file.functions {
+                if function.declaration.offset == declaration.offset && ct_is_annotated(file, function) {
+                  return Some(CtSignatureTarget::{
+                    key: ct_site_key(plan, mi, path, declaration.offset)
+                    name: function.declaration.name
+                  })
+                }
+              }
+            }
+          }
+        }
+        fi = fi + 1u32
+      }
+    }
+    mi = mi + 1u32
+  }
+  None
+}
+
+fn ct_collect_signature_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering) -> Unit {
+  let invalid = ct_invalid_signature_sites(plan, lowering)
+  let target_cache = map_empty::<U64, Option<CtSignatureTarget>>()
+  let mut mi = 0u32
+  for source in collected.modules.values {
+    let module_ = lowering.modules[mi]
+    let calls = ct_source_call_targets(source, module_)
+    let mut ei = 0u32
+    for expression in source.expressions {
+      let selected = match module_.expressions[ei].kind {
+        PlannedModuleValueGet(value), PlannedFunctionReference(value) => Some(value)
+        _ => match expression {
+          CallExpr(_, _, _) => match module_.expressions[ei].call_target {
+            SelectedBasicCallTarget(value, _) => Some(value)
+            _ => match calls[ei] {
+              SelectedBasicCallTarget(value, _) => Some(value)
+              _ => None
+            }
+          }
+          _ => None
+        }
+      }
+      match selected {
+        Some(declaration) => match match target_cache.get(declaration) {
+          Some(value) => value
+          None => {
+            let value = ct_signature_target(plan, collected, declaration)
+            target_cache.set(declaration, value)
+            value
+          }
+        } {
+          Some(target) => {
+            let mut fi = 0u32
+            for id in source.files {
+              if id == source.expression_files[ei] {
+                for file in plan.files {
+                  if file.module_index == mi && file.original.path == source.file_paths[fi] && expression.offset() < file.clean.byte_length() {
+                    let file_index = ct_site_file_index(plan, mi, file.original.path)
+                    let calls = match plan.signature_calls.get(file_index) {
+                      Some(value) => value
+                      None => {
+                        let value = map_empty::<U32, CtSignatureTarget>()
+                        plan.signature_calls.set(file_index, value)
+                        value
+                      }
+                    }
+                    let offset = match expression {
+                      CallExpr(callee, _, _) => source.expressions[callee].offset()
+                      _ => expression.offset()
+                    }
+                    if !invalid.contains_key(ct_site_key(plan, mi, file.original.path, offset)) {
+                    match calls.get(offset) {
+                      Some(previous) if previous.key != target.key => {
+                        plan.error = "conflicting checked signature targets at one source site"
+                        return
+                      }
+                      _ => {}
+                    }
+                    calls.set(offset, target)
+                    }
+                  }
+                }
+              }
+              fi = fi + 1u32
+            }
+          }
+          None => {}
+        }
+        None => {}
+      }
+      ei = ei + 1u32
+    }
+    mi = mi + 1u32
+  }
+}
+
+fn ct_adapter_name(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
+  let plan = machine.plan
+  let occupied = match plan.adapter_names.get(file.module_index) {
+    Some(names) => names
+    None => {
+      let names = map_empty::<String, Bool>()
+      for source in plan.files {
+        if source.module_index == file.module_index {
+          if !ct_charge(machine, source.clean.byte_length()) {
+  return ""
+}
+          for token in self_host_tokenize(source.clean) {
+            if !ct_charge(machine, 0u32) {
+  return ""
+}
+            match token.kind {
+              Identifier(name, _) if !names.contains_key(name) => {
+                if !ct_charge(machine, 32u32 + name.byte_length()) {
+  return ""
+}
+                names.set(name, true)
+              }
+              _ => {}
+            }
+          }
+        }
+      }
+      plan.adapter_names.set(file.module_index, names)
+      names
+    }
+  }
+  let out = StringBuilder::new()
+  out.append("__dew_transform_adapter_")
+  out.append_u32(file.module_index)
+  out.append("_")
+  out.append_u32(ct_site_file_index(plan, file.module_index, file.original.path))
+  out.append("_")
+  out.append_u32(function.start)
+  let base = out.finish()
+  while 0u32 {
+    counter => {
+      if !ct_charge(machine, 32u32) {
+  return ""
+}
+      let candidate = StringBuilder::new()
+      candidate.append(base)
+      candidate.append("_")
+      candidate.append_u32(counter)
+      let name = candidate.finish()
+      if !occupied.contains_key(name) {
+        occupied.set(name, true)
+        return name
+      }
+      continue counter + 1u32
+    }
+  }
+}
+
+fn ct_source_repairs(machine: CtMachine, file: CtFile, bridges: Map<U64, String>) -> Array<CtSourceRepair> {
+  let result = array_new::<CtSourceRepair>()
+  let seen = map_empty::<U32, String>()
+  let mut inserted = 0u32
+  if bridges.length() == 0u32 {
+  return result
+}
+  let file_id = ct_site_file_index(machine.plan, file.module_index, file.original.path)
+  let calls = match machine.plan.signature_calls.get(file_id) {
+    Some(value) => value
+    None => return result
+  }
+  let tokens = self_host_tokenize(file.clean)
+  let entries = calls.entries()
+  while entries.has_next() {
+    true => {
+      let entry = map_entry_iter_next(entries)
+      if true {
+        match bridges.get(entry.value.key) {
+          Some(bridge) => {
+            let offset = entry.key
+            let begin = while (0u32, tokens.length()) {
+              (low, high) if low < high => {
+                let middle = low + (high - low) / 2u32
+                if tokens[middle].offset < offset {
+  continue (middle + 1u32, high)
+} else {
+  continue (low, middle)
+}
+              }
+              (low, _) => break low
+            }
+            let mut start = 4294967295u32
+            let mut end = 0u32
+            let _ = while begin {
+              index if index < tokens.length() && index - begin < 8u32 => {
+                let token = tokens[index]
+                match token.kind {
+                  Identifier(name, _) if name == entry.value.name => {
+                    start = token.offset
+                    end = start + name.byte_length()
+                    break ()
+                  }
+                  AtIdentifier(_, _, _) => {}
+                  _ => {
+                    if token.symbol_code != 0u32 && !(token.symbol_code == 27u32) {
+                      break ()
+                    }
+                  }
+                }
+                continue index + 1u32
+              }
+              _ => break ()
+            }
+            if start == 4294967295u32 || end > file.clean.byte_length() {
+              let _ = ct_fail(machine, "checked signature repair lost its function reference site")
+              return []
+            }
+            match seen.get(start) {
+              Some(previous) => {
+                if previous != bridge {
+                  let _ = ct_fail(machine, "conflicting checked signature repairs")
+                  return []
+                }
+              }
+              None => {
+                if bridge.byte_length() > 1048576u32 - inserted {
+                  let _ = ct_fail(machine, "generated call repair size limit exceeded")
+                  return []
+                }
+                inserted = inserted + bridge.byte_length()
+                seen.set(start, bridge)
+                result.push(CtSourceRepair::{
+                  start: start
+                  end: end
+                  name: bridge
+                })
+              }
+            }
+          }
+          None => {}
+        }
+      }
+      continue entries.has_next()
+    }
+    false => break ()
+  }
+  ct_sort_source_repairs(result)
+}
+
+fn ct_sort_source_repairs(values: Array<CtSourceRepair>) -> Array<CtSourceRepair> {
+  if values.length() < 2u32 {
+    return values
+  }
+  let mut source = values
+  for shift in [0u32, 8u32, 16u32, 24u32] {
+    let counts = array_new::<U32>()
+    let _ = while 0u32 {
+      index if index < 256u32 => {
+        counts.push(0u32)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    for value in source {
+      let digit = (value.start >> shift) & 255u32
+      counts[digit] = counts[digit] + 1u32
+    }
+    let mut total = 0u32
+    let _ = while 0u32 {
+      index if index < 256u32 => {
+        let count = counts[index]
+        counts[index] = total
+        total = total + count
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let output = source.copy()
+    for value in source {
+      let digit = (value.start >> shift) & 255u32
+      output[counts[digit]] = value
+      counts[digit] = counts[digit] + 1u32
+    }
+    source = output
+  }
+  source
+}
+
+fn ct_repaired_part(source: Bytes, start: U32, end: U32, repairs: Array<CtSourceRepair>) -> String {
+  let out = BytesBuilder::new()
+  let mut cursor = start
+  let first = while (0u32, repairs.length()) {
+    (low, high) if low < high => {
+      let middle = low + (high - low) / 2u32
+      if repairs[middle].start < start {
+        continue (middle + 1u32, high)
+      } else {
+        continue (low, middle)
+      }
+    }
+    (low, _) => break low
+  }
+  let _ = while first {
+    index if index < repairs.length() => {
+      let repair = repairs[index]
+      if repair.start >= end {
+        break ()
+      }
+      if repair.start >= cursor && repair.end <= end {
+        out.append(source.slice(cursor, repair.start))
+        out.append(repair.name.as_bytes())
+        cursor = repair.end
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  out.append(source.slice(cursor, end))
+  out.finish().to_string()
+}

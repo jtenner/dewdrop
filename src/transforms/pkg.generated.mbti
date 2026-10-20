@@ -22,6 +22,18 @@ type EvalError
 // Types and methods
 type Annotation
 
+type AppliedFunction
+
+type BytecodeBinary
+
+type BytecodeBuilder
+
+type BytecodeCall
+
+type BytecodeFunction
+
+type BytecodeLoop
+
 type CallTarget
 
 type Cell
@@ -43,6 +55,8 @@ type IntrinsicContract
 
 type Machine
 
+type MemoryOpcode
+
 type Operation
 
 type ParsedFile
@@ -63,11 +77,17 @@ pub struct Plan {
   array_layouts : Map[String, Array[String]]
   raw_layouts : Map[String, RawLayout]
   intrinsic_contracts : Map[String, IntrinsicContract]
+  adapter_names : Map[Int, Map[String, Bool]]
+  mut signature_error : String
+  validation_targets : Map[(Int, String), (String, UInt64)]
+  body_errors : Map[(Int, Int, Int), String]
+  signature_calls : Map[(Int, Int, Int), (Int, Int, UInt64)]
   reports : Array[TransformReport]
   expression_types : Map[(Int, Int), Array[ReflectedExpressionType]]
   reflection_errors : Array[String]
 }
 pub fn Plan::add_array_layout(Self, Int, String, UInt64, String, Array[String]) -> Unit
+pub fn Plan::add_body_error(Self, Int, String, UInt64, String) -> Bool
 pub fn Plan::add_call_proof(Self, Int, String, UInt64, Int, String, UInt64, reference? : Bool, result_kind? : String, constructor_key? : String, function_declaration? : UInt64?, generic_function? : Bool, function_specialization? : UInt?, frame? : String, target_frame? : String) -> Unit
 pub fn Plan::add_checked_module(Self, SourceModule) -> Result[Unit, String]
 pub fn Plan::add_constant(Self, Int, String, UInt64, CheckedConstant, frame? : String) -> Unit
@@ -76,6 +96,7 @@ pub fn Plan::add_intrinsic_contract(Self, Bytes, Array[String], String) -> Unit
 pub fn Plan::add_pattern_proof(Self, Int, String, UInt64, String) -> Unit
 pub fn Plan::add_raw_layout(Self, String, String, Array[String], Array[String]) -> Unit
 pub fn Plan::add_scalar_proof(Self, Int, String, UInt64, Bytes, frame? : String) -> Unit
+pub fn Plan::add_signature_call(Self, Int, String, UInt64, Int, String, UInt64) -> Unit
 pub fn Plan::add_type_name(Self, Int, String, String) -> Unit
 pub fn Plan::annotation_entries(Self, output_module_count? : Int) -> Result[Array[(Int, String)], String]
 pub fn Plan::check_signatures(Self, (Int, String) -> Bool) -> Result[Unit, String]
@@ -109,6 +130,8 @@ pub(all) struct SourceModule {
   path : String
   files : Array[SourceFile]
 }
+
+type SourceRepair
 
 pub(all) struct TransformReport {
   module_name : String

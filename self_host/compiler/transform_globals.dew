@@ -1,4 +1,7 @@
 fn ct_global_value(machine: CtMachine, mi: U32, path: String, declaration: SelfHostLetDeclaration) -> CtValue {
+  if !ct_check_body(machine, mi, path, declaration.offset) {
+    return CtValue::Empty
+  }
   if declaration.mutable_ {
     return ct_fail(machine, "mutable module bindings cannot execute at compile time")
   }

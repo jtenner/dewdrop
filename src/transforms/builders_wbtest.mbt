@@ -13,6 +13,8 @@ fn builder_machine() -> Machine raise {
     initializing: {},
     text_storage: {},
     memory: None,
+    render_source: DefaultValue,
+    render_replacement: "",
     bytecode_enabled: true,
     bytecode: {},
     bytecode_compile_work: 1048576,

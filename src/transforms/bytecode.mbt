@@ -714,6 +714,7 @@ fn Machine::source_body(
   function : @parser.FunctionDeclaration,
   args : Array[Value],
 ) -> Value raise EvalError {
+  self.check_body(mi, self.file_index, function.offset)
   if self.bytecode_enabled {
     let cache = match self.bytecode.get(self.frame) {
       Some(cache) => cache

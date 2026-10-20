@@ -29,6 +29,10 @@ fn ct_validation_manifest(plan: CtPlan) -> SelfHostProgramManifest {
                 plan.error = "generated transform check file path collision"
               }
             }
+            plan.validation_targets.set(ct_call_key(mi, path, 0u32), CtSignatureTarget::{
+              key: ct_site_key(plan, mi, file.original.path, function.declaration.offset)
+              name: function.declaration.name
+            })
             generated.push({
                 path: path
                 source: ct_part(file.clean, function.start, function.declaration.body.offset).concat(ct_validation_body(plan)).as_bytes()
@@ -108,7 +112,12 @@ fn ct_expand_checked_plan_retaining_declarations(plan: CtPlan, default_preamble:
     }
   }
   let lowering = self_host_plan_program_lowering(frozen)
-  match self_host_validate_program_inference(lowering) {
+  let inference = if ct_defer_inference_errors(plan, lowering) {
+    ct_inference_validation_view(lowering)
+  } else {
+    lowering
+  }
+  match self_host_validate_program_inference(inference) {
     Some(error) => return Err(error)
     None => {
     }
@@ -129,6 +138,7 @@ fn ct_expand_checked_plan_retaining_declarations(plan: CtPlan, default_preamble:
   ct_collect_scalar_proofs(plan, collected, lowering, ct_validation_body(plan))
   ct_collect_pattern_proofs(plan, collected, lowering)
   ct_collect_calls(plan, collected, lowering)
+  ct_collect_signature_calls(plan, collected, lowering)
   ct_collect_frames(plan, collected, lowering)
   if plan.error.byte_length() != 0u32 {
     return Err(plan.error)

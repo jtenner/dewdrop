@@ -161,7 +161,7 @@ Unchecked items need further implementation. Checked items have code and tests.
 
 - [x] Parsed expression trees for every original function body.
 - [x] Typed expression reflection through `ctx.type_of`, with original check errors.
-- [ ] Signature changes and call-site repair.
+- [x] Signature changes and call-site repair.
 - [x] Syntax quotation and expression splicing.
 - [x] Automatic name hygiene for quote-local `$name` bindings.
 - [x] Parsed syntax arguments on annotations.

@@ -187,6 +187,9 @@ fn ct_render_inner(machine: CtMachine, value: CtValue, depth: U32) -> String {
     return ct_render_quote(machine, args[0u32], args[1u32], depth)
   }
   if key == "dewdrop.ast::ExprNode::Source" && args.length() == 1u32 {
+        if ct_truth(machine, ct_reference_equal(machine, value, machine.render_source)) {
+          return machine.render_replacement
+        }
         return ct_string(machine, args[0u32])
       }
       if key == "dewdrop.ast::ExprNode::Integer" && args.length() == 1u32 {
@@ -300,7 +303,9 @@ fn ct_is_annotated(file: CtFile, function: CtFunction) -> Bool {
   false
 }
 
-fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
+fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> CtAppliedFunction {
+  machine.steps = 100000u32
+  machine.allocated = 0u32
   let fn_ = function.declaration
   let generated_imports = StringBuilder::new()
   let generated_declarations = StringBuilder::new()
@@ -308,8 +313,12 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
   let mut first_generated_declaration = true
   let mut node = CtValue::Record("dewdrop.ast::FnNode", [
   ct_binding("name", CtValue::Text(fn_.name)),
+  ct_binding("signature", ct_signature_node(machine, fn_)),
+  ct_binding("call_adapter", CtValue::Variant("dew.std.option::Option::None", [])),
   ct_binding("body", CtValue::Variant("dewdrop.ast::ExprNode::Source", [CtValue::Text("match () {\n_ => ".concat(ct_part(file.clean, fn_.body.offset, function.end)).concat("\n}"))])),
   ])
+  let original_source = ct_field(machine, node, "body")
+  let original_signature = ct_render_signature(machine, ct_field(machine, node, "signature"))
   for annotation in file.annotations {
     if annotation.target >= function.start && annotation.target < fn_.name_offset {
       machine.globals.clear()
@@ -322,7 +331,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       for source in machine.plan.files {
         for candidate in source.functions {
           if !ct_charge(machine, 16u32) {
-            return ""
+            return ct_failed_applied(file, function)
           }
           if candidate.transform_ && key == machine.plan.manifest.modules[source.module_index].path.concat("::").concat(candidate.declaration.name) {
             is_transform = true
@@ -331,7 +340,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       }
       if !is_transform {
         let _ = ct_fail(machine, "annotation must name a transform fn")
-        return ""
+        return ct_failed_applied(file, function)
       }
       let mut line = 1u64
       let mut column = 1u64
@@ -357,7 +366,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
           for source in machine.plan.files {
             if source.module_index == file.module_index {
               if !ct_charge(machine, 16u32) {
-                return ""
+                return ct_failed_applied(file, function)
               }
               if source.original.source.to_string().contains(fresh) {
                 collision = true
@@ -400,25 +409,25 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
         _ => value
       }
       if machine.error.byte_length() != 0u32 {
-        return ""
+        return ct_failed_applied(file, function)
       }
       match node {
         Record(type_, _) if type_ == "dewdrop.ast::FnNode" || type_ == "" => {
         }
         _ => {
           let _ = ct_fail(machine, "transform must return FnNode or Result<FnNode, TransformError>")
-          return ""
+          return ct_failed_applied(file, function)
         }
       }
       if ct_string(machine, ct_field(machine, node, "name")) != fn_.name {
         let _ = ct_fail(machine, "body transforms must preserve the function name")
-        return ""
+        return ct_failed_applied(file, function)
       }
       for item in ct_sequence_values(machine, ct_field(machine, context, "imports")) {
         let rendered = ct_register_import(machine, file.module_index, item)
         if rendered.byte_length() > 1048576u32 - generated_bytes {
           let _ = ct_fail(machine, "generated source size limit exceeded")
-          return ""
+          return ct_failed_applied(file, function)
         }
         generated_bytes = generated_bytes + rendered.byte_length()
         generated_imports.append(rendered)
@@ -427,7 +436,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
         let rendered = ct_render_declaration(machine, item)
         if rendered.byte_length() >= 1048576u32 - generated_bytes {
           let _ = ct_fail(machine, "generated source size limit exceeded")
-          return ""
+          return ct_failed_applied(file, function)
         }
         generated_bytes = generated_bytes + rendered.byte_length() + 1u32
         if !first_generated_declaration {
@@ -447,11 +456,93 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
       })
     }
   }
+  let signature = ct_render_signature(machine, ct_field(machine, node, "signature"))
+  let changed = signature != original_signature
+  let bridge = match ct_field(machine, node, "call_adapter") {
+    Variant(key, values) if key == "dew.std.option::Option::None" && values.length() == 0u32 => None
+    Variant(key, values) if key == "dew.std.option::Option::Some" && values.length() == 1u32 => {
+      if !changed {
+        let _ = ct_fail(machine, "call adapter requires a changed function signature")
+        return ct_failed_applied(file, function)
+      }
+      Some(ct_adapter_name(machine, file, function))
+    }
+    _ => {
+      let _ = ct_fail(machine, "invalid function call adapter")
+      return ct_failed_applied(file, function)
+    }
+  }
+  CtAppliedFunction::{
+    file: file
+    function: function
+    node: node
+    original_source: original_source
+    signature: signature
+    changed: changed
+    bridge: bridge
+    imports: generated_imports.finish()
+    declarations: generated_declarations.finish()
+    steps: machine.steps
+    allocated: machine.allocated
+  }
+}
+
+fn ct_failed_applied(file: CtFile, function: CtFunction) -> CtAppliedFunction {
+  CtAppliedFunction::{
+    file: file
+    function: function
+    node: CtValue::Empty
+    original_source: CtValue::Empty
+    signature: ""
+    changed: false
+    bridge: None
+    imports: ""
+    declarations: ""
+    steps: 0u32
+    allocated: 0u32
+  }
+}
+
+fn ct_render_applied(machine: CtMachine, applied: CtAppliedFunction, repairs: Array<CtSourceRepair>) -> String {
+  let file = applied.file
+  let function = applied.function
+  let fn_ = function.declaration
+  let node = applied.node
+  machine.steps = applied.steps
+  machine.allocated = applied.allocated
+  machine.render_source = applied.original_source
+  machine.render_replacement = "match () {\n_ => ".concat(ct_repaired_part(file.clean, fn_.body.offset, function.end, repairs)).concat("\n}")
   let body = ct_render(machine, ct_field(machine, node, "body"), 0u32)
   if machine.error.byte_length() != 0u32 {
     return ""
   }
-  let source = ct_part(file.clean, function.start, fn_.body.offset).concat("{\n").concat(body).concat("\n}")
+  let header = if applied.changed {
+    ct_part(file.clean, function.start, ct_signature_parameters_start(machine, file.clean, fn_)).concat(applied.signature).concat(" ")
+  } else {
+    ct_part(file.clean, function.start, fn_.body.offset)
+  }
+  let source = header.concat("{\n").concat(body).concat("\n}")
+  let mut declarations = applied.declarations
+  match applied.bridge {
+    Some(bridge) => {
+      machine.render_source = CtValue::Empty
+      let adapter = match ct_field(machine, node, "call_adapter") {
+        Variant(_, values) if values.length() == 1u32 => ct_render(machine, values[0u32], 0u32)
+        _ => {
+          let _ = ct_fail(machine, "checked call adapter lost its body")
+          return ""
+        }
+      }
+      let bridge_header = ct_part(file.clean, function.start, fn_.name_offset).concat(bridge).concat(ct_part(file.clean, fn_.name_offset + fn_.name.byte_length(), fn_.body.offset))
+      let declaration = bridge_header.concat("{\n").concat(adapter).concat("\n}")
+      let checked = ct_render_declaration(machine, CtValue::Variant("dewdrop.ast::DeclarationNode::Function", [CtValue::Text(declaration)]))
+      if machine.error.byte_length() != 0u32 {
+  return ""
+}
+      declarations = declarations.concat("\n").concat(checked)
+    }
+    None => {}
+  }
   if source.byte_length() > 1048576u32 {
     let _ = ct_fail(machine, "generated source size limit exceeded")
     return ""
@@ -483,8 +574,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> String {
     let _ = ct_fail(machine, "transform must produce one valid function body")
     return ""
   }
-  let imports = generated_imports.finish()
-  let declarations = generated_declarations.finish()
+  let imports = applied.imports
   if imports.byte_length() == 0u32 && declarations.byte_length() == 0u32 {
     return source
   }
@@ -508,6 +598,25 @@ fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations:
     return Ok(plan.manifest)
   }
   let machine = ct_machine(plan)
+  let applied = map_empty::<U64, CtAppliedFunction>()
+  let bridges = map_empty::<U64, String>()
+  for file in plan.files {
+    ct_seed_imports(machine, file.module_index)
+    for function in file.functions {
+      if !function.transform_ && ct_is_annotated(file, function) {
+        let value = ct_apply(machine, file, function)
+        if machine.error.byte_length() != 0u32 {
+          return Err(file.original.path.concat(": error: transform on ").concat(function.declaration.name).concat(": ").concat(machine.error))
+        }
+        let key = ct_site_key(plan, file.module_index, file.original.path, function.declaration.offset)
+        applied.set(key, value)
+        match value.bridge {
+          Some(name) => bridges.set(key, name)
+          None => {}
+        }
+      }
+    }
+  }
   let modules = array_new::<SelfHostManifestModule>()
   let mut mi = 0u32
   for module_ in plan.manifest.modules {
@@ -516,6 +625,10 @@ fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations:
     let generated = array_new::<SelfHostManifestFile>()
     for file in plan.files {
       if file.module_index == mi {
+        let file_repairs = ct_source_repairs(machine, file, bridges)
+        if machine.error.byte_length() != 0u32 {
+  return Err(machine.error)
+}
         let out = BytesBuilder::new()
         let mut cursor = 0u32
         for function in file.functions {
@@ -523,12 +636,16 @@ fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations:
             out.append(file.original.source.slice(cursor, function.end))
             cursor = function.end
           } else if function.transform_ {
-            out.append(file.clean.slice(cursor, function.start))
+            out.append(ct_repaired_part(file.clean, cursor, function.start, file_repairs).as_bytes())
             out.append(ct_blank(file.clean, function.start, function.end))
             cursor = function.end
           } else if ct_is_annotated(file, function) {
-            out.append(file.clean.slice(cursor, function.start))
-            let replacement = ct_apply(machine, file, function)
+            out.append(ct_repaired_part(file.clean, cursor, function.start, file_repairs).as_bytes())
+            let value = match applied.get(ct_site_key(plan, file.module_index, file.original.path, function.declaration.offset)) {
+              Some(value) => value
+              None => return Err("transform result lost its original function site")
+            }
+            let replacement = ct_render_applied(machine, value, file_repairs)
             out.append(ct_blank(file.clean, function.start, function.end))
             let path_builder = StringBuilder::new()
             path_builder.append(file.original.path)
@@ -554,7 +671,7 @@ fn ct_expand_retaining_declarations(plan: CtPlan, retain_transform_declarations:
             cursor = function.end
           }
         }
-        out.append(file.clean.slice(cursor, file.clean.byte_length()))
+        out.append(ct_repaired_part(file.clean, cursor, file.clean.byte_length(), file_repairs).as_bytes())
         files.push({
           path: file.original.path
           source: out.finish()

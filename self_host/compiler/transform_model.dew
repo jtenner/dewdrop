@@ -71,6 +71,10 @@ pub struct CtPlan {
   pattern_proofs: Map<U64, String>
   references: Map<U64, CtFunctionReferenceProof>
   frames: Map<String, CtExecutionFrame>
+  adapter_names: Map<U32, Map<String, Bool>>
+  validation_targets: Map<String, CtSignatureTarget>
+  body_errors: Map<U64, String>
+  signature_calls: Map<U32, Map<U32, CtSignatureTarget>>
   calls: Map<U64, CtCallTarget>
   scalar_types: Map<U64, String>
   array_literals: Map<U64, CtArrayLayout>
@@ -97,6 +101,8 @@ pub struct CtMachine {
   initializing: Map<String, Bool>
   mut file_path: String
   mut frame: String
+  mut render_source: CtValue
+  mut render_replacement: String
   mut memory: Option<WasmArray<U8>>
   bytecode_enabled: Bool
   bytecode: Map<String, Map<U64, Option<CtBytecodeFunction>>>
@@ -127,6 +133,8 @@ fn ct_machine_with_bytecode(plan: CtPlan, enabled: Bool) -> CtMachine {
     initializing: map_empty::<String, Bool>()
     file_path: ""
     frame: ""
+    render_source: CtValue::Empty
+    render_replacement: ""
     memory: None
     bytecode_enabled: enabled
     bytecode: map_empty::<String, Map<U64, Option<CtBytecodeFunction>>>()

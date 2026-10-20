@@ -1,0 +1,162 @@
+fn ct_signature_node(machine: CtMachine, function: SelfHostFunctionDeclaration) -> CtValue {
+  CtValue::Record("dewdrop.ast::SignatureNode", [
+    ct_binding("parameters", ct_parameter_nodes(machine, function.parameters)),
+    ct_binding("return_type", ct_type_node(machine, function.return_type)),
+  ])
+}
+
+fn ct_render_type(machine: CtMachine, node: CtValue, depth: U32) -> String {
+  if !ct_charge(machine, 64u32) {
+    return ""
+  }
+  if depth >= 128u32 {
+    let _ = ct_fail(machine, "generated type depth limit exceeded")
+    return ""
+  }
+  match node {
+    Record(key, _) if key == "dewdrop.ast::TypeNode" => {}
+    _ => {
+      let _ = ct_fail(machine, "invalid generated TypeNode")
+      return ""
+    }
+  }
+  let kind = ct_string(machine, ct_field(machine, node, "kind"))
+  let name = ct_string(machine, ct_field(machine, node, "name"))
+  let children = array_new::<String>()
+  for argument in ct_sequence_values(machine, ct_field(machine, node, "arguments")) {
+    children.push(ct_render_type(machine, argument, depth + 1u32))
+  }
+  let out = StringBuilder::new()
+  if kind == "named" || kind == "qualified" {
+    let valid = if kind == "named" {
+  ct_identifier(name)
+} else {
+  ct_qualified_identifier(name)
+}
+    if !valid || children.length() != 0u32 {
+      let _ = ct_fail(machine, "invalid generated named type")
+      return ""
+    }
+    out.append(name)
+  } else if kind == "tuple" {
+    if name != "" || (children.length() < 2u32 || children.length() > 32u32) {
+      let _ = ct_fail(machine, "invalid generated tuple type")
+      return ""
+    }
+    out.append("(")
+    ct_append_type_list(out, children, 0u32, children.length())
+    out.append(")")
+  } else if kind == "applied" {
+    if name != "" || children.length() < 2u32 {
+      let _ = ct_fail(machine, "invalid generated applied type")
+      return ""
+    }
+    out.append(children[0u32])
+    out.append("<")
+    ct_append_type_list(out, children, 1u32, children.length())
+    out.append(">")
+  } else if kind == "function" {
+    if name != "" || children.length() == 0u32 {
+      let _ = ct_fail(machine, "invalid generated function type")
+      return ""
+    }
+    out.append("fn(")
+    ct_append_type_list(out, children, 0u32, children.length() - 1u32)
+    out.append(") -> ")
+    out.append(children[children.length() - 1u32])
+  } else if kind == "computed" {
+    if children.length() != 1u32 {
+      let _ = ct_fail(machine, "invalid generated computed type")
+      return ""
+    }
+    out.append(children[0u32])
+    out.append("(")
+    out.append(ct_quote(name))
+    out.append(")")
+  } else {
+    let _ = ct_fail(machine, "invalid generated type kind")
+    return ""
+  }
+  let result = out.finish()
+  if result.byte_length() > 1048576u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  let _ = ct_charge(machine, result.byte_length())
+  result
+}
+
+fn ct_append_type_list(out: StringBuilder, values: Array<String>, start: U32, end: U32) -> Unit {
+  let _ = while start {
+    index if index < end => {
+      if index != start {
+        out.append(", ")
+      }
+      out.append(values[index])
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn ct_render_signature(machine: CtMachine, node: CtValue) -> String {
+  match node {
+    Record(key, _) if key == "dewdrop.ast::SignatureNode" => {}
+    _ => {
+      let _ = ct_fail(machine, "invalid generated SignatureNode")
+      return ""
+    }
+  }
+  let names = map_empty::<String, Bool>()
+  let parameters = array_new::<String>()
+  for value in ct_sequence_values(machine, ct_field(machine, node, "parameters")) {
+    if !ct_charge(machine, 32u32) {
+      return ""
+    }
+    match value {
+      Record(key, _) if key == "dewdrop.ast::ParameterNode" => {}
+      _ => {
+        let _ = ct_fail(machine, "invalid generated ParameterNode")
+        return ""
+      }
+    }
+    let name = ct_string(machine, ct_field(machine, value, "name"))
+    if !ct_identifier(name) || names.get(name) is Some(_) {
+      let _ = ct_fail(machine, "invalid or duplicate generated parameter name")
+      return ""
+    }
+    names.set(name, true)
+    parameters.push(name.concat(": ").concat(ct_render_type(machine, ct_field(machine, value, "type_"), 0u32)))
+  }
+  let out = StringBuilder::new()
+  out.append("(")
+  ct_append_type_list(out, parameters, 0u32, parameters.length())
+  out.append(") -> ")
+  out.append(ct_render_type(machine, ct_field(machine, node, "return_type"), 0u32))
+  let result = out.finish()
+  if result.byte_length() > 1048576u32 {
+    let _ = ct_fail(machine, "generated source size limit exceeded")
+    return ""
+  }
+  let _ = ct_charge(machine, result.byte_length())
+  result
+}
+
+fn ct_signature_parameters_start(machine: CtMachine, source: Bytes, function: SelfHostFunctionDeclaration) -> U32 {
+  let start = function.name_offset + function.name.byte_length()
+  let mut angles = 0u32
+  for token in self_host_tokenize(source.slice(start, function.body.offset)) {
+    let symbol = token.symbol_code
+    if symbol == 29u32 {
+      angles = angles + 1u32
+    } else if symbol == 30u32 && angles > 0u32 {
+      angles = angles - 1u32
+    } else if symbol == 22u32 && angles >= 2u32 {
+      angles = angles - 2u32
+    } else if symbol == 0u32 && angles == 0u32 {
+      return start + token.offset
+    }
+  }
+  let _ = ct_fail(machine, "original function has no parameter list")
+  0u32
+}

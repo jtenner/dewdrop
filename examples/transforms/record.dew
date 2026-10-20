@@ -5,6 +5,8 @@ transform fn answer(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast
   @ast.FnNode::{
     name: node.name
     body: @ast.integer(42i32)
+    signature: node.signature
+    call_adapter: node.call_adapter
   }
 }
 

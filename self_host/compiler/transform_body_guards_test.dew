@@ -1,0 +1,284 @@
+test "transform body guard new ordinary call" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_parameters([ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))])\n  let body = changed.with_body(@ast.name(\"value\").binary(\"+\", @ast.name(\"bonus\")))\n  body.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(2i32)]))\n}\n#extend\nfn answer(value: I32) -> I32 {\n  value\n}\npub fn main() -> I32 {\n  answer(40i32, 2i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform body guard mixed old and new ordinary calls" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn extend(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_parameters([ctx.parameters[0u32], @ast.parameter(\"bonus\", @ast.named_type(\"I32\"))])\n  let body = changed.with_body(@ast.name(\"value\").binary(\"+\", @ast.name(\"bonus\")))\n  body.repair_calls_with(@ast.name(node.name).call([@ast.name(\"value\"), @ast.integer(2i32)]))\n}\n#extend\nfn answer(value: I32) -> I32 {\n  value\n}\npub fn main() -> I32 {\n  answer(20i32, 20i32) + answer(0i32)\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform body guard new result used in a condition" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn predicate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.integer(42i32))\n}\n#predicate\nfn answer() -> I32 {\n  0i32\n}\npub fn main() -> I32 {\n  if answer() {\n    42i32\n  } else {\n    0i32\n  }\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform body guard invalid executed helper" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  true\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid helper was accepted")
+    Err(error) => assert(error.contains("compile-time helper failed source checking"), error)
+  }
+}
+
+test "transform body guard invalid untaken helper branch" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  if false {\n    true\n  } else {\n    42i32\n  }\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid helper was accepted")
+    Err(error) => assert(error.contains("compile-time helper failed source checking"), error)
+  }
+}
+
+test "transform body guard invalid closure body" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n  let callback = fn() -> I32 {\n    true\n  }\n  callback()\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid helper was accepted")
+    Err(error) => assert(error.contains("compile-time helper failed source checking"), error)
+  }
+}
+
+test "transform body guard invalid method body" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nstruct Value {\n  value: I32\n}\nimpl Value {\n  fn read(self) -> I32 {\n    true\n  }\n}\nfn compute() -> I32 {\n  let value = Value::{\n    value: 42i32\n  }\n  value.read()\n}\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(compute()))\n}\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "invalid helper was accepted")
+    Err(error) => assert(error.contains("compile-time helper failed source checking"), error)
+  }
+}
+
+test "transform body guard unused runtime error remains fatal at final check" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(42i32))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\nfn unused() -> I32 {\n true\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  let expanded = match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+      return ()
+    }
+  }
+  let collected = self_host_collect_program_manifest(7200u64, self_host_manifest_with_default_preamble(expanded, true))
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => assert(error.contains("type constraint"), error)
+    None => assert(false, "runtime body errors must fail final checking")
+  }
+}
+
+test "body check precedes cached tree or bytecode execution" {
+  for enabled in [false, true] {
+    let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", enabled)
+    let initial = ct_source_body(machine, 0u32, function, [])
+    assert(initial is Number(42u64, "I32"), "initial checked body result")
+    machine.plan.body_errors.set(ct_site_key(machine.plan, 0u32, machine.file_path, function.offset), "saved callable error")
+    let steps = machine.steps
+    let allocated = machine.allocated
+    let _ = ct_source_body(machine, 0u32, function, [])
+    assert(machine.error.contains("saved callable error"), machine.error)
+    assert(machine.steps == steps && machine.allocated == allocated, "no source execution after body rejection")
+  }
+}
+
+test "body check precedes cached global read in another file" {
+  let plan = ct_prepare(SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "caller.dew"
+        source: b"transform fn marker() -> I32 {\n 0i32\n}\n"
+        test_only: false
+      }, SelfHostManifestFile::{
+        path: "value.dew"
+        source: b"let value = 42i32\n"
+        test_only: false
+      }]
+    }]
+  })
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  let machine = ct_machine(plan)
+  machine.file_path = "caller.dew"
+  let declaration = match plan.files[1u32].declarations[0u32] {
+    Let(value) => value
+    _ => {
+      assert(false, "missing global test declaration")
+      return ()
+    }
+  }
+  machine.globals.set("app::value", CtValue::Number(42u64, "I32"))
+  plan.body_errors.set(ct_site_key(plan, 0u32, "value.dew", declaration.offset), "saved initializer error")
+  let _ = ct_global_value(machine, 0u32, "value.dew", declaration)
+  assert(machine.error.contains("saved initializer error"), machine.error)
+  assert(machine.file_path == "caller.dew", "caller file retained")
+}
+
+test "transform body guard new result in tail return" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn predicate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.integer(42i32))\n}\n#predicate\nfn answer() -> I32 {\n  0i32\n}\nfn old() -> I32 {\n  answer()\n}\nfn changed() -> Bool {\n  answer()\n}\npub fn main() -> I32 {\n  if changed() && old() == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform body guard new result in explicit return" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn predicate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.integer(42i32))\n}\n#predicate\nfn answer() -> I32 {\n  0i32\n}\nfn old() -> I32 {\n  answer()\n}\nfn changed() -> Bool {\n  return answer()\n}\npub fn main() -> I32 {\n  if changed() && old() == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform body guard new result in tail function value return" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn predicate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.integer(42i32))\n}\n#predicate\nfn answer() -> I32 {\n  0i32\n}\nfn old() -> fn() -> I32 {\n  answer\n}\nfn changed() -> fn() -> Bool {\n  answer\n}\npub fn main() -> I32 {\n  if changed()() && old()() == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "transform body guard new result in explicit function value return" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn predicate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  let changed = node.with_return_type(@ast.named_type(\"Bool\")).with_body(@ast.boolean(true))\n  changed.repair_calls_with(@ast.integer(42i32))\n}\n#predicate\nfn answer() -> I32 {\n  0i32\n}\nfn old() -> fn() -> I32 {\n  answer\n}\nfn changed() -> fn() -> Bool {\n  return answer\n}\npub fn main() -> I32 {\n  if changed()() && old()() == 42i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => ct_signature_test_recheck(expanded)
+    Err(error) => assert(false, error)
+  }
+}
+
+test "signature repair keeps range edges and excludes neighboring repairs" {
+  assert(ct_repaired_part(b"abcdef", 1u32, 5u32, [
+    CtSourceRepair::{
+      start: 0u32
+      end: 1u32
+      name: "left"
+    },
+    CtSourceRepair::{
+      start: 2u32
+      end: 3u32
+      name: "X"
+    },
+    CtSourceRepair::{
+      start: 4u32
+      end: 5u32
+      name: "Y"
+    },
+    CtSourceRepair::{
+      start: 5u32
+      end: 6u32
+      name: "right"
+    },
+  ]) == "bXdY", "range repair boundaries")
+  assert(ct_repaired_part(b"abcdef", 3u32, 3u32, []) == "", "empty range")
+}

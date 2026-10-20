@@ -56,6 +56,11 @@ pub struct Plan {
   array_layouts : Map[String, Array[String]]
   raw_layouts : Map[String, RawLayout]
   intrinsic_contracts : Map[String, IntrinsicContract]
+  adapter_names : Map[Int32, Map[String, Bool]]
+  mut signature_error : String
+  validation_targets : Map[(Int32, String), (String, UInt64)]
+  body_errors : Map[(Int32, Int32, Int32), String]
+  signature_calls : Map[(Int32, Int32, Int32), (Int32, Int32, UInt64)]
   reports : Array[TransformReport]
   expression_types : Map[(Int32, Int32), Array[ReflectedExpressionType]]
   reflection_errors : Array[String]
@@ -342,6 +347,11 @@ pub fn prepare(
       raw_layouts: {},
       intrinsic_contracts: {},
       frames: {},
+      adapter_names: {},
+      signature_error: "",
+      validation_targets: {},
+      body_errors: {},
+    signature_calls: {},
       reports: [],
       expression_types: {},
       reflection_errors: [],
@@ -417,6 +427,11 @@ pub fn prepare(
     raw_layouts: {},
     intrinsic_contracts: {},
     frames: {},
+    adapter_names: {},
+    signature_error: "",
+    validation_targets: {},
+    body_errors: {},
+    signature_calls: {},
     reports: [],
     expression_types: {},
     reflection_errors: [],
@@ -465,6 +480,10 @@ pub fn Plan::validation_sources(self : Plan) -> Array[SourceModule] {
             file.clean,
             function.start,
             function.declaration.body.offset.to_int(),
+          )
+          self.validation_targets[(mi, path)] = (
+            file.file.path,
+            function.declaration.offset,
           )
           checks.push({ path, source: bytes(header + self.validation_body()), })
         }

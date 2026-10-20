@@ -299,6 +299,7 @@ default_preamble: Bool) -> Unit {
     }
   }
   let lowering = self_host_plan_program_lowering(frozen)
+  ct_collect_signature_calls(plan, program, lowering)
   match self_host_validate_program_inference(lowering) {
     Some(error) => {
       plan.reflection_errors.push(error)

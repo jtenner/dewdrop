@@ -397,6 +397,9 @@ fn ct_compile_bytecode(machine: CtMachine, mi: U32, function: SelfHostFunctionDe
 }
 
 fn ct_source_body(machine: CtMachine, mi: U32, function: SelfHostFunctionDeclaration, args: Array<CtValue>) -> CtValue {
+  if !ct_check_body(machine, mi, machine.file_path, function.offset) {
+    return CtValue::Empty
+  }
   if machine.bytecode_enabled {
     let cache = match machine.bytecode.get(machine.frame) {
       Some(value) => value
