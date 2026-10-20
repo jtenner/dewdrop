@@ -1371,6 +1371,25 @@ fn BasicBodyInferencer::imported_function_reference(
 }
 
 ///|
+fn BasicBodyInferencer::qualified_imported_function_reference_head(
+  self : BasicBodyInferencer,
+  base : ExprId,
+  name : NameId,
+) -> Int32? {
+  if !(self.collected.expressions[base] is HirImportAliasExpr(_, _)) {
+    return None
+  }
+  match (self.names.expression_references[base], self.imports) {
+    (ImportedModuleNameReference(interface_index), Some(imports)) =>
+      imports.scope.lookup_module_callable(
+        interface_index,
+        self.collected.name(name),
+      )
+    _ => None
+  }
+}
+
+///|
 fn BasicBodyInferencer::local_function_reference_candidate_count(
   self : BasicBodyInferencer,
   name : NameId,
@@ -1648,11 +1667,18 @@ fn BasicBodyInferencer::constrain_function_references(
       self.consumed_member_roots[self.expression_index(expression)] {
       continue
     }
-    let (name, offset) = match self.collected.expressions[expression] {
-      HirNameExpr(name, offset) => (name, offset)
+    let (name, offset, reference) = match
+      self.collected.expressions[expression] {
+      HirNameExpr(name, offset) =>
+        (name, offset, self.names.expression_references[expression])
+      HirQualifiedExpr(base, name, offset) =>
+        match self.qualified_imported_function_reference_head(base, name) {
+          Some(head) => (name, offset, ImportedValueNameReference(head))
+          None => continue
+        }
       _ => continue
     }
-    let candidate_count = match self.names.expression_references[expression] {
+    let candidate_count = match reference {
       ModuleValueNameReference(_) if self.module_value_type(name) is None =>
         self.local_function_reference_candidate_count(name)
       ImportedValueNameReference(head) =>
@@ -1669,7 +1695,7 @@ fn BasicBodyInferencer::constrain_function_references(
       self.poison_expression(expression)
       continue
     }
-    match self.names.expression_references[expression] {
+    match reference {
       ModuleValueNameReference(_) =>
         self.select_local_function_reference(expression, name, offset)
       ImportedValueNameReference(head) =>

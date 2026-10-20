@@ -404,7 +404,30 @@ fn BasicBodyInferencer::infer_qualified_value(
                 }
                 None => self.mark_unsupported(expression)
               }
-            None => self.mark_unsupported(expression)
+            None =>
+              match
+                self.qualified_imported_function_reference_head(base, property) {
+                Some(head) =>
+                  match self.imported_function_reference(head) {
+                    Some((declaration, type_)) => {
+                      self.constrain(
+                        self.expression_type(expression),
+                        self.solver.resolved_type(type_),
+                        expression_type_origin(expression, offset),
+                      )
+                      self.expression_selections[self.expression_index(
+                        expression,
+                      )] = FunctionReferenceSelection(declaration, {
+                        start: 0,
+                        length: 0,
+                      })
+                    }
+                    // Expected-type selection finishes generic and overloaded
+                    // references after the shared member/call constraint queue.
+                    None => ()
+                  }
+                None => self.mark_unsupported(expression)
+              }
           }
         }
         _ => self.mark_unsupported(expression)
