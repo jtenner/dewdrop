@@ -5,15 +5,10 @@ pub struct CtTypeName {
 }
 
 fn ct_imported_type_name(machine: CtMachine, mi: U32, name: String) -> Option<String> {
-  for binding in machine.plan.type_names {
-    if !ct_charge(machine, 0u32) {
-      return None
-    }
-    if binding.module_index == mi && binding.name == name {
-      return Some(binding.key)
-    }
+  if !ct_charge(machine, 16u32) {
+    return None
   }
-  None
+  ct_source_index(machine.plan).sources[mi].types.get(name)
 }
 
 fn ct_collect_type_names(plan: CtPlan, frozen: SelfHostFrozenSignatureProgram) -> Unit {
@@ -37,10 +32,12 @@ fn ct_collect_type_names(plan: CtPlan, frozen: SelfHostFrozenSignatureProgram) -
                       key: plan.manifest.modules[oi].path.concat("::").concat(name)
                     })
                   }
-                  _ => {}
+                  _ => {
+                  }
                 }
               }
-              _ => {}
+              _ => {
+              }
             }
           }
           oi = oi + 1u32

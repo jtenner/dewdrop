@@ -257,11 +257,10 @@ fn Machine::apply(
   ])
   let original_source = field(node, "body")
   let original_signature = self.render_signature(field(node, "signature"))
-  for annotation in file.annotations {
-    if annotation.target < function.start ||
-      annotation.target >= fn_.name_offset.to_int() {
-      continue
-    }
+  for
+    ai in function.annotation_start..<(function.annotation_start +
+    function.annotation_count) {
+    let annotation = file.annotations[ai]
     self.globals.clear()
     self.initializing.clear()
     self.steps = 100_000
@@ -269,41 +268,12 @@ fn Machine::apply(
     self.memory = None
     self.text_storage.clear()
     let key = self.annotation_key(function.module_, annotation.name)
-    let mut is_transform = false
-    for files in self.plan.files {
-      for source in files {
-        for candidate in source.functions {
-          self.charge(16)
-          if self.plan.modules[candidate.module_].path +
-            "::" +
-            candidate.declaration.name ==
-            key &&
-            candidate.transform {
-            is_transform = true
-          }
-        }
-      }
-    }
-    guard is_transform else {
+    guard self.plan.source_index().transforms.contains(key) else {
       raise Failed("annotation must name a transform fn: " + key)
     }
-    let mut line = 1UL
-    let mut column = 1UL
-    for i = 0; i < annotation.offset; i = i + 1 {
-      if file.file.source[i] == b'\n' {
-        line += 1UL
-        column = 1UL
-      } else {
-        column += 1UL
-      }
-    }
-    let mut fresh = "__dew_transform_" + annotation.offset.to_string()
-    while self.plan.files[function.module_].any(fn(source) {
-            text(source.file.source).contains(fresh)
-          }) {
-      self.charge(16)
-      fresh += "_"
-    }
+    let line = annotation.line_no
+    let column = annotation.col_no
+    let fresh = self.fresh_name(function.module_, annotation.offset.to_uint())
     let parameters = parameter_source(file.clean, fn_)
     let return_type = part(
       file.clean,
@@ -539,11 +509,7 @@ pub fn Plan::expand(
     machine.seed_imports(mi)
     for fi, file in files {
       for function in file.functions {
-        if !function.transform &&
-          file.annotations.any(fn(a) {
-            a.target >= function.start &&
-            a.target < function.declaration.name_offset.to_int()
-          }) {
+        if !function.transform && function.annotation_count > 0 {
           let value = machine.apply(function, file) catch {
             Failed(message) =>
               return Err(
@@ -598,10 +564,7 @@ pub fn Plan::expand(
           blank(removed, 0, removed.length())
           out.write_bytes(Bytes::from_fixedarray(removed))
           cursor = function.end
-        } else if file.annotations.any(fn(a) {
-            a.target >= function.start &&
-            a.target < function.declaration.name_offset.to_int()
-          }) {
+        } else if function.annotation_count > 0 {
           out.write_string_utf8(
             repaired_part(file.clean, cursor, function.start, file_repairs),
           )

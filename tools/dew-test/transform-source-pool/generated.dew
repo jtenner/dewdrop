@@ -1,0 +1,12 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+
+transform fn load(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  ctx.import_module("example.late", "late")
+  node.with_body(@ast.source("@late.answer()"))
+}
+
+#load
+pub fn main() -> I32 {
+  0i32
+}

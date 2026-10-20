@@ -67,7 +67,7 @@ fn ct_type_node_at_depth(machine: CtMachine, type_: SelfHostTypeExpr, depth: U32
   for argument in arguments {
     children.push(ct_type_node_at_depth(machine, argument, depth + 1u32))
   }
-  CtValue::Record("dewdrop.ast::TypeNode", [
+  ct_record("dewdrop.ast::TypeNode", [
     ct_binding("kind", CtValue::Text(kind)),
     ct_binding("name", CtValue::Text(name)),
     ct_binding("arguments", ct_syntax_values(machine, children)),
@@ -77,7 +77,7 @@ fn ct_type_node_at_depth(machine: CtMachine, type_: SelfHostTypeExpr, depth: U32
 fn ct_parameter_nodes(machine: CtMachine, parameters: Array<SelfHostFnParameter>) -> CtValue {
   let values = array_new::<CtValue>()
   for parameter in parameters {
-    values.push(CtValue::Record("dewdrop.ast::ParameterNode", [
+    values.push(ct_record("dewdrop.ast::ParameterNode", [
       ct_binding("name", CtValue::Text(parameter.name)),
       ct_binding("type_", ct_type_node(machine, parameter.type_)),
     ]))
@@ -92,7 +92,7 @@ fn ct_type_parameter_nodes(machine: CtMachine, parameters: Array<SelfHostTypePar
     for bound in parameter.bounds {
       bounds.push(ct_type_node(machine, bound))
     }
-    values.push(CtValue::Record("dewdrop.ast::TypeParameterNode", [
+    values.push(ct_record("dewdrop.ast::TypeParameterNode", [
       ct_binding("name", CtValue::Text(parameter.name)),
       ct_binding("bounds", ct_syntax_values(machine, bounds)),
     ]))

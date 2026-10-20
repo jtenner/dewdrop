@@ -49,10 +49,7 @@ pub fn Plan::add_signature_call(
       }
       for function in target.functions {
         if function.declaration.offset == target_offset &&
-          target.annotations.any(a => {
-            a.target >= function.start &&
-            a.target < function.declaration.name_offset.to_int()
-          }) {
+          function.annotation_count > 0 {
           let site = (mi, fi, offset.to_int())
           let target = (target_module, ti, target_offset)
           if self.signature_calls.get(site) is Some(previous) &&
@@ -93,8 +90,6 @@ fn Machine::adapter_name(
     }
   }
   let base = "__dew_transform_adapter_" +
-    function.module_.to_string() +
-    "_" +
     function.file.to_string() +
     "_" +
     function.start.to_string()

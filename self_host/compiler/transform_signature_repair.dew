@@ -174,9 +174,17 @@ fn ct_adapter_name(machine: CtMachine, file: CtFile, function: CtFunction) -> St
   }
   let out = StringBuilder::new()
   out.append("__dew_transform_adapter_")
-  out.append_u32(file.module_index)
-  out.append("_")
-  out.append_u32(ct_site_file_index(plan, file.module_index, file.original.path))
+  let mut ordinal = 0u32
+  let mut found = false
+  for source in plan.manifest.modules[file.module_index].files {
+    if source.path == file.original.path {
+      found = true
+      break ()
+    }
+    ordinal = ordinal + 1u32
+  }
+  self_host_assert_compiler_invariant(found, "transform adapter lost its module source file")
+  out.append_u32(ordinal)
   out.append("_")
   out.append_u32(function.start)
   let base = out.finish()

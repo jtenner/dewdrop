@@ -161,3 +161,76 @@ test "transform body guard new result in explicit function value return" {
     Err(error) => fail(error.message())
   }
 }
+
+///|
+test "transform frame root checks array method import before specialization" {
+  for valid in [false, true] {
+    let source = @utf8.encode(
+      (if valid { "open dew.std.array\n" } else { "" }) +
+      "import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n if ctx.expression_types.length() == 0u32 {\n  return node\n }\n node\n}\n#inspect\npub fn main() -> I32 {\n 0i32\n}\n",
+    )
+    match compile_transform_source(source) {
+      Ok(compiled) => {
+        assert_true(valid, msg="missing array method import was accepted")
+        assert_true(compiled.emit_binary().unwrap().length() > 8)
+      }
+      Err(error) => {
+        assert_false(valid, msg=error.message())
+        assert_true(
+          error.message().contains("compile-time helper failed source checking"),
+          msg=error.message(),
+        )
+      }
+    }
+  }
+}
+
+///|
+test "bad helper bodies stay out of transform frame preparation" {
+  for mode in [0, 1, 2] {
+    let call = if mode == 0 {
+      " let _ = bad_helper(ctx)\n"
+    } else if mode == 2 {
+      " if choose() {\n  let _ = bad_helper(ctx)\n }\n"
+    } else {
+      ""
+    }
+    let source = @utf8.encode(
+      "import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn bad_helper(ctx: @transform.TransformContext) -> U32 {\n ctx.expression_types.length()\n}\nfn choose() -> Bool {\n false\n}\ntransform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n" +
+      call +
+      " node.with_body(@ast.integer(42i32))\n}\n#inspect\npub fn main() -> I32 {\n 0i32\n}\n",
+    )
+    let manifest = @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app", [
+        @semantic.ManifestFile::new("main.dew", source),
+      ]),
+    ])
+    match
+      expand_manifest_sources(
+        manifest,
+        @semantic.StandardLibrarySources::bootstrap(),
+        CompilerPipelineOptions::production(5100UL, 0, true),
+      ) {
+      Err(error) => {
+        assert_eq(mode, 0, msg=error.message())
+        assert_true(
+          error.message().contains("compile-time helper failed source checking"),
+          msg=error.message(),
+        )
+      }
+      Ok(expanded) => {
+        assert_true(mode != 0, msg="called invalid helper was accepted")
+        assert_true(
+          expanded.modules[0].files.any(file => {
+            file.source == b"pub fn main() -> I32 {\n42i32\n}"
+          }),
+        )
+        match compile_transform_source(source) {
+          Ok(_) => fail("final checking accepted an unchanged invalid helper")
+          Err(error) =>
+            assert_true(error.message().contains("length"), msg=error.message())
+        }
+      }
+    }
+  }
+}

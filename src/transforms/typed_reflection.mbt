@@ -32,10 +32,7 @@ pub fn Plan::reflection_targets(
   for mi, files in self.files {
     for file in files {
       for function in file.functions {
-        if file.annotations.any(fn(a) {
-            a.target >= function.start &&
-            a.target < function.declaration.name_offset.to_int()
-          }) {
+        if function.annotation_count > 0 {
           result.push(
             (
               mi,
@@ -106,13 +103,13 @@ fn Machine::expression_type_nodes(
   self : Machine,
   function : SourceFunction,
 ) -> Value raise EvalError {
+  self.charge(0)
   let result = []
   if self.plan.expression_types.get((function.module_, function.file))
     is Some(entries) {
     let mut low = 0
     let mut high = entries.length()
     while low < high {
-      self.charge(0)
       let middle = low + (high - low) / 2
       if entries[middle].offset < function.declaration.body.offset {
         low = middle + 1
@@ -121,7 +118,6 @@ fn Machine::expression_type_nodes(
       }
     }
     for index in low..<entries.length() {
-      self.charge(0)
       let entry = entries[index]
       if entry.offset >= function.end.to_uint64() {
         break
@@ -143,7 +139,9 @@ fn Machine::expression_type_nodes(
 fn Machine::reflection_errors(self : Machine) -> Value raise EvalError {
   let values = []
   for message in self.plan.reflection_errors {
-    self.charge(bytes(message).length() + 16)
+    // Compiler diagnostics are immutable metadata. Charge the value wrapper;
+    // reading their bytes uses the normal text storage charge.
+    self.charge(16)
     values.push(Text(message))
   }
   self.syntax_values(values)

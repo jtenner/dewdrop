@@ -1,0 +1,275 @@
+test "expression type queries ignore unrelated search entries" {
+  let mut expected_work = 0u32
+  let mut expected_allocation = 0u32
+  for padding in [0u32, 512u32] {
+    let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", false)
+    let file = machine.plan.files[0u32]
+    let function = file.functions[0u32]
+    let type_ = CtReflectedType::{
+      kind: "named"
+      name: "I32"
+      arguments: []
+    }
+    let entries = array_new::<CtExpressionType>()
+    let _ = while 0u32 {
+      index if index < padding => {
+        entries.push(CtExpressionType::{
+          offset: 0u32
+          kind: "I32"
+          type_: type_
+        })
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    entries.push(CtExpressionType::{
+      offset: function.declaration.body.offset
+      kind: "block"
+      type_: type_
+    })
+    machine.plan.expression_types.set(ct_call_key(0u32, file.original.path, 0u32), entries)
+    let before = machine.steps
+    let allocated = machine.allocated
+    let _ = ct_expression_type_nodes(machine, file, function)
+    assert(machine.error.byte_length() == 0u32, machine.error)
+    if padding == 0u32 {
+      expected_work = before - machine.steps
+      expected_allocation = machine.allocated - allocated
+    } else {
+      assert(before - machine.steps == expected_work && machine.allocated - allocated == expected_allocation, "unrelated type entries keep query costs")
+    }
+  }
+}
+
+test "discard bindings evaluate once with the same block cost" {
+  for enabled in [false, true] {
+    let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n let _ = 1i32\n 42i32\n}\n", enabled)
+    let result = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+    assert(ct_raw_bits(machine, result) == 42u64, "discard result")
+    assert(machine.error.byte_length() == 0u32, machine.error)
+    assert(100000u32 - machine.steps == 6u32 && machine.allocated == 96u32, "canonical discard cost")
+  }
+}
+
+test "qualified unit patterns use one checked pattern event" {
+  let machine = ct_machine(ct_test_plan(b""))
+  ct_register_site_file(machine.plan, 0u32, "main.dew")
+  machine.file_path = "main.dew"
+  machine.plan.pattern_proofs.set(ct_site_key(machine.plan, 0u32, "main.dew", 7u32), "app::Flag::Off")
+  let before = machine.steps
+  let allocated = machine.allocated
+  assert(ct_pattern(machine, 0u32, QualifiedPattern(BindingPattern("Flag", 0u32), "Off", 7u32), CtValue::Variant("app::Flag::Off", []), ct_environment()), machine.error)
+  assert(before - machine.steps == 1u32 && machine.allocated - allocated == 16u32, "one checked pattern event")
+}
+
+test "diagnostic metadata costs do not depend on message formatting" {
+  let machine = ct_machine(ct_test_plan(b""))
+  machine.plan.reflection_errors.push("short")
+  let before = machine.steps
+  let allocated = machine.allocated
+  let _ = ct_reflection_error_nodes(machine)
+  let work = before - machine.steps
+  let allocation_work = machine.allocated - allocated
+  machine.plan.reflection_errors.clear()
+  machine.plan.reflection_errors.push("long diagnostic with a source location and detailed type names")
+  let before = machine.steps
+  let allocated = machine.allocated
+  let _ = ct_reflection_error_nodes(machine)
+  assert(before - machine.steps == work && machine.allocated - allocated == allocation_work, "diagnostic metadata cost")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "source calls have equal cold and warm resource costs" {
+  for enabled in [false, true] {
+    let (machine, _) = ct_bc_test_machine(b"fn compute(value: I32) -> I32 {\n value\n}\n", enabled)
+    let first = ct_call(machine, "app::compute", [CtValue::Number(42u64, "I32")])
+    assert(first is Number(42u64, "I32"), machine.error)
+    let work = 100000u32 - machine.steps
+    let allocated = machine.allocated
+    assert(work == 4u32 && allocated == 96u32, "canonical source call cost")
+    machine.steps = 100000u32
+    machine.allocated = 0u32
+    let second = ct_call(machine, "app::compute", [CtValue::Number(42u64, "I32")])
+    assert(second is Number(42u64, "I32"), machine.error)
+    assert(100000u32 - machine.steps == work, "cold and warm source calls have equal work")
+    assert(machine.allocated == allocated, "cold and warm source calls have equal allocation work")
+  }
+}
+test "failed resource charges keep counters within their bounds" {
+  let (machine, _) = ct_bc_test_machine(b"fn compute() -> I32 {\n 42i32\n}\n", false)
+  machine.steps = 0u32
+  machine.allocated = 7u32
+  assert(!ct_charge(machine, 100u32), "work exhaustion must fail")
+  assert(machine.error == "transform work limit exceeded", machine.error)
+  assert(machine.steps == 0u32 && machine.allocated == 7u32, "work failure counters")
+  machine.error = ""
+  machine.steps = 1u32
+  machine.allocated = 4194303u32
+  assert(!ct_charge(machine, 2u32), "allocation exhaustion must fail")
+  assert(machine.error == "transform allocation limit exceeded", machine.error)
+  assert(machine.steps == 0u32 && machine.allocated == 4194303u32, "allocation failure counters")
+}
+test "primitive arithmetic has one cost across execution paths" {
+  for enabled in [false, true] {
+    let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n 40i32 + 2i32\n}\n", enabled)
+    if enabled {
+      assert(ct_compile_bytecode(machine, 0u32, function) is Some(_), "arithmetic uses bytecode")
+    }
+    let result = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+    assert(machine.error.byte_length() == 0u32, machine.error)
+    assert(ct_raw_bits(machine, result) == 42u64, "arithmetic result")
+    assert(100000u32 - machine.steps == 6u32 && machine.allocated == 96u32, "canonical arithmetic cost")
+  }
+}
+
+test "raw reference field work does not depend on field position" {
+  let machine = ct_machine(ct_test_plan(b""))
+  machine.plan.raw_layouts.set("record:123", CtRawLayout::{
+    fields: ["data", "begin", "size"]
+    storage: ["array:v128", "i32", "i32"]
+  })
+  let view = ct_reference_cast(machine, CtValue::ByteText(b"text"), "record:123")
+  let before = machine.steps
+  assert(ct_raw_bits(machine, ct_field(machine, view, "begin")) == 0u64, "first scalar field")
+  let first = before - machine.steps
+  let before = machine.steps
+  assert(ct_raw_bits(machine, ct_field(machine, view, "size")) == 4u64, "last scalar field")
+  assert(before - machine.steps == first, "field position keeps the same work")
+}
+test "raw text reads have cache independent UTF8 costs" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let value = CtValue::Text("aλ🧪")
+  for index in [0u32, 0u32, 2u32] {
+    let work = machine.steps
+    let allocation = machine.allocated
+    let result = ct_raw_struct_get(machine, value, index)
+    if index == 2u32 {
+      assert(ct_raw_bits(machine, result) == 7u64, "UTF8 length")
+    }
+    assert(work - machine.steps == 1u32, "one read event")
+    assert(machine.allocated - allocation == 23u32, "UTF8 storage read cost")
+  }
+  machine.steps = 0u32
+  let allocated = machine.allocated
+  let _ = ct_raw_struct_get(machine, value, 0u32)
+  assert(machine.error == "transform work limit exceeded", machine.error)
+  assert(machine.allocated == allocated, "work failure allocation unchanged")
+  machine.error = ""
+  machine.steps = 1u32
+  machine.allocated = 4194303u32
+  let _ = ct_raw_struct_get(machine, value, 0u32)
+  assert(machine.error == "transform allocation limit exceeded", machine.error)
+  assert(machine.steps == 0u32 && machine.allocated == 4194303u32, "allocation failure counters")
+}
+test "wide record fields keep last binding cells and array identity" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let values = array_new::<CtBinding>()
+  let first = ct_binding("same", ct_number(1u64, "I32"))
+  let last = ct_binding("same", ct_number(2u64, "I32"))
+  values.push(first)
+  for name in ["a", "b", "c", "d", "e", "f", "g", "h"] {
+    values.push(ct_binding(name, CtValue::Empty))
+  }
+  values.push(last)
+  let value = ct_record("fixture", values)
+  let alias = ct_record("fixture", values)
+  assert(ct_truth(machine, ct_reference_equal(machine, value, alias)), "binding array identity")
+  assert(ct_raw_bits(machine, ct_field(machine, value, "same")) == 2u64, "last duplicate wins")
+  ct_write_field(machine, value, "same", ct_number(42u64, "I32"))
+  assert(ct_raw_bits(machine, last.value) == 42u64, "same mutable binding cell")
+  assert(ct_raw_bits(machine, first.value) == 1u64, "first duplicate unchanged")
+  assert(ct_raw_bits(machine, ct_field(machine, alias, "same")) == 42u64, "alias sees assignment")
+  let names = ct_field_names(["same", "a", "b", "c", "d", "e", "f", "g", "same"])
+  assert(ct_field_position(names, "same") is Some(0u32), "view duplicate uses first position")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+test "failed array copy reads do not commit writes" {
+  for steps in [1u32, 2u32, 3u32, 4u32] {
+    let machine = ct_machine(ct_test_plan(b""))
+    let source = CtValue::RawArray(CtRawStorage::{
+      values: [CtValue::DefaultValue, CtValue::DefaultValue]
+      default_kind: "unit-product:(u)"
+    })
+    let storage = CtRawStorage::{
+      values: [ct_number(7u64, "I32"), ct_number(8u64, "I32")]
+      default_kind: ""
+    }
+    machine.steps = steps
+    let _ = ct_raw_array_copy(machine, CtValue::RawArray(storage), 0u64, source, 0u64, 2u64)
+    assert(machine.error == "transform work limit exceeded", machine.error)
+    assert(storage.values[0u32] is Number(7u64, "I32") && storage.values[1u32] is Number(8u64, "I32"), "failed reads commit no writes")
+    assert(machine.steps == 0u32, "bounded work counter")
+  }
+}
+
+
+test "raw array copy keeps overlapping source values" {
+  let machine = ct_machine(ct_test_plan(b""))
+  let storage = CtRawStorage::{
+    values: [ct_number(1u64, "I32"), ct_number(2u64, "I32"), ct_number(3u64, "I32")]
+    default_kind: "I32"
+  }
+  let value = CtValue::RawArray(storage)
+  let before = machine.steps
+  let _ = ct_raw_array_copy(machine, value, 1u64, value, 0u64, 2u64)
+  assert(storage.values[0u32] is Number(1u64, "I32") && storage.values[1u32] is Number(1u64, "I32") && storage.values[2u32] is Number(2u64, "I32"), "overlap reads precede writes")
+  assert(before - machine.steps == 3u32 && machine.allocated == 32u32, "copy source event costs")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+test "adapter names use file order within the module" {
+  let source = b"transform fn marker() -> I32 {\n 0i32\n}\n#marker\nfn answer() -> I32 {\n 42i32\n}\n"
+  let padding = array_new::<SelfHostManifestFile>()
+  for index in [0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 7u32, 8u32, 9u32, 10u32, 11u32] {
+    let name = StringBuilder::new()
+    name.append_u32(index)
+    name.append(".dew")
+    padding.push({
+      path: name.finish()
+      source: b""
+      test_only: false
+    })
+  }
+  let plan = ct_prepare({
+    modules: [
+      {
+        path: "padding"
+        files: padding
+      },
+      {
+        path: "app"
+        files: [
+          {
+            path: "first.dew"
+            source: b""
+            test_only: false
+          },
+          {
+            path: "target.dew"
+            source: source
+            test_only: false
+          },
+        ]
+      },
+    ]
+  })
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  let file = plan.files[13u32]
+  let function = file.functions[1u32]
+  let expected = StringBuilder::new()
+  expected.append("__dew_transform_adapter_1_")
+  expected.append_u32(function.start)
+  expected.append("_0")
+  let machine = ct_machine(plan)
+  assert(ct_adapter_name(machine, file, function) == expected.finish(), "adapter names use the file ordinal within their own module")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}
+
+test "plain matches have the same source event cost in both compilers" {
+  for enabled in [false, true] {
+    let (machine, function) = ct_bc_test_machine(b"fn compute() -> I32 {\n match 1i32 {\n  _ => 42i32\n }\n}\n", enabled)
+    let result = ct_source_call_frame(machine, 0u32, machine.file_path, function, [], "")
+    assert(machine.error.byte_length() == 0u32, machine.error)
+    assert(ct_raw_bits(machine, result) == 42u64, "match result")
+    assert(100000u32 - machine.steps == 8u32 && machine.allocated == 112u32, "canonical plain match cost")
+  }
+}

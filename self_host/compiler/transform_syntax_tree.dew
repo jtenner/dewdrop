@@ -11,7 +11,7 @@ fn ct_syntax_node(machine: CtMachine, kind: String, label: String, offset: U32, 
   if !ct_charge(machine, 64u32 + label.byte_length()) {
     return CtValue::Empty
   }
-  CtValue::Record("dewdrop.ast::SyntaxNode", [
+  ct_record("dewdrop.ast::SyntaxNode", [
     ct_binding("kind", CtValue::Text(kind)),
     ct_binding("label", CtValue::Text(label)),
     ct_binding("offset", CtValue::Number(u32_into_u64(offset), "U32")),

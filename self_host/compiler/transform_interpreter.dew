@@ -1,100 +1,58 @@
 fn ct_module(machine: CtMachine, path: String) -> U32 {
-  let mut i = 0u32
-  for module_ in machine.plan.manifest.modules {
-    if module_.path == path {
-      return i
+  if !ct_charge(machine, 16u32) {
+    return 4294967295u32
+  }
+  match ct_source_index(machine.plan).modules.get(path) {
+    Some(index) => return index
+    None => {
     }
-    i = i + 1u32
   }
   let _ = ct_fail(machine, "compile-time module source is unavailable: ".concat(path))
   4294967295u32
 }
 
 fn ct_member(machine: CtMachine, mi: U32, name: String, exported: Bool) -> Option<String> {
-  let mut found = false
-  for file in machine.plan.files {
-    if file.module_index == mi {
-      for declaration in file.declarations {
-        if !ct_charge(machine, 16u32) {
-          return None
-        }
-        let unsupported = match declaration {
-          Let(value) => Some((value.name, value.visibility))
-          Trait(value) => Some((value.name, value.visibility))
-          TypeAlias(value) => Some((value.name, value.visibility))
-          ForeignType(value) => Some((value.name, value.visibility))
-          ForeignLibrary(value) => Some((value.namespace_alias, ModuleVisible))
-          _ => None
-        }
-        match unsupported {
-          Some((candidate_name, visibility)) if candidate_name == name && (!exported || visibility is Public) => {
-            let _ = ct_fail(machine, "unsupported compile-time declaration shadows name: ".concat(name))
-            return None
-          }
-          _ => {
-          }
-        }
-        let candidate = match declaration {
-          Function(value) => Some((value.name, value.visibility))
-          Struct(value) => Some((value.name, value.visibility))
-          Enum(value) => Some((value.name, value.visibility))
-          Builtin(value) => Some((value.name, value.visibility))
-          _ => None
-        }
-        match candidate {
-          Some((candidate_name, visibility)) if candidate_name == name && (!exported || visibility is Public) => {
-            if found {
-              let _ = ct_fail(machine, "overloaded compile-time names are not supported: ".concat(name))
-              return None
-            }
-            found = true
-          }
-          _ => {
-          }
-        }
-      }
-    }
+  if !ct_charge(machine, 16u32) {
+    return None
   }
-  if found && mi < machine.plan.manifest.modules.length() {
-    Some(machine.plan.manifest.modules[mi].path.concat("::").concat(name))
-  } else {
-    None
+  let state = match ct_source_index(machine.plan).sources[mi].members.get(name) {
+    Some(member) => if exported {
+      member.exported
+    } else {
+      member.local
+    }
+    None => CtSourceMemberState::Absent
+  }
+  match state {
+    Absent => None
+    Present => Some(machine.plan.manifest.modules[mi].path.concat("::").concat(name))
+    Overloaded => {
+      let _ = ct_fail(machine, "overloaded compile-time names are not supported: ".concat(name))
+      None
+    }
+    Shadowed => {
+      let _ = ct_fail(machine, "unsupported compile-time declaration shadows name: ".concat(name))
+      None
+    }
   }
 }
 
 fn ct_resolve(machine: CtMachine, mi: U32, name: String, alias_: Option<String>) -> String {
+  if !ct_charge(machine, 16u32) {
+    return ""
+  }
   match alias_ {
     Some(alias_name) => {
-      let mut path = ""
-      for file in machine.plan.files {
-        if file.module_index == mi {
-          for declaration in file.declarations {
-            if !ct_charge(machine, 16u32) {
-              return ""
-            }
-            match declaration {
-              Import(import_) if !import_.open_ => {
-                let alias_value = match import_.import_alias {
-                  Some(value) => value
-                  None => import_.default_alias
-                }
-                if alias_value == alias_name {
-                  if path.byte_length() != 0u32 && path != import_.joined_path {
-                    let _ = ct_fail(machine, "ambiguous transform import alias")
-                    return ""
-                  }
-                  path = import_.joined_path
-                }
-              }
-              _ => {
-              }
-            }
-          }
+      let path = match ct_source_index(machine.plan).sources[mi].aliases.get(alias_name) {
+        Some(Some(path)) => path
+        Some(None) => {
+          let _ = ct_fail(machine, "ambiguous transform import alias")
+          return ""
         }
-      }
-      if path.byte_length() == 0u32 {
-        let _ = ct_fail(machine, "unknown transform import alias: ".concat(alias_name))
-        return ""
+        None => {
+          let _ = ct_fail(machine, "unknown transform import alias: ".concat(alias_name))
+          return ""
+        }
       }
       let target = ct_module(machine, path)
       match ct_member(machine, target, name, true) {
@@ -105,44 +63,28 @@ fn ct_resolve(machine: CtMachine, mi: U32, name: String, alias_: Option<String>)
         }
       }
     }
-    None => {
-    }
+    None => {}
   }
   match ct_member(machine, mi, name, false) {
     Some(key) => return key
-    None => {
-    }
+    None => {}
   }
   let mut result = ""
-  for file in machine.plan.files {
-    if file.module_index == mi {
-      for declaration in file.declarations {
-        if !ct_charge(machine, 16u32) {
+  for import_ in ct_source_index(machine.plan).sources[mi].opens {
+    if import_.wildcard {
+      let _ = ct_fail(machine, "wildcard imports are not supported by the transform interpreter")
+      return ""
+    }
+    let target = ct_module(machine, import_.joined_path)
+    match ct_member(machine, target, name, true) {
+      Some(key) => {
+        if result.byte_length() != 0u32 && result != key {
+          let _ = ct_fail(machine, "ambiguous compile-time name")
           return ""
         }
-        match declaration {
-          Import(import_) if import_.open_ => {
-            if import_.wildcard {
-              let _ = ct_fail(machine, "wildcard imports are not supported by the transform interpreter")
-              return ""
-            }
-            let target = ct_module(machine, import_.joined_path)
-            match ct_member(machine, target, name, true) {
-              Some(key) => {
-                if result.byte_length() != 0u32 && result != key {
-                  let _ = ct_fail(machine, "ambiguous compile-time name")
-                  return ""
-                }
-                result = key
-              }
-              None => {
-              }
-            }
-          }
-          _ => {
-          }
-        }
+        result = key
       }
+      None => {}
     }
   }
   if result.byte_length() != 0u32 {
@@ -150,8 +92,7 @@ fn ct_resolve(machine: CtMachine, mi: U32, name: String, alias_: Option<String>)
   }
   match ct_imported_type_name(machine, mi, name) {
     Some(key) => return key
-    None => {
-    }
+    None => {}
   }
   let _ = ct_fail(machine, "unknown or unsupported compile-time name: ".concat(name))
   ""
@@ -181,63 +122,29 @@ fn ct_call(machine: CtMachine, key: String, args: Array<CtValue>) -> CtValue {
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return CtValue::Empty
   }
-  if !ct_charge(machine, 32u32 + args.length() * 16u32) {
-    return CtValue::Empty
-  }
   match machine.functions.get(key) {
     Some(Source(mi, path, function, _)) => return ct_source_call(machine, mi, path, function, args)
     _ => {
     }
   }
-  for file in machine.plan.files {
-    let module_name = machine.plan.manifest.modules[file.module_index].path
-    for declaration in file.declarations {
-      if !ct_charge(machine, 16u32) {
-        return CtValue::Empty
+  match ct_source_index(machine.plan).entries.get(key) {
+    Some(Source(mi, path, function, _)) => {
+      if function.receiver is Some(_) {
+        return ct_fail(machine, "method calls are not supported at compile time")
       }
-      match declaration {
-        Function(function) if key == module_name.concat("::").concat(function.name) => {
-          if function.receiver is Some(_) {
-            return ct_fail(machine, "method calls are not supported at compile time")
-          }
-          if args.length() != function.parameters.length() {
-            return ct_fail(machine, "compile-time argument count mismatch")
-          }
-          for candidate in file.functions {
-            if candidate.declaration.name == function.name && ct_is_annotated(file, candidate) {
-              return ct_fail(machine, "compile-time calls to annotated functions are not supported")
-            }
-          }
-          machine.functions.set(key, Source(file.module_index, file.original.path, function, ""))
-          let previous_file = machine.file_path
-          machine.file_path = file.original.path
-          let value = ct_source_body(machine, file.module_index, function, args)
-          machine.file_path = previous_file
-          if machine.flow == 1u32 {
-            machine.flow = 0u32
-            return machine.result
-          }
-          if machine.flow != 0u32 {
-            return ct_fail(machine, "loop control escaped a compile-time function")
-          }
-          return value
-        }
-        Enum(enum_) => {
-          for variant in enum_.variants {
-            if key == module_name.concat("::").concat(enum_.name).concat("::").concat(ct_variant_name(variant)) {
-              return CtValue::Variant(key, args)
-            }
-          }
-        }
-        Builtin(builtin_) if key == module_name.concat("::").concat(builtin_.name) => {
-          return ct_fail(machine, "builtin is not supported at compile time")
-        }
-        _ => {
-        }
+      if args.length() != function.parameters.length() {
+        return ct_fail(machine, "compile-time argument count mismatch")
       }
+      if machine.plan.annotated_functions.get(ct_site_key(machine.plan, mi, path, function.offset)) is Some(_) {
+        return ct_fail(machine, "compile-time calls to annotated functions are not supported")
+      }
+      machine.functions.set(key, CtCallTarget::Source(mi, path, function, ""))
+      ct_source_call(machine, mi, path, function, args)
     }
+    Some(Constructor(key)), Some(UnitConstructor(key)) => CtValue::Variant(key, args)
+    Some(Intrinsic(_, _)) => ct_fail(machine, "builtin is not supported at compile time")
+    _ => ct_fail(machine, "function is unavailable at compile time (host calls are forbidden): ".concat(key))
   }
-  ct_fail(machine, "function is unavailable at compile time (host calls are forbidden): ".concat(key))
 }
 
 fn ct_binary(machine: CtMachine, op: SelfHostBinaryOperator, left: CtValue, right: CtValue) -> CtValue {
@@ -501,8 +408,8 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtE
       CtValue::Sequence(ct_eval_values(machine, mi, items, env))
     }
     BlockExpr(block) => ct_block(machine, mi, block, env)
-    ObjectExpr(items, _) => CtValue::Record("", ct_eval_fields(machine, mi, items, env))
-    ConstructExpr(type_, items, _) => CtValue::Record(ct_path(machine, mi, type_), ct_eval_fields(machine, mi, items, env))
+    ObjectExpr(items, _) => ct_record("", ct_eval_fields(machine, mi, items, env))
+    ConstructExpr(type_, items, _) => ct_record(ct_path(machine, mi, type_), ct_eval_fields(machine, mi, items, env))
     QualifiedExpr(_, _, _) => if ct_lookup_reference(machine, mi, expression.offset()) is Some(_) {
       ct_function_reference(machine, mi, expression, env)
     } else {
@@ -550,8 +457,8 @@ fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtE
     PrefixExpr(op, expression, offset) => {
       let raw = ct_eval(machine, mi, expression, env)
       if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
-    return CtValue::Empty
-  }
+        return CtValue::Empty
+      }
       ct_scalar_prefix(machine, op, raw, ct_lookup_scalar_type(machine, mi, offset))
     }
     ReturnExpr(value, _) => {
@@ -630,9 +537,12 @@ fn ct_pattern_inner(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value
       }
       _ => false
     }
-    QualifiedPattern(_, _, _) => match value {
-      Variant(key, values) => key == ct_pattern_path(machine, mi, pattern) && values.length() == 0u32
-      _ => false
+    QualifiedPattern(_, _, _) => {
+      let constructor = ct_pattern_path_inner(machine, mi, pattern)
+      match value {
+        Variant(key, values) => key == constructor && values.length() == 0u32
+        _ => false
+      }
     }
     StructPattern(_, patterns, _, offset) => match value {
       ReferenceView(_, _) => {
@@ -709,7 +619,7 @@ fn ct_match(machine: CtMachine, mi: U32, expression: SelfHostExpr, arms: Array<S
   }
   let _ = while 0u32 {
     _ => {
-      if !ct_charge(machine, 0u32) || machine.flow != 0u32 {
+      if machine.flow != 0u32 || (loop_ && !ct_charge(machine, 0u32)) {
         return CtValue::Empty
       }
       let mut matched = false
@@ -814,29 +724,29 @@ fn ct_pattern(machine: CtMachine, mi: U32, pattern: SelfHostPattern, value: CtVa
 
 fn ct_literal_pattern_equal(machine: CtMachine, expected: CtValue, value: CtValue) -> Bool {
   match (expected, value) {
-      (Text(a), Text(b)) => a == b
-      (Text(a), TextReference(_)) => a == ct_string(machine, value)
-      (Floating(a, "F32"), Floating(b, "F32")) => wasm_f32_from_bits(u64_into_u32(a)) == wasm_f32_from_bits(u64_into_u32(b))
-      (Floating(a, "F64"), Floating(b, "F64")) => wasm_f64_from_bits(a) == wasm_f64_from_bits(b)
-      (Number(number, _), DefaultValue) => number == 0u64
-      (Boolean(flag), DefaultValue) => !flag
-      (Boolean(a), Number(bits, "Bool")), (Number(bits, "Bool"), Boolean(a)) => (if a {
-        1u64
-      } else {
-        0u64
-      }) == bits
-      (Number(a, "Bool"), Number(b, "Bool")) => a == b
-      (Number(a, kind), other) => match ct_intrinsic_result(machine, other, kind) {
-        Number(b, _) => a == b
-        _ => false
-      }
-      (Boolean(a), other) => match ct_intrinsic_result(machine, other, "Bool") {
-        Boolean(b) => a == b
-        _ => false
-      }
-      _ => {
-        let _ = ct_fail(machine, "unsupported equality in compile-time pattern")
-        false
-      }
+    (Text(a), Text(b)) => a == b
+    (Text(a), TextReference(_)) => a == ct_string(machine, value)
+    (Floating(a, "F32"), Floating(b, "F32")) => wasm_f32_from_bits(u64_into_u32(a)) == wasm_f32_from_bits(u64_into_u32(b))
+    (Floating(a, "F64"), Floating(b, "F64")) => wasm_f64_from_bits(a) == wasm_f64_from_bits(b)
+    (Number(number, _), DefaultValue) => number == 0u64
+    (Boolean(flag), DefaultValue) => !flag
+    (Boolean(a), Number(bits, "Bool")), (Number(bits, "Bool"), Boolean(a)) => (if a {
+      1u64
+    } else {
+      0u64
+    }) == bits
+    (Number(a, "Bool"), Number(b, "Bool")) => a == b
+    (Number(a, kind), other) => match ct_intrinsic_result(machine, other, kind) {
+      Number(b, _) => a == b
+      _ => false
+    }
+    (Boolean(a), other) => match ct_intrinsic_result(machine, other, "Bool") {
+      Boolean(b) => a == b
+      _ => false
+    }
+    _ => {
+      let _ = ct_fail(machine, "unsupported equality in compile-time pattern")
+      false
+    }
   }
 }

@@ -4,8 +4,11 @@ pub struct CtRawLayout {
 }
 
 builtin ct_reference_identity(left: CtValue, right: CtValue) -> Bool = "ref.eq"
+
 builtin ct_raw_storage_identity(left: CtRawStorage, right: CtRawStorage) -> Bool = "ref.eq"
+
 builtin ct_binding_storage_identity(left: Array<CtBinding>, right: Array<CtBinding>) -> Bool = "ref.eq"
+
 builtin ct_value_storage_identity(left: Array<CtValue>, right: Array<CtValue>) -> Bool = "ref.eq"
 
 fn ct_reference_equal(machine: CtMachine, left: CtValue, right: CtValue) -> CtValue {
@@ -17,7 +20,7 @@ fn ct_reference_equal(machine: CtMachine, left: CtValue, right: CtValue) -> CtVa
     (_, NullValue), (_, DefaultValue) => CtValue::Boolean(false)
     (RawArray(left), RawArray(right)) => CtValue::Boolean(ct_raw_storage_identity(left, right))
     (TextChunks(left, _), TextChunks(right, _)) => CtValue::Boolean(ct_reference_identity(left, right))
-    (Record(_, left), Record(_, right)) => CtValue::Boolean(ct_binding_storage_identity(left, right))
+    (Record(_, left), Record(_, right)) => CtValue::Boolean(ct_binding_storage_identity(left.values, right.values))
     (Text(_), Text(_)), (ByteText(_), ByteText(_)) => CtValue::Boolean(ct_reference_identity(left, right))
     (Variant(_, left), Variant(_, right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
     (Sequence(left), Sequence(right)) => CtValue::Boolean(ct_value_storage_identity(left, right))
@@ -57,7 +60,7 @@ fn ct_raw_storage_kind(lowering: SelfHostPlannedProgramLowering, module_: SelfHo
     NominalType(declaration) => "record:".concat(ct_raw_declaration_key(declaration))
     AppliedType(base, arguments) if arguments.length == 1u32 => match module_.resolved_types.types[base] {
       NominalType(declaration) if lowering.raw_arrays.declarations.contains_key(declaration) =>
-        "array:".concat(ct_raw_storage_kind(lowering, module_, module_.resolved_types.type_arguments[arguments.start]))
+      "array:".concat(ct_raw_storage_kind(lowering, module_, module_.resolved_types.type_arguments[arguments.start]))
       _ => "unsupported"
     }
     _ => "unsupported"
@@ -96,10 +99,12 @@ fn ct_collect_raw_layouts(plan: CtPlan, collected: SelfHostCollectedProgram, low
               plan.raw_layouts.set(collected.module_paths[mi].concat("::").concat(source.name(declaration.name)), value)
               plan.raw_layouts.set("record:".concat(ct_raw_declaration_key(layout.declaration)), value)
             }
-            _ => {}
+            _ => {
+            }
           }
         }
-        _ => {}
+        _ => {
+        }
       }
     }
     mi = mi + 1u32
@@ -185,7 +190,7 @@ fn ct_reference_cast(machine: CtMachine, value: CtValue, kind: String) -> CtValu
       base
     }
   } else {
-    CtValue::ReferenceView(ct_reference_base(value), fields)
+    CtValue::ReferenceView(ct_reference_base(value), ct_field_names(fields))
   }
 }
 
@@ -199,9 +204,17 @@ fn ct_raw_struct_get(machine: CtMachine, value: CtValue, index: U32) -> CtValue 
       _ => ct_fail(machine, "Wasm struct field out of bounds at compile time")
     }
     Text(content) => match index {
-      0u32 => CtValue::TextChunks(original, content.as_bytes())
+      0u32 => {
+        if !ct_charge(machine, content.byte_length() + 16u32) {
+          return CtValue::Empty
+        }
+        CtValue::TextChunks(original, content.as_bytes())
+      }
       1u32 => ct_number(0u64, "U32")
-      2u32 => ct_number(u32_into_u64(content.byte_length()), "U32")
+      2u32 => match ct_raw_struct_get(machine, original, 0u32) {
+        TextChunks(_, backing) => ct_number(u32_into_u64(backing.byte_length()), "U32")
+        _ => ct_fail(machine, "text reference lost its byte storage")
+      }
       _ => ct_fail(machine, "Wasm struct field out of bounds at compile time")
     }
     Record(key, values) => match machine.plan.raw_layouts.get(key) {
@@ -291,7 +304,11 @@ fn ct_raw_array_copy(machine: CtMachine, target: CtValue, target_at: U64, source
       if !ct_charge(machine, 0u32) {
         return CtValue::Empty
       }
-      copy.push(ct_raw_array_get(machine, source, source_at + u32_into_u64(index)))
+      let value = ct_raw_array_get(machine, source, source_at + u32_into_u64(index))
+      if machine.error.byte_length() != 0u32 {
+        return CtValue::Empty
+      }
+      copy.push(value)
       continue index + 1u32
     }
     _ => break ()
@@ -312,29 +329,23 @@ fn ct_write_field(machine: CtMachine, value: CtValue, name: String, replacement:
     ReferenceView(base, names) => match ct_reference_base(base) {
       Record(key, values) => match machine.plan.raw_layouts.get(key) {
         Some(layout) => {
-          let _ = while 0u32 {
-            index if index < names.length() => {
-              if !ct_charge(machine, 0u32) {
+          match ct_field_position(names, name) {
+            Some(index) => {
+              if index >= layout.fields.length() || !layout.storage[index].starts_with("mut:") {
+                let _ = ct_fail(machine, "field assignment requires a mutable checked field")
                 return
               }
-              if names[index] == name {
-                if index >= layout.fields.length() || !layout.storage[index].starts_with("mut:") {
-                  let _ = ct_fail(machine, "field assignment requires a mutable checked field")
-                  return
+              match ct_lookup(machine, values, layout.fields[index]) {
+                Some(binding) => {
+                  binding.value = replacement
                 }
-                match ct_lookup(machine, values, layout.fields[index]) {
-                  Some(binding) => {
-                    binding.value = replacement
-                  }
-                  None => {
-                    let _ = ct_fail(machine, "unknown mutable record field")
-                  }
+                None => {
+                  let _ = ct_fail(machine, "unknown mutable record field")
                 }
-                return
               }
-              continue index + 1u32
+              return
             }
-            _ => break ()
+            None => {}
           }
           let _ = ct_fail(machine, "unknown mutable record field")
         }
@@ -348,11 +359,11 @@ fn ct_write_field(machine: CtMachine, value: CtValue, name: String, replacement:
     }
     Record(_, values) => match ct_lookup(machine, values, name) {
       Some(binding) => {
-                    binding.value = replacement
-                  }
+        binding.value = replacement
+      }
       None => {
-                    let _ = ct_fail(machine, "unknown mutable record field")
-                  }
+        let _ = ct_fail(machine, "unknown mutable record field")
+      }
     }
     _ => {
       let _ = ct_fail(machine, "field assignment requires a record")

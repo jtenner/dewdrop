@@ -98,8 +98,13 @@ fn ct_frame_query_proof(lowering: SelfHostPlannedProgramLowering, module_id: U64
   ct_query_proof(lowering, module_id, expression, kind)
 }
 
+struct CtTransformFrameRoot {
+  declaration: U64
+  error: Option<String>
+}
+
 fn ct_transform_frame_roots(plan: CtPlan, collected: SelfHostCollectedProgram) -> Map<U64, Bool> {
-  let entries = map_empty::<String, U64>()
+  let entries = map_empty::<String, CtTransformFrameRoot>()
   for file in plan.files {
     let source = collected.modules.at(file.module_index)
     let mut file_id = 18446744073709551615u64
@@ -115,7 +120,15 @@ fn ct_transform_frame_roots(plan: CtPlan, collected: SelfHostCollectedProgram) -
         let mut found = false
         for declaration in source.declarations {
           if declaration.kind is FunctionDecl && declaration.offset == function.declaration.offset && source.declaration_files[self_host_semantic_id_local(declaration.id)] == file_id {
-            entries.set(plan.manifest.modules[file.module_index].path.concat("::").concat(function.declaration.name), declaration.id)
+            let error = if plan.body_errors.length() == 0u32 {
+              None
+            } else {
+              plan.body_errors.get(ct_site_key(plan, file.module_index, file.original.path, function.declaration.offset))
+            }
+            entries.set(plan.manifest.modules[file.module_index].path.concat("::").concat(function.declaration.name), {
+              declaration: declaration.id
+              error: error
+            })
             found = true
           }
         }
@@ -128,8 +141,9 @@ fn ct_transform_frame_roots(plan: CtPlan, collected: SelfHostCollectedProgram) -
   for file in plan.files {
     for function in file.functions {
       if !function.transform_ {
-        for annotation in file.annotations {
-          if annotation.target >= function.start && annotation.target < function.declaration.name_offset {
+        let _ = while function.annotation_start {
+          index if index - function.annotation_start < function.annotation_count => {
+            let annotation = file.annotations[index]
             machine.steps = 100000u32
             machine.allocated = 0u32
             let key = ct_annotation_key(machine, file.module_index, annotation.name)
@@ -138,13 +152,23 @@ fn ct_transform_frame_roots(plan: CtPlan, collected: SelfHostCollectedProgram) -
               return roots
             }
             match entries.get(key) {
-              Some(declaration) => roots.set(declaration, true)
+              Some(root) => {
+                match root.error {
+                  Some(error) => {
+                    plan.error = "compile-time helper failed source checking:\n".concat(error)
+                    return roots
+                  }
+                  None => roots.set(root.declaration, true)
+                }
+              }
               None => {
                 plan.error = "annotation must name a transform fn"
                 return roots
               }
             }
+            continue index + 1u32
           }
+          _ => break ()
         }
       }
     }
@@ -168,7 +192,8 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
   }
   original.compile_time.transform_limited = true
   original.compile_time.transform_instance_budget = 1048576u32
-  let selected = self_host_plan_program_specialization_roots(original, false, Some(roots))
+  let body_exclusions = ct_frame_body_exclusions(plan, original)
+  let selected = self_host_plan_program_specialization_roots_excluding_bodies(original, false, Some(roots), body_exclusions)
   if selected.lowering.compile_time.transform_instance_error.byte_length() != 0u32 {
     plan.error = selected.lowering.compile_time.transform_instance_error
     return
@@ -181,6 +206,13 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
   let _ = while 0u32 {
     index if index < selected.requests.length() => {
       let request = selected.requests[index]
+      let excluded = match body_exclusions {
+        Some(values) => values.contains_key(request.declaration)
+        None => false
+      }
+      if excluded {
+        continue index + 1u32
+      }
       match lowering.index.declaration_owner(request.declaration) {
         Some(mi) => {
           let module_ = self_host_program_function_lowering(lowering, mi, index)

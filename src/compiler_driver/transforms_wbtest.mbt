@@ -172,3 +172,23 @@ test "transform lookup sees standard imports added by the test command" {
     Err(error) => fail(error.message())
   }
 }
+
+///|
+test "narrow source shifts keep selected masks in both VM paths" {
+  for fallback in [false, true] {
+    let source = @utf8.encode(
+      "import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n" +
+      (if fallback { " let unused = fn() -> I32 {\n  0i32\n }\n" } else { "" }) +
+      " let left = 1i8\n let count = 8i8\n if left << count == 1i8 && 1u8 << 8u8 == 1u8 && 1i16 << 16i16 == 1i16 && 1u16 << 16u16 == 1u16 && -128i8 >> count == -128i8 && -32768i16 >> 16i16 == -32768i16 {\n 42i32\n } else {\n 0i32\n }\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(compute()))\n}\n#calculate\npub fn main() -> I32 {\n 0i32\n}\n",
+    )
+    match compile_transform_source(source) {
+      Err(error) => fail(error.message())
+      Ok(compiled) =>
+        assert_true(
+          compiled.program.modules[0].file_sources.any(source => {
+            source == b"pub fn main() -> I32 {\n42i32\n}"
+          }),
+        )
+    }
+  }
+}

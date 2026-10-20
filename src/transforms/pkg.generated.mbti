@@ -47,6 +47,8 @@ pub(all) enum CheckedConstant {
 
 type ExecutionFrame
 
+type FieldNames
+
 type FunctionIdentity
 
 type FunctionReferenceProof
@@ -85,6 +87,7 @@ pub struct Plan {
   reports : Array[TransformReport]
   expression_types : Map[(Int, Int), Array[ReflectedExpressionType]]
   reflection_errors : Array[String]
+  mut source_lookup : SourceIndex?
 }
 pub fn Plan::add_array_layout(Self, Int, String, UInt64, String, Array[String]) -> Unit
 pub fn Plan::add_body_error(Self, Int, String, UInt64, String) -> Bool
@@ -126,10 +129,18 @@ pub(all) struct SourceFile {
 
 type SourceFunction
 
+type SourceIndex
+
+type SourceMember
+
+type SourceMemberState
+
 pub(all) struct SourceModule {
   path : String
   files : Array[SourceFile]
 }
+
+type SourceModuleIndex
 
 type SourceRepair
 

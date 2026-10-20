@@ -759,25 +759,17 @@ impl SelfHostCollectionBuilder {
           lowered_items.push(self_host_hir_expression_item(expression, item.offset))
         } else if self_host_block_item_is_let(item) {
           let value_id = self.lower_expression(item.value)
-          if item.name == "_" {
-            lowered_items.push(
-              self_host_hir_discarded_let_item(
-                self.intern(item.name),
-                value_id,
-                item.offset,
-              ),
-            )
-          } else {
-            lowered_items.push(
-              self_host_hir_let_item(
-                item.mutable_,
-                self.intern(item.name),
-                item.name_offset,
-                value_id,
-                item.offset,
-              ),
-            )
-          }
+          // Discards keep let semantics: their initializer runs once and
+          // contributes Unit to the block. Ordinary let emission drops an unread result.
+          lowered_items.push(
+            self_host_hir_let_item(
+              item.mutable_,
+              self.intern(item.name),
+              item.name_offset,
+              value_id,
+              item.offset,
+            ),
+          )
         } else if self_host_block_item_is_assignment(item) {
           let target_id = self.lower_expression(item.target)
           let value_id = self.lower_expression(item.value)

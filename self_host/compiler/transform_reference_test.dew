@@ -126,6 +126,21 @@ test "null tests require a proved reference for tuple values" {
   assert(machine.error.contains("checked reference carrier"), "unresolved tuples need positive reference proof")
 }
 
+test "generated iterator names include the source position" {
+  for source in [b"for value in values {\n value\n}", b"\n\nfor value in values {\n value\n}"] {
+    match self_host_parse_expression_source(source) {
+      Ok(BlockExpr(block)) => {
+        let offset = block.items[0u32].value.offset()
+        let expected = StringBuilder::new()
+        expected.append("$for_iter_")
+        expected.append_u32(offset)
+        assert(block.items[0u32].name == expected.finish(), "iterator name keeps its own source site")
+      }
+      _ => assert(false, "for parse failed")
+    }
+  }
+}
+
 test "generated for calls and patterns have distinct checked sites" {
   let expression = match self_host_parse_expression_source(b"for value in values {\n  consume(value)\n}") {
     Ok(value) => value

@@ -1,0 +1,320 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "local",
+      "path": "examples/transforms/local.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/local.dew",
+          "function": "main",
+          "transform": "example.app::answer",
+          "offset": 307,
+          "work": 283,
+          "allocation_work": 5713
+        }
+      ],
+      "source_sha256": "850ce90a5daebca8ec9a4fcfeaaa4c9df2f2a6f051821d07a7d9cda1cac41572"
+    },
+    {
+      "name": "methods",
+      "path": "examples/transforms/methods.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/methods.dew",
+          "function": "main",
+          "transform": "example.app::replace",
+          "offset": 819,
+          "work": 345,
+          "allocation_work": 7201
+        }
+      ],
+      "source_sha256": "33f7b6b1f0a338af8a925e447fe743cf3c08153302a534bfd2bd5843937e79a8"
+    },
+    {
+      "name": "callbacks",
+      "path": "examples/transforms/callbacks.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/callbacks.dew",
+          "function": "main",
+          "transform": "example.app::replace",
+          "offset": 337,
+          "work": 294,
+          "allocation_work": 5857
+        }
+      ],
+      "source_sha256": "6f955d91a21746f805888d3a747551725eecf46403a2aa598807c7d6dd47bdaa"
+    },
+    {
+      "name": "generics",
+      "path": "examples/transforms/generics.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/generics.dew",
+          "function": "main",
+          "transform": "example.app::replace",
+          "offset": 550,
+          "work": 308,
+          "allocation_work": 6209
+        }
+      ],
+      "source_sha256": "df863a7c2c5eabfbe0615eb6a0b71e0e744121d534ab9652bfe8e0ffde8935d9"
+    },
+    {
+      "name": "constants",
+      "path": "examples/transforms/constants.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/constants.dew",
+          "function": "main",
+          "transform": "example.app::replace",
+          "offset": 246,
+          "work": 282,
+          "allocation_work": 5767
+        }
+      ],
+      "source_sha256": "e8716bd6b0152af85bb5310c4418db8b642fb3154df27499d5d903f3a3491711"
+    },
+    {
+      "name": "quotes",
+      "path": "examples/transforms/quotes.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/quotes.dew",
+          "function": "answer",
+          "transform": "example.app::wrap",
+          "offset": 251,
+          "work": 304,
+          "allocation_work": 6216
+        }
+      ],
+      "source_sha256": "b13956e3774a2a4d34bdd00f485f7a8fa58131acf2b4f944172ae79a54c8b3ff"
+    },
+    {
+      "name": "arguments",
+      "path": "examples/transforms/arguments.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/arguments.dew",
+          "function": "main",
+          "transform": "example.app::labeled",
+          "offset": 528,
+          "work": 395,
+          "allocation_work": 8003
+        }
+      ],
+      "source_sha256": "a9e2c6789d58dda5001a0993b3689b69c38a9b2fd2c26a4dc85e6722ca8fd739"
+    },
+    {
+      "name": "strings",
+      "path": "examples/transforms/strings.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/strings.dew",
+          "function": "main",
+          "transform": "example.app::build",
+          "offset": 430,
+          "work": 4036,
+          "allocation_work": 75931
+        }
+      ],
+      "source_sha256": "26ad922bb54ea811e79a9d27c2cb32c912e28aec347d05ddc65142c607179ca6"
+    },
+    {
+      "name": "generic_traits",
+      "path": "examples/transforms/generic_traits.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/generic_traits.dew",
+          "function": "main",
+          "transform": "example.app::calculate",
+          "offset": 732,
+          "work": 334,
+          "allocation_work": 6769
+        }
+      ],
+      "source_sha256": "1f7591d17ebf69bfc2ade8ca6678596f4f80e7913fcca7bb41de418b5b4adc0a"
+    },
+    {
+      "name": "generic_closures",
+      "path": "examples/transforms/generic_closures.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/generic_closures.dew",
+          "function": "main",
+          "transform": "example.app::calculate",
+          "offset": 480,
+          "work": 324,
+          "allocation_work": 6305
+        }
+      ],
+      "source_sha256": "9a9c9da8a05f79605124ffc70d3d46d7f0b9f50a404021b487847c390ed00f4b"
+    },
+    {
+      "name": "text_operations",
+      "path": "examples/transforms/text_operations.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/text_operations.dew",
+          "function": "text_answer",
+          "transform": "example.app::text_transform",
+          "offset": 2549,
+          "work": 55212,
+          "allocation_work": 1040851
+        },
+        {
+          "module": "example.app",
+          "file": "examples/transforms/text_operations.dew",
+          "function": "builder_answer",
+          "transform": "example.app::builder_transform",
+          "offset": 2791,
+          "work": 38406,
+          "allocation_work": 707380
+        }
+      ],
+      "source_sha256": "b57d119ac28310eda61caadd9993240baab487fb8479ea28ef4f4d7f7f084a58"
+    },
+    {
+      "name": "bytecode",
+      "path": "examples/transforms/bytecode.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/bytecode.dew",
+          "function": "main",
+          "transform": "example.app::calculate",
+          "offset": 485,
+          "work": 619,
+          "allocation_work": 12497
+        }
+      ],
+      "source_sha256": "e74f1c02245cdc766674a0c2376a4e6208e50d561860da41aa29603fbcc08e80"
+    },
+    {
+      "name": "memory",
+      "path": "examples/transforms/memory.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/memory.dew",
+          "function": "main",
+          "transform": "example.app::calculate",
+          "offset": 1508,
+          "work": 661,
+          "allocation_work": 78609
+        }
+      ],
+      "source_sha256": "a29be9dcab9795764813e398aa5289ec94ab06c022be67a5c61377cf9bb1bb9c"
+    },
+    {
+      "name": "packed_storage",
+      "path": "examples/transforms/packed_storage.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/packed_storage.dew",
+          "function": "main",
+          "transform": "example.app::calculate",
+          "offset": 1117,
+          "work": 466,
+          "allocation_work": 9233
+        }
+      ],
+      "source_sha256": "b0eba203d8df24b2125ed0ba6dbc8e69fb00dda2d6719f02e72c11ea3151cadf"
+    },
+    {
+      "name": "signatures",
+      "path": "examples/transforms/signatures.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/signatures.dew",
+          "function": "answer",
+          "transform": "example.app::add_bonus",
+          "offset": 610,
+          "work": 421,
+          "allocation_work": 8231
+        }
+      ],
+      "source_sha256": "03274c3687a5f2176e5315b82f7a28c82c3d5d656f37108b5429c940619e21a8"
+    },
+    {
+      "name": "typed_reflection",
+      "path": "examples/transforms/typed_reflection.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/typed_reflection.dew",
+          "function": "main",
+          "transform": "example.app::check_types",
+          "offset": 746,
+          "work": 7915,
+          "allocation_work": 155409
+        }
+      ],
+      "source_sha256": "d58fea919ae1050ba46d910eee6fb1fd21840f30439a4921ec67eb6727c2ee52"
+    },
+    {
+      "name": "typed_repair",
+      "path": "examples/transforms/typed_repair.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/typed_repair.dew",
+          "function": "main",
+          "transform": "example.app::repair",
+          "offset": 343,
+          "work": 310,
+          "allocation_work": 6153
+        }
+      ],
+      "source_sha256": "6bc2ca84d9e7478471ea5bdf7a9bee00047f30a78ce150cfa1dcc1edcca30488"
+    },
+    {
+      "name": "loop_guards",
+      "path": "examples/transforms/loop_guards.dew",
+      "module": "example.app",
+      "reports": [
+        {
+          "module": "example.app",
+          "file": "examples/transforms/loop_guards.dew",
+          "function": "main",
+          "transform": "example.app::replace",
+          "offset": 882,
+          "work": 349,
+          "allocation_work": 6609
+        }
+      ],
+      "source_sha256": "0638f385cb5d609d5fc71bf7019c6f92d9cebe06f799cf8070cebfe72894e03a"
+    }
+  ]
+}

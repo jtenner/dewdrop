@@ -1,0 +1,179 @@
+// Source metadata is immutable between loader appends. Queries retain their
+// logical fees; this index only removes repeated scans of unrelated source.
+
+pub enum CtSourceMemberState {
+  Absent
+  Present
+  Overloaded
+  Shadowed
+}
+
+pub struct CtSourceMember {
+  mut local: CtSourceMemberState
+  mut exported: CtSourceMemberState
+}
+
+pub struct CtSourceModuleIndex {
+  members: Map<String, CtSourceMember>
+  aliases: Map<String, Option<String>>
+  opens: Array<SelfHostImportDeclaration>
+  types: Map<String, String>
+  fresh_names: Map<String, U32>
+}
+
+pub struct CtSourceIndex {
+  modules: Map<String, U32>
+  sources: Array<CtSourceModuleIndex>
+  module_count: U32
+  file_count: U32
+  type_count: U32
+  transforms: Map<String, Bool>
+  entries: Map<String, CtCallTarget>
+}
+
+fn ct_source_member_add(state: CtSourceMemberState, supported: Bool) -> CtSourceMemberState {
+  match state {
+    Overloaded, Shadowed => state
+    _ => if !supported {
+      CtSourceMemberState::Shadowed
+    } else {
+      match state {
+        Absent => CtSourceMemberState::Present
+        _ => CtSourceMemberState::Overloaded
+      }
+    }
+  }
+}
+
+fn ct_source_index(plan: CtPlan) -> CtSourceIndex {
+  match plan.source_lookup {
+    Some(index) if index.module_count == plan.manifest.modules.length() && index.file_count == plan.files.length() && index.type_count == plan.type_names.length() => return index
+    _ => {
+    }
+  }
+  let modules = map_empty::<String, U32>()
+  let sources = array_new::<CtSourceModuleIndex>()
+  let transforms = map_empty::<String, Bool>()
+  let entries = map_empty::<String, CtCallTarget>()
+  let mut mi = 0u32
+  for module_ in plan.manifest.modules {
+    if !modules.contains_key(module_.path) {
+      modules.set(module_.path, mi)
+    }
+    sources.push(CtSourceModuleIndex::{
+      members: map_empty::<String, CtSourceMember>()
+      aliases: map_empty::<String, Option<String>>()
+      opens: []
+      types: map_empty::<String, String>()
+      fresh_names: map_empty::<String, U32>()
+    })
+    mi = mi + 1u32
+  }
+  for binding in plan.type_names {
+    if binding.module_index < sources.length() {
+      let types = sources[binding.module_index].types
+      if !types.contains_key(binding.name) {
+        types.set(binding.name, binding.key)
+      }
+    }
+  }
+  for file in plan.files {
+    let source = sources[file.module_index]
+    let module_name = plan.manifest.modules[file.module_index].path
+    ct_index_fresh_names(file.original.source, source.fresh_names)
+    for function in file.functions {
+      if function.transform_ {
+        transforms.set(module_name.concat("::").concat(function.declaration.name), true)
+      }
+    }
+    for declaration in file.declarations {
+      match declaration {
+        Function(function) => {
+          let key = module_name.concat("::").concat(function.name)
+          if !entries.contains_key(key) {
+            entries.set(key, CtCallTarget::Source(file.module_index, file.original.path, function, ""))
+          }
+        }
+        Builtin(builtin_) => {
+          let key = module_name.concat("::").concat(builtin_.name)
+          if !entries.contains_key(key) {
+            entries.set(key, CtCallTarget::Intrinsic(builtin_, ""))
+          }
+        }
+        Enum(enum_) => for variant in enum_.variants {
+          let key = module_name.concat("::").concat(enum_.name).concat("::").concat(ct_variant_name(variant))
+          if !entries.contains_key(key) {
+            let target = match variant {
+              UnitVariant(_, _, _) => CtCallTarget::UnitConstructor(key)
+              _ => CtCallTarget::Constructor(key)
+            }
+            entries.set(key, target)
+          }
+        }
+        _ => {}
+      }
+      match declaration {
+        Import(value) => if value.open_ {
+          source.opens.push(value)
+        } else {
+          let alias = match value.import_alias {
+            Some(value) => value
+            None => value.default_alias
+          }
+          match source.aliases.get(alias) {
+            Some(Some(previous)) if previous != value.joined_path => source.aliases.set(alias, None)
+            Some(_) => {
+            }
+            None => source.aliases.set(alias, Some(value.joined_path))
+          }
+        }
+        _ => {
+        }
+      }
+      let entry = match declaration {
+        Function(d) => Some((d.name, d.visibility is Public, true))
+        Struct(d) => Some((d.name, d.visibility is Public, true))
+        Enum(d) => Some((d.name, d.visibility is Public, true))
+        Builtin(d) => Some((d.name, d.visibility is Public, true))
+        Let(d) => Some((d.name, d.visibility is Public, false))
+        Trait(d) => Some((d.name, d.visibility is Public, false))
+        TypeAlias(d) => Some((d.name, d.visibility is Public, false))
+        ForeignType(d) => Some((d.name, d.visibility is Public, false))
+        ForeignLibrary(d) => Some((d.namespace_alias, false, false))
+        _ => None
+      }
+      match entry {
+        Some((name, public_, supported)) => {
+          let member = match source.members.get(name) {
+            Some(value) => value
+            None => {
+              let value = CtSourceMember::{
+                local: CtSourceMemberState::Absent
+                exported: CtSourceMemberState::Absent
+              }
+              source.members.set(name, value)
+              value
+            }
+          }
+          member.local = ct_source_member_add(member.local, supported)
+          if public_ {
+            member.exported = ct_source_member_add(member.exported, supported)
+          }
+        }
+        None => {
+        }
+      }
+    }
+  }
+  let index = CtSourceIndex::{
+    modules: modules
+    sources: sources
+    module_count: plan.manifest.modules.length()
+    file_count: plan.files.length()
+    type_count: plan.type_names.length()
+    transforms: transforms
+    entries: entries
+  }
+  plan.source_lookup = Some(index)
+  index
+}

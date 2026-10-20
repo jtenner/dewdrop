@@ -175,7 +175,7 @@ Unchecked items need further implementation. Checked items have code and tests.
 - [x] Stable declaration ranges and original function sites for generated source.
 - [x] Expanded-source JSON for editor views.
 - [x] Per-transform work and allocation reports.
-- [ ] Identical resource accounting across compiler implementations.
+- [x] Identical resource accounting across compiler implementations.
 - [ ] Persistent transform-result cache with dependency tracking.
 - [x] Compact bytecode backend.
 - [ ] Parallel independent transform execution.

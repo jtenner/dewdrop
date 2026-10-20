@@ -137,10 +137,7 @@ fn Machine::source_call(
   frame~ : String = "",
 ) -> Value raise EvalError {
   let file = self.plan.files[mi][fi]
-  guard !file.annotations.any(fn(a) {
-    a.target >= function.offset.to_int() &&
-    a.target < function.name_offset.to_int()
-  }) else {
+  guard !file.has_annotation(function) else {
     return eval_fail("annotated functions cannot execute at compile time")
   }
   let receiver_count = if function.receiver is Some(_) { 1 } else { 0 }
@@ -315,10 +312,10 @@ fn Machine::closure_call(
 
 ///|
 fn Machine::unit_variant(self : Machine, key : String) -> Value raise EvalError {
+  self.charge(16)
   for mi, module_ in self.plan.modules {
     for file in self.plan.files[mi] {
       for declaration in file.declarations {
-        self.charge(0)
         if declaration is @parser.Enum(enum_) {
           for variant in enum_.variants {
             if variant is @parser.UnitVariant(name, _) &&

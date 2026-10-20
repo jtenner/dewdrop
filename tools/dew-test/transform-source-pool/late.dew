@@ -1,0 +1,12 @@
+import dewdrop.ast as @ast
+import dewdrop.transform as @transform
+import example.constants as @constants
+
+transform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {
+  node.with_body(@ast.integer(@constants.answer))
+}
+
+#replace
+pub fn answer() -> I32 {
+  0i32
+}

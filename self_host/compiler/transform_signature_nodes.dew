@@ -1,5 +1,5 @@
 fn ct_signature_node(machine: CtMachine, function: SelfHostFunctionDeclaration) -> CtValue {
-  CtValue::Record("dewdrop.ast::SignatureNode", [
+  ct_record("dewdrop.ast::SignatureNode", [
     ct_binding("parameters", ct_parameter_nodes(machine, function.parameters)),
     ct_binding("return_type", ct_type_node(machine, function.return_type)),
   ])

@@ -20,7 +20,7 @@ test "instruction contracts reject float vector and field result mismatches" {
     fields: ["value"]
     storage: ["i32"]
   })
-  let value = CtValue::Record("record:123", [ct_binding("value", ct_number(1u64, "I32"))])
+  let value = ct_record("record:123", [ct_binding("value", ct_number(1u64, "I32"))])
   assert(!ct_check_intrinsic_contract(field, "struct.get 0", [value], "I64"), "field result keeps its checked width")
   assert(field.error.contains("checked field"), "field mismatch has a diagnostic")
 }
@@ -33,4 +33,37 @@ test "checked results reject omitted float opcodes and unresolved generic result
   let unresolved = ct_machine(ct_test_plan(b""))
   assert(!ct_check_intrinsic_contract(unresolved, "i32.add", [ct_number(1u64, "I32"), ct_number(2u64, "I32")], ""), "unknown generic result cannot hide a fixed scalar result")
   assert(unresolved.error.contains("concrete checked carrier"), "generic failure is visible")
+}
+
+test "narrow source shifts keep selected masks in both VM paths" {
+  for fallback in [false, true] {
+    let source = "import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn compute() -> I32 {\n".concat(if fallback {
+      " let unused = fn() -> I32 {\n  0i32\n }\n"
+    } else {
+      ""
+    }).concat(" let left = 1i8\n let count = 8i8\n if left << count == 1i8 && 1u8 << 8u8 == 1u8 && 1i16 << 16i16 == 1i16 && 1u16 << 16u16 == 1u16 && -128i8 >> count == -128i8 && -32768i16 >> 16i16 == -32768i16 {\n 42i32\n } else {\n 0i32\n }\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(compute()))\n}\n#calculate\npub fn main() -> I32 {\n 0i32\n}\n")
+    let manifest = SelfHostProgramManifest::{
+      modules: [{
+        path: "example.app"
+        files: [{
+          path: "narrow-shifts.dew"
+          source: source.as_bytes()
+          test_only: false
+        }]
+      }]
+    }
+    match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+      Err(error) => assert(false, error)
+      Ok(expanded) => {
+        let mut found = false
+        for file in expanded.modules[0u32].files {
+          if file.path.contains("::transform[main@") {
+            found = true
+            assert(file.source.equals(b"pub fn main() -> I32 {\n42i32\n}"), "selected narrow shift masks keep the result")
+          }
+        }
+        assert(found, "generated shift result")
+      }
+    }
+  }
 }

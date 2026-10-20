@@ -601,3 +601,74 @@ test "orphan implementation evidence is rejected before interface export" {
   assert(imports.at(1u32).implementation_count() == 0u32, "trait imports")
   assert(imports.at(2u32).implementation_count() == 0u32, "type imports")
 }
+
+test "primitive receivers retain imported operator implementation evidence" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn equal(left: I8, right: I8) -> Bool {\n  left == right\n}\npub fn different(left: U8, right: U8) -> Bool {\n  left != right\n}\n",
+    b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\npub trait Ne {\n  fn ne(self, other: Self) -> Bool\n}\nimpl Eq for I8 {\n  fn eq(self, other: I8) -> Bool {\n    false\n  }\n}\nimpl Ne for U8 {\n  fn ne(self, other: U8) -> Bool {\n    true\n  }\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "operator imports valid")
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_inference(lowering) is None, "primitive operator inference valid")
+  assert(self_host_validate_program_lowering(lowering) is None, "primitive operator lowering valid")
+  let mut selected = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      PlannedOperatorCall(declaration, _, _, _, _) => {
+        assert(self_host_semantic_id_module(declaration) == 2601u64, "selected imported declaration retained")
+        assert(ct_operator_proved_opcode(lowering, declaration).byte_length() == 0u32, "non-forwarding primitive method has no scalar proof")
+        selected = selected + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(selected == 2u32, "both primitive operators keep selected calls")
+}
+
+test "primitive imported operator errors do not become scalar fallback" {
+  let consumer = b"open app.library\npub fn equal(left: I8, right: I8) -> Bool {\n  left == right\n}\n"
+  let trait_source = "pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\n"
+  let implementation = "impl Eq for I8 {\n  fn eq(self, other: I8) -> Bool {\n    false\n  }\n}\n"
+  for ambiguous in [false, true] {
+    let library = if ambiguous {
+      trait_source.concat(implementation).concat(implementation)
+    } else {
+      trait_source
+    }
+    let fixture = self_host_imported_semantics_fixture(consumer, library.as_bytes())
+    assert(fixture.frozen.import_diagnostics.length() == 0u32, "error fixture imports valid")
+    let lowering = self_host_plan_program_lowering(fixture.frozen)
+    let diagnostics = lowering.modules[0u32].inferred.diagnostics
+    assert(diagnostics.length() == 1u32, "operator error must remain visible")
+    if ambiguous {
+      assert(diagnostics[0u32] is AmbiguousOperator(_, _, _, 2u32, _), "equal candidates stay ambiguous")
+    } else {
+      assert(diagnostics[0u32] is NoMatchingOperator(_, _), "visible trait with no implementation is an error")
+    }
+  }
+}
+
+test "primitive operators retain fallback when no operator trait is in scope" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @library\npub fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\npub fn equal(left: I8, right: I8) -> Bool {\n  left == right\n}\npub fn equal_float(left: F32, right: F32) -> Bool {\n  left == right\n}\n",
+    b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\nimpl Eq for I8 {\n  fn eq(self, other: I8) -> Bool {\n    false\n  }\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "qualified import valid")
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_inference(lowering) is None, "no-trait primitive inference valid")
+  assert(self_host_validate_program_lowering(lowering) is None, "no-trait primitive lowering valid")
+  let mut primitive = 0u32
+  let mut selected = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      PlannedBinaryExpression(_, _, _) => {
+        primitive = primitive + 1u32
+      }
+      PlannedOperatorCall(_, _, _, _, _) => {
+        selected = selected + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(primitive == 3u32 && selected == 0u32, "qualified-only trait is not in scope; primitive fallback retained")
+}

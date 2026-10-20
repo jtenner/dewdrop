@@ -1,0 +1,57 @@
+test "source index keeps visibility shadow and overload errors" {
+  let plan = ct_test_plan(b"fn hidden() -> I32 {\n 1i32\n}\npub fn shown() -> I32 {\n 2i32\n}\ntransform fn marker() -> Unit {}\n")
+  let machine = ct_machine(plan)
+  assert(ct_member(machine, 0u32, "hidden", true) is None, "private member hidden")
+  assert(ct_member(machine, 0u32, "hidden", false) is Some("app::hidden"), "local member visible")
+  assert(ct_member(machine, 0u32, "shown", true) is Some("app::shown"), "public member visible")
+  for (source, expected) in [(b"fn same() -> I32 {\n 1i32\n}\nfn same(x: I32) -> I32 {\n x\n}\nlet same = 0i32\ntransform fn marker() -> Unit {}\n", "overloaded compile-time names"), (b"let same = 0i32\nfn same() -> I32 {\n 1i32\n}\ntransform fn marker() -> Unit {}\n", "unsupported compile-time declaration shadows name")] {
+    let machine = ct_machine(ct_test_plan(source))
+    let _ = ct_member(machine, 0u32, "same", false)
+    assert(machine.error.contains(expected), machine.error)
+  }
+}
+test "source index rebuilds after source append and retains query fees" {
+  let plan = ct_test_plan(b"import dependency as @d\nfn helper() -> Unit {}\ntransform fn marker() -> Unit {}\n")
+  let machine = ct_machine(plan)
+  assert(ct_module(machine, "app") == 0u32, "initial source index")
+  let file = SelfHostManifestFile::{
+    path: "dependency.dew"
+    source: b"pub fn value() -> I32 {\n 42i32\n}\n"
+    test_only: false
+  }
+  let mi = plan.manifest.modules.length()
+  plan.manifest.modules.push(SelfHostManifestModule::{
+    path: "dependency"
+    files: [file]
+  })
+  plan.files.push(ct_scan(plan, mi, file))
+  for unused in [false, true] {
+    let _ = unused
+    let before = machine.steps
+    let allocation = machine.allocated
+    assert(ct_resolve(machine, 0u32, "value", Some("d")) == "dependency::value", machine.error)
+    assert(before - machine.steps == 3u32 && machine.allocated - allocation == 48u32, "canonical nested query fees")
+  }
+}
+test "source index retains alias conflicts" {
+  let machine = ct_machine(ct_test_plan(b"import first as @d\nimport second as @d\nfn helper() -> Unit {}\ntransform fn marker() -> Unit {}\n"))
+  let _ = ct_resolve(machine, 0u32, "value", Some("d"))
+  assert(machine.error.contains("ambiguous transform import alias"), machine.error)
+}
+test "source index rebuilds imported type names and keeps first binding" {
+  let plan = ct_test_plan(b"transform fn marker() -> Unit {}\n")
+  let machine = ct_machine(plan)
+  assert(ct_imported_type_name(machine, 0u32, "Later") is None, "missing type name")
+  plan.type_names.push(CtTypeName::{
+    module_index: 0u32
+    name: "Later"
+    key: "first::Later"
+  })
+  plan.type_names.push(CtTypeName::{
+    module_index: 0u32
+    name: "Later"
+    key: "second::Later"
+  })
+  assert(ct_imported_type_name(machine, 0u32, "Later") is Some("first::Later"), "first imported binding wins")
+  assert(machine.error.byte_length() == 0u32, machine.error)
+}

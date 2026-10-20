@@ -18,6 +18,8 @@ struct Annotation {
   name : String
   offset : Int32
   target : Int32
+  line_no : UInt64
+  col_no : UInt64
 }
 
 ///|
@@ -26,6 +28,8 @@ struct SourceFunction {
   file : Int32
   declaration : @parser.FunctionDeclaration
   transform : Bool
+  annotation_start : Int32
+  annotation_count : Int32
   start : Int32
   end : Int32
 }
@@ -64,6 +68,7 @@ pub struct Plan {
   reports : Array[TransformReport]
   expression_types : Map[(Int32, Int32), Array[ReflectedExpressionType]]
   reflection_errors : Array[String]
+  mut source_lookup : SourceIndex?
 }
 
 ///|
@@ -86,6 +91,7 @@ pub fn Plan::add_checked_module(
       Err(message) => return Err(file.path + ": error: " + message)
     }
   }
+  self.source_lookup = None
   self.modules.push(module_)
   self.files.push(parsed)
   Ok(())
@@ -129,6 +135,9 @@ fn scan(
   let marks : Array[Int32] = []
   let pending : Array[Annotation] = []
   let mut depth = 0
+  let mut location_cursor = 0
+  let mut line_no = 1UL
+  let mut col_no = 1UL
   let mut i = 0
   while i < tokens.length() {
     let token = tokens[i]
@@ -183,10 +192,21 @@ fn scan(
           clean.length()
         }
         blank(clean, tokens[start].offset().to_int(), end)
+        while location_cursor < offset {
+          if file.source[location_cursor] == b'\n' {
+            line_no += 1UL
+            col_no = 1UL
+          } else {
+            col_no += 1UL
+          }
+          location_cursor += 1
+        }
         pending.push({
           name,
           offset,
           target: 0,
+          line_no,
+          col_no,
           arguments,
           arguments_source,
           arguments_offset,
@@ -226,6 +246,8 @@ fn scan(
   let functions : Array[SourceFunction] = []
   let clean = Bytes::from_fixedarray(clean)
   let mut token_cursor = 0
+  let mut annotation_cursor = 0
+  let mut mark_cursor = 0
   for event in @parser.parse_bytes(clean) {
     match event {
       @parser.Diagnostic(error) =>
@@ -257,17 +279,33 @@ fn scan(
               }
             }
           }
-          let mut is_transform = false
-          for mark in marks {
-            if mark >= fn_.offset.to_int() && mark < fn_.name_offset.to_int() {
-              is_transform = true
-            }
+          while mark_cursor < marks.length() &&
+                marks[mark_cursor] < fn_.offset.to_int() {
+            mark_cursor += 1
           }
+          let is_transform = mark_cursor < marks.length() &&
+            marks[mark_cursor] < fn_.name_offset.to_int()
+          while mark_cursor < marks.length() &&
+                marks[mark_cursor] < fn_.name_offset.to_int() {
+            mark_cursor += 1
+          }
+          while annotation_cursor < annotations.length() &&
+                annotations[annotation_cursor].target < fn_.offset.to_int() {
+            annotation_cursor += 1
+          }
+          let annotation_start = annotation_cursor
+          while annotation_cursor < annotations.length() &&
+                annotations[annotation_cursor].target < fn_.name_offset.to_int() {
+            annotation_cursor += 1
+          }
+          let annotation_count = annotation_cursor - annotation_start
           functions.push({
             module_,
             file: file_index,
             declaration: fn_,
             transform: is_transform,
+            annotation_start,
+            annotation_count,
             start: fn_.offset.to_int(),
             end,
           })
@@ -351,10 +389,11 @@ pub fn prepare(
       signature_error: "",
       validation_targets: {},
       body_errors: {},
-    signature_calls: {},
+      signature_calls: {},
       reports: [],
       expression_types: {},
       reflection_errors: [],
+      source_lookup: None,
     })
   }
   let modules = modules.copy()
@@ -435,6 +474,7 @@ pub fn prepare(
     reports: [],
     expression_types: {},
     reflection_errors: [],
+    source_lookup: None,
   })
 }
 
@@ -455,10 +495,7 @@ pub fn Plan::validation_sources(self : Plan) -> Array[SourceModule] {
       let out = @buffer.new()
       let mut cursor = 0
       for function in file.functions {
-        if file.annotations.any(fn(a) {
-            a.target >= function.start &&
-            a.target < function.declaration.name_offset.to_int()
-          }) {
+        if function.annotation_count > 0 {
           out.write_bytes(file.clean[cursor:function.start])
           let removed = file.clean[function.start:function.end]
             .to_owned()

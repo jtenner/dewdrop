@@ -505,12 +505,9 @@ fn self_host_parse_block_let(
     Some(token) => match token.kind {
       Identifier(name, _) => {
         parser.index = parser.index + 1u32
-        // String patterns are not proof that this binding is a wildcard.
-        if self_host_tokenizer_string_equals(name, "_") {
-          IgnoredProductBinding
-        } else {
-          NamedProductBinding(name, token.offset)
-        }
+        // A top-level discard is still one evaluated let item. Product
+        // pattern wildcards are handled by the product binding parser.
+        NamedProductBinding(name, token.offset)
       }
       Symbol(symbol_code, _) if symbol_code == 0u32 => {
         parser.index = parser.index + 1u32
@@ -1201,7 +1198,7 @@ fn self_host_parse_for_expression(
     }
   }
   // Generated sites use distinct bytes within the for keyword.
-  let iterator_name = "$for_iter"
+  let iterator_name = self_host_product_name("$for_iter_", offset)
   let iterator_value = CallExpr(
     FieldExpr(iterable, "iter", offset),
     self_host_empty_expressions(),

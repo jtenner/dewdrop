@@ -231,11 +231,6 @@ fn ct_run_bytecode_inner(machine: CtMachine, code: CtBytecodeFunction, arguments
       } else if op == 4u32 {
         let selected = code.binaries[arg]
         let left = slots[selected.left]
-        // Keep the tree interpreter's current accounting until its canonical
-        // operator event is changed in both paths.
-        if !ct_charge(machine, 32u32 + machine.file_path.byte_length()) {
-          return CtValue::Empty
-        }
         let primitive = match selected.opcode {
           Some(opcode) => opcode.equals(b"primitive") || opcode.equals(ct_scalar_expected_opcode(selected.operator, left))
           None => false

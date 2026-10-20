@@ -5,14 +5,15 @@ pub fn Plan::annotation_entries(
   self : Plan,
   output_module_count~ : Int32 = -1,
 ) -> Result[Array[(Int32, String)], String] {
-  let entries : Map[String, (Int32, String)] = {}
+  let entries : Map[String, (Int32, String, String?)] = {}
   for mi, files in self.files {
-    for file in files {
+    for fi, file in files {
       for function in file.functions {
         if function.transform {
           entries[self.modules[mi].path + "::" + function.declaration.name] = (
             mi,
             function.declaration.name,
+            self.body_errors.get((mi, fi, function.declaration.offset.to_int())),
           )
         }
       }
@@ -49,24 +50,28 @@ pub fn Plan::annotation_entries(
         if function.transform {
           continue
         }
-        for annotation in file.annotations {
-          if annotation.target < function.start ||
-            annotation.target >= function.declaration.name_offset.to_int() {
-            continue
-          }
+        for
+          ai in function.annotation_start..<(function.annotation_start +
+          function.annotation_count) {
+          let annotation = file.annotations[ai]
           machine.steps = 100_000
           machine.allocated = 0
           let key = machine.annotation_key(mi, annotation.name) catch {
             Failed(message) => return Err(message)
             _ => return Err("invalid annotation entry control flow")
           }
-          let entry = match entries.get(key) {
+          let (entry_module, entry_name, body_error) = match entries.get(key) {
             Some(value) => value
             None => return Err("annotation must name a transform fn: " + key)
           }
+          if body_error is Some(message) {
+            return Err(
+              "compile-time helper failed source checking:\n" + message,
+            )
+          }
           if !seen.contains(key) {
             seen[key] = true
-            result.push(entry)
+            result.push((entry_module, entry_name))
           }
         }
       }

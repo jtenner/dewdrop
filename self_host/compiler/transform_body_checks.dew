@@ -233,3 +233,27 @@ fn ct_invalid_signature_sites(plan: CtPlan, lowering: SelfHostPlannedProgramLowe
   }
   invalid
 }
+
+// Called only after ct_defer_inference_errors covered all job diagnostics and
+// validation accepted its view. Keep original diagnostics for exact body IDs.
+fn ct_frame_body_exclusions(plan: CtPlan, lowering: SelfHostPlannedProgramLowering) -> Option<Map<U64, Bool>> {
+  if plan.body_errors.length() == 0u32 {
+    return None
+  }
+  let excluded = map_empty::<U64, Bool>()
+  let mut mi = 0u32
+  for module_ in lowering.modules {
+    let source = lowering.collected.modules.at(mi)
+    for job in module_.inferred.jobs {
+      if job.diagnostics.length != 0u32 {
+        let body_id = match job.kind {
+          MergedBodyInferenceJob(body) => body
+          MergedLambdaInferenceJob(lambda) => source.lambdas[lambda].root_body
+        }
+        excluded.set(source.bodies[self_host_semantic_id_local(body_id)].declaration, true)
+      }
+    }
+    mi = mi + 1u32
+  }
+  Some(excluded)
+}

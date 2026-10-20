@@ -2700,6 +2700,10 @@ fn self_host_body_block_carrier(
   if block >= module_.blocks.length() {
     return UnresolvedBodyCarrier
   }
+  // A non-fallthrough block never supplies its syntactic tail value.
+  if !module_.blocks[block].flow.falls_through {
+    return NeverBodyCarrier
+  }
   let items = module_.blocks[block].items
   if self_host_u32_equal(items.length, 0u32) {
     return UnitBodyCarrier

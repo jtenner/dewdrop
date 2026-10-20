@@ -1,4 +1,39 @@
 ///|
+struct FieldNames {
+  values : Array[String]
+  index : Map[String, Int32]?
+}
+
+///|
+fn field_names(values : Array[String]) -> FieldNames {
+  let index = if values.length() > 8 {
+    let index : Map[String, Int32] = {}
+    for position, name in values {
+      if !index.contains(name) {
+        index[name] = position
+      }
+    }
+    Some(index)
+  } else {
+    None
+  }
+  { values, index, }
+}
+
+///|
+fn FieldNames::position(self : FieldNames, name : String) -> Int32? {
+  if self.index is Some(index) {
+    return index.get(name)
+  }
+  for position, value in self.values {
+    if value == name {
+      return Some(position)
+    }
+  }
+  None
+}
+
+///|
 struct RawLayout {
   fields : Array[String]
   storage : Array[String]
@@ -51,7 +86,9 @@ fn Machine::reference_cast(
   kind : String,
 ) -> Value raise EvalError {
   if value is NullValue || value is DefaultValue {
-    return if kind == "nullable" { NullValue } else {
+    return if kind == "nullable" {
+      NullValue
+    } else {
       eval_fail("null reference cast trap at compile time")
     }
   }
@@ -85,7 +122,7 @@ fn Machine::reference_cast(
       base
     }
   } else {
-    ReferenceView(reference_base(value), fields)
+    ReferenceView(reference_base(value), field_names(fields))
   }
 }
 
@@ -106,15 +143,11 @@ fn Machine::raw_struct_get(
     Text(content) as original =>
       match index {
         0 => {
-          self.charge(content.length())
-          let backing = match self.text_storage.get(content) {
-            Some(backing) => backing
-            None => {
-              let backing = bytes(content)
-              self.charge(backing.length() + 16)
-              self.text_storage[content] = backing
-              backing
-            }
+          let cached = self.text_storage.get(content)
+          let backing = cached.unwrap_or_else(fn() { bytes(content) })
+          self.charge(backing.length() + 16)
+          if cached is None {
+            self.text_storage[content] = backing
           }
           TextChunks(original, backing)
         }
@@ -150,11 +183,8 @@ fn Machine::read_field(
 ) -> Value raise EvalError {
   match value {
     ReferenceView(base, names) => {
-      for index, field_name in names {
-        self.charge(0)
-        if field_name == name {
-          return self.raw_struct_get(base, index)
-        }
+      if names.position(name) is Some(index) {
+        return self.raw_struct_get(base, index)
       }
       eval_fail("unknown checked raw reference field: " + name)
     }
@@ -273,10 +303,10 @@ fn Machine::raw_array_copy(
   }
   self.charge(count.to_int() * 16)
   let copy = Array::makei(count.to_int(), fn(index) {
+    self.charge(0)
     self.raw_array_get(source, source_at + index.to_uint64())
   })
   for index, value in copy {
-    self.charge(0)
     storage.values[target_at.to_int() + index] = value
   }
   Unit
@@ -295,16 +325,13 @@ fn Machine::write_field(
         self.plan.raw_layouts.get(key) is Some(layout) else {
         raise Failed("field assignment requires mutable struct storage")
       }
-      for index, field_name in names {
-        self.charge(0)
-        if field_name == name {
-          guard index < layout.fields.length() &&
-            layout.storage[index].has_prefix("mut:") else {
-            raise Failed("field assignment requires a mutable checked field")
-          }
-          values[layout.fields[index]] = replacement
-          return
+      if names.position(name) is Some(index) {
+        guard index < layout.fields.length() &&
+          layout.storage[index].has_prefix("mut:") else {
+          raise Failed("field assignment requires a mutable checked field")
         }
+        values[layout.fields[index]] = replacement
+        return
       }
       raise Failed("unknown mutable record field")
     }

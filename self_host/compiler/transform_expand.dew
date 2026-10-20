@@ -295,12 +295,7 @@ fn ct_annotation_key(machine: CtMachine, mi: U32, name: String) -> String {
 }
 
 fn ct_is_annotated(file: CtFile, function: CtFunction) -> Bool {
-  for annotation in file.annotations {
-    if annotation.target >= function.start && annotation.target < function.declaration.name_offset {
-      return true
-    }
-  }
-  false
+  function.annotation_count != 0u32
 }
 
 fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> CtAppliedFunction {
@@ -311,7 +306,7 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> CtApplied
   let generated_declarations = StringBuilder::new()
   let mut generated_bytes = 0u32
   let mut first_generated_declaration = true
-  let mut node = CtValue::Record("dewdrop.ast::FnNode", [
+  let mut node = ct_record("dewdrop.ast::FnNode", [
   ct_binding("name", CtValue::Text(fn_.name)),
   ct_binding("signature", ct_signature_node(machine, fn_)),
   ct_binding("call_adapter", CtValue::Variant("dew.std.option::Option::None", [])),
@@ -319,69 +314,27 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> CtApplied
   ])
   let original_source = ct_field(machine, node, "body")
   let original_signature = ct_render_signature(machine, ct_field(machine, node, "signature"))
-  for annotation in file.annotations {
-    if annotation.target >= function.start && annotation.target < fn_.name_offset {
+  let _ = while function.annotation_start {
+    index if index - function.annotation_start < function.annotation_count => {
+      let annotation = file.annotations[index]
       machine.globals.clear()
       machine.initializing.clear()
       machine.steps = 100000u32
       machine.allocated = 0u32
       machine.memory = None
       let key = ct_annotation_key(machine, file.module_index, annotation.name)
-      let mut is_transform = false
-      for source in machine.plan.files {
-        for candidate in source.functions {
-          if !ct_charge(machine, 16u32) {
-            return ct_failed_applied(file, function)
-          }
-          if candidate.transform_ && key == machine.plan.manifest.modules[source.module_index].path.concat("::").concat(candidate.declaration.name) {
-            is_transform = true
-          }
-        }
-      }
-      if !is_transform {
+      if !ct_source_index(machine.plan).transforms.contains_key(key) {
         let _ = ct_fail(machine, "annotation must name a transform fn")
         return ct_failed_applied(file, function)
       }
-      let mut line = 1u64
-      let mut column = 1u64
-      let _ = while 0u32 {
-        i if i < annotation.offset => {
-          if file.original.source.byte_at(i) == 10u8 {
-            line = line + 1u64
-            column = 1u64
-          } else {
-            column = column + 1u64
-          }
-          continue i + 1u32
-        }
-        _ => break ()
+      let line = annotation.line_no
+      let column = annotation.col_no
+      let fresh = ct_fresh_name(machine, file.module_index, annotation.offset)
+      if machine.error.byte_length() != 0u32 {
+        return ct_failed_applied(file, function)
       }
-      let fresh_builder = StringBuilder::new()
-      fresh_builder.append("__dew_transform_")
-      fresh_builder.append_u32(annotation.offset)
-      let mut fresh = fresh_builder.finish()
-      let _ = while 0u32 {
-        _ => {
-          let mut collision = false
-          for source in machine.plan.files {
-            if source.module_index == file.module_index {
-              if !ct_charge(machine, 16u32) {
-                return ct_failed_applied(file, function)
-              }
-              if source.original.source.to_string().contains(fresh) {
-                collision = true
-              }
-            }
-          }
-          if !collision {
-            break ()
-          }
-          fresh = fresh.concat("_")
-          continue 0u32
-        }
-      }
-      let context = CtValue::Record("dewdrop.transform::TransformContext", [
-      ct_binding("location", CtValue::Record("dewdrop.transform::SourceLocation", [
+      let context = ct_record("dewdrop.transform::TransformContext", [
+      ct_binding("location", ct_record("dewdrop.transform::SourceLocation", [
       ct_binding("file_name", CtValue::Text(file.original.path)),
       ct_binding("line_no", CtValue::Number(line, "U32")),
       ct_binding("col_no", CtValue::Number(column, "U32")),
@@ -454,7 +407,9 @@ fn ct_apply(machine: CtMachine, file: CtFile, function: CtFunction) -> CtApplied
         work: 100000u32 - machine.steps
         allocation_work: machine.allocated
       })
+      continue index + 1u32
     }
+    _ => break ()
   }
   let signature = ct_render_signature(machine, ct_field(machine, node, "signature"))
   let changed = signature != original_signature

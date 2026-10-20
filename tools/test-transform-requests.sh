@@ -28,7 +28,7 @@ for kind in "${examples[@]}"; do
   self_host_measure "transform output validation: $kind" \
     wasm-tools validate --features all "$work/$kind.wasm"
   self_host_measure "transform output execution: $kind" \
-    node -e 'const fs=require("fs"); WebAssembly.instantiate(fs.readFileSync(process.argv[1])).then(({instance})=>{const value=instance.exports.main(); if(value!==42) throw Error(`expected 42, got ${value}`); console.log(`main() = ${value}`)})' "$work/$kind.wasm"
+    node -e 'const fs=require("fs"); WebAssembly.instantiate(fs.readFileSync(process.argv[1])).then(({instance})=>{instance.exports.__dew_init?.(); const value=instance.exports.main(); if(value!==42) throw Error(`expected 42, got ${value}`); console.log(`main() = ${value}`)})' "$work/$kind.wasm"
 done
 
 cat > "$work/bad-signature.dew" <<'DEW'

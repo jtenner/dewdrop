@@ -13,7 +13,7 @@ test "signature adapters avoid names of local bindings" {
     },
   ]).unwrap()
   let function = plan.files[0][0].functions[1]
-  let occupied = "__dew_transform_adapter_0_0_" +
+  let occupied = "__dew_transform_adapter_0_" +
     function.start.to_string() +
     "_0"
   // Include the collision in another function's local scope in the same module.

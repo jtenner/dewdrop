@@ -338,36 +338,61 @@ default_preamble: Bool) -> Unit {
       self_host_assert_compiler_invariant(file_id != 18446744073709551615u64, "reflected expression lost its source file")
       let cache = map_empty::<I32, CtReflectedType>()
       let values = array_new::<CtExpressionType>()
-      let mut ei = 0u32
-      for expression in source.expressions {
-        let offset = expression.offset()
-        if source.expression_files[ei] == file_id && ct_reflection_in_ranges(ranges, offset) {
-          match ct_reflected_type(program, module_, module_.inferred.expression_types[ei], cache, 0u32) {
-            Some(type_) => values.push(CtExpressionType::{
-              offset: offset
-              kind: ct_reflected_expression_kind(expression)
-              type_: type_
-            })
-            None => {
-            }
-          }
+      // Inference arrays are packed by job (bodies, then lambdas), while
+      // source IDs include each lambda immediately after its owning body.
+      // Keep expression-before-block ordering and use each job's source span.
+      for job in module_.inferred.jobs {
+        let expressions = match job.kind {
+          MergedBodyInferenceJob(body) => source.bodies[self_host_semantic_id_local(body)].expressions
+          MergedLambdaInferenceJob(lambda) => source.lambdas[lambda].body.expressions
         }
-        ei = ei + 1u32
+        self_host_assert_compiler_invariant(expressions.length == job.expression_types.length, "reflected expression job span changed")
+        let _ = while 0u32 {
+          relative if relative < expressions.length => {
+            let ei = expressions.start + relative
+            let expression = source.expressions[ei]
+            let offset = expression.offset()
+            if source.expression_files[ei] == file_id && ct_reflection_in_ranges(ranges, offset) {
+              let root = module_.inferred.expression_types[job.expression_types.start + relative]
+              match ct_reflected_type(program, module_, root, cache, 0u32) {
+                Some(type_) => values.push(CtExpressionType::{
+                  offset: offset
+                  kind: ct_reflected_expression_kind(expression)
+                  type_: type_
+                })
+                None => {}
+              }
+            }
+            continue relative + 1u32
+          }
+          _ => break ()
+        }
       }
-      let mut bi = 0u32
-      for block in source.blocks {
-        if source.block_files[bi] == file_id && ct_reflection_in_ranges(ranges, block.offset) {
-          match ct_reflected_type(program, module_, module_.inferred.block_types[bi], cache, 0u32) {
-            Some(type_) => values.push(CtExpressionType::{
-              offset: block.offset
-              kind: "block"
-              type_: type_
-            })
-            None => {
-            }
-          }
+      for job in module_.inferred.jobs {
+        let blocks = match job.kind {
+          MergedBodyInferenceJob(body) => source.bodies[self_host_semantic_id_local(body)].blocks
+          MergedLambdaInferenceJob(lambda) => source.lambdas[lambda].body.blocks
         }
-        bi = bi + 1u32
+        self_host_assert_compiler_invariant(blocks.length == job.block_types.length, "reflected block job span changed")
+        let _ = while 0u32 {
+          relative if relative < blocks.length => {
+            let bi = blocks.start + relative
+            let block = source.blocks[bi]
+            if source.block_files[bi] == file_id && ct_reflection_in_ranges(ranges, block.offset) {
+              let root = module_.inferred.block_types[job.block_types.start + relative]
+              match ct_reflected_type(program, module_, root, cache, 0u32) {
+                Some(type_) => values.push(CtExpressionType::{
+                  offset: block.offset
+                  kind: "block"
+                  type_: type_
+                })
+                None => {}
+              }
+            }
+            continue relative + 1u32
+          }
+          _ => break ()
+        }
       }
       plan.expression_types.set(ct_call_key(mi, file.original.path, 0u32), ct_sort_expression_types(values))
     }
@@ -401,7 +426,7 @@ depth: U32) -> CtValue {
     }
     arguments.push(argument)
   }
-  CtValue::Record("dewdrop.ast::TypeNode", [
+  ct_record("dewdrop.ast::TypeNode", [
     ct_binding("kind", CtValue::Text(type_.kind)),
     ct_binding("name", CtValue::Text(type_.name)),
     ct_binding("arguments", ct_syntax_values(machine, arguments)),
@@ -411,14 +436,14 @@ depth: U32) -> CtValue {
 fn ct_expression_type_nodes(machine: CtMachine,
 file: CtFile,
 function: CtFunction) -> CtValue {
+  if !ct_charge(machine, 0u32) {
+    return CtValue::Empty
+  }
   let values = array_new::<CtValue>()
   match machine.plan.expression_types.get(ct_call_key(file.module_index, file.original.path, 0u32)) {
     Some(entries) => {
       let start = while (0u32, entries.length()) {
         (low, high) if low < high => {
-          if !ct_charge(machine, 0u32) {
-            return CtValue::Empty
-          }
           let middle = low + (high - low) / 2u32
           if entries[middle].offset < function.declaration.body.offset {
             continue (middle + 1u32, high)
@@ -430,9 +455,6 @@ function: CtFunction) -> CtValue {
       }
       let _ = while start {
         index if index < entries.length() => {
-          if !ct_charge(machine, 0u32) {
-            return CtValue::Empty
-          }
           let value = entries[index]
           if value.offset >= function.end {
             break ()
@@ -444,7 +466,7 @@ function: CtFunction) -> CtValue {
           if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
             return CtValue::Empty
           }
-          values.push(CtValue::Record("dewdrop.ast::ExpressionTypeNode", [
+          values.push(ct_record("dewdrop.ast::ExpressionTypeNode", [
             ct_binding("offset", ct_number(u32_into_u64(value.offset), "U32")),
             ct_binding("kind", CtValue::Text(value.kind)),
             ct_binding("type_", type_node),
@@ -464,7 +486,9 @@ function: CtFunction) -> CtValue {
 fn ct_reflection_error_nodes(machine: CtMachine) -> CtValue {
   let values = array_new::<CtValue>()
   for message in machine.plan.reflection_errors {
-    if !ct_charge(machine, 16u32 + message.byte_length()) {
+    // Diagnostics share immutable compiler metadata. Text byte reads have
+    // their own storage charge.
+    if !ct_charge(machine, 16u32) {
       return CtValue::Empty
     }
     values.push(CtValue::Text(message))

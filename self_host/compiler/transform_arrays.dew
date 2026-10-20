@@ -8,7 +8,7 @@ fn ct_array_value(machine: CtMachine, mi: U32, offset: U32, values: Array<CtValu
     return CtValue::Empty
   }
   match machine.plan.array_literals.get(ct_site_key(machine.plan, mi, machine.file_path, offset)) {
-    Some(layout) => CtValue::Record(layout.key, [
+    Some(layout) => ct_record(layout.key, [
     ct_binding(layout.fields[0u32], CtValue::RawArray(CtRawStorage::{
       values: values
       default_kind: ""

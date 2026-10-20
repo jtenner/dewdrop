@@ -14,14 +14,14 @@ pub enum CtValue {
   Vector(U64, U64)
   TextChunks(CtValue, Bytes)
   TextReference(CtValue)
-  ReferenceView(CtValue, Array<String>)
+  ReferenceView(CtValue, CtFieldNames)
   Floating(U64, String)
   Number(U64, String)
   Boolean(Bool)
   Text(String)
   ByteText(Bytes)
   Sequence(Array<CtValue>)
-  Record(String, Array<CtBinding>)
+  Record(String, CtRecordFields)
   Variant(String, Array<CtValue>)
   Function(CtCallTarget, Array<CtValue>, CtFunctionIdentity)
   Closure(U32, String, Array<SelfHostFnParameter>, SelfHostBlock, CtEnvironment, String)
@@ -40,11 +40,15 @@ pub struct CtAnnotation {
   name: String
   offset: U32
   target: U32
+  line_no: U64
+  col_no: U64
 }
 
 pub struct CtFunction {
   declaration: SelfHostFunctionDeclaration
   transform_: Bool
+  annotation_start: U32
+  annotation_count: U32
   start: U32
   end: U32
 }
@@ -85,6 +89,7 @@ pub struct CtPlan {
   reflection_errors: Array<String>
   annotated_functions: Map<U64, Bool>
   type_names: Array<CtTypeName>
+  mut source_lookup: Option<CtSourceIndex>
 }
 
 pub struct CtMachine {
@@ -171,7 +176,6 @@ fn ct_string(machine: CtMachine, value: CtValue) -> String {
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return ""
   }
-
   match value {
     Text(value) => value
     TextReference(value) => ct_reference_string(machine, value)
@@ -186,7 +190,6 @@ fn ct_truth(machine: CtMachine, value: CtValue) -> Bool {
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return false
   }
-
   match value {
     Boolean(value) => value
     Number(bits, "Bool") => bits != 0u64
@@ -206,15 +209,18 @@ fn ct_binding(name: String, value: CtValue) -> CtBinding {
   }
 }
 
-fn ct_lookup(machine: CtMachine, values: Array<CtBinding>, name: String) -> Option<CtBinding> {
+fn ct_lookup(machine: CtMachine, fields: CtRecordFields, name: String) -> Option<CtBinding> {
+  match fields.index {
+    Some(index) => return index.get(name)
+    None => {
+    }
+  }
+  let values = fields.values
   let mut i = values.length()
   let _ = while 0u32 {
     _ => {
       if i == 0u32 {
         break ()
-      }
-      if !ct_charge(machine, 0u32) {
-        return None
       }
       i = i - 1u32
       let item = values[i]
@@ -231,20 +237,12 @@ fn ct_field(machine: CtMachine, value: CtValue, name: String) -> CtValue {
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return CtValue::Empty
   }
-
   match value {
     ReferenceView(base, names) => {
-      let _ = while 0u32 {
-        index if index < names.length() => {
-          if !ct_charge(machine, 0u32) {
-            return CtValue::Empty
-          }
-          if names[index] == name {
-            return ct_raw_struct_get(machine, base, index)
-          }
-          continue index + 1u32
+      match ct_field_position(names, name) {
+        Some(index) => return ct_raw_struct_get(machine, base, index)
+        None => {
         }
-        _ => break ()
       }
       ct_fail(machine, "unknown checked raw reference field: ".concat(name))
     }
@@ -256,7 +254,6 @@ fn ct_field(machine: CtMachine, value: CtValue, name: String) -> CtValue {
   }
 }
 
-
 fn ct_part(source: Bytes, start: U32, end: U32) -> String {
   source.slice(start, end).to_string()
 }
@@ -267,13 +264,12 @@ fn ct_blank(source: Bytes, start: U32, end: U32) -> Bytes {
     i if i < end => {
       let byte = source.byte_at(i)
       builder.append_byte(if byte == 10u8 || byte == 13u8 {
-          byte
-        } else {
-          32u8
+        byte
+      } else {
+        32u8
       })
       continue i + 1u32
     }
-
     _ => break ()
   }
   builder.finish()

@@ -57,9 +57,6 @@ fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: Sel
   if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
     return CtValue::Empty
   }
-  if !ct_charge(machine, 32u32 + args.length() * 16u32) {
-    return CtValue::Empty
-  }
   let receivers = if function.receiver is Some(_) {
     1u32
   } else {
@@ -71,6 +68,9 @@ fn ct_source_call_frame(machine: CtMachine, mi: U32, path: String, function: Sel
   let annotation_key = ct_site_key(machine.plan, mi, path, function.offset)
   if machine.plan.annotated_functions.get(annotation_key) is Some(_) {
     return ct_fail(machine, "annotated functions cannot execute at compile time")
+  }
+  if !ct_charge(machine, 32u32 + args.length() * 16u32) {
+    return CtValue::Empty
   }
   let previous = machine.file_path
   let previous_frame = machine.frame
@@ -402,12 +402,12 @@ fn ct_closure_call(machine: CtMachine, closure: CtValue, args: Array<CtValue>) -
 }
 
 fn ct_unit_variant(machine: CtMachine, key: String) -> CtValue {
+  if !ct_charge(machine, 16u32) {
+    return CtValue::Empty
+  }
   for file in machine.plan.files {
     let prefix = machine.plan.manifest.modules[file.module_index].path
     for declaration in file.declarations {
-      if !ct_charge(machine, 0u32) {
-        return CtValue::Empty
-      }
       match declaration {
         Enum(enum_) => {
           for variant in enum_.variants {

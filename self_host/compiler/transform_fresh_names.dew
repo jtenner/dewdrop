@@ -1,0 +1,102 @@
+// ASCII substring matching deliberately includes comments, strings and longer names.
+// Only ten short digit-prefix keys can be added per occurrence.
+fn ct_index_fresh_names(source: Bytes, names: Map<String, U32>) -> Unit {
+  let prefix = b"__dew_transform_"
+  let mut cursor = 0u32
+  let _ = while cursor {
+    current if current < source.byte_length() => {
+      let mut matched = 0u32
+      if source.byte_length() - current >= prefix.byte_length() {
+        let _ = while matched {
+          index if index < prefix.byte_length() && source.byte_at(current + index) == prefix.byte_at(index) => {
+            matched = index + 1u32
+            continue matched
+          }
+          _ => break ()
+        }
+      }
+      if matched != prefix.byte_length() {
+        cursor = current + 1u32
+        continue cursor
+      }
+      let digits_start = current + prefix.byte_length()
+      let mut digits_end = digits_start
+      let _ = while digits_end {
+        index if index < source.byte_length() && source.byte_at(index) >= 48u8 && source.byte_at(index) <= 57u8 => {
+          digits_end = index + 1u32
+          continue digits_end
+        }
+        _ => break ()
+      }
+      if digits_end == digits_start {
+        cursor = current + 1u32
+        continue cursor
+      }
+      let mut suffix_end = digits_end
+      let _ = while suffix_end {
+        index if index < source.byte_length() && source.byte_at(index) == 95u8 => {
+          suffix_end = index + 1u32
+          continue suffix_end
+        }
+        _ => break ()
+      }
+      let digits = if digits_end - digits_start > 10u32 {
+        10u32
+      } else {
+        digits_end - digits_start
+      }
+      let _ = while 1u32 {
+        length if length <= digits => {
+          let end = digits_start + length
+          let key = source.slice(current, end).to_string()
+          let suffix = if end == digits_end {
+            suffix_end - digits_end
+          } else {
+            0u32
+          }
+          match names.get(key) {
+            Some(previous) if previous >= suffix => {}
+            _ => names.set(key, suffix)
+          }
+          continue length + 1u32
+        }
+        _ => break ()
+      }
+      // Do not skip underscores: a new occurrence can start at their end.
+      cursor = digits_end
+      continue cursor
+    }
+    _ => break ()
+  }
+}
+
+fn ct_fresh_name(machine: CtMachine, mi: U32, offset: U32) -> String {
+  let out = StringBuilder::new()
+  out.append("__dew_transform_")
+  out.append_u32(offset)
+  let base = out.finish()
+  let maximum = match ct_source_index(machine.plan).sources[mi].fresh_names.get(base) {
+    Some(value) => value
+    None => return base
+  }
+  let count = maximum + 1u32
+  let _ = while 0u32 {
+    index if index < count => {
+      if !ct_charge(machine, 16u32) {
+        return ""
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let result = StringBuilder::new()
+  result.append(base)
+  let _ = while 0u32 {
+    index if index < count => {
+      result.append("_")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  result.finish()
+}

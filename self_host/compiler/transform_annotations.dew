@@ -102,7 +102,7 @@ fn ct_shift_annotation_node(machine: CtMachine, node: CtValue, delta: U32) -> Un
   }
   match node {
     Record(_, fields) => {
-      for field in fields {
+      for field in fields.values {
         if field.name == "offset" {
           field.value = CtValue::Number(ct_raw_bits(machine, field.value) + u32_into_u64(delta), "U32")
         }

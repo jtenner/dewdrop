@@ -90,3 +90,61 @@ test "shared nested type prototypes retain visible work limits" {
   let _ = ct_reflected_type_node(machine, type_, 0u32)
   assert(machine.error.contains("limit exceeded"), "shared type graph cannot bypass work or allocation limits")
 }
+
+
+test "reflected methods main expression and block keep I32 after a lambda" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "reflection-methods.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.array\nopen dew.std.string\n\nstruct Counter {\n  mut value: I32\n}\n\nimpl Counter {\n  fn new(value: I32) -> Counter {\n    Counter::{\n      value: value\n    }\n  }\n  fn add(self, amount: I32) -> Unit {\n    self.value = self.value + amount\n  }\n  fn answer(self) -> I32 {\n    self.value\n  }\n}\n\nfn twice(value: I32) -> I32 {\n  value * 2i32\n}\n\nfn apply(value: I32, callback: fn(I32) -> I32) -> I32 {\n  callback(value)\n}\n\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  if ctx.expression_types.length() != 2u32 {\n    return node.with_body(@ast.integer(0i32))\n  }\n  let block_type = ctx.expression_types[0u32]\n  let literal_type = ctx.expression_types[1u32]\n  if block_type.kind != \"block\" || literal_type.kind != \"I32\" || block_type.type_.kind != \"named\" || block_type.type_.name != \"I32\" || literal_type.type_.kind != \"named\" || literal_type.type_.name != \"I32\" {\n    return node.with_body(@ast.integer(0i32))\n  }\n  let counter = Counter::new(apply(10i32, twice))\n  let alias = counter\n  alias.add(20i32)\n  let mut extra = 1i32\n  let callback = fn(value: I32) -> I32 {\n    extra = extra + 1i32\n    return value + extra\n  }\n  node.with_body(@ast.integer(apply(counter.answer(), callback)))\n}\n\n#replace\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Err(error) => assert(false, error)
+    Ok(expanded) => {
+      let mut found = false
+      for file in expanded.modules[0u32].files {
+        if file.path.contains("::transform[main@") {
+          found = true
+          assert(file.source.to_string().contains("42i32"), "methods main reflected I32 expression and block")
+        }
+      }
+      assert(found, "methods main generated file")
+    }
+  }
+}
+
+test "reflected expressions and blocks follow multiple lambda and function source spans" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "reflection-order.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nopen dew.std.array\nopen dew.std.string\n\ntype Signed = I32\n\nfn first() -> I32 {\n  let callback = fn() -> I32 {\n    return 7i32\n  }\n  callback()\n}\n\ntransform fn verify(node: @ast.FnNode, ctx: @transform.TransformContext) -> Result<@ast.FnNode, @transform.TransformError> {\n  let expected = if node.name == \"wide\" {\n    \"I64\"\n  } else {\n    \"I32\"\n  }\n  if ctx.expression_types.length() != 2u32 {\n    return Result::Err(@transform.error(\"missing reflected expression or block\"))\n  }\n  let block_type = ctx.expression_types[0u32]\n  let literal_type = ctx.expression_types[1u32]\n  if block_type.kind != \"block\" || literal_type.kind != expected || block_type.type_.kind != \"named\" || block_type.type_.name != expected || literal_type.type_.kind != \"named\" || literal_type.type_.name != expected {\n    return Result::Err(@transform.error(\"reflected source expression or block type changed after a lambda\"))\n  }\n  Result::Ok(node)\n}\n\n#verify\nfn narrow() -> Signed {\n  1i32\n}\n\nfn second() -> I64 {\n  let callback = fn() -> I64 {\n    let nested = fn() -> I64 {\n      return 8i64\n    }\n    return nested()\n  }\n  callback()\n}\n\n#verify\npub fn wide() -> I64 {\n  2i64\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Err(error) => assert(false, error)
+    Ok(expanded) => {
+      let mut narrow = false
+      let mut wide = false
+      for file in expanded.modules[0u32].files {
+        if file.path.contains("::transform[narrow@") {
+          narrow = true
+          assert(file.source.to_string().contains("-> Signed"), "logical alias type is retained")
+        }
+        if file.path.contains("::transform[wide@") {
+          wide = true
+          assert(file.source.to_string().contains("2i64"), "I64 source body is retained")
+        }
+      }
+      assert(narrow && wide, "both checked source-order targets expanded")
+    }
+  }
+}

@@ -199,22 +199,6 @@ fn self_host_hir_expression_item(
   }
 }
 
-fn self_host_hir_discarded_let_item(
-  name: U32,
-  value: U32,
-  offset: U32,
-) -> SelfHostHirBlockItem {
-  {
-    kind: 1u32
-    mutable_: false
-    source_name: name
-    name: 4294967295u32
-    name_offset: offset
-    value: value
-    offset: offset
-  }
-}
-
 fn self_host_hir_block_item_is_let(item: SelfHostHirBlockItem) -> Bool {
   self_host_u32_equal(item.kind, 0u32)
 }

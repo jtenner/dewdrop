@@ -129,7 +129,7 @@ test "semantic function blocks lower contiguous let and return items" {
   }
 }
 
-test "semantic wildcard lets preserve initializer effects as expression items" {
+test "semantic wildcard lets keep one evaluated let item" {
   let collected = self_host_collect_bytes(
     2401u64,
     b"fn run() -> Unit {\n  let _ = while 0u32 {\n    index if index < 1u32 => continue index + 1u32\n    _ => break ()\n  }\n}\n",
@@ -137,21 +137,13 @@ test "semantic wildcard lets preserve initializer effects as expression items" {
   assert(collected.diagnostics.length() == 0u32, "wildcard let diagnostics")
   let root = self_host_body_root_block(collected.bodies[0u32])
   let items = collected.blocks[root].items
-  assert(items.length == 2u32, "wildcard let item count")
-  let while_item = collected.block_items[items.start]
-  assert(!self_host_hir_block_item_is_let(while_item), "wildcard let created a local binding")
-  match collected.expressions[while_item.value] {
+  assert(items.length == 1u32, "one wildcard let item without extra Unit expression")
+  let item = collected.block_items[items.start]
+  assert(self_host_hir_block_item_is_let(item), "wildcard initializer keeps let tail semantics")
+  assert(collected.name(item.name) == "_", "discard spelling retained")
+  match collected.expressions[item.value] {
     WhileExpr(_, _, _) => {}
     _ => assert(false, "wildcard let initializer is not while")
-  }
-  let discard_item = collected.block_items[items.start + 1u32]
-  assert(!self_host_hir_block_item_is_let(discard_item), "wildcard let discard created a local binding")
-  match collected.expressions[discard_item.value] {
-    BlockExpr(block, _) => assert(
-      collected.blocks[block].items.length == 0u32,
-      "wildcard let discard is not Unit",
-    )
-    _ => assert(false, "wildcard let discard is not Unit")
   }
 }
 

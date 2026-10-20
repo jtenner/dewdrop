@@ -30,6 +30,9 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
   let pending = array_new::<CtAnnotation>()
   let marks = array_new::<U32>()
   let mut depth = 0u32
+  let mut location_cursor = 0u32
+  let mut line_no = 1u64
+  let mut col_no = 1u64
   let mut cursor = 0u32
   let mut i = 0u32
   let _ = while 0u32 {
@@ -108,6 +111,19 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
           clean.append(original.source.slice(cursor, start))
           clean.append(ct_blank(original.source, start, end))
           cursor = end
+          let _ = while location_cursor {
+            position if position < start => {
+              if original.source.byte_at(position) == 10u8 {
+                line_no = line_no + 1u64
+                col_no = 1u64
+              } else {
+                col_no = col_no + 1u64
+              }
+              location_cursor = position + 1u32
+              continue location_cursor
+            }
+            _ => break ()
+          }
           pending.push({
               arguments: arguments.values
               arguments_source: arguments.source
@@ -115,6 +131,8 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
               name: name
               offset: start
               target: 0u32
+              line_no: line_no
+              col_no: col_no
           })
           continue 0u32
         }
@@ -138,6 +156,8 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
                 name: annotation.name
                 offset: annotation.offset
                 target: token.offset
+                line_no: annotation.line_no
+                col_no: annotation.col_no
             })
           }
           pending.clear()
@@ -166,6 +186,8 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
   let declarations = array_new::<SelfHostDeclaration>()
   let functions = array_new::<CtFunction>()
   let mut token_cursor = 0u32
+  let mut annotation_cursor = 0u32
+  let mut mark_cursor = 0u32
   if plan.error.byte_length() == 0u32 {
     for event in self_host_parse_module(source).events {
       match event {
@@ -197,15 +219,42 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
                 }
                 _ => break ()
               }
-              let mut is_transform = false
-              for mark in marks {
-                if mark >= function.offset && mark < function.name_offset {
-                  is_transform = true
+              let _ = while mark_cursor {
+                index if index < marks.length() && marks[index] < function.offset => {
+                  mark_cursor = index + 1u32
+                  continue mark_cursor
                 }
+                _ => break ()
               }
+              let is_transform = mark_cursor < marks.length() && marks[mark_cursor] < function.name_offset
+              let _ = while mark_cursor {
+                index if index < marks.length() && marks[index] < function.name_offset => {
+                  mark_cursor = index + 1u32
+                  continue mark_cursor
+                }
+                _ => break ()
+              }
+              let _ = while annotation_cursor {
+                index if index < annotations.length() && annotations[index].target < function.offset => {
+                  annotation_cursor = index + 1u32
+                  continue annotation_cursor
+                }
+                _ => break ()
+              }
+              let annotation_start = annotation_cursor
+              let _ = while annotation_cursor {
+                index if index < annotations.length() && annotations[index].target < function.name_offset => {
+                  annotation_cursor = index + 1u32
+                  continue annotation_cursor
+                }
+                _ => break ()
+              }
+              let annotation_count = annotation_cursor - annotation_start
               functions.push({
                   declaration: function
                   transform_: is_transform
+                  annotation_start: annotation_start
+                  annotation_count: annotation_count
                   start: function.offset
                   end: end
               })
@@ -218,10 +267,8 @@ fn ct_scan(plan: CtPlan, module_index: U32, original: SelfHostManifestFile) -> C
     }
   }
   for function in functions {
-    for annotation in annotations {
-      if annotation.target >= function.declaration.offset && annotation.target < function.declaration.name_offset {
-        plan.annotated_functions.set(ct_site_key(plan, module_index, original.path, function.declaration.offset), true)
-      }
+    if function.annotation_count != 0u32 {
+      plan.annotated_functions.set(ct_site_key(plan, module_index, original.path, function.declaration.offset), true)
     }
   }
   {
@@ -278,6 +325,7 @@ fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_
     raw_layouts: map_empty::<String, CtRawLayout>()
     annotated_functions: map_empty::<U64, Bool>()
     type_names: []
+    source_lookup: None
   }
   if !active {
     return plan

@@ -65,6 +65,10 @@ change the body, parameters, and result type. The original name, type parameters
 bounds, and visibility stay the same. The context supplies checked types for
 original expressions. A transform can also add declarations and imports.
 
+Use `open dew.std.array` for Array methods such as
+`ctx.expression_types.length()`. Transform imports follow ordinary Dew method
+visibility rules.
+
 `ExprNode` has these variants:
 
 | Variant | Generated code |
@@ -277,10 +281,19 @@ interpreter work; it is not a measured process-memory limit. Limits fail with a
 compiler diagnostic. No file, network, clock, environment, or process capability
 is exposed to interpreted code.
 
-The two compiler implementations count work differently. A transform near a
-limit can pass in one and fail in the other. Name and proof lookup also counts as
-work, so large source modules can reach the limit sooner. The limits protect the
-compiler; they are not a portable measure of transform cost.
+Both compiler implementations use the same logical resource charges. The AST
+interpreter and bytecode path also use the same charges. A checked source call
+has the same cost on its first and later executions. Name and type-table queries
+have a fixed query charge; unrelated declarations and search positions do not
+add steps. Returned values and executed source statements keep their own costs.
+The shared checked-source test corpus checks exact reports in both compilers.
+
+Raw String storage reads charge the UTF-8 byte length plus 16 units on every
+read, including cached reads. Diagnostic lists charge value entries; reading
+diagnostic bytes uses the same String storage rule. A failed work charge leaves
+both counters unchanged. A failed allocation charge consumes its work step and
+keeps the allocation counter within its limit. Array copy finishes all source
+reads before it writes destination values, including when a read fails.
 
 Persistent transform result caching is future work. A compact bytecode backend
 is available, with interpreter fallback for other forms. Ordinary compiler
@@ -299,12 +312,17 @@ To test real compile requests after building a self-host compiler:
 ```sh
 mise exec wasm-tools@1.262.0 -- tools/test-transform-requests.sh \
   .tmp/self-host-bootstrap/a/compiler.wasm node-facet
+mise exec wasm-tools@1.262.0 -- tools/test-transform-source-pool.sh \
+  .tmp/self-host-bootstrap/a/compiler.wasm
 ```
 
 Use `wago` in place of `node-facet` to run the same requests in Wago.
 The test checks every public example and requires each exported `main` to
 return `42`. It also checks that invalid signatures, extra declarations, unsafe
 operations, and host calls fail with a diagnostic and produce no output file.
+The source-pool test checks an imported annotation and a generated import whose
+module has its own transform and pooled constant dependency. Unused invalid pool
+source stays unparsed.
 
 ## Quotes and splices
 
@@ -467,7 +485,7 @@ These are logical interpreter counts. Allocation work is an estimate of work
 that creates values; it is not retained heap bytes or peak memory. It includes
 context construction and generated import and declaration work. Final shared
 function rendering and later compiler passes are outside this per-annotation
-count. Counts can differ between the native and Dew implementations.
+count. The native and Dew implementations use the same logical charges.
 
 Compiler API users can read `options.transform_reports` after compilation.
 The Dew API `ct_expand_checked_with_reports` returns the expanded manifest and
@@ -525,8 +543,9 @@ views, and growing StringBuilder/BytesBuilder operations run through their Dew
 source. See `examples/transforms/text_operations.dew`. Lexical scope snapshots
 share cells and copy their name map only when a declaration changes the names.
 Checked source sites use numeric IDs that distinguish modules and files.
-Work and allocation reports remain implementation-specific; the current full
-text control uses78,686/83,981 work steps in Native/Dew respectively.
+The two annotations in this example use 55,212 and 38,406 work steps in both
+compiler implementations. Their allocation-work counts are 1,040,851 and 707,380
+units. These are logical budgets, not elapsed time or measured memory use.
 
 Integer bit counts, rotations, and I64 sign extension also execute at compile
 time. Named function references keep their checked runtime identity, including

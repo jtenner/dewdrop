@@ -284,7 +284,7 @@ test "scope copies and name searches consume transform budgets" {
     _ => fail("scope budget must produce a diagnostic")
   }
   machine.allocated = 0
-  machine.steps = 1
+  machine.steps = 0
   try {
     let _ = machine.local_member(0, "helper", false)
     fail("a name search must consume the work budget")

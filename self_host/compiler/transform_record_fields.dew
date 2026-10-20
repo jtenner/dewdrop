@@ -1,0 +1,64 @@
+// Keep small records as bounded scans. Wide records index the same binding
+// cells, so assignment and reference identity do not change.
+
+pub struct CtRecordFields {
+  values: Array<CtBinding>
+  index: Option<Map<String, CtBinding>>
+}
+
+fn ct_record(key: String, values: Array<CtBinding>) -> CtValue {
+  let index = if values.length() > 8u32 {
+    let index = map_empty::<String, CtBinding>()
+    for value in values {
+      index.set(value.name, value)
+    }
+    Some(index)
+  } else {
+    None
+  }
+  CtValue::Record(key, CtRecordFields::{
+    values: values
+    index: index
+  })
+}
+
+pub struct CtFieldNames {
+  values: Array<String>
+  index: Option<Map<String, U32>>
+}
+
+fn ct_field_names(values: Array<String>) -> CtFieldNames {
+  let index = if values.length() > 8u32 {
+    let index = map_empty::<String, U32>()
+    let mut position = 0u32
+    for value in values {
+      if !index.contains_key(value) {
+        index.set(value, position)
+      }
+      position = position + 1u32
+    }
+    Some(index)
+  } else {
+    None
+  }
+  CtFieldNames::{
+    values: values
+    index: index
+  }
+}
+
+fn ct_field_position(names: CtFieldNames, name: String) -> Option<U32> {
+  match names.index {
+    Some(index) => index.get(name)
+    None => {
+      let mut position = 0u32
+      for value in names.values {
+        if value == name {
+          return Some(position)
+        }
+        position = position + 1u32
+      }
+      None
+    }
+  }
+}

@@ -1,0 +1,77 @@
+test "annotation preparation keeps byte positions spans and transform markers" {
+  let plan = ct_test_plan("// λ🧪\r\n\n\t#first\n  #second\n// kept gap\npub fn sample() -> Unit {\n}\nfn ordinary() -> Unit {\n}\npub transform fn marked() -> Unit {\n}\ntransform fn other() -> Unit {\n}\n".as_bytes())
+  assert(plan.error.byte_length() == 0u32, plan.error)
+  let file = plan.files[0u32]
+  assert(file.annotations.length() == 2u32, "two stacked annotations")
+  assert(file.annotations[0u32].line_no == 3u64 && file.annotations[0u32].col_no == 2u64, "first original byte position")
+  assert(file.annotations[1u32].line_no == 4u64 && file.annotations[1u32].col_no == 3u64, "second original byte position")
+  assert(file.functions.length() == 4u32, "all functions retained")
+  assert(file.functions[0u32].annotation_start == 0u32 && file.functions[0u32].annotation_count == 2u32, "stacked span")
+  assert(file.functions[1u32].annotation_count == 0u32, "ordinary function empty span")
+  assert(!file.functions[0u32].transform_ && !file.functions[1u32].transform_, "ordinary markers")
+  assert(file.functions[2u32].transform_ && file.functions[3u32].transform_, "both marker orders")
+  for function in file.functions {
+    let mut count = 0u32
+    for annotation in file.annotations {
+      if annotation.target >= function.start && annotation.target < function.declaration.name_offset {
+        assert(file.annotations[function.annotation_start + count].offset == annotation.offset, "same annotation interval")
+        count = count + 1u32
+      }
+    }
+    assert(function.annotation_count == count, "same annotation count")
+  }
+}
+
+test "fresh name index keeps raw substring and digit prefix semantics" {
+  let names = map_empty::<String, U32>()
+  ct_index_fresh_names(b"// __dew_transform_12345___\n\"__dew_transform_12_\" __dew_transform_12345_ __dew_transform_01__ __dew_transform___dew_transform_7__ __dew_transform_8___dew_transform_9_ __dew_transform_42949672950__", names)
+  assert(names.get("__dew_transform_1") is Some(0u32), "short digit prefix")
+  assert(names.get("__dew_transform_12") is Some(1u32), "string collision")
+  assert(names.get("__dew_transform_12345") is Some(3u32), "maximum suffix wins")
+  assert(names.get("__dew_transform_01") is Some(2u32), "leading zero substring")
+  assert(names.get("__dew_transform_7") is Some(2u32), "overlap after no digits")
+  assert(names.get("__dew_transform_8") is Some(3u32), "suffix overlap")
+  assert(names.get("__dew_transform_9") is Some(1u32), "overlap at suffix end")
+  assert(names.get("__dew_transform_4294967295") is Some(0u32), "ten digit prefix")
+  assert(names.get("__dew_transform_42949672950") is None, "ten digit key bound")
+}
+
+test "fresh name charges each collision before final output" {
+  let machine = ct_machine(ct_test_plan(b"// __dew_transform_12___\nfn compute() -> Unit {\n}\ntransform fn marker() -> Unit {\n}\n"))
+  assert(ct_fresh_name(machine, 0u32, 12u32) == "__dew_transform_12____", machine.error)
+  assert(100000u32 - machine.steps == 4u32 && machine.allocated == 64u32, "four collision fees")
+  assert(ct_fresh_name(machine, 0u32, 99u32) == "__dew_transform_99", "missing base stays bare")
+  assert(100000u32 - machine.steps == 4u32 && machine.allocated == 64u32, "no missing fee")
+  machine.steps = 2u32
+  machine.allocated = 0u32
+  let _ = ct_fresh_name(machine, 0u32, 12u32)
+  assert(machine.error == "transform work limit exceeded", machine.error)
+  assert(machine.steps == 0u32 && machine.allocated == 32u32, "bounded failed collision fees")
+}
+
+test "preparation index keeps first cold target and transform set" {
+  let machine = ct_machine(ct_test_plan(b"fn compute() -> I32 {\n 42i32\n}\nfn compute() -> I32 {\n 7i32\n}\n#marker\nfn annotated() -> Unit {\n}\ntransform fn marker() -> Unit {\n}\n"))
+  let index = ct_source_index(machine.plan)
+  assert(index.transforms.contains_key("app::marker") && !index.transforms.contains_key("app::compute"), "only transform markers")
+  assert(ct_call(machine, "app::compute", []) is Number(42u64, "I32"), machine.error)
+  let _ = ct_call(machine, "app::annotated", [])
+  assert(machine.error.contains("annotated"), machine.error)
+}
+
+test "long fresh suffix fails within the work bound" {
+  let source = StringBuilder::new()
+  source.append("// __dew_transform_12")
+  let _ = while 0u32 {
+    i if i < 65536u32 => {
+      source.append("_")
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  source.append("\nfn compute() -> Unit {\n}\ntransform fn marker() -> Unit {\n}\n")
+  let machine = ct_machine(ct_test_plan(source.finish().as_bytes()))
+  machine.steps = 2u32
+  let _ = ct_fresh_name(machine, 0u32, 12u32)
+  assert(machine.error == "transform work limit exceeded", machine.error)
+  assert(machine.steps == 0u32 && machine.allocated == 32u32, "long collision remains bounded")
+}

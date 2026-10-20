@@ -1073,7 +1073,8 @@ fn self_host_lowering_directize_targets(
   let _ = while index {
     current => if current < expressions.length() {
       match expressions[current].kind {
-        PlannedDirectCall(_, target, _, _) => {
+        PlannedDirectCall(_, target, _, _),
+        PlannedBuiltinCall(_, _, target, _, _) => {
           self_host_lowering_consume_expression_target(expressions, target)
         }
         PlannedConstruct(target, _, _) => {

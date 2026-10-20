@@ -7,7 +7,7 @@ enum Value {
   Vector(UInt64, UInt64)
   TextChunks(Value, Bytes)
   TextReference(Value)
-  ReferenceView(Value, Array[String])
+  ReferenceView(Value, FieldNames)
   Floating(UInt64, String)
   Number(UInt64, String)
   Boolean(Bool)
@@ -65,12 +65,12 @@ struct Machine {
 
 ///|
 fn Machine::charge(self : Machine, amount : Int32) -> Unit raise EvalError {
+  guard self.steps > 0 else { raise Failed("transform work limit exceeded") }
   self.steps -= 1
-  self.allocated += amount
-  guard self.steps >= 0 else { raise Failed("transform work limit exceeded") }
-  guard self.allocated <= 4_194_304 else {
+  guard amount >= 0 && amount <= 4_194_304 - self.allocated else {
     raise Failed("transform allocation limit exceeded")
   }
+  self.allocated += amount
 }
 
 ///|
@@ -117,11 +117,9 @@ fn Machine::module_index(
   self : Machine,
   path : String,
 ) -> Int32 raise EvalError {
-  for i, module_ in self.plan.modules {
-    self.charge(16)
-    if module_.path == path {
-      return i
-    }
+  self.charge(16)
+  if self.plan.source_index().modules.get(path) is Some(index) {
+    return index
   }
   raise Failed("compile-time module source is unavailable: " + path)
 }
@@ -133,51 +131,19 @@ fn Machine::local_member(
   name : String,
   exported : Bool,
 ) -> String? raise EvalError {
-  let mut found = false
-  for file in self.plan.files[mi] {
-    self.charge(0)
-    for declaration in file.declarations {
-      self.charge(16)
-      let unsupported = match declaration {
-        @parser.Let(d) =>
-          Some((d.name, !exported || d.visibility is @parser.Public))
-        @parser.Trait(d) =>
-          Some((d.name, !exported || d.visibility is @parser.Public))
-        @parser.TypeAlias(d) =>
-          Some((d.name, !exported || d.visibility is @parser.Public))
-        @parser.ForeignType(d) =>
-          Some((d.name, !exported || d.visibility is @parser.Public))
-        @parser.ForeignLibrary(d) => Some((d.namespace_alias, !exported))
-        _ => None
-      }
-      if unsupported is Some((n, visible)) && n == name && visible {
-        raise Failed(
-          "unsupported compile-time declaration shadows name: " + name,
-        )
-      }
-      let candidate = match declaration {
-        @parser.Function(d) => Some((d.name, d.visibility))
-        @parser.Struct(d) => Some((d.name, d.visibility))
-        @parser.Enum(d) => Some((d.name, d.visibility))
-        @parser.Builtin(d) => Some((d.name, d.visibility))
-        _ => None
-      }
-      if candidate is Some((n, visibility)) &&
-        n == name &&
-        (!exported || visibility is @parser.Public) {
-        guard !found else {
-          raise Failed(
-            "overloaded compile-time names are not supported: " + name,
-          )
-        }
-        found = true
-      }
-    }
+  self.charge(16)
+  let member = self.plan.source_index().sources[mi].members.get(name)
+  let state = match member {
+    Some(member) => if exported { member.exported } else { member.local }
+    None => Absent
   }
-  if found {
-    Some(self.plan.modules[mi].path + "::" + name)
-  } else {
-    None
+  match state {
+    Absent => None
+    Present => Some(self.plan.modules[mi].path + "::" + name)
+    Overloaded =>
+      raise Failed("overloaded compile-time names are not supported: " + name)
+    Shadowed =>
+      raise Failed("unsupported compile-time declaration shadows name: " + name)
   }
 }
 
@@ -188,25 +154,12 @@ fn Machine::resolve(
   name : String,
   alias : String?,
 ) -> String raise EvalError {
+  self.charge(16)
   if alias is Some(alias) {
-    let mut path : String? = None
-    for file in self.plan.files[mi] {
-      self.charge(0)
-      for declaration in file.declarations {
-        self.charge(16)
-        if declaration is @parser.Import(import_) &&
-          !import_.open_ &&
-          import_.import_alias.unwrap_or(import_.path.last().unwrap()) == alias {
-          let next = import_.path.join(".")
-          if path is Some(prior) && prior != next {
-            raise Failed("ambiguous transform import alias: " + alias)
-          }
-          path = Some(next)
-        }
-      }
-    }
-    guard path is Some(path) else {
-      raise Failed("unknown transform import alias: " + alias)
+    let path = match self.plan.source_index().sources[mi].aliases.get(alias) {
+      Some(Some(path)) => path
+      Some(None) => raise Failed("ambiguous transform import alias: " + alias)
+      None => raise Failed("unknown transform import alias: " + alias)
     }
     let target = self.module_index(path)
     guard self.local_member(target, name, true) is Some(key) else {
@@ -218,29 +171,24 @@ fn Machine::resolve(
     return key
   }
   let mut result : String? = None
-  for file in self.plan.files[mi] {
-    self.charge(0)
-    for declaration in file.declarations {
-      self.charge(16)
-      if declaration is @parser.Import(import_) && import_.open_ {
-        guard !import_.wildcard else {
-          raise Failed(
-            "wildcard imports are not supported by the transform interpreter",
-          )
-        }
-        let target = self.module_index(import_.path.join("."))
-        if self.local_member(target, name, true) is Some(key) {
-          if result is Some(prior) && prior != key {
-            raise Failed("ambiguous compile-time name: " + name)
-          }
-          result = Some(key)
-        }
+  for (path, wildcard) in self.plan.source_index().sources[mi].opens {
+    guard !wildcard else {
+      raise Failed(
+        "wildcard imports are not supported by the transform interpreter",
+      )
+    }
+    let target = self.module_index(path)
+    if self.local_member(target, name, true) is Some(key) {
+      if result is Some(prior) && prior != key {
+        raise Failed("ambiguous compile-time name: " + name)
       }
+      result = Some(key)
     }
   }
   if result is Some(key) {
     return key
   }
+  self.charge(16)
   if self.plan.type_names.get((mi, name)) is Some(key) {
     return key
   }
@@ -291,72 +239,35 @@ fn Machine::call(
   key : String,
   args : Array[Value],
 ) -> Value raise EvalError {
-  self.charge(32 + args.length() * 16)
   if self.functions.get(key) is Some(Source(mi, fi, function, _)) {
     return self.source_call(mi, fi, function, args)
   }
-  for mi, module_ in self.plan.modules {
-    self.charge(0)
-    for fi, file in self.plan.files[mi] {
-      self.charge(0)
-      for declaration in file.declarations {
-        self.charge(16)
-        match declaration {
-          @parser.Function(fn_) if key == module_.path + "::" + fn_.name => {
-            guard fn_.receiver is None else {
-              return eval_fail("method calls are not supported at compile time")
-            }
-            guard !file.annotations.any(fn(annotation) {
-              annotation.target >= fn_.offset.to_int() &&
-              annotation.target < fn_.name_offset.to_int()
-            }) else {
-              return eval_fail(
-                "annotated functions cannot execute at compile time",
-              )
-            }
-            guard args.length() == fn_.parameters.length() else {
-              return eval_fail("compile-time argument count mismatch: " + key)
-            }
-            self.functions[key] = Source(mi, fi, fn_, "")
-            for _ in fn_.parameters {
-              self.charge(16)
-            }
-            let previous_file = self.file_index
-            self.file_index = fi
-            let result = self.source_body(mi, fn_, args) catch {
-              Returned(value) => value
-              Broken(_) | Continued(_) => {
-                self.file_index = previous_file
-                return eval_fail("loop control escaped a compile-time function")
-              }
-              Failed(message) => {
-                self.file_index = previous_file
-                return eval_fail(key + ": " + message)
-              }
-            }
-            self.file_index = previous_file
-            return result
-          }
-          @parser.Enum(enum_) =>
-            for variant in enum_.variants {
-              self.charge(16)
-              if key == module_.path + "::" + enum_.name + "::" + variant.name() {
-                return Variant(key, args)
-              }
-            }
-          @parser.Builtin(builtin) if key == module_.path + "::" + builtin.name =>
-            return eval_fail(
-              "builtin is not supported at compile time: " +
-              text(builtin.builtin_name),
-            )
-          _ => ()
-        }
+  match self.plan.source_index().entries.get(key) {
+    Some(Source(mi, fi, function, _)) => {
+      guard function.receiver is None else {
+        return eval_fail("method calls are not supported at compile time")
       }
+      guard !self.plan.files[mi][fi].has_annotation(function) else {
+        return eval_fail("annotated functions cannot execute at compile time")
+      }
+      guard args.length() == function.parameters.length() else {
+        return eval_fail("compile-time argument count mismatch: " + key)
+      }
+      self.functions[key] = Source(mi, fi, function, "")
+      self.source_call(mi, fi, function, args)
     }
+    Some(Constructor(key)) | Some(UnitConstructor(key)) => Variant(key, args)
+    Some(Intrinsic(builtin, _)) =>
+      eval_fail(
+        "builtin is not supported at compile time: " +
+        text(builtin.builtin_name),
+      )
+    _ =>
+      eval_fail(
+        "function is unavailable at compile time (host calls are forbidden): " +
+        key,
+      )
   }
-  eval_fail(
-    "function is unavailable at compile time (host calls are forbidden): " + key,
-  )
 }
 
 ///|

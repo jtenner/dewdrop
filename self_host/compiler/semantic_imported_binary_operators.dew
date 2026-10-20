@@ -16,59 +16,9 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  // Only scalar primitive operations have a direct Wasm fallback. Reference
-  // carrier equality is not value equality for Bytes, String, or user records.
-  fn binary_has_scalar_fallback(self, left: U32) -> Bool {
-    let type_ = self.solver.representative_type(self.expression_type(left))
-    match self.solver.type_term(type_) {
-      BodyResolvedType(resolved) => match self.resolved.types[resolved] {
-        PrimitiveType(primitive) => match primitive {
-          BoolType => true
-          I8Type => true
-          I16Type => true
-          I32Type => true
-          I64Type => true
-          U8Type => true
-          U16Type => true
-          U32Type => true
-          U64Type => true
-          F32Type => true
-          F64Type => true
-          V128Type => true
-          Swar32Type => true
-          Swar64Type => true
-          I8x4Type => true
-          U8x4Type => true
-          I16x2Type => true
-          U16x2Type => true
-          I8x8Type => true
-          U8x8Type => true
-          I16x4Type => true
-          U16x4Type => true
-          I32x2Type => true
-          U32x2Type => true
-          I8x16Type => true
-          U8x16Type => true
-          I16x8Type => true
-          U16x8Type => true
-          I32x4Type => true
-          U32x4Type => true
-          I64x2Type => true
-          U64x2Type => true
-          F32x4Type => true
-          F64x2Type => true
-          _ => false
-        }
-        _ => false
-      }
-      _ => false
-    }
-  }
-
+  // A visible operator trait owns primitive receivers too. Preserve its selected
+  // implementation and diagnostics; scalar shortcuts require a separate proof.
   fn constrain_imported_binary_operator(self, expression: U32, operator: SelfHostHirBinaryOperator, left: U32, offset: U32) -> Unit {
-    if self.binary_has_scalar_fallback(left) {
-      return
-    }
     // A generic template does not supply a concrete receiver yet. Its existing
     // specialization/evidence path must decide the operator, not this search.
     let receiver = self.solver.representative_type(self.expression_type(left))

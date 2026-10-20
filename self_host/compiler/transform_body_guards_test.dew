@@ -282,3 +282,102 @@ test "signature repair keeps range edges and excludes neighboring repairs" {
   ]) == "bXdY", "range repair boundaries")
   assert(ct_repaired_part(b"abcdef", 3u32, 3u32, []) == "", "empty range")
 }
+
+
+test "transform frame root reports a missing array method import" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "app"
+      files: [{
+        path: "missing-array.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  if ctx.expression_types.length() == 0u32 {\n    return node\n  }\n  node\n}\n#inspect\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "missing array method import was accepted")
+    Err(error) => {
+      assert(error.contains("compile-time helper failed source checking"), error)
+      assert(error.contains("no matching method"), error)
+    }
+  }
+}
+
+test "transform frame root accepts an explicit array method import" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "app"
+      files: [{
+        path: "array-import.dew"
+        source: b"open dew.std.array\nimport dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  if ctx.expression_types.length() == 0u32 {\n    return node\n  }\n  node\n}\n#inspect\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Err(error) => assert(false, error)
+    Ok(expanded) => assert(ct_test_all_source(expanded.modules[0u32]).contains("0i32"), "original target body retained")
+  }
+}
+
+fn ct_test_missing_array_helper_manifest(mode: U32) -> SelfHostProgramManifest {
+  let source = StringBuilder::new()
+  source.append("import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nfn bad_helper(ctx: @transform.TransformContext) -> U32 {\n  ctx.expression_types.length()\n}\nfn choose() -> Bool {\n  false\n}\ntransform fn inspect(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n")
+  if mode == 0u32 {
+    source.append("  let _ = bad_helper(ctx)\n")
+  } else if mode == 2u32 {
+    source.append("  if choose() {\n    let _ = bad_helper(ctx)\n  }\n")
+  }
+  source.append("  node.with_body(@ast.integer(42i32))\n}\n#inspect\npub fn main() -> I32 {\n  0i32\n}\n")
+  SelfHostProgramManifest::{
+    modules: [{
+      path: "app"
+      files: [{
+        path: "bad-helper-import.dew"
+        source: source.finish().as_bytes()
+        test_only: false
+      }]
+    }]
+  }
+}
+
+test "called invalid helper reports source error before specialization" {
+  match ct_expand_checked_with_source_pool(ct_test_missing_array_helper_manifest(0u32), ct_frames_test_source_pool(), true) {
+    Ok(_) => assert(false, "called invalid helper was accepted")
+    Err(error) => {
+      assert(error.contains("compile-time helper failed source checking"), error)
+      assert(error.contains("no matching method"), error)
+    }
+  }
+}
+
+test "unused invalid helper remains deferred during transform execution" {
+  match ct_expand_checked_with_source_pool(ct_test_missing_array_helper_manifest(1u32), ct_frames_test_source_pool(), true) {
+    Err(error) => assert(false, error)
+    Ok(expanded) => {
+      assert(ct_test_all_source(expanded.modules[0u32]).contains("42i32"), "valid transform executed")
+      let collected = self_host_collect_program_manifest(7200u64, self_host_manifest_with_default_preamble(expanded, true))
+      let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+      match self_host_validate_program_inference(lowering) {
+        Some(error) => assert(error.contains("no matching method"), error)
+        None => assert(false, "final checking must reject the unchanged invalid helper")
+      }
+    }
+  }
+}
+
+test "unreached invalid helper call does not fail frame preparation" {
+  match ct_expand_checked_with_source_pool(ct_test_missing_array_helper_manifest(2u32), ct_frames_test_source_pool(), true) {
+    Err(error) => assert(false, error)
+    Ok(expanded) => {
+      assert(ct_test_all_source(expanded.modules[0u32]).contains("42i32"), "false helper call path was skipped")
+      let collected = self_host_collect_program_manifest(7200u64, self_host_manifest_with_default_preamble(expanded, true))
+      let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+      match self_host_validate_program_inference(lowering) {
+        Some(error) => assert(error.contains("no matching method"), error)
+        None => assert(false, "final checking must reject the unchanged invalid helper")
+      }
+    }
+  }
+}
