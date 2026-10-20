@@ -1,0 +1,5 @@
+// Official compiler builds replace this source with a generated build identity.
+// A direct source build without that identity can compile but cannot use a cache.
+fn ct_transform_compiler_identity() -> Bytes {
+  b""
+}

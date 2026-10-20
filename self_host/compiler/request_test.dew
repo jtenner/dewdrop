@@ -160,3 +160,40 @@ test "repeated request preparation requires exact tracked compiler API bytes" {
   }
   assert(ct_prepare_with_trusted_libraries(changed, [0u32]).error.byte_length() != 0u32, "tracked module bytes must still match")
 }
+
+test "transform cache request suffix keeps bytes and rejects output collision" {
+  let encoded = BytesBuilder::new()
+  ct_cache_u32(encoded, 5u32)
+  encoded.append(b"\xffsave")
+  ct_cache_text(encoded, "cache/result.bin")
+  let reader = SelfHostRequestReader::{
+    bytes: encoded.finish()
+    offset: 0u32
+    error: None
+    total_files: 0u32
+  }
+  match self_host_reader_transform_cache(reader, 1u32, true, "out.wasm") {
+    Some(session) => {
+      assert(session.cache.snapshot().equals(b"\xffsave"), "opaque cache bytes")
+      assert(session.report, "report flag")
+    }
+    None => assert(false, "valid cache suffix")
+  }
+  assert(reader.error is None, "valid reader")
+  assert(reader.offset == reader.bytes.byte_length(), "exact end")
+  let collision = SelfHostRequestReader::{
+    bytes: reader.bytes
+    offset: 0u32
+    error: None
+    total_files: 0u32
+  }
+  assert(self_host_reader_transform_cache(collision, 1u32, true, "cache/result.bin") is None, "output collision")
+  assert(collision.error is Some(_), "collision diagnostic")
+}
+
+test "transform cache request paths must be relative files" {
+  for path in ["", ".", "..", "../cache", "/cache", "cache/", "a//b", "a/./b", "a/../b", "a\\b", "C:cache"] {
+    assert(!self_host_cache_output_path_valid(path), path)
+  }
+  assert(self_host_cache_output_path_valid("cache/result.bin"), "valid path")
+}

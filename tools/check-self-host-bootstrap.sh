@@ -42,18 +42,24 @@ if (( binaryen )); then
 fi
 
 mapfile -t compiler_sources < <(
-  find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' | sort
+  find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name 'transform_cache_identity.dew' | sort
 )
 sources=(
   self_host/starshine/ffi.dew
   self_host/starshine/fingerprint.dew
   "${compiler_sources[@]}"
+  .tmp/self-host-bootstrap/transform_cache_identity.dew
 )
 
-rm -rf "$work"
+if [[ -e "$work" ]]; then
+  saved_work=$(mktemp -d "$root/.tmp/self-host-bootstrap.saved.XXXXXX")
+  mv "$work" "$saved_work/run"
+fi
 mkdir -p "$work/a" "$work/b" "$work/c"
 
 self_host_ensure_starshine_ffi
+self_host_measure "transform compiler build identity" python3 \
+  tools/generate_transform_cache_identity.py "$work/transform_cache_identity.dew"
 self_host_measure "MoonBit time provider build" \
   wasm-tools parse "$time_provider_wat" -o "$time_provider"
 

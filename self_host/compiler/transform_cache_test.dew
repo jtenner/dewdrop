@@ -1,0 +1,178 @@
+fn ct_cache_test_manifest() -> SelfHostProgramManifest {
+  SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(42i32))\n}\n#replace\npub fn main() -> I32 {\n 0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+}
+
+test "transform cache can use a new session and preserve reports" {
+  let manifest = ct_cache_test_manifest()
+  let pool = ct_frames_test_source_pool()
+  let cold = CtTransformCache::new(b"")
+  let first_reports = array_new::<CtTransformReport>()
+  let first = match ct_expand_cached(manifest, pool, true, false, 0u32, b"compiler", cold, first_reports) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+      return
+    }
+  }
+  assert(cold.status() == "miss", "cold miss")
+  assert(cold.snapshot().byte_length() == 0u32, "publication must be explicit")
+  cold.accept()
+  assert(cold.snapshot().byte_length() > 76u32, "saved result")
+  let warm = CtTransformCache::new(cold.snapshot())
+  let second_reports = array_new::<CtTransformReport>()
+  let second = match ct_expand_cached(manifest, pool, true, false, 0u32, b"compiler", warm, second_reports) {
+    Ok(value) => value
+    Err(error) => {
+      assert(false, error)
+      return
+    }
+  }
+  assert(warm.status() == "hit", "new session hit")
+  assert(ct_test_all_source(first.modules[0u32]) == ct_test_all_source(second.modules[0u32]), "equal generated source")
+  assert(first_reports.length() == 1u32 && second_reports.length() == 1u32, "report count")
+  assert(first_reports[0u32].work == second_reports[0u32].work && first_reports[0u32].allocation_work == second_reports[0u32].allocation_work, "equal resource work")
+}
+
+test "transform cache key binds compiler inputs and options" {
+  let manifest = ct_cache_test_manifest()
+  let empty = SelfHostProgramManifest::{
+    modules: []
+  }
+  let key = ct_cache_key(manifest, empty, b"compiler", true, false, 0u32)
+  assert(!key.equals(ct_cache_key(manifest, empty, b"other compiler", true, false, 0u32)), "build")
+  assert(!key.equals(ct_cache_key(manifest, empty, b"compiler", false, false, 0u32)), "preamble")
+  assert(!key.equals(ct_cache_key(manifest, empty, b"compiler", true, true, 0u32)), "test mode")
+  assert(!key.equals(ct_cache_key(manifest, empty, b"compiler", true, false, 1u32)), "root")
+  assert(!key.equals(ct_cache_key(manifest, manifest, b"compiler", true, false, 0u32)), "pool")
+  let changed = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: manifest.modules[0u32].files[0u32].source
+        test_only: true
+      }]
+    }]
+  }
+  assert(!key.equals(ct_cache_key(changed, empty, b"compiler", true, false, 0u32)), "test-only file")
+}
+
+test "transform cache codec rejects damage and keeps test-only files" {
+  let manifest = ct_cache_test_manifest()
+  let empty = SelfHostProgramManifest::{
+    modules: []
+  }
+  let key = ct_cache_key(manifest, empty, b"compiler", true, false, 0u32)
+  let marked = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"raw source"
+        test_only: true
+      }]
+    }]
+  }
+  let artifact = match ct_cache_encode(key, marked, []) {
+    Some(bytes) => bytes
+    None => {
+      assert(false, "encoding failed")
+      return
+    }
+  }
+  match ct_cache_decode(artifact, key) {
+    Some(decoded) => assert(decoded.manifest.modules[0u32].files[0u32].test_only, "test-only flag")
+    None => assert(false, "round trip failed")
+  }
+  assert(ct_cache_decode(artifact.view(0u32, artifact.byte_length() - 1u32), key) is None, "truncated")
+  assert(ct_cache_decode(artifact.concat(b"x"), key) is None, "trailing")
+  assert(ct_cache_decode(b"DWTC", key) is None, "short")
+  let damaged = artifact.view(0u32, 40u32).concat(b"X").concat(artifact.view(41u32, artifact.byte_length() - 41u32))
+  assert(ct_cache_decode(damaged, key) is None, "checksum")
+  let other_key = ct_cache_key(marked, empty, b"compiler", true, false, 0u32)
+  assert(ct_cache_decode(artifact, other_key) is None, "wrong key")
+}
+
+test "transform cache rejects excessive counts and duplicate names after checksum" {
+  let manifest = ct_cache_test_manifest()
+  let key = ct_cache_key(manifest, SelfHostProgramManifest::{
+    modules: []
+  }, b"compiler", true, false, 0u32)
+  let payload = BytesBuilder::new()
+  ct_cache_u32(payload, 4294967295u32)
+  let bytes = payload.finish()
+  let out = BytesBuilder::new()
+  out.append(b"DWTC")
+  ct_cache_u32(out, 1u32)
+  out.append(key)
+  ct_cache_digest(out, blake3(bytes))
+  ct_cache_u32(out, bytes.byte_length())
+  out.append(bytes)
+  assert(ct_cache_decode(out.finish(), key) is None, "excessive count with valid checksum")
+  let duplicate_modules = SelfHostProgramManifest::{
+    modules: [manifest.modules[0u32], manifest.modules[0u32]]
+  }
+  match ct_cache_encode(key, duplicate_modules, []) {
+    Some(artifact) => assert(ct_cache_decode(artifact, key) is None, "duplicate module")
+    None => assert(false, "small duplicate fixture must encode")
+  }
+  let duplicate_files = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [manifest.modules[0u32].files[0u32], manifest.modules[0u32].files[0u32]]
+    }]
+  }
+  match ct_cache_encode(key, duplicate_files, []) {
+    Some(artifact) => assert(ct_cache_decode(artifact, key) is None, "duplicate file")
+    None => assert(false, "small duplicate fixture must encode")
+  }
+}
+
+test "transform cache finds syntax only in imported source" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [SelfHostManifestModule::{
+      path: "app"
+      files: [SelfHostManifestFile::{
+        path: "main.dew"
+        source: b"import example.tools as @tools\npub fn main() -> I32 {\n @tools.answer()\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  let pool = ct_frames_test_source_pool()
+  pool.modules.push(SelfHostManifestModule::{
+    path: "example.tools"
+    files: [SelfHostManifestFile::{
+      path: "tools.dew"
+      source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntransform fn replace(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(42i32))\n}\n#replace\npub fn answer() -> I32 {\n 0i32\n}\n"
+      test_only: false
+    }]
+  })
+  assert(!ct_cache_has_transform(manifest), "root has no transform syntax")
+  let cold = CtTransformCache::new(b"")
+  match ct_expand_cached(manifest, pool, true, false, 0u32, b"compiler", cold, []) {
+    Err(error) => assert(false, error)
+    Ok(_) => cold.accept()
+  }
+  assert(cold.status() == "miss", "cold imported source")
+  let warm = CtTransformCache::new(cold.snapshot())
+  let reports = array_new::<CtTransformReport>()
+  match ct_expand_cached(manifest, pool, true, false, 0u32, b"compiler", warm, reports) {
+    Err(error) => assert(false, error)
+    Ok(expanded) => {
+      assert(warm.status() == "hit", "imported source hit")
+      assert(reports.length() == 1u32, "imported report")
+      assert(reports[0u32].module_name == "example.tools", "report module")
+      assert(expanded.modules.length() > 1u32, "imported module retained")
+    }
+  }
+}

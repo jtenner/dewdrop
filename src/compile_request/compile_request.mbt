@@ -91,6 +91,7 @@ pub(all) enum CompilerDiagnosticsMode {
 ///|
 pub(all) enum CompilerCachePolicy {
   CompilerCachesDisabled
+  CompilerTransformCacheFile(Bytes, String)
 } derive(Eq, Debug)
 
 ///|
@@ -360,6 +361,14 @@ fn compiler_request_logical_path_valid(value : String) -> Bool {
 }
 
 ///|
+fn compiler_request_cache_path_valid(value : String) -> Bool {
+  compiler_request_logical_path_valid(value) &&
+  value != "." &&
+  !value.has_suffix("/") &&
+  !value.contains(":")
+}
+
+///|
 fn compiler_request_fingerprint_valid(value : String) -> Bool {
   if @utf8.encode(value).length() != 64 {
     return false
@@ -442,10 +451,18 @@ fn compiler_request_encoded_size(request : CompilerRequest) -> Int32 {
       8 + @utf8.encode(provider.name).length() + provider.wasm.length(),
     )
   }
-  compiler_request_bounded_size_add(
+  total = compiler_request_bounded_size_add(
     total,
     request.compiler_fingerprint.length(),
   )
+  match request.config.cache_policy {
+    CompilerCachesDisabled => total
+    CompilerTransformCacheFile(prior, path) =>
+      compiler_request_bounded_size_add(
+        total,
+        8 + prior.length() + @utf8.encode(path).length(),
+      )
+  }
 }
 
 ///|
@@ -659,6 +676,50 @@ pub fn CompilerRequest::validate(
   }
   match self.config.cache_policy {
     CompilerCachesDisabled => ()
+    CompilerTransformCacheFile(prior, path) => {
+      if prior.length() > 16777216 {
+        return Err("compile request transform cache exceeds its byte bound")
+      }
+      match
+        compiler_request_string_size(
+          path,
+          max_path_bytes(),
+          "transform cache output path",
+          false,
+        ) {
+        Err(error) => return Err(error)
+        Ok(_) => ()
+      }
+      if !compiler_request_cache_path_valid(path) {
+        return Err(
+          "compile request transform cache output path must be a relative file path",
+        )
+      }
+      match self.response {
+        CompilerOutputFile(output) => {
+          if !compiler_request_cache_path_valid(output) {
+            return Err(
+              "a cached compile request requires a relative output file path",
+            )
+          }
+          if output == path {
+            return Err(
+              "compile request transform cache output must differ from module output",
+            )
+          }
+        }
+        CompilerStatusOnly => ()
+      }
+      match
+        compiler_request_add_payload(
+          total_payload,
+          prior.length(),
+          "transform cache",
+        ) {
+        Err(error) => return Err(error)
+        Ok(_) => ()
+      }
+    }
   }
   if compiler_request_encoded_size(self) > max_request_bytes() {
     Err("compile request exceeds total request byte bound")
@@ -768,6 +829,7 @@ pub fn CompilerRequest::encode(self : CompilerRequest) -> Result[Bytes, String] 
     output,
     match self.config.cache_policy {
       CompilerCachesDisabled => 0U
+      CompilerTransformCacheFile(_, _) => 1U
     },
   )
   compiler_request_write_u32(
@@ -792,6 +854,13 @@ pub fn CompilerRequest::encode(self : CompilerRequest) -> Result[Bytes, String] 
     for file in module_.files {
       compiler_request_write_string(output, file.logical_path)
       compiler_request_write_bytes(output, file.source)
+    }
+  }
+  match self.config.cache_policy {
+    CompilerCachesDisabled => ()
+    CompilerTransformCacheFile(prior, path) => {
+      compiler_request_write_bytes(output, prior)
+      compiler_request_write_string(output, path)
     }
   }
   let bytes = output.to_bytes()
@@ -874,9 +943,7 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
   }
   let test_mode = reader.read_bool("test mode")
   let default_preamble = reader.read_bool("default preamble")
-  let cache_policy = match reader.read_tag("cache policy", 0) {
-    _ => CompilerCachesDisabled
-  }
+  let cache_tag = reader.read_tag("cache policy", 1)
   let cache_report = reader.read_bool("cache report")
   let compiler_fingerprint = reader.read_bytes(
     "compiler fingerprint",
@@ -895,6 +962,16 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
     modules
   } else {
     []
+  }
+  let cache_policy = if cache_tag == 1 {
+    let prior = reader.read_bytes("transform cache", 16777216)
+    let path = reader.read_string(
+      "transform cache output path",
+      max_path_bytes(),
+    )
+    CompilerTransformCacheFile(prior, path)
+  } else {
+    CompilerCachesDisabled
   }
   if reader.offset != bytes.length() {
     reader.fail("trailing bytes in compile request")

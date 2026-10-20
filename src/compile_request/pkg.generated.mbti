@@ -39,6 +39,7 @@ pub fn max_total_files() -> Int
 // Types and methods
 pub(all) enum CompilerCachePolicy {
   CompilerCachesDisabled
+  CompilerTransformCacheFile(Bytes, String)
 } derive(Eq, @debug.Debug)
 
 pub(all) enum CompilerDiagnosticsMode {

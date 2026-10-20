@@ -635,3 +635,31 @@ fields, raw arrays, default values, and array literals are also supported.
 
 Try `examples/transforms/memory.dew`, `memory_state.dew`,
 `packed_integers.dew`, and `packed_storage.dew`. Each main returns `42`.
+
+The compiler can save expanded source and transform resource reports. Every cache
+hit still passes the normal compiler checks. The saved artifact has a 16 MiB size
+limit. This is not a heap limit. Keys include the compiler build identity, source
+and source-pool dependencies, standard and API sources, and compiler options.
+
+The Native build driver uses the compilation cache pack. Use `--cache-report` to
+see `transform result cache: hit` or `miss`. Set `DEW_TRANSFORM_CACHE=0` to turn it
+off. Automatic use requires a compiler build identity.
+
+The Dew compiler accepts request cache mode 1. The request tool takes
+`--transform-cache INPUT|- OUTPUT`; use `-` for a cold build. It writes a new cache
+file only after the normal checks and output build succeed. It uses the current
+file API in the same compiler instance. Normal compiler builds generate its
+build identity. A direct build with the empty identity stub rejects cache mode 1.
+See the [request format](compile-request.md).
+
+To run cold, hit, corrupt-data, dependency-change, and bad-source checks:
+
+```sh
+tools/test-transform-cache.sh --native
+tools/test-transform-cache.sh .tmp/self-host-bootstrap/b/compiler.wasm
+```
+
+The second command uses Node. On pinned Wago, use the Native-built compiler at
+`.tmp/self-host-bootstrap/a/compiler.wasm`. Its cold and cache-hit requests pass.
+The self-built B has a pre-existing cast or invariant fault on that Wago pin,
+including with caching off. See [cache evidence and limits](research/transform-result-cache-2026-10-20.md).

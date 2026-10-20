@@ -176,7 +176,7 @@ Unchecked items need further implementation. Checked items have code and tests.
 - [x] Expanded-source JSON for editor views.
 - [x] Per-transform work and allocation reports.
 - [x] Identical resource accounting across compiler implementations.
-- [ ] Persistent transform-result cache with dependency tracking.
+- [x] Persistent transform-result cache with dependency tracking.
 - [x] Compact bytecode backend.
 - [ ] Parallel independent transform execution.
 - [x] Pinned native Wago request check and CI job (host speed issue remains).

@@ -17,6 +17,9 @@ pub let cache_pack_layout_kind = 0x5459414cU
 pub let cache_pack_fragment_kind = 0x30475246U
 
 ///|
+pub let cache_pack_transform_kind = 0x534e5254U
+
+///|
 pub struct CompilationCachePack {
   enabled : Bool
   path : String
@@ -140,6 +143,10 @@ pub fn open_compilation_cache_pack(
     @sys.get_env_var("DEW_PLAN_CACHE").unwrap_or("0") == "1" ||
     (
       @sys.get_env_var("DEW_PROGRAM_CACHE").unwrap_or("1") != "0" &&
+      @sys.get_env_var("DEW_COMPILER_FINGERPRINT").unwrap_or("") != ""
+    ) ||
+    (
+      @sys.get_env_var("DEW_TRANSFORM_CACHE").unwrap_or("1") != "0" &&
       @sys.get_env_var("DEW_COMPILER_FINGERPRINT").unwrap_or("") != ""
     )
   let enabled = cache_platform_supported() &&

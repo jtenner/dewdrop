@@ -2,6 +2,7 @@ open dew.std.bytes
 open dew.std.option
 open dew.std.result
 open dew.std.string
+open dew.std.path
 
 fn self_host_request_string_equals(
   left: String,
@@ -24,6 +25,12 @@ struct SelfHostRequestReader {
   mut total_files: U32
 }
 
+pub struct SelfHostTransformCacheRequest {
+  output_path: String
+  cache: CtTransformCache
+  report: Bool
+}
+
 pub struct SelfHostCompileRequest {
   output_path: String
   root_module: String
@@ -33,6 +40,7 @@ pub struct SelfHostCompileRequest {
   compiler_fingerprint: Bytes
   test_mode: Bool
   default_preamble: Bool
+  transform_cache: Option<SelfHostTransformCacheRequest>
 }
 
 fn self_host_request_manifest_module_count(
@@ -336,8 +344,8 @@ pub fn decode_self_host_compile_request(
   self_host_reader_expect(reader, 0u32, "diagnostics mode")
   let test_mode = self_host_reader_bool(reader, "test mode")
   let default_preamble = self_host_reader_bool(reader, "default preamble")
-  self_host_reader_expect(reader, 0u32, "cache policy")
-  let _cache_report = self_host_reader_bool(reader, "cache report")
+  let cache_mode = self_host_reader_count(reader, 1u32, "cache policy")
+  let cache_report = self_host_reader_bool(reader, "cache report")
   let compiler_fingerprint = self_host_reader_bytes(
     reader,
     4096u32,
@@ -364,6 +372,7 @@ pub fn decode_self_host_compile_request(
       pool_modules.push(module_)
     }
   }
+  let transform_cache = self_host_reader_transform_cache(reader, cache_mode, cache_report, output_path)
   if compiler_fingerprint.byte_length() == 0u32 {
     self_host_reader_fail(reader, "compiler fingerprint must not be empty")
   } else if reader.offset != reader.bytes.byte_length() {
@@ -388,6 +397,7 @@ pub fn decode_self_host_compile_request(
           compiler_fingerprint: compiler_fingerprint
           test_mode: test_mode
           default_preamble: default_preamble
+          transform_cache: transform_cache
         }
         match request.root_module_index() {
           None => Err("root module is missing from manifest")
@@ -405,6 +415,35 @@ pub fn decode_self_host_compile_request(
       }
     }
   }
+}
+
+// Keep the new cache mode strict without changing legacy request paths.
+fn self_host_cache_output_path_valid(path: String) -> Bool {
+  if path.contains(":") {
+    return false
+  }
+  relative_path(path) is Ok(_)
+}
+
+fn self_host_reader_transform_cache(reader: SelfHostRequestReader, mode: U32, report: Bool, module_output: String) -> Option<SelfHostTransformCacheRequest> {
+  if mode != 1u32 || reader.error is Some(_) {
+    return None
+  }
+  let prior = self_host_reader_bytes(reader, 16777216u32, "transform cache")
+  let path = self_host_reader_string(reader, 4096u32, "transform cache output path")
+  if !self_host_cache_output_path_valid(path) || !self_host_cache_output_path_valid(module_output) {
+    self_host_reader_fail(reader, "cached compile request requires relative file output paths")
+  } else if path == module_output {
+    self_host_reader_fail(reader, "transform cache output must differ from module output")
+  }
+  if reader.error is Some(_) {
+    return None
+  }
+  Some(SelfHostTransformCacheRequest::{
+    output_path: path
+    cache: CtTransformCache::new(prior)
+    report: report
+  })
 }
 
 // Only selected modules are parsed. The pool is immutable source data.

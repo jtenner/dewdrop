@@ -65,7 +65,7 @@ optimization mode              u32 (0 optimized)
 diagnostics mode               u32 (0 deterministic text)
 test mode                      bool-as-u32
 use default preamble           bool-as-u32
-cache policy                   u32 (0 all persistent caches disabled)
+cache policy                   u32 (0 disabled, 1 transform result file)
 report cache status            bool-as-u32
 compiler fingerprint           bytes
 optional source pool           array {
@@ -75,14 +75,21 @@ optional source pool           array {
     exact source               bytes
   }
 }
+cache-mode-1 suffix only        {
+  prior transform artifact     bytes (empty means cold build)
+  transform cache output path  string
+}
 ```
 
 Check requests must use Wasm output kind and status-only response mode. Build
 requests must use output-file response mode.
 
 New writers always emit the source-pool count, including zero. A reader also
-accepts EOF directly after the compiler fingerprint as an empty pool. Other
-trailing bytes are invalid.
+accepts EOF directly after the compiler fingerprint as an empty pool for mode 0.
+Mode 1 requires the source-pool count and its cache suffix. Other trailing bytes
+are invalid. The prior artifact is at most 16 MiB. Cache and module output paths
+must be distinct relative file paths in mode 1. Empty segments, dot segments,
+parent segments, backslashes, NUL, and colons are rejected.
 
 The embedded standard-library identity is BLAKE3 over a domain separator, the
 ordered standard source path registry, and each exact source payload. A mismatch
@@ -90,9 +97,22 @@ fails before compiler phases begin.
 
 `CompilerSessionConfig` owns optimization, diagnostics, test planning, default
 preamble selection, cache policy, and cache reporting. The source-Bytes request
-path does not mutate environment variables. The first fixed point supports only
-optimized compilation, deterministic text diagnostics, and disabled persistent
-caches.
+path does not mutate environment variables. It supports optimized compilation,
+deterministic text diagnostics, disabled caches, and a transform-result file.
+Mode 1 saves expanded source and resource reports, then runs normal compiler
+checks on every hit. A malformed artifact is a miss. A new artifact is written
+only after checks and requested output emission succeed. A cache write failure is
+reported. An oversized result is compiled without publishing an artifact.
+
+The Dew compiler needs a generated compiler build identity for mode 1. The normal
+`tools/check-self-host-bootstrap.sh` build provides it. A direct build with the
+empty identity stub rejects mode 1. The Native driver requires the actual build
+identity in `DEW_COMPILER_FINGERPRINT`. The request's ABI/provider fingerprint is
+not a substitute for this build identity.
+
+The request tool accepts `--transform-cache INPUT|- OUTPUT` and `--cache-report`.
+Use `-` for an empty input. These options use the existing file API and the same
+compiler instance. Mode 0 remains compatible with old requests.
 
 ## Bounds
 

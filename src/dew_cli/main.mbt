@@ -233,6 +233,27 @@ fn run_source_compile_request(
       request.config.default_preamble,
     )
   }
+  let transform_cache = match request.config.cache_policy {
+    @compile_request.CompilerCachesDisabled => None
+    @compile_request.CompilerTransformCacheFile(prior, _) => {
+      let identity = @sys.get_env_var("DEW_COMPILER_FINGERPRINT").unwrap_or("")
+      if identity == "" {
+        cli_fail(
+          "transform cache is unavailable: compiler build has no cache identity",
+        )
+      }
+      Some(
+        @compiler_driver.CompilerTransformCache::new(
+          identity,
+          prior_bytes=prior,
+        ),
+      )
+    }
+  }
+  let options = match transform_cache {
+    Some(cache) => options.with_transform_cache(cache)
+    None => options
+  }
   let compiled = match
     @compiler_driver.compile_manifest_uncached(
       manifest,
@@ -281,6 +302,7 @@ fn run_source_compile_request(
     println("body inference cache: disabled")
     println("layout and fragment cache: disabled")
     println("compilation cache pack: disabled")
+    println("transform result cache: \{compiled.transform_cache_status}")
   }
   match request.command {
     @compile_request.CompilerCheck =>
@@ -323,6 +345,19 @@ fn run_source_compile_request(
           abort("validated build request has no output file")
       }
     }
+  }
+  match (transform_cache, request.config.cache_policy) {
+    (Some(cache), @compile_request.CompilerTransformCacheFile(prior, path)) => {
+      let bytes = cache.snapshot()
+      if cache.status() == "hit" ||
+        (
+          cache.status() == "miss" &&
+          !@compile_request.bytes_equal(bytes, prior)
+        ) {
+        write_cli_output(path, bytes)
+      }
+    }
+    _ => ()
   }
   ignore(request.compiler_fingerprint)
 }
@@ -541,7 +576,10 @@ fn main {
         abort("unreachable")
       }
     }
-    write_cli_output(output, render_expanded_sources(expanded, manifest, options.transform_reports))
+    write_cli_output(
+      output,
+      render_expanded_sources(expanded, manifest, options.transform_reports),
+    )
     return
   }
   let cache_pack = match
@@ -669,6 +707,7 @@ fn main {
     @sys.exit(1)
   }
   if cache_report {
+    println("transform result cache: \{compiled.transform_cache_status}")
     println("parse event cache: \{parse_event_cache_status}")
     println("standard interface cache: \{cache_status}")
     println("body inference cache: \{body_cache_status}")

@@ -4,7 +4,10 @@ import {
   "jtenner/dewdrop/transforms",
   "jtenner/dewdrop/backend",
   "jtenner/dewdrop/core_linker",
+  "jtenner/dewdrop/cache_binary",
   "jtenner/dewdrop/standard_loader",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/buffer",
+  "moonbitlang/x/sys",
 }

@@ -239,7 +239,21 @@ fn self_host_compile_request_semantic_plan(
   if 31022548779538u64 == 31022548779539u64 {
     return Err("compile request U64 direct inequality contract failed")
   }
-  let transformed_manifest = match ct_expand_checked_with_source_pool(request.manifest, request.source_pool, request.default_preamble) {
+  let expanded = match request.transform_cache {
+    None => ct_expand_checked_with_source_pool(request.manifest, request.source_pool, request.default_preamble)
+    Some(session) => {
+      let identity = ct_transform_compiler_identity()
+      if identity.byte_length() == 0u32 {
+        return Err("transform cache is unavailable: compiler build has no cache identity")
+      }
+      let root = match request.root_module_index() {
+        Some(index) => index
+        None => return Err("compile request root module is missing")
+      }
+      ct_expand_cached(request.manifest, request.source_pool, request.default_preamble, request.test_mode, root, identity, session.cache, [])
+    }
+  }
+  let transformed_manifest = match expanded {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -388,6 +402,37 @@ fn self_host_compile_request_semantic_plan(
   }
 }
 
+// Called only after all normal checks and the output module write succeed.
+fn self_host_write_transform_cache(process: FacetProcess, filesystem: FacetFileSystem, request: SelfHostCompileRequest) -> U32 {
+  match request.transform_cache {
+    None => 0u32
+    Some(session) => {
+      let bytes = match session.cache.pending {
+        Some(pending) => pending
+        None => if session.cache.status() == "hit" {
+          session.cache.snapshot()
+        } else {
+          b""
+        }
+      }
+      if bytes.byte_length() > 0u32 {
+        let path = match relative_path(session.output_path) {
+          Ok(value) => value
+          Err(_) => return self_host_error(process, "transform cache output path is not relative")
+        }
+        match fs_write_file(filesystem, path, bytes) {
+          Err(_) => return self_host_error(process, "cannot write transform cache output")
+          Ok(_) => session.cache.accept()
+        }
+      }
+      if session.report {
+        let _ = process_write_stderr(process, "transform result cache: ".concat(session.cache.status()).concat("\n").as_bytes())
+      }
+      0u32
+    }
+  }
+}
+
 fn self_host_fingerprint_matches_at(
   expected: FixedArray<U8>,
   actual: Bytes,
@@ -510,7 +555,7 @@ pub fn main() -> U32 {
                                   process,
                                   "cannot write output module",
                                 )
-                                Ok(_) => 0u32
+                                Ok(_) => self_host_write_transform_cache(process, filesystem, request)
                               }
                             }
                           }

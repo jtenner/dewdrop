@@ -273,3 +273,46 @@ test "request module reader stops before adding truncated file records" {
   assert_eq(reader.error, Some("truncated compile request"))
   assert_eq(reader.offset, 12)
 }
+
+///|
+test "transform cache request suffix round trips opaque bytes" {
+  let request = compile_request_test_request()
+  let cached = {
+    ..request,
+    config: {
+      ..request.config,
+      cache_policy: CompilerTransformCacheFile(
+        b"DWTC\xffsaved", "cache/result.bin",
+      ),
+    },
+  }
+  let bytes = cached.encode().unwrap()
+  assert_eq(decode(bytes).unwrap(), cached)
+  assert_eq(decode(bytes).unwrap().encode().unwrap(), bytes)
+  assert_eq(bytes.length(), request.encode().unwrap().length() + 8 + 10 + 16)
+  assert_true(decode(bytes + b"extra") is Err(_))
+  let short = Buffer()
+  for i in 0..<(bytes.length() - 1) {
+    short.write_byte(bytes[i])
+  }
+  assert_true(decode(short.to_bytes()) is Err(_))
+}
+
+///|
+test "transform cache request rejects unsafe output paths and collisions" {
+  let request = compile_request_test_request()
+  for
+    path in [
+      "", ".", "..", "../cache", "/cache", "cache/", "a//b", "a/./b", "a/../b", "a\\b",
+      "C:cache", "out/compiler.wasm",
+    ] {
+    let cached = {
+      ..request,
+      config: {
+        ..request.config,
+        cache_policy: CompilerTransformCacheFile(b"", path),
+      },
+    }
+    assert_true(cached.validate() is Err(_), msg=path)
+  }
+}

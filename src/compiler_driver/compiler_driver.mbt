@@ -33,6 +33,7 @@ pub struct CompilerPipelineOptions {
   default_preamble : Bool
   planning_mode : CompilerPlanningMode
   transform_reports : Array[@transforms.TransformReport]
+  transform_cache : CompilerTransformCache?
 } derive(Eq, Debug)
 
 ///|
@@ -47,6 +48,7 @@ pub fn CompilerPipelineOptions::production(
     default_preamble,
     planning_mode: CompilerProductionPlanning,
     transform_reports: [],
+    transform_cache: None,
   }
 }
 
@@ -62,6 +64,7 @@ pub fn CompilerPipelineOptions::test_mode(
     default_preamble,
     planning_mode: CompilerTestPlanning,
     transform_reports: [],
+    transform_cache: None,
   }
 }
 
@@ -76,6 +79,7 @@ pub struct CompilerCompilation {
   planning_cache_status : @standard_loader.PlanningCacheStatus
   parse_event_cache_status : @standard_loader.ParseEventCacheStatus
   cache_pack_status : String
+  transform_cache_status : String
 }
 
 ///|
@@ -113,7 +117,7 @@ pub fn compile_manifest_uncached(
   source_pool~ : @semantic.ProgramManifest = @semantic.ProgramManifest::new([]),
 ) -> Result[CompilerCompilation, CompilerCompilationError] {
   let manifest = match
-    compiler_expand_transform_import_closure(
+    compiler_expand_transform_import_closure_cached(
       manifest, source_pool, standard_sources, options,
     ) {
     Ok(value) => value
@@ -142,6 +146,10 @@ pub fn compile_manifest_uncached(
     options.root_module_index,
     planning_options,
   )
+  compiler_validate_pending_transform_cache(
+    options, program, analyzed, lowering, link,
+  )
+  compiler_accept_transform_cache(options)
   Ok({
     program,
     analyzed,
@@ -152,6 +160,7 @@ pub fn compile_manifest_uncached(
     planning_cache_status: @standard_loader.PlanningCacheStatus::disabled(),
     parse_event_cache_status: @standard_loader.ParseEventCacheWasDisabled(0),
     cache_pack_status: "disabled",
+    transform_cache_status: compiler_transform_cache_status(options),
   })
 }
 
@@ -165,8 +174,20 @@ pub fn compile_manifest(
   ),
   pack~ : @standard_loader.CompilationCachePack? = None,
 ) -> Result[CompilerCompilation, CompilerCompilationError] {
+  let (options, prepared_key) = compiler_open_transform_cache(
+    manifest,
+    loaded.sources,
+    options,
+    pack,
+  )
   let manifest = match
-    compiler_expand_transforms(manifest, loaded.sources, options) {
+    compiler_expand_transform_import_closure_cached(
+      manifest,
+      @semantic.ProgramManifest::new([]),
+      loaded.sources,
+      options,
+      prepared_key~,
+    ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -227,6 +248,14 @@ pub fn compile_manifest(
     Err(error) => return Err(CompilerInfrastructureError(error))
   }
   let link = linked.link
+  compiler_validate_pending_transform_cache(
+    options, program, analyzed, lowering, link,
+  )
+  match compiler_store_transform_cache(options, pack) {
+    Ok(_) => ()
+    Err(error) => return Err(CompilerInfrastructureError(error))
+  }
+  compiler_accept_transform_cache(options)
   match pack {
     Some(session) =>
       match session.commit() {
@@ -251,6 +280,7 @@ pub fn compile_manifest(
       Some(session) => session.status()
       None => "disabled"
     },
+    transform_cache_status: compiler_transform_cache_status(options),
   })
 }
 

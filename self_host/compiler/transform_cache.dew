@@ -1,0 +1,410 @@
+open dew.std.blake3
+open dew.std.bytes_builder
+open dew.std.fixed_array
+open dew.std.map
+
+// Saved source only. Checked plans and interpreter cells belong to one compile.
+pub struct CtTransformCache {
+  mut saved: Bytes
+  mut pending: Option<Bytes>
+  mut state: String
+}
+
+impl CtTransformCache {
+  fn new(prior: Bytes) -> CtTransformCache {
+    CtTransformCache::{
+      saved: prior
+      pending: None
+      state: "unused"
+    }
+  }
+
+  fn snapshot(self) -> Bytes {
+    self.saved
+  }
+
+  fn status(self) -> String {
+    self.state
+  }
+
+  // The caller must complete normal source and link checks before publication.
+  fn accept(self) -> Unit {
+    if self.pending is Some(bytes) {
+      self.saved = bytes
+      self.pending = None
+    }
+  }
+}
+
+struct CtCacheReader {
+  bytes: Bytes
+  mut offset: U32
+  mut failed: Bool
+}
+
+struct CtCacheDecoded {
+  manifest: SelfHostProgramManifest
+  reports: Array<CtTransformReport>
+}
+
+fn ct_cache_u32(out: BytesBuilder, value: U32) -> Unit {
+  out.append_byte(self_host_u32_to_u8(value & 255u32))
+  out.append_byte(self_host_u32_to_u8((value >> 8u32) & 255u32))
+  out.append_byte(self_host_u32_to_u8((value >> 16u32) & 255u32))
+  out.append_byte(self_host_u32_to_u8((value >> 24u32) & 255u32))
+}
+
+fn ct_cache_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn ct_cache_size_u32(value: U64) -> U32 {
+  value.into()
+}
+
+fn ct_cache_text(out: BytesBuilder, text: String) -> Unit {
+  ct_cache_u32(out, text.byte_length())
+  out.append(text.as_bytes())
+}
+
+fn ct_cache_digest(out: BytesBuilder, digest: FixedArray<U8>) -> Unit {
+  while 0u32 {
+    index if index < digest.length() => {
+      out.append_byte(digest.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break self_host_unit()
+  }
+}
+
+fn ct_cache_graph(manifest: SelfHostProgramManifest) -> FixedArray<U8> {
+  let graph = BytesBuilder::new()
+  graph.append(b"DEW_TRANSFORM_GRAPH_V1\x00")
+  ct_cache_u32(graph, manifest.modules.length())
+  for module_ in manifest.modules {
+    let node = BytesBuilder::new()
+    ct_cache_text(node, module_.path)
+    ct_cache_u32(node, module_.files.length())
+    for file in module_.files {
+      let leaf = BytesBuilder::new()
+      leaf.append(b"DEW_TRANSFORM_DEW_FILE_V1\x00")
+      ct_cache_text(leaf, file.path)
+      ct_cache_u32(leaf, file.source.byte_length())
+      ct_cache_u32(leaf, if file.test_only {
+        1u32
+      } else {
+        0u32
+      })
+      ct_cache_digest(leaf, blake3(file.source))
+      ct_cache_digest(node, blake3(leaf.finish()))
+    }
+    ct_cache_digest(graph, blake3(node.finish()))
+  }
+  blake3(graph.finish())
+}
+
+fn ct_cache_key(manifest: SelfHostProgramManifest, pool: SelfHostProgramManifest, identity: Bytes, preamble: Bool, test_mode: Bool, root: U32) -> Bytes {
+  let key = BytesBuilder::new()
+  key.append(b"DEW_TRANSFORM_DEW_RESULT_V1\x00")
+  ct_cache_u32(key, identity.byte_length())
+  key.append(identity)
+  ct_cache_u32(key, 7200u32)
+  ct_cache_u32(key, root)
+  ct_cache_u32(key, if preamble {
+    1u32
+  } else {
+    0u32
+  })
+  ct_cache_u32(key, if test_mode {
+    1u32
+  } else {
+    0u32
+  })
+  ct_cache_digest(key, ct_cache_graph(manifest))
+  ct_cache_digest(key, ct_cache_graph(pool))
+  ct_cache_digest(key, blake3(ct_ast_source()))
+  ct_cache_digest(key, blake3(ct_transform_source()))
+  let out = BytesBuilder::with_capacity(32u32)
+  ct_cache_digest(out, blake3(key.finish()))
+  out.finish()
+}
+
+fn ct_cache_manifest_bounded(manifest: SelfHostProgramManifest) -> Bool {
+  if manifest.modules.length() > 1024u32 {
+    return false
+  }
+  let mut files = 0u32
+  for module_ in manifest.modules {
+    if module_.path.byte_length() > 255u32 || module_.files.length() > 4096u32 {
+      return false
+    }
+    files = files + module_.files.length()
+    if files > 65536u32 {
+      return false
+    }
+    for file in module_.files {
+      if file.path.byte_length() > 4096u32 || file.source.byte_length() > 16777216u32 {
+        return false
+      }
+    }
+  }
+  true
+}
+
+fn ct_cache_has_transform(manifest: SelfHostProgramManifest) -> Bool {
+  for module_ in manifest.modules {
+    for file in module_.files {
+      if ct_has_syntax(file.source) {
+        return true
+      }
+    }
+  }
+  false
+}
+
+fn ct_cache_encode(key: Bytes, manifest: SelfHostProgramManifest, reports: Array<CtTransformReport>) -> Option<Bytes> {
+  if key.byte_length() != 32u32 || !ct_cache_manifest_bounded(manifest) || manifest.modules.length() == 0u32 || reports.length() > 65536u32 {
+    return None
+  }
+  let mut size = 8u64
+  for module_ in manifest.modules {
+    if module_.path.byte_length() == 0u32 || module_.files.length() == 0u32 {
+      return None
+    }
+    size = size + 8u64 + ct_cache_u64(module_.path.byte_length())
+    for file in module_.files {
+      if file.path.byte_length() == 0u32 {
+        return None
+      }
+      size = size + 12u64 + ct_cache_u64(file.path.byte_length()) + ct_cache_u64(file.source.byte_length())
+    }
+  }
+  for report in reports {
+    for text in [report.module_name, report.file_name, report.function_name, report.transform_name] {
+      if text.byte_length() > 4096u32 {
+        return None
+      }
+      size = size + 4u64 + ct_cache_u64(text.byte_length())
+    }
+    size = size + 12u64
+  }
+  if size + 76u64 > 16777216u64 {
+    return None
+  }
+  let payload = BytesBuilder::with_capacity(ct_cache_size_u32(size))
+  ct_cache_u32(payload, manifest.modules.length())
+  for module_ in manifest.modules {
+    ct_cache_text(payload, module_.path)
+    ct_cache_u32(payload, module_.files.length())
+    for file in module_.files {
+      ct_cache_text(payload, file.path)
+      ct_cache_u32(payload, file.source.byte_length())
+      payload.append(file.source)
+      ct_cache_u32(payload, if file.test_only {
+        1u32
+      } else {
+        0u32
+      })
+    }
+  }
+  ct_cache_u32(payload, reports.length())
+  for report in reports {
+    ct_cache_text(payload, report.module_name)
+    ct_cache_text(payload, report.file_name)
+    ct_cache_text(payload, report.function_name)
+    ct_cache_text(payload, report.transform_name)
+    ct_cache_u32(payload, report.offset)
+    ct_cache_u32(payload, report.work)
+    ct_cache_u32(payload, report.allocation_work)
+  }
+  let bytes = payload.finish()
+  assert(ct_cache_u64(bytes.byte_length()) == size, "transform cache encoded size invariant")
+  let out = BytesBuilder::with_capacity(bytes.byte_length() + 76u32)
+  out.append(b"DWTC")
+  ct_cache_u32(out, 1u32)
+  out.append(key)
+  ct_cache_digest(out, blake3(bytes))
+  ct_cache_u32(out, bytes.byte_length())
+  out.append(bytes)
+  Some(out.finish())
+}
+
+fn ct_cache_read_u32(reader: CtCacheReader) -> U32 {
+  if reader.failed || reader.bytes.byte_length() - reader.offset < 4u32 {
+    reader.failed = true
+    return 0u32
+  }
+  let offset = reader.offset
+  reader.offset = offset + 4u32
+  self_host_request_u8_to_u32(reader.bytes.byte_at(offset)) |
+  (self_host_request_u8_to_u32(reader.bytes.byte_at(offset + 1u32)) << 8u32) |
+  (self_host_request_u8_to_u32(reader.bytes.byte_at(offset + 2u32)) << 16u32) |
+  (self_host_request_u8_to_u32(reader.bytes.byte_at(offset + 3u32)) << 24u32)
+}
+
+fn ct_cache_count(reader: CtCacheReader, limit: U32) -> U32 {
+  let value = ct_cache_read_u32(reader)
+  if value > limit {
+    reader.failed = true
+    return 0u32
+  }
+  value
+}
+
+fn ct_cache_blob(reader: CtCacheReader, limit: U32) -> Bytes {
+  let length = ct_cache_count(reader, limit)
+  if reader.failed || length > reader.bytes.byte_length() - reader.offset {
+    reader.failed = true
+    return b""
+  }
+  let result = reader.bytes.view(reader.offset, length)
+  reader.offset = reader.offset + length
+  result
+}
+
+fn ct_cache_read_text(reader: CtCacheReader, limit: U32) -> String {
+  let value = ct_cache_blob(reader, limit)
+  if !value.is_valid_utf8() {
+    reader.failed = true
+    return ""
+  }
+  value.to_string()
+}
+
+fn ct_cache_decode(bytes: Bytes, key: Bytes) -> Option<CtCacheDecoded> {
+  if bytes.byte_length() < 76u32 || bytes.byte_length() > 16777216u32 || key.byte_length() != 32u32 {
+    return None
+  }
+  let reader = CtCacheReader::{
+    bytes: bytes
+    offset: 0u32
+    failed: false
+  }
+  if ct_cache_read_u32(reader) != 1129600836u32 || ct_cache_read_u32(reader) != 1u32 || !bytes.view(8u32, 32u32).equals(key) {
+    return None
+  }
+  reader.offset = 72u32
+  let length = ct_cache_count(reader, bytes.byte_length() - 76u32)
+  if reader.failed || length != bytes.byte_length() - 76u32 {
+    return None
+  }
+  let digest = BytesBuilder::with_capacity(32u32)
+  ct_cache_digest(digest, blake3(bytes.view(76u32, length)))
+  if !bytes.view(40u32, 32u32).equals(digest.finish()) {
+    return None
+  }
+  let count = ct_cache_count(reader, 1024u32)
+  if reader.failed || count == 0u32 || count > (bytes.byte_length() - reader.offset) / 22u32 {
+    return None
+  }
+  let modules = array_new::<SelfHostManifestModule>()
+  let module_names = map_empty::<String, Bool>()
+  let mut total_files = 0u32
+  while 0u32 {
+    cache_index if cache_index < count => {
+      let name = ct_cache_read_text(reader, 255u32)
+      let file_count = ct_cache_count(reader, 4096u32)
+      if reader.failed || name.byte_length() == 0u32 || module_names.contains_key(name) || file_count == 0u32 || file_count > (bytes.byte_length() - reader.offset) / 13u32 || file_count > 65536u32 - total_files {
+        return None
+      }
+      module_names.set(name, true)
+      total_files = total_files + file_count
+      let files = array_new::<SelfHostManifestFile>()
+      let paths = map_empty::<String, Bool>()
+      while 0u32 {
+        cache_index if cache_index < file_count => {
+          let path = ct_cache_read_text(reader, 4096u32)
+          let source = ct_cache_blob(reader, 16777216u32)
+          let flag = ct_cache_read_u32(reader)
+          if reader.failed || path.byte_length() == 0u32 || paths.contains_key(path) || flag > 1u32 {
+            return None
+          }
+          paths.set(path, true)
+          files.push(SelfHostManifestFile::{
+            path: path
+            source: source
+            test_only: flag == 1u32
+          })
+
+          continue cache_index + 1u32
+        }
+        _ => break self_host_unit()
+      }
+      modules.push(SelfHostManifestModule::{
+        path: name
+        files: files
+      })
+
+      continue cache_index + 1u32
+    }
+    _ => break self_host_unit()
+  }
+  let report_count = ct_cache_count(reader, 65536u32)
+  if reader.failed || report_count > (bytes.byte_length() - reader.offset) / 28u32 {
+    return None
+  }
+  let reports = array_new::<CtTransformReport>()
+  while 0u32 {
+    cache_index if cache_index < report_count => {
+      let module_name = ct_cache_read_text(reader, 4096u32)
+      let file_name = ct_cache_read_text(reader, 4096u32)
+      let function_name = ct_cache_read_text(reader, 4096u32)
+      let transform_name = ct_cache_read_text(reader, 4096u32)
+      let offset = ct_cache_read_u32(reader)
+      let work = ct_cache_read_u32(reader)
+      let allocation_work = ct_cache_read_u32(reader)
+      if reader.failed || work > 100000u32 || allocation_work > 4194304u32 {
+        return None
+      }
+      reports.push(CtTransformReport::{
+        module_name: module_name
+        file_name: file_name
+        function_name: function_name
+        transform_name: transform_name
+        offset: offset
+        work: work
+        allocation_work: allocation_work
+      })
+
+      continue cache_index + 1u32
+    }
+    _ => break self_host_unit()
+  }
+  if reader.failed || reader.offset != bytes.byte_length() {
+    return None
+  }
+  Some(CtCacheDecoded::{
+    manifest: SelfHostProgramManifest::{
+      modules: modules
+    }
+    reports: reports
+  })
+}
+
+fn ct_expand_cached(manifest: SelfHostProgramManifest, pool: SelfHostProgramManifest, preamble: Bool, test_mode: Bool, root: U32, identity: Bytes, cache: CtTransformCache, reports: Array<CtTransformReport>) -> Result<SelfHostProgramManifest, String> {
+  cache.pending = None
+  if identity.byte_length() == 0u32 || identity.byte_length() > 4096u32 || !ct_cache_manifest_bounded(manifest) || !ct_cache_manifest_bounded(pool) || !(ct_cache_has_transform(manifest) || ct_cache_has_transform(pool)) {
+    cache.state = "disabled"
+    return ct_expand_checked_with_source_pool_reports(manifest, pool, preamble, reports)
+  }
+  let key = ct_cache_key(manifest, pool, identity, preamble, test_mode, root)
+  if ct_cache_decode(cache.saved, key) is Some(decoded) {
+    cache.state = "hit"
+    for report in decoded.reports {
+      reports.push(report)
+    }
+    return Ok(decoded.manifest)
+  }
+  cache.state = "miss"
+  let own_reports = array_new::<CtTransformReport>()
+  match ct_expand_checked_with_source_pool_reports(manifest, pool, preamble, own_reports) {
+    Err(error) => Err(error)
+    Ok(expanded) => {
+      cache.pending = ct_cache_encode(key, expanded, own_reports)
+      for report in own_reports {
+        reports.push(report)
+      }
+      Ok(expanded)
+    }
+  }
+}

@@ -34,6 +34,7 @@ pub struct CompilerCompilation {
   planning_cache_status : @standard_loader.PlanningCacheStatus
   parse_event_cache_status : @standard_loader.ParseEventCacheStatus
   cache_pack_status : String
+  transform_cache_status : String
 }
 pub fn CompilerCompilation::emit_binary(Self) -> Result[Bytes, @backend.StarshineProgramBinaryEmissionError]
 pub fn CompilerCompilation::emit_linked_binary(Self, Array[@core_linker.CoreWasmLibrary]) -> Result[Bytes, String]
@@ -52,9 +53,11 @@ pub struct CompilerPipelineOptions {
   default_preamble : Bool
   planning_mode : CompilerPlanningMode
   transform_reports : Array[@transforms.TransformReport]
+  transform_cache : CompilerTransformCache?
 } derive(Eq, @debug.Debug)
 pub fn CompilerPipelineOptions::production(UInt64, Int, Bool) -> Self
 pub fn CompilerPipelineOptions::test_mode(UInt64, Int, Bool) -> Self
+pub fn CompilerPipelineOptions::with_transform_cache(Self, CompilerTransformCache) -> Self
 
 pub enum CompilerPlanningMode {
   CompilerProductionPlanning
@@ -65,6 +68,16 @@ pub(all) struct CompilerRenderedDiagnostic {
   severity : @semantic.CompilerDiagnosticSeverity
   text : String
 } derive(Eq, @debug.Debug)
+
+pub struct CompilerTransformCache {
+  identity : String
+  mut saved : Bytes
+  mut pending : (FixedArray[Byte], Bytes)?
+  mut state : String
+} derive(Eq, @debug.Debug)
+pub fn CompilerTransformCache::new(String, prior_bytes? : Bytes) -> Self
+pub fn CompilerTransformCache::snapshot(Self) -> Bytes
+pub fn CompilerTransformCache::status(Self) -> String
 
 // Type aliases
 

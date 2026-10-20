@@ -30,6 +30,8 @@ pub let cache_pack_lowering_kind : UInt
 
 pub let cache_pack_parse_event_kind : UInt
 
+pub let cache_pack_transform_kind : UInt
+
 pub let cache_pack_wasm_kind : UInt
 
 pub fn combine_planning_cache_status(PlanningCacheStatus, PlanningCacheStatus) -> PlanningCacheStatus

@@ -96,7 +96,7 @@ fn main {
   let args = @sys.get_cli_args()
   if args.length() < 7 {
     println(
-      "usage: self_host_bootstrap_fixture REQUEST PROVIDER FINGERPRINT_PREFIX OUTPUT ROOT_MODULE SOURCE... [--module NAME SOURCE...] [--pool-module NAME SOURCE...] [--standard-root ROOT]",
+      "usage: self_host_bootstrap_fixture REQUEST PROVIDER FINGERPRINT_PREFIX OUTPUT ROOT_MODULE SOURCE... [--module NAME SOURCE...] [--pool-module NAME SOURCE...] [--standard-root ROOT] [--transform-cache INPUT|- OUTPUT] [--cache-report]",
     )
     @sys.exit(2)
   }
@@ -122,6 +122,8 @@ fn main {
   let source_pool : Array[@compile_request.CompilerRequestModule] = []
   // Explicit source selection is read by the packer, never by interpretation.
   let mut standard_root : String? = None
+  let mut cache_policy = @compile_request.CompilerCachesDisabled
+  let mut cache_report = false
   for argument in 6..<args.length() {
     if args[argument] == "--standard-root" {
       if argument + 1 >= args.length() {
@@ -129,6 +131,36 @@ fn main {
         @sys.exit(2)
       }
       standard_root = Some(args[argument + 1])
+    }
+  }
+  for argument in 6..<args.length() {
+    if args[argument] == "--cache-report" {
+      cache_report = true
+    }
+    if args[argument] == "--transform-cache" {
+      if argument + 2 >= args.length() {
+        println(
+          "--transform-cache requires an input file or - and an output path",
+        )
+        @sys.exit(2)
+      }
+      let prior = if args[argument + 1] == "-" {
+        b""
+      } else {
+        @fs.read_file_to_bytes(args[argument + 1]) catch {
+          error => {
+            println(
+              "cannot read transform cache: \{bootstrap_io_error_message(error)}",
+            )
+            @sys.exit(2)
+            b""
+          }
+        }
+      }
+      cache_policy = @compile_request.CompilerTransformCacheFile(
+        prior,
+        args[argument + 2],
+      )
     }
   }
   for path in @standard_sources.standard_source_paths() {
@@ -168,6 +200,14 @@ fn main {
   while index < args.length() {
     if args[index] == "--standard-root" {
       index += 2
+      continue
+    }
+    if args[index] == "--transform-cache" {
+      index += 3
+      continue
+    }
+    if args[index] == "--cache-report" {
+      index += 1
       continue
     }
     if args[index] == "--module" || args[index] == "--pool-module" {
@@ -215,8 +255,8 @@ fn main {
       diagnostics: @compile_request.CompilerTextDiagnostics,
       test_mode: false,
       default_preamble: true,
-      cache_policy: @compile_request.CompilerCachesDisabled,
-      cache_report: false,
+      cache_policy,
+      cache_report,
     },
     compiler_fingerprint: bootstrap_fingerprint(fingerprint_prefix, provider),
   }
