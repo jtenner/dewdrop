@@ -1,0 +1,12 @@
+diff --git a/cli/runtime/commands/run/command.go b/cli/runtime/commands/run/command.go
+--- a/cli/runtime/commands/run/command.go
++++ b/cli/runtime/commands/run/command.go
+@@ -109,6 +109,8 @@
+ 	runtime := cmd.environment.LoadRuntime(config, positionals)
+ 	defer runtime.Close()
+ 	module := mustLoadModule(positionals[0], config, runtime, cmd.environment.ArtifactCache(), ctx.Bool("allow-native-artifact"))
++	// Keep the compiled owner live while plugins fork the running module.
++	defer module.Close()
+ 	compiled := module.Compiled()
+ 	exports := ctx.Strings("invoke")
+ 	if len(exports) == 0 {

@@ -70,13 +70,31 @@ def adapt(source: str) -> str:
     return source[:insertion] + ''.join(stubs) + source[insertion:]
 
 
+
+def bound_worker_memory(source: str, maximum_pages: int = 256) -> str:
+    """Bound this compiler's private scratch memory for managed worker forks."""
+    if not 1 <= maximum_pages <= 256:
+        raise ValueError('worker memory maximum must be 1..256 pages')
+    memories = list(re.finditer(
+        r'^  \(memory ((?:\$[^\s]+ )?\(;\d+;\)) (\d+)(?: (\d+))?\)\n', source, re.M,
+    ))
+    if len(memories) != 1 or len(re.findall(r'^  \(memory ', source, re.M)) != 1 or re.search(r'^  \(import [^\n]*\(memory ', source, re.M):
+        raise ValueError('compiler workers require one private, non-shared 32-bit memory')
+    memory = memories[0]
+    minimum = int(memory[2])
+    if minimum > maximum_pages:
+        raise ValueError('compiler memory minimum exceeds the worker memory budget')
+    maximum = min(int(memory[3]), maximum_pages) if memory[3] else maximum_pages
+    return source[:memory.start()] + f'  (memory {memory[1]} {minimum} {maximum})\n' + source[memory.end():]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('compiler', type=Path)
     parser.add_argument('output', type=Path)
     args = parser.parse_args()
     source = subprocess.check_output(['wasm-tools', 'print', str(args.compiler)], text=True)
-    result = adapt(source)
+    result = bound_worker_memory(adapt(source))
     subprocess.run(['wasm-tools', 'parse', '-', '-o', str(args.output)], input=result, text=True, check=True)
     subprocess.run(['wasm-tools', 'validate', '--features', 'all', str(args.output)], check=True)
 
