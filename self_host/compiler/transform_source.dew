@@ -325,6 +325,8 @@ fn ct_prepare_with_trusted_libraries(manifest: SelfHostProgramManifest, trusted_
     raw_layouts: map_empty::<String, CtRawLayout>()
     annotated_functions: map_empty::<U64, Bool>()
     type_names: []
+    trait_objects: map_empty::<U64, CtTraitObjectProof>()
+    trait_dictionaries: map_empty::<String, CtTraitObjectProof>()
     source_lookup: None
   }
   if !active {

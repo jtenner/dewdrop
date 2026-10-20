@@ -1,3 +1,5 @@
+open dew.std.map
+
 fn self_host_merge_i32_at(values: Array<I32>, index: U32) -> I32 {
   array_get_unchecked(values, index)
 }
@@ -43,6 +45,7 @@ pub struct SelfHostMergedModuleInference {
   control_state_types: Array<I32>
   control_result_types: Array<I32>
   call_targets: Array<SelfHostBasicCallTarget>
+  trait_object_coercions: Map<U32, SelfHostInferredTraitObjectCoercion>
   operator_targets: Array<SelfHostBasicCallTarget>
   expression_selections: Array<SelfHostBasicExpressionSelection>
   object_field_targets: Array<SelfHostBasicObjectFieldTarget>
@@ -119,6 +122,7 @@ fn self_host_merge_call_target(
         self_host_merge_type_span(arguments, argument_base),
       )
     }
+    DynamicTraitBasicCallTarget(trait_, requirement, slot, arguments) => DynamicTraitBasicCallTarget(trait_, requirement, slot, self_host_merge_type_span(arguments, argument_base))
     BoundTraitBasicCallTarget(requirement, parameter, bound, arguments) => BoundTraitBasicCallTarget(requirement, parameter, bound, self_host_merge_type_span(arguments, argument_base))
     _ => target
   }
@@ -289,6 +293,15 @@ fn self_host_merge_inference_job(
   let pattern_type_arguments = self_host_merge_type_array(
     target.pattern_type_arguments, source.pattern_type_arguments, type_base,
   )
+  let coercions = source.trait_object_coercions.entries()
+  while coercions.has_next() {
+    true => {
+      let entry = map_entry_iter_next(coercions)
+      target.trait_object_coercions.set(entry.key, entry.value)
+      continue coercions.has_next()
+    }
+    false => break ()
+  }
   let call_start = target.call_targets.length()
   let mut call_target_index = 0u32
   let _ = while call_target_index {
@@ -417,6 +430,7 @@ fn self_host_merge_module_inference(
     control_state_types: []
     control_result_types: []
     call_targets: []
+    trait_object_coercions: self_host_empty_trait_object_coercions()
     operator_targets: []
     expression_selections: []
     object_field_targets: []

@@ -389,7 +389,10 @@ fn self_host_compile_request_semantic_plan(
   }
   let link = self_host_plan_program_wasmgc_link(
     self_host_plan_program_wasmgc_fragments(
-      self_host_plan_program_specialization(lowering, request.test_mode),
+      self_host_plan_program_runtime_specialization(lowering, match request.root_module_index() {
+        Some(value) => value
+        None => return Err("compile request root module is missing")
+      }, request.test_mode),
     ),
     request.test_mode,
   )

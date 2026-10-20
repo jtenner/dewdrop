@@ -7,6 +7,12 @@ fn self_host_compile_time_body_needs_recheck(module_: SelfHostPlannedModuleLower
   for body in module_.bodies {
     if body.declaration == declaration {
       for expression in self_host_compile_time_owned_expressions(module_, body) {
+        match module_.inferred.trait_object_coercions.get(expression) {
+          Some(proof) => if proof.witness is None {
+            return true
+          }
+          None => {}
+        }
         if module_.expressions[expression].selection is DeferredBasicExpressionSelection {
           return true
         }

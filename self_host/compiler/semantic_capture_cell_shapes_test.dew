@@ -21,7 +21,11 @@ fn self_host_capture_cell_shape_test(shape: SelfHostPlannedValueShape) -> Unit {
   let fields = []
   let cells = self_host_wasmgc_u32_slots(module_.locals.length())
   let lambdas = self_host_wasmgc_u32_slots(module_.lambdas.length())
-  let _ = self_host_wasmgc_plan_closures(module_, types, fields, cells, lambdas)
+  let live_bodies = self_host_program_specialization_seen()
+  for body in module_.bodies {
+    live_bodies.set(body.body, true)
+  }
+  let _ = self_host_wasmgc_plan_closures(module_, types, fields, cells, lambdas, live_bodies)
   if shape is I64PlannedValueShape {
     assert(cells[1u32] != 4294967295u32, "concrete captured local has a cell")
     let field = fields[types[cells[1u32]].fields.start]

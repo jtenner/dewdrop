@@ -1,0 +1,314 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.result
+
+pub struct SelfHostInferredTraitObjectCoercion {
+  trait_declaration: U64
+  target: SelfHostCompileTimeType
+  bound: SelfHostCompileTimeType
+  witness: Option<SelfHostCompileTimeTraitWitness>
+}
+
+struct SelfHostPendingTraitObjectCoercion {
+  expected: I32
+  origin: SelfHostTypeConstraintOrigin
+}
+
+fn self_host_empty_trait_object_coercions() -> Map<U32, SelfHostInferredTraitObjectCoercion> {
+  map_empty::<U32, SelfHostInferredTraitObjectCoercion>()
+}
+
+fn self_host_empty_pending_trait_object_coercions() -> Map<U32, SelfHostPendingTraitObjectCoercion> {
+  map_empty::<U32, SelfHostPendingTraitObjectCoercion>()
+}
+
+fn self_host_trait_object_mentions_self(resolved: SelfHostResolvedModuleTypes, root: U32, trait_: U64) -> Bool {
+  let pending = [root]
+  let mut steps = 0u32
+  while pending.length() {
+    length if length > 0u32 => {
+      if steps >= 65536u32 {
+        return true
+      }
+      steps = steps + 1u32
+      let type_ = pending[length - 1u32]
+      pending.truncate(length - 1u32)
+      self_host_assert_array_index(type_, resolved.types.length(), "ARN-103 trait requirement type")
+      match resolved.types[type_] {
+        SelfType(owner) => if owner == trait_ {
+          return true
+        }
+        ProductType(arguments) => {
+          let _ = while 0u32 {
+            index if index < arguments.length => {
+              pending.push(resolved.type_arguments[arguments.start + index])
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+        }
+        AppliedType(base, arguments) => {
+          pending.push(base)
+          let _ = while 0u32 {
+            index if index < arguments.length => {
+              pending.push(resolved.type_arguments[arguments.start + index])
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+        }
+        FunctionType(parameters, result) => {
+          pending.push(result)
+          let _ = while 0u32 {
+            index if index < parameters.length => {
+              pending.push(resolved.type_arguments[parameters.start + index])
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+        }
+        _ => {}
+      }
+      continue pending.length()
+    }
+    _ => break ()
+  }
+  false
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn body_trait_declaration(self, type_: I32) -> Option<U64> {
+    match self.solver.type_term(self.solver.representative_type(type_)) {
+      BodyResolvedType(type_) => self.resolved_trait_head(type_)
+      BodyAppliedType(base, _) => match self.solver.type_term(self.solver.representative_type(base)) {
+        BodyResolvedType(type_) => self.resolved_trait_head(type_)
+        _ => None
+      }
+      _ => None
+    }
+  }
+
+  fn constrain_expression_assignable(self, expression: U32, expected: I32, origin: SelfHostTypeConstraintOrigin) -> Unit {
+    let actual = self.expression_type(expression)
+    if self.is_primitive(actual, NeverType) {
+      return
+    }
+    let expected = self.guard_refined_type(expected, expression)
+    match self.body_trait_declaration(expected) {
+      Some(trait_) => if self.body_trait_declaration(actual) is Some(actual_trait) && actual_trait == trait_ {
+        self.constrain(actual, expected, origin)
+      } else {
+        self.pending_trait_object_coercions.set(expression, {
+          expected: expected
+          origin: origin
+        })
+      }
+      None => self.constrain(actual, expected, origin)
+    }
+  }
+
+  fn resolve_trait_object_coercions(self) -> Unit {
+    let entries = self.pending_trait_object_coercions.entries()
+    while entries.has_next() {
+      true => {
+        let entry = map_entry_iter_next(entries)
+        let expression = entry.key
+        let pending = entry.value
+        let actual = self.expression_type(expression)
+        let expected = pending.expected
+        if !self.is_primitive(actual, NeverType) {
+          let trait_ = match self.body_trait_declaration(expected) {
+            Some(value) => value
+            None => unreachable()
+          }
+          if self.body_trait_declaration(actual) is Some(actual_trait) && actual_trait == trait_ {
+            self.constrain(actual, expected, pending.origin)
+          } else {
+            let valid = match self.check_inference_trait_obligation(expression, actual, expected) {
+              Ok(value) => value
+              Err(error) => {
+                self.diagnostics.push(TraitObligationFailure(self.body.declaration, expression, error, pending.origin.offset))
+                false
+              }
+            }
+            if valid {
+              let bindings = self_host_empty_compile_time_bindings()
+              let target = match self_host_read_compile_time_solver_type(self.solver, actual, bindings, 0u32) {
+                Ok(value) => value
+                Err(error) => {
+                  self.diagnostics.push(TraitObligationFailure(self.body.declaration, expression, error, pending.origin.offset))
+                  continue entries.has_next()
+                }
+              }
+              let bound = match self_host_read_compile_time_solver_type(self.solver, expected, bindings, 0u32) {
+                Ok(value) => value
+                Err(error) => {
+                  self.diagnostics.push(TraitObligationFailure(self.body.declaration, expression, error, pending.origin.offset))
+                  continue entries.has_next()
+                }
+              }
+              let concrete = match self_host_compile_time_types_concrete([target, bound]) {
+                Ok(value) => value
+                Err(_) => false
+              }
+              let witness = if concrete {
+                let search = self.obligation_search()
+                search.budget.steps = 0u32
+                match search.witness(target, bound) {
+                  Ok(Some(value)) => Some(value)
+                  _ => {
+                    self_host_assert_compiler_invariant(false, "INV-001 checked trait conversion lost its implementation")
+                    unreachable()
+                  }
+                }
+              } else {
+                None
+              }
+              self.trait_object_coercions.set(expression, {
+                trait_declaration: trait_
+                target: target
+                bound: bound
+                witness: witness
+              })
+            } else {
+              self.constrain(actual, expected, pending.origin)
+            }
+          }
+        }
+        continue entries.has_next()
+      }
+      false => break ()
+    }
+  }
+
+  fn constrain_trait_object_method(self, expression: U32, target: U32, receiver: U32, name: U32, arguments: SelfHostHirSpan, offset: U32) -> Bool {
+    let receiver_type = self.expression_type(receiver)
+    let trait_ = match self.body_trait_declaration(receiver_type) {
+      Some(value) => value
+      None => return false
+    }
+    let search = self.obligation_search()
+    let view = match self_host_trait_signature_view(self.collected, self.resolved, Some(search.imports), trait_) {
+      Some(value) => value
+      None => {
+        self_host_assert_compiler_invariant(false, "LNK-504 dynamic trait signature is missing")
+        unreachable()
+      }
+    }
+    let mut selected = None
+    let mut slot = 0u32
+    for requirement in view.requirements {
+      if requirement.name == self.collected.name(name) {
+        selected = Some(requirement)
+        break ()
+      }
+      if requirement.receiver {
+        slot = slot + 1u32
+      }
+    }
+    let requirement = match selected {
+      Some(value) => value
+      None => {
+        self.store_call_target(expression, ErrorBasicCallTarget, 1u32)
+        self.solver.poison_type(self.expression_type(expression))
+        self.diagnostics.push(NoMatchingMethod(name, expression, offset))
+        return true
+      }
+    }
+    let mut valid = requirement.receiver && requirement.generics.length == 0u32 && requirement.parameters.length() == arguments.length + 1u32
+    let _ = while 1u32 {
+      index if index < requirement.parameters.length() => {
+        if self_host_trait_object_mentions_self(self.resolved, requirement.parameters[index], trait_) {
+          valid = false
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    if self_host_trait_object_mentions_self(self.resolved, requirement.result, trait_) {
+      valid = false
+    }
+    self.consumed_member_roots[self.expression_index(target)] = true
+    self.solver.poison_type(self.expression_type(target))
+    if !valid {
+      self.store_call_target(expression, ErrorBasicCallTarget, 1u32)
+      self.solver.poison_type(self.expression_type(expression))
+      self.diagnostics.push(NoMatchingMethod(name, expression, offset))
+      return true
+    }
+    self.imported_instantiation_generics.clear()
+    let local = self_host_semantic_id_module(trait_) == self.collected.module_id
+    self.instantiation_generics = if local {
+      view.generics
+    } else {
+      self_host_empty_hir_span(0u32)
+    }
+    self.instantiation_method_generics = self_host_empty_hir_span(0u32)
+    match view.imported_parameter_ids {
+      Some(ids) => {
+        let _ = while 0u32 {
+          index if index < view.generics.length => {
+            self.imported_instantiation_generics.push(ids[view.generics.start + index])
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+      None => {}
+    }
+    self.candidate_type_arguments.clear()
+    match self.solver.type_term(self.solver.representative_type(receiver_type)) {
+      BodyAppliedType(_, parameters) => {
+        let _ = while 0u32 {
+          index if index < parameters.length => {
+            self.candidate_type_arguments.push(self.solver.type_arguments[parameters.start + index])
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+      BodyResolvedType(type_) => match self.resolved.types[type_] {
+        AppliedType(_, parameters) => {
+          let _ = while 0u32 {
+            index if index < parameters.length => {
+              self.candidate_type_arguments.push(self.solver.resolved_type(self.resolved.type_arguments[parameters.start + index]))
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+        }
+        _ => {}
+      }
+      _ => {}
+    }
+    self_host_assert_compiler_invariant(self.candidate_type_arguments.length() == view.generics.length, "SPC-303 dynamic trait argument count")
+    self.instantiation_self_owner = trait_
+    self.instantiation_self_type = receiver_type
+    let origin = self_host_call_type_origin(expression, offset)
+    let parameters = []
+    let _ = while 0u32 {
+      index if index < arguments.length => {
+        parameters.push(self.instantiate_signature_type(requirement.parameters[index + 1u32]))
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let result = self.instantiate_signature_type(requirement.result)
+    let start = self.call_type_arguments.length()
+    self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
+    let _ = while 0u32 {
+      index if index < arguments.length => {
+        self.constrain_expression_assignable(self.collected.expression_children[arguments.start + index], parameters[index], origin)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    self.constrain(self.expression_type(expression), result, origin)
+    self.store_call_target(expression, DynamicTraitBasicCallTarget(trait_, requirement.declaration, slot, {
+      start: start
+      length: self.candidate_type_arguments.length()
+    }), 2u32)
+    true
+  }
+}

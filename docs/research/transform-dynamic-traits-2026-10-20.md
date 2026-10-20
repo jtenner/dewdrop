@@ -1,7 +1,7 @@
 # Dynamic trait values in transforms
 
-The Native interpreter now accepts checked trait values. The Dew interpreter
-still needs this path. Keep the full feature unchecked until both pass.
+The Native and Dew interpreters accept checked trait values during transforms.
+Both use the normal semantic checker to select implementations and methods.
 
 The semantic export reads exact method targets from the ordinary compiler's
 trait and generic planner. Logical transform instances do not need a physical
@@ -75,11 +75,6 @@ These samples include correctness changes as well as indexing. They do not
 isolate an indexing speed gain. Peak process RSS is not retained proof memory;
 it is dominated by source preparation. There is no native ARM64 measurement.
 
-The current self-built Dew compiler rejects the same source example during
-ordinary type checking. The red request takes 1.584 seconds. Do not count Native
-success as Dew support. Dew needs checked conversions, dynamic method targets,
-generic evidence, proof export, and matching VM/resource behavior.
-
 Median request samples (direct/trait) are 1.470/1.470 seconds before the combined
 correctness/index changes, 1.513/1.528 seconds after indexing, and 1.702/1.711
 seconds with the nongeneric fast path. The matched control slowed too, so these
@@ -96,7 +91,42 @@ trait cache tests, and seven loader cache tests. The aggregate takes 41.836
 seconds, a performance fault; each individual lane stays below 30 seconds.
 The final scoped interface generation also passes.
 
-The first Dew source test build passes after source-form fixes. Of 12 local
-source cases, the two unsafe-method rejection tests pass and ten valid cases
-fail in the missing interpreter dispatch/reference path (24.192 seconds total).
-This is a visible incomplete feature, not a passing Dew implementation.
+## Dew implementation and checks
+
+The Dew semantic checker records each checked conversion and its concrete
+implementation witness. Closed generic bodies are checked with their logical
+arguments. The ordinary specialization worklist retains exact method targets,
+including query-sensitive implementations. The transform proof export uses
+these checked declarations and frames. It does not search by method name.
+
+Tree and bytecode execution share trait construction and dispatch. Direct VM
+checks cover identity, receiver aliases, wrong slots, and equal resource charges.
+The source cases also cover imports, generic erasure, returned traits, and
+implementation prerequisites. The focused lane passes 20 tests in 24.735 seconds.
+
+The compiler written in Dew does not yet emit runtime trait objects. A new
+backend check rejects a live runtime conversion or dynamic call with a clear
+error. A regression first showed that an equal-reference conversion was silently
+emitted as its receiver. It now fails visibly. The Native backend retains its
+existing runtime trait support.
+
+Compiler requests now start their checked reachability graph from public root
+functions, the existing private main entry rule, and enabled tests. Private
+helpers remain reachable through normal calls and references. Enabled module
+initializers remain roots. Unused private helper bodies, their nested closures,
+and their capture storage are omitted. Transform-only trait helpers therefore
+do not require runtime emission. Tests retain private calls, private main,
+unread initializers, and check omitted nested closure code and storage.
+
+The final full Dew lane passes all 309 tests in 90.247 seconds, including the
+runtime safety and root fixes. The focused 20-case lane passes too.
+The B/C bootstrap reaches an exact fixed point with SHA-256
+`cc184cdbb38f68c28650267d7591aa362c04b9714fcffe8983bd4fd9afb8ada5`.
+The bootstrap takes 78.154 seconds. All 65 public example requests emit valid
+Wasm and return 42. All 18 error requests fail as expected. The full request run
+takes 282.875 seconds. These aggregate times exceed the 30-second target and
+remain performance faults. Logs are in `.tmp/transforms-v5/resources/`.
+
+The final read-only Dew review found no remaining defect after the runtime
+safety, private-main, and unused-closure corrections. Claude review is still
+unavailable due to its account quota. No new performance gain is claimed.

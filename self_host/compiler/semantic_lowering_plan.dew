@@ -54,6 +54,7 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedOperatorCall(U64, SelfHostHirBinaryOperator, U32, U32, SelfHostHirSpan)
   PlannedBuiltinCall(Bytes, U64, U32, SelfHostHirSpan, SelfHostHirSpan)
   PlannedDirectCall(U64, U32, SelfHostHirSpan, SelfHostHirSpan)
+  PlannedDynamicTraitCall(U64, U64, U32, U32, SelfHostHirSpan, SelfHostHirSpan)
   PlannedFunctionValueCall(U32, SelfHostHirSpan, I32)
   PlannedUnresolvedCall(U32, SelfHostHirSpan)
   PlannedFieldGet(U64, U32, Bool)
@@ -585,6 +586,16 @@ fn self_host_lowering_expression_kind(
           )
         }
       }
+      DynamicTraitBasicCallTarget(trait_, requirement, slot, type_arguments) => {
+        let receiver = match collected.expressions[target] {
+          FieldExpr(receiver, _, _) => receiver
+          _ => {
+            self_host_assert_compiler_invariant(false, "INV-001 checked dynamic trait call has no receiver")
+            unreachable()
+          }
+        }
+        PlannedDynamicTraitCall(trait_, requirement, slot, receiver, arguments, type_arguments)
+      }
       FunctionValueBasicCallTarget(_) => PlannedFunctionValueCall(
         target,
         arguments,
@@ -653,6 +664,7 @@ fn self_host_lowering_target_type_arguments(
   match target {
     SelectedBasicCallTarget(_, arguments) => arguments
     BoundTraitBasicCallTarget(_, _, _, arguments) => arguments
+    DynamicTraitBasicCallTarget(_, _, _, arguments) => arguments
     _ => ({
       start: 0u32
       length: 0u32

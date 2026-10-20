@@ -1,0 +1,427 @@
+open dew.std.map
+open dew.std.option
+
+test "dynamic transform traits preserve aliases and checked generic erasure" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntrait Answer {\n\n  fn answer(self) -> I32\n\n}\nstruct Counter {\n\n  mut value: I32\n\n}\nimpl Answer for Counter {\n\n  fn answer(self) -> I32 {\n\n    self.value = self.value + 1i32\n    self.value\n  \n}\n\n}\nimpl Answer for I32 {\n\n  fn answer(self) -> I32 {\n\n    self + 2i32\n  \n}\n\n}\nfn read(value: Answer) -> I32 {\n\n  value.answer()\n\n}\nfn erase<t: Answer>(value: t) -> Answer {\n\n  value\n\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n\n  let counter = Counter::{\n\n    value: 18i32\n  \n}\n  let first = read(counter)\n  let erased = erase(counter)\n  let second = read(erased)\n  let third = read(20i32)\n  node.with_body(@ast.integer(if first == 19i32 && second == 20i32 && counter.value == 20i32 && third == 22i32 {\n\n    42i32\n  \n} else {\n\n    0i32\n  \n}))\n\n}\n#calculate\npub fn main() -> I32 {\n\n  0i32\n\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform traits preserve slot and argument order" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntrait Pair {\n\n  fn first(self, amount: I32) -> I32\n  fn second(self, amount: I32) -> I32\n\n}\nstruct Counter {\n mut value: I32 \n}\nimpl Pair for Counter {\n\n  fn first(self, amount: I32) -> I32 {\n self.value = self.value + amount\n self.value \n}\n  fn second(self, amount: I32) -> I32 {\n self.value = self.value - amount\n self.value \n}\n\n}\nfn view(counter: Counter) -> Pair {\n counter.value = counter.value + 1i32\n counter \n}\nfn amount(counter: Counter) -> I32 {\n counter.value = counter.value * 2i32\n 2i32 \n}\nfn alias(value: Pair) -> Pair {\n  value\n}\nfn calculate_value(counter: Counter) -> I32 {\n\n  let a = view(counter).first(amount(counter))\n  let b = alias(counter)\n  let c = b.second(2i32)\n  if a == 42i32 && c == 40i32 && counter.value == 40i32 {\n 42i32 \n} else {\n 0i32 \n}\n\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n\n  node.with_body(@ast.integer(calculate_value(Counter::{\n value: 19i32 \n})))\n\n}\n#calculate\npub fn main() -> I32 {\n\n  0i32\n\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform traits survive explicit return branch and closure capture" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntrait Answer {\n fn answer(self) -> I32 \n}\nimpl Answer for I32 {\n fn answer(self) -> I32 {\n self \n} \n}\nfn erase(value: I32, choose: Bool) -> Answer {\n\n  if choose {\n return value \n}\n  value + 1i32\n\n}\nfn callback(value: Answer) -> fn() -> I32 {\n fn() -> I32 {\n value.answer() \n} \n}\nfn result() -> I32 {\n\n  let first = callback(erase(20i32, true))\n  let second = callback(erase(21i32, false))\n  first() + second()\n\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n\n  node.with_body(@ast.integer(result()))\n\n}\n#calculate\npub fn main() -> I32 {\n\n  0i32\n\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform traits retain generic implementation prerequisites" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntrait Answer {\n fn answer(self) -> I32 \n}\nimpl Answer for I32 {\n fn answer(self) -> I32 {\n self \n} \n}\nstruct Box<t> {\n value: t \n}\nimpl<t: Answer> Answer for Box<t> {\n fn answer(self) -> I32 {\n self.value.answer() \n} \n}\nfn read(value: Answer) -> I32 {\n value.answer() \n}\nfn erase<t: Answer>(value: t) -> Answer {\n value \n}\nfn result() -> I32 {\n read(erase(Box::{\n value: 42i32 \n})) \n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n\n  node.with_body(@ast.integer(result()))\n\n}\n#calculate\npub fn main() -> I32 {\n\n  0i32\n\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform traits reject generic methods" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntrait Bad {\n fn answer<t>(self, value: t) -> I32 \n}\nimpl Bad for I32 {\n fn answer<t>(self, value: t) -> I32 {\n self \n} \n}\nfn read(value: Bad) -> I32 {\n value.answer(1i32) \n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(read(42i32))) \n}\n#calculate\npub fn main() -> I32 {\n 0i32 \n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      assert(false, "unsafe dynamic method must fail checking")
+    }
+    Err(error) => assert(error.contains("no matching method"), error)
+  }
+}
+
+test "dynamic transform traits reject Self result" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\ntrait Bad {\n fn answer(self) -> Self \n}\nimpl Bad for I32 {\n fn answer(self) -> I32 {\n self \n} \n}\nfn read(value: Bad) -> I32 {\n let _ = value.answer()\n 42i32 \n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n node.with_body(@ast.integer(read(42i32))) \n}\n#calculate\npub fn main() -> I32 {\n 0i32 \n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      assert(false, "unsafe dynamic method must fail checking")
+    }
+    Err(error) => assert(error.contains("no matching method"), error)
+  }
+}
+
+test "dynamic transform generic methods retain logical query types" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\ntrait Answer {\n  fn answer(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t> Answer for Box<t> {\n  fn answer(self) -> I32 {\n    if @types.type_equal::<t, I32>() {\n      20i32\n    } else {\n      22i32\n    }\n  }\n}\nfn read(value: Answer) -> I32 {\n  value.answer()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read(Box::{\n    value: 0i32\n  }) + read(Box::{\n    value: 0u32\n  })))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform generic methods distinguish equal reference carriers" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nstruct Left {}\nstruct Right {}\ntrait Answer {\n  fn answer(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t> Answer for Box<t> {\n  fn answer(self) -> I32 {\n    if @types.type_equal::<t, Left>() {\n      20i32\n    } else {\n      22i32\n    }\n  }\n}\nfn read(value: Answer) -> I32 {\n  value.answer()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read(Box::{\n    value: Left::{}\n  }) + read(Box::{\n    value: Right::{}\n  })))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform generic trait arguments come from the checked target" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\ntrait Answer<t> {\n  fn answer(self) -> I32\n}\nstruct Marker {}\nimpl<t> Answer<t> for Marker {\n  fn answer(self) -> I32 {\n    if @types.type_equal::<t, I32>() {\n      20i32\n    } else {\n      22i32\n    }\n  }\n}\nfn read_i(value: Answer<I32>) -> I32 {\n  value.answer()\n}\nfn read_u(value: Answer<U32>) -> I32 {\n  value.answer()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read_i(Marker::{}) + read_u(Marker::{})))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform nested generic methods keep helpers and returned traits" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nstruct Left {}\nstruct Right {}\ntrait Read {\n  fn read(self) -> I32\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\ntrait Outer {\n  fn inner(self) -> Read\n}\nstruct Box<t> {\n  value: t\n}\nfn classify<t>() -> I32 {\n  if @types.type_equal::<t, Left>() {\n    20i32\n  } else {\n    22i32\n  }\n}\nimpl<t> Outer for Box<t> {\n  fn inner(self) -> Read {\n    classify::<t>()\n  }\n}\nfn read(value: Outer) -> I32 {\n  value.inner().read()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read(Box::{\n    value: Left::{}\n  }) + read(Box::{\n    value: Right::{}\n  })))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform generic erasure retains logical query types" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\ntrait Answer {\n  fn answer(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t> Answer for Box<t> {\n  fn answer(self) -> I32 {\n    if @types.type_equal::<t, I32>() {\n      20i32\n    } else {\n      22i32\n    }\n  }\n}\nfn erase<t: Answer>(value: t) -> Answer {\n  value\n}\nfn read(value: Answer) -> I32 {\n  value.answer()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read(erase(Box::{\n    value: 0i32\n  })) + read(erase(Box::{\n    value: 0u32\n  }))))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform generic erasure distinguishes equal reference carriers" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport dew.std.types as @types\nstruct Left {}\nstruct Right {}\ntrait Answer {\n  fn answer(self) -> I32\n}\nstruct Box<t> {\n  value: t\n}\nimpl<t> Answer for Box<t> {\n  fn answer(self) -> I32 {\n    if @types.type_equal::<t, Left>() {\n      20i32\n    } else {\n      22i32\n    }\n  }\n}\nfn erase<t: Answer>(value: t) -> Answer {\n  value\n}\nfn read(value: Answer) -> I32 {\n  value.answer()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read(erase(Box::{\n    value: Left::{}\n  })) + read(erase(Box::{\n    value: Right::{}\n  }))))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+fn ct_trait_bytecode_fixture(enabled: Bool) -> (CtMachine, SelfHostFunctionDeclaration) {
+  let (machine, compute) = ct_bc_test_machine(b"fn compute(value: I32) -> I32 {\n read(value)\n}\nfn read(value: Answer) -> I32 {\n value.answer()\n}\ntrait Answer {\n fn answer(self) -> I32\n}\nimpl Answer for I32 {\n fn answer(self) -> I32 {\n self + 2i32\n }\n}\n", enabled)
+  let file = machine.plan.files[0u32]
+  let mut read = None
+  let mut method = None
+  for declaration in file.declarations {
+    match declaration {
+      Function(function) if function.name == "read" => {
+        read = Some(function)
+      }
+      Impl(impl_) => {
+        method = Some(impl_.methods[0u32])
+      }
+      _ => {}
+    }
+  }
+  let read = match read {
+    Some(value) => value
+    None => unreachable()
+  }
+  let method = match method {
+    Some(value) => value
+    None => unreachable()
+  }
+  match compute.body.items[0u32].value {
+    CallExpr(_, arguments, offset) => {
+      machine.plan.calls.set(ct_site_key(machine.plan, 0u32, file.original.path, offset), CtCallTarget::Source(0u32, file.original.path, read, "I32"))
+      let methods = map_empty::<U64, CtTraitMethod>()
+      methods.set(123u64, {
+        key: "12:0"
+        target: CtCallTarget::Source(0u32, file.original.path, method, "")
+      })
+      machine.plan.trait_objects.set(ct_site_key(machine.plan, 0u32, file.original.path, arguments[0u32].offset()), {
+        methods: methods
+      })
+    }
+    _ => unreachable()
+  }
+  match read.body.items[0u32].value {
+    CallExpr(_, _, offset) => machine.plan.calls.set(ct_site_key(machine.plan, 0u32, file.original.path, offset), CtCallTarget::DynamicTrait(123u64, "12:0", "I32"))
+    _ => unreachable()
+  }
+  (machine, compute)
+}
+
+test "dynamic transform bytecode and tree keep the same charges" {
+  let (tree, tree_fn) = ct_trait_bytecode_fixture(false)
+  let (vm, vm_fn) = ct_trait_bytecode_fixture(true)
+  assert(ct_compile_bytecode(vm, 0u32, vm_fn) is Some(_), "the trait case must execute bytecode")
+  let left = ct_source_call(tree, 0u32, tree.file_path, tree_fn, [ct_number(40u64, "I32")])
+  let right = ct_source_call(vm, 0u32, vm.file_path, vm_fn, [ct_number(40u64, "I32")])
+  assert(tree.error.byte_length() == 0u32, tree.error)
+  assert(vm.error.byte_length() == 0u32, vm.error)
+  assert(ct_raw_bits(tree, left) == 42u64, "tree result")
+  assert(ct_raw_bits(vm, right) == 42u64, "bytecode result")
+  assert(tree.steps == vm.steps, "same logical work")
+  assert(tree.allocated == vm.allocated, "same allocation work")
+  assert(tree.depth == 0u32 && vm.depth == 0u32, "both paths restore depth")
+}
+
+test "dynamic transform values keep envelope identity and reject a wrong slot" {
+  let (machine, _) = ct_trait_bytecode_fixture(false)
+  let methods = map_empty::<U64, CtTraitMethod>()
+  methods.set(123u64, {
+    key: "12:0"
+    target: CtCallTarget::Unsupported
+  })
+  let proof = CtTraitObjectProof::{
+    methods: methods
+  }
+  let receiver = ct_number(40u64, "I32")
+  let first = ct_trait_object(machine, receiver, proof)
+  let second = ct_trait_object(machine, receiver, proof)
+  assert(ct_reference_equal(machine, first, first) is Boolean(true), "alias identity")
+  assert(ct_reference_equal(machine, first, second) is Boolean(false), "separate envelope identity")
+  assert(!ct_reference_is_null(machine, first), "non-null trait value")
+  let _ = ct_dynamic_trait_call(machine, 123u64, "12:1", "I32", [first])
+  assert(machine.error == "checked dynamic trait method slot mismatch", machine.error)
+}
+
+test "dynamic transform traits retain imported implementation and prerequisite identities" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [{
+      path: "example.app"
+      files: [{
+        path: "main.dew"
+        source: b"import dewdrop.ast as @ast\nimport dewdrop.transform as @transform\nimport traits.helper as @helper\nfn read(value: @helper.Answer) -> I32 {\n  value.answer()\n}\ntransform fn calculate(node: @ast.FnNode, ctx: @transform.TransformContext) -> @ast.FnNode {\n  node.with_body(@ast.integer(read(@helper.value())))\n}\n#calculate\npub fn main() -> I32 {\n  0i32\n}\n"
+        test_only: false
+      }]
+    }, {
+      path: "traits.helper"
+      files: [{
+        path: "helper.dew"
+        source: b"pub trait Answer {\n  fn answer(self) -> I32\n}\npub struct Box<t> {\n  value: t\n}\nimpl Answer for I32 {\n  fn answer(self) -> I32 {\n    self\n  }\n}\nimpl<t: Answer> Answer for Box<t> {\n  fn answer(self) -> I32 {\n    self.value.answer()\n  }\n}\npub fn erase<t: Answer>(value: t) -> Answer {\n  value\n}\npub fn value() -> Answer {\n  erase(Box::{\n    value: 42i32\n  })\n}\n"
+        test_only: false
+      }]
+    }]
+  }
+  match ct_expand_checked_with_source_pool(manifest, ct_frames_test_source_pool(), true) {
+    Ok(expanded) => {
+      let source = ct_test_all_source(expanded.modules[0u32])
+      assert(source.contains("pub fn main() -> I32 {\n42i32\n}"), source)
+    }
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform runtime trait conversions cannot erase a reference silently" {
+  let lowering = self_host_type_demand_test_lowering(b"trait Answer {\n fn answer(self) -> I32\n}\nstruct Box {\n value: I32\n}\nimpl Answer for Box {\n fn answer(self) -> I32 {\n self.value\n }\n}\nbuiltin same<a,b>(left: a, right: b) -> Bool = \"ref.eq\"\nfn erase(value: Box) -> Answer {\n value\n}\npub fn main() -> I32 {\n let box = Box::{\n value: 42i32\n }\n if same(erase(box), box) {\n 1i32\n } else {\n 42i32\n }\n}\n")
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
+  match build_self_host_linked_i32_module(link, lowering.modules[0u32].module_id) {
+    Ok(_) => assert(false, "a runtime conversion must not return the original receiver")
+    Err(error) => assert(error.contains("runtime trait objects"), error)
+  }
+}
+
+test "dynamic transform runtime roots omit private compile-time helpers" {
+  let lowering = self_host_type_demand_test_lowering(b"trait Answer {\n fn answer(self) -> I32\n}\nfn read(value: Answer) -> I32 {\n value.answer()\n}\npub fn main() -> I32 {\n 42i32\n}\n")
+  let plan = self_host_plan_program_runtime_specialization(lowering, 0u32, false)
+  let fragments = self_host_plan_program_wasmgc_fragments(plan)
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let mut omitted = false
+  for function in fragments.modules[0u32].functions {
+    for callable in lowering.modules[0u32].functions.callables {
+      if function.declaration == callable.declaration && callable.name.equals(b"read") {
+        omitted = function.elided
+      }
+    }
+  }
+  assert(omitted, "unused private helper has no runtime function")
+  match build_self_host_linked_i32_module(link, lowering.modules[0u32].module_id) {
+    Ok(bytes) => assert(bytes.byte_length() > 8u32, "runtime output")
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform runtime roots retain private calls and unread initializers" {
+  let lowering = self_host_type_demand_test_lowering(b"struct Payload {\n value: I32\n}\nfn make() -> Payload {\n Payload::{\n value: 1i32\n }\n}\nlet unread = make()\nfn answer() -> I32 {\n 42i32\n}\npub fn main() -> I32 {\n answer()\n}\n")
+  let plan = self_host_plan_program_runtime_specialization(lowering, 0u32, false)
+  let fragments = self_host_plan_program_wasmgc_fragments(plan)
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  assert(link.initializers.length() > 0u32, "unread initializer is retained")
+  for name in [b"make", b"answer"] {
+    let mut live = false
+    for function in fragments.modules[0u32].functions {
+      for callable in lowering.modules[0u32].functions.callables {
+        if function.declaration == callable.declaration && callable.name.equals(name) {
+          live = !function.elided
+        }
+      }
+    }
+    assert(live, "checked private call is retained")
+  }
+  match build_self_host_linked_i32_module(link, lowering.modules[0u32].module_id) {
+    Ok(bytes) => assert(bytes.byte_length() > 8u32, "runtime output")
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform runtime roots retain a private main entry" {
+  let lowering = self_host_type_demand_test_lowering(b"fn main() -> I32 {\n 42i32\n}\n")
+  let plan = self_host_plan_program_runtime_specialization(lowering, 0u32, false)
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(plan), false)
+  assert(self_host_linked_i32_main_function_index(link, lowering.modules[0u32].module_id) != 4294967295u32, "private main remains the checked entry point")
+  match build_self_host_linked_i32_module(link, lowering.modules[0u32].module_id) {
+    Ok(bytes) => assert(bytes.byte_length() > 8u32, "private entry output")
+    Err(error) => assert(false, error)
+  }
+}
+
+test "dynamic transform runtime roots omit unused nested lambda code and storage" {
+  let lowering = self_host_type_demand_test_lowering(b"builtin add(left: I32, right: I32) -> I32 = \"i32.add\"\nfn make() -> fn(I32) -> I32 {\n let mut count = 0i32\n fn(value: I32) -> I32 {\n count = add(count, 1i32)\n add(value, count)\n }\n}\npub fn main() -> I32 {\n 42i32\n}\n")
+  let plan = self_host_plan_program_runtime_specialization(lowering, 0u32, false)
+  let fragments = self_host_plan_program_wasmgc_fragments(plan)
+  for function in fragments.modules[0u32].functions {
+    assert(!(function.kind is PlannedWasmDefinedLambdaFunction(_)), "unused lambda code is omitted")
+  }
+  for type_ in fragments.modules[0u32].physical_types {
+    assert(!(type_.kind is PlannedWasmCaptureCellType(_, _)) && !(type_.kind is PlannedWasmLambdaClosureType(_, _)), "unused capture storage is omitted")
+  }
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  match build_self_host_linked_i32_module(link, lowering.modules[0u32].module_id) {
+    Ok(bytes) => assert(bytes.byte_length() > 8u32, "runtime output")
+    Err(error) => assert(false, error)
+  }
+}

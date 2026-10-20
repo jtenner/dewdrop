@@ -1,4 +1,5 @@
 open dew.std.array
+open dew.std.map
 
 fn self_host_clone_query_evidence(source: SelfHostBasicModuleEvidence) -> SelfHostBasicModuleEvidence {
   let bodies = []
@@ -17,6 +18,16 @@ fn self_host_clone_query_evidence(source: SelfHostBasicModuleEvidence) -> SelfHo
 }
 
 fn self_host_clone_query_inferred(source: SelfHostMergedModuleInference) -> SelfHostMergedModuleInference {
+  let coercions = self_host_empty_trait_object_coercions()
+  let entries = source.trait_object_coercions.entries()
+  while entries.has_next() {
+    true => {
+      let entry = map_entry_iter_next(entries)
+      coercions.set(entry.key, entry.value)
+      continue entries.has_next()
+    }
+    false => break ()
+  }
   {
     module_id: source.module_id
     jobs: source.jobs
@@ -30,6 +41,7 @@ fn self_host_clone_query_inferred(source: SelfHostMergedModuleInference) -> Self
     control_state_types: source.control_state_types
     control_result_types: source.control_result_types
     call_targets: source.call_targets
+    trait_object_coercions: coercions
     operator_targets: source.operator_targets
     expression_selections: source.expression_selections
     object_field_targets: source.object_field_targets

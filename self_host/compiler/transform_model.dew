@@ -10,6 +10,7 @@ pub enum CtValue {
   Empty
   NullValue
   DefaultValue
+  TraitObject(CtTraitObjectValue)
   RawArray(CtRawStorage)
   Vector(U64, U64)
   TextChunks(CtValue, Bytes)
@@ -75,6 +76,8 @@ pub struct CtPlan {
   pattern_proofs: Map<U64, String>
   references: Map<U64, CtFunctionReferenceProof>
   frames: Map<String, CtExecutionFrame>
+  trait_objects: Map<U64, CtTraitObjectProof>
+  trait_dictionaries: Map<String, CtTraitObjectProof>
   adapter_names: Map<U32, Map<String, Bool>>
   validation_targets: Map<String, CtSignatureTarget>
   body_errors: Map<U64, String>

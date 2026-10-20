@@ -167,7 +167,7 @@ Unchecked items need further implementation. Checked items have code and tests.
 - [x] Parsed syntax arguments on annotations.
 - [x] Complete default/null reference behavior for raw arrays.
 - [x] Generic trait evidence during interpretation.
-- [ ] Dynamic trait objects.
+- [x] Dynamic trait objects during transform execution (Native and Dew).
 - [x] First-class overloaded builtin references with a checked target.
 - [x] Scalar floating-point execution with Wasm rounding and traps.
 - [x] Full text, packed integers, and the current SIMD/memory instruction catalog.

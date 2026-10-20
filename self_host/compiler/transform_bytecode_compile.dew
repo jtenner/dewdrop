@@ -91,6 +91,25 @@ fn ct_bc_call(builder: CtBytecodeBuilder, callee: SelfHostExpr, arguments: Array
         slots.push(ct_bc_save(builder))
       }
     }
+    Some(DynamicTrait(_, _, _)) => {
+      match callee {
+        FieldExpr(owner, _, _) => {
+          ct_bc_expr(builder, owner, env, loop_)
+          slots.push(ct_bc_save(builder))
+        }
+        _ => {
+          builder.supported = false
+          return
+        }
+      }
+      for argument in arguments {
+        if !builder.supported {
+          return
+        }
+        ct_bc_expr(builder, argument, env, loop_)
+        slots.push(ct_bc_save(builder))
+      }
+    }
     Some(Intrinsic(_, _)), Some(Constructor(_)) => {
       for argument in arguments {
         if !builder.supported {
@@ -350,6 +369,17 @@ fn ct_bc_expr(builder: CtBytecodeBuilder, expression: SelfHostExpr, env: Map<Str
     NameExpr(_, offset), FieldExpr(_, _, offset) => ct_bc_type_read(builder, offset)
     _ => {}
   }
+  match ct_lookup_trait_object(builder.machine, builder.module_, expression.offset()) {
+    Some(proof) => {
+      if !ct_bc_reserve(builder, 8u32) {
+        return
+      }
+      let index = builder.trait_objects.length()
+      builder.trait_objects.push(proof)
+      let _ = ct_bc_emit(builder, 21u32, index)
+    }
+    None => {}
+  }
 }
 
 fn ct_compile_bytecode(machine: CtMachine, mi: U32, function: SelfHostFunctionDeclaration) -> Option<CtBytecodeFunction> {
@@ -362,6 +392,7 @@ fn ct_compile_bytecode(machine: CtMachine, mi: U32, function: SelfHostFunctionDe
     binaries: array_new::<CtBytecodeBinary>()
     prefixes: array_new::<CtBytecodePrefix>()
     names: array_new::<String>()
+    trait_objects: array_new::<CtTraitObjectProof>()
     kinds: array_new::<String>()
     mutable_slots: array_new::<Bool>()
     visits: 0u32
@@ -390,6 +421,7 @@ fn ct_compile_bytecode(machine: CtMachine, mi: U32, function: SelfHostFunctionDe
     binaries: builder.binaries
     prefixes: builder.prefixes
     names: builder.names
+    trait_objects: builder.trait_objects
     kinds: builder.kinds
     slots: builder.mutable_slots.length()
     estimated_bytes: builder.estimated_bytes

@@ -18,6 +18,7 @@ fn self_host_merge_test_body(
     control_state_types: []
     control_result_types: []
     call_targets: [target]
+    trait_object_coercions: self_host_empty_trait_object_coercions()
     operator_targets: [NoBasicCallTarget]
     expression_selections: [NoBasicExpressionSelection]
     object_field_targets: []

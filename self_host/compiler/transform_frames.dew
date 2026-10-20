@@ -7,6 +7,7 @@ struct CtExecutionFrame {
   calls: Map<U64, CtCallTarget>
   references: Map<U64, CtFunctionReferenceProof>
   scalar_types: Map<U64, String>
+  trait_objects: Map<U64, CtTraitObjectProof>
 }
 
 struct CtFrameTarget {
@@ -19,6 +20,7 @@ fn ct_base_frame(plan: CtPlan) -> CtExecutionFrame {
     scalar_proofs: plan.scalar_proofs
     calls: plan.calls
     references: plan.references
+    trait_objects: plan.trait_objects
     scalar_types: plan.scalar_types
   }
 }
@@ -34,6 +36,7 @@ fn ct_execution_frame(plan: CtPlan, frame: String) -> CtExecutionFrame {
         scalar_proofs: map_empty::<U64, Bytes>()
         calls: map_empty::<U64, CtCallTarget>()
         references: map_empty::<U64, CtFunctionReferenceProof>()
+        trait_objects: map_empty::<U64, CtTraitObjectProof>()
         scalar_types: map_empty::<U64, String>()
       }
       plan.frames.set(frame, value)
@@ -228,6 +231,24 @@ fn ct_collect_frames(plan: CtPlan, collected: SelfHostCollectedProgram, original
         None => {}
       }
       continue index + 1u32
+    }
+    _ => break ()
+  }
+  let _ = while 0u32 {
+    mi if mi < lowering.modules.length() => {
+      let module_ = lowering.modules[mi]
+      let expressions = []
+      let entries = module_.inferred.trait_object_coercions.entries()
+      while entries.has_next() {
+        true => {
+          let entry = map_entry_iter_next(entries)
+          expressions.push(entry.key)
+          continue entries.has_next()
+        }
+        false => break ()
+      }
+      ct_collect_trait_objects(plan, collected, lowering, mi, module_, expressions, ct_base_frame(plan), 4294967295u32)
+      continue mi + 1u32
     }
     _ => break ()
   }

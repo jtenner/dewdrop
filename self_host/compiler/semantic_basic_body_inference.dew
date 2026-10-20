@@ -188,6 +188,7 @@ pub enum SelfHostBasicCallTarget {
   // This is logical evidence, not a selected physical implementation.
   BoundTraitBasicCallTarget(U64, U64, U32, SelfHostHirSpan)
   FunctionValueBasicCallTarget(U32)
+  DynamicTraitBasicCallTarget(U64, U64, U32, SelfHostHirSpan)
 }
 
 pub struct SelfHostBasicInferredBody {
@@ -203,6 +204,7 @@ pub struct SelfHostBasicInferredBody {
   control_state_types: Array<I32>
   control_result_types: Array<I32>
   call_targets: Array<SelfHostBasicCallTarget>
+  trait_object_coercions: Map<U32, SelfHostInferredTraitObjectCoercion>
   operator_targets: Array<SelfHostBasicCallTarget>
   expression_selections: Array<SelfHostBasicExpressionSelection>
   object_field_targets: Array<SelfHostBasicObjectFieldTarget>
@@ -494,6 +496,7 @@ struct SelfHostBasicBodyInferencer {
   control_state_types: Array<I32>
   control_result_types: Array<I32>
   call_targets: Array<SelfHostBasicCallTarget>
+  trait_object_coercions: Map<U32, SelfHostInferredTraitObjectCoercion>
   operator_targets: Array<SelfHostBasicCallTarget>
   expression_selections: Array<SelfHostBasicExpressionSelection>
   object_field_targets: Array<SelfHostBasicObjectFieldTarget>
@@ -510,6 +513,7 @@ struct SelfHostBasicBodyInferencer {
   expression_type_arguments: Array<I32>
   pattern_type_arguments: Array<I32>
   pending_direct_calls: Array<U32>
+  pending_trait_object_coercions: Map<U32, SelfHostPendingTraitObjectCoercion>
   pending_method_calls: Array<U32>
   retry_method_calls: Array<U32>
   mut postpone_method_failures: Bool
@@ -610,6 +614,7 @@ impl SelfHostBasicBodyInferencer {
       control_state_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
       control_result_types: self_host_inference_i32_slots(name_info.controls.length, 0i32)
       call_targets: self_host_inference_call_target_slots(body.expressions.length)
+      trait_object_coercions: self_host_empty_trait_object_coercions()
       operator_targets: self_host_inference_call_target_slots(body.expressions.length)
       expression_selections: self_host_inference_expression_selection_slots(body.expressions.length)
       object_field_targets: self_host_inference_object_field_target_slots(body.object_fields.length)
@@ -626,6 +631,7 @@ impl SelfHostBasicBodyInferencer {
       expression_type_arguments: []
       pattern_type_arguments: []
       pending_direct_calls: []
+      pending_trait_object_coercions: self_host_empty_pending_trait_object_coercions()
       pending_method_calls: []
       retry_method_calls: []
       postpone_method_failures: false
@@ -860,8 +866,24 @@ impl SelfHostBasicBodyInferencer {
     expected: I32,
     origin: SelfHostTypeConstraintOrigin,
   ) -> Bool {
-    self.is_primitive(actual, NeverType) ||
-      self.solver.unify(actual, expected, origin)
+    if self.is_primitive(actual, NeverType) {
+      return true
+    }
+    match self.body_trait_declaration(expected) {
+      Some(trait_) => {
+        if self.body_trait_declaration(actual) is Some(actual_trait) && actual_trait == trait_ {
+          return self.solver.unify(actual, expected, origin)
+        }
+        if self.solver.has_unresolved_variable(actual) {
+          return true
+        }
+        match self.check_inference_trait_obligation(origin.source, actual, expected) {
+          Ok(value) => return value
+          Err(_) => return false
+        }
+      }
+      None => self.solver.unify(actual, expected, origin)
+    }
   }
 
   fn mark_unsupported(self, expression: U32) -> Unit {
@@ -3932,7 +3954,7 @@ impl SelfHostBasicBodyInferencer {
           self.collected.expression_children[arguments.start + current],
         )
         let origin = self_host_call_type_origin(expression, offset)
-        self.constrain_assignable(argument_type, parameter_type, origin)
+        self.constrain_expression_assignable(self.collected.expression_children[arguments.start + current], parameter_type, origin)
         self.constrain_resolved_signature_evidence(
           argument_type,
           signature_type,
@@ -4194,8 +4216,7 @@ impl SelfHostBasicBodyInferencer {
         let parameter = self.imported.parameter_types[
           self_host_u32_add(callable.parameters.start, current)
         ]
-        self.constrain_assignable(
-          self.expression_type(argument),
+        self.constrain_expression_assignable(argument,
           self.instantiate_signature_type(parameter),
           origin,
         )
@@ -4669,8 +4690,8 @@ impl SelfHostBasicBodyInferencer {
             self_host_u32_add(arguments.start, current)
           ],
         )
-        self.constrain_assignable(
-          actual,
+        self.constrain_expression_assignable(
+          self.collected.expression_children[arguments.start + current],
           self.instantiate_signature_type(signature_type),
           origin,
         )
@@ -4839,8 +4860,7 @@ impl SelfHostBasicBodyInferencer {
         let argument_expression = self.collected.expression_children[
           self_host_u32_add(arguments.start, current)
         ]
-        self.constrain_assignable(
-          self.expression_type(argument_expression),
+        self.constrain_expression_assignable(argument_expression,
           self.instantiate_signature_type(
             self.imported.parameter_types[
               self_host_u32_add(callable.parameters.start, current + 1u32)
@@ -5158,6 +5178,9 @@ impl SelfHostBasicBodyInferencer {
       _ => {
         return
       }
+    }
+    if self.constrain_trait_object_method(expression, target, receiver, name, arguments, offset) {
+      return
     }
     if self.constrain_declared_bound_method(expression, target, receiver, name, arguments, offset) {
       return
@@ -5569,12 +5592,9 @@ impl SelfHostBasicBodyInferencer {
         let signature_type = self.imported.variant_payload_types[
           self_host_u32_add(variant.payload_types.start, current)
         ]
-        self.constrain_assignable(
-          self.expression_type(
-            self.collected.expression_children[
+        self.constrain_expression_assignable(self.collected.expression_children[
               self_host_u32_add(arguments.start, current)
             ],
-          ),
           self.instantiate_signature_type(signature_type),
           origin,
         )
@@ -5691,8 +5711,8 @@ impl SelfHostBasicBodyInferencer {
             self_host_u32_add(arguments.start, current)
           ],
         )
-        self.constrain_assignable(
-          actual,
+        self.constrain_expression_assignable(
+          self.collected.expression_children[arguments.start + current],
           self.instantiate_signature_type(signature_type),
           origin,
         )
@@ -5970,8 +5990,7 @@ impl SelfHostBasicBodyInferencer {
           self.object_field_targets[self.object_field_index(object_field_index)] = SelectedBasicObjectFieldTarget(
             field.field,
           )
-          self.constrain_assignable(
-            self.expression_type(object_field.value),
+          self.constrain_expression_assignable(object_field.value,
             self.instantiate_signature_type(field.type_),
             origin,
           )
@@ -6109,7 +6128,7 @@ impl SelfHostBasicBodyInferencer {
           let signature_type = self.resolved.field_types[selected]
           let expected = self.instantiate_signature_type(signature_type)
           let actual = self.expression_type(object_field.value)
-          self.constrain_assignable(actual, expected, origin)
+          self.constrain_expression_assignable(object_field.value, expected, origin)
           self.constrain_resolved_signature_evidence(
             actual,
             signature_type,
@@ -6827,8 +6846,7 @@ impl SelfHostBasicBodyInferencer {
     index = 0u32
     let _ = while index {
       current => if current < arguments.length {
-        self.constrain_assignable(
-          self.expression_type(self.collected.expression_children[arguments.start + current]),
+        self.constrain_expression_assignable(self.collected.expression_children[arguments.start + current],
           parameters[current],
           self_host_call_type_origin(expression, offset),
         )
@@ -7074,8 +7092,7 @@ impl SelfHostBasicBodyInferencer {
     let right_signature = self.resolved.parameter_types[
       self_host_u32_add(parameters.start, 1u32)
     ]
-    self.constrain_assignable(
-      self.expression_type(right),
+    self.constrain_expression_assignable(right,
       self.instantiate_signature_type(right_signature),
       origin,
     )
@@ -7474,8 +7491,7 @@ impl SelfHostBasicBodyInferencer {
     let index_signature = self.resolved.parameter_types[
       self_host_u32_add(parameters.start, 1u32)
     ]
-    self.constrain_assignable(
-      self.expression_type(index),
+    self.constrain_expression_assignable(index,
       self.instantiate_signature_type(index_signature),
       origin,
     )
@@ -7488,8 +7504,7 @@ impl SelfHostBasicBodyInferencer {
       let value_signature = self.resolved.parameter_types[
         self_host_u32_add(parameters.start, 2u32)
       ]
-      self.constrain_assignable(
-        self.expression_type(value),
+      self.constrain_expression_assignable(value,
         self.instantiate_signature_type(value_signature),
         origin,
       )
@@ -7757,8 +7772,7 @@ impl SelfHostBasicBodyInferencer {
         if !self.is_primitive(self.expression_type(arm.body), NeverType) {
           all_never = false
         }
-        self.constrain_assignable(
-          self.expression_type(arm.body),
+        self.constrain_expression_assignable(arm.body,
           result,
           self_host_expression_type_origin(expression, offset),
         )
@@ -7807,8 +7821,7 @@ impl SelfHostBasicBodyInferencer {
       } else {
         self.control_state_types[control]
       }
-      self.constrain_assignable(
-        self.expression_type(value),
+      self.constrain_expression_assignable(value,
         expected,
         self_host_expression_type_origin(expression, offset),
       )
@@ -7867,8 +7880,7 @@ impl SelfHostBasicBodyInferencer {
               self_host_return_type_origin(current, offset),
             )
           } else {
-            self.constrain_assignable(
-              self.expression_type(value),
+            self.constrain_expression_assignable(value,
               self.guard_refined_type(self.declared_return_type, value),
               self_host_return_type_origin(value, offset),
             )
@@ -7885,7 +7897,7 @@ impl SelfHostBasicBodyInferencer {
               self.pending_guarded_joins.push(current)
             } else {
               self.constrain_assignable(self.block_type(block), self.expression_type(current), self_host_expression_type_origin(current, offset))
-              self.constrain_assignable(self.expression_type(alternative), self.expression_type(current), self_host_expression_type_origin(current, offset))
+              self.constrain_expression_assignable(alternative, self.expression_type(current), self_host_expression_type_origin(current, offset))
             }
           }
           PrefixExpr(operator, value, _) => match operator {
@@ -7948,7 +7960,7 @@ impl SelfHostBasicBodyInferencer {
                 _ => {}
               }
             }
-            self.constrain_assignable(self.expression_type(value), self.expression_type(target), self_host_expression_type_origin(current, offset))
+            self.constrain_expression_assignable(value, self.expression_type(target), self_host_expression_type_origin(current, offset))
           }
           ObjectExpr(_, _) => self.pending_constructions.push(current)
           ConstructExpr(target, _, _) => {
@@ -8072,8 +8084,7 @@ impl SelfHostBasicBodyInferencer {
           self_host_return_type_origin(self_host_semantic_id_local(self.body.id), self.body.offset),
         )
       } else if !self.is_primitive(self.declared_return_type, UnitType) {
-        self.constrain_assignable(
-          self.expression_type(root_expression),
+        self.constrain_expression_assignable(root_expression,
           self.declared_return_type,
           self_host_return_type_origin(root_expression, self.body.offset),
         )
@@ -8208,6 +8219,7 @@ impl SelfHostBasicBodyInferencer {
       control_state_types: self.control_state_types
       control_result_types: self.control_result_types
       call_targets: self.call_targets
+      trait_object_coercions: self.trait_object_coercions
       operator_targets: self.operator_targets
       expression_selections: self.expression_selections
       object_field_targets: self.object_field_targets
@@ -8283,6 +8295,7 @@ impl SelfHostBasicBodyInferencer {
 
   fn run(self) -> SelfHostBasicInferredBody {
     self.constrain_body()
+    self.resolve_trait_object_coercions()
     self.validate_field_assignments()
     self.finalize()
   }

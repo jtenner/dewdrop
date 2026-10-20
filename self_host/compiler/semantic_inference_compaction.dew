@@ -305,6 +305,7 @@ fn self_host_compact_basic_inferred_body(
     control_state_types: compact.remap_array(body.control_state_types)
     control_result_types: compact.remap_array(body.control_result_types)
     call_targets: body.call_targets
+    trait_object_coercions: body.trait_object_coercions
     operator_targets: body.operator_targets
     expression_selections: body.expression_selections
     object_field_targets: body.object_field_targets

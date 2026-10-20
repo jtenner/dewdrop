@@ -1,6 +1,7 @@
 open dew.std.map
 
 pub enum CtCallTarget {
+  DynamicTrait(U64, String, String)
   Constant(CtCheckedConstant)
   Framed(CtCallTarget, String)
   Source(U32, String, SelfHostFunctionDeclaration, String)
@@ -110,6 +111,20 @@ fn ct_checked_call(machine: CtMachine, mi: U32, offset: U32, callee: SelfHostExp
       }
       ct_intrinsic_result(machine, ct_source_call_frame(machine, target_mi, path, function, values, selected.frame), kind)
     }
+    Some(DynamicTrait(requirement, key, kind)) => {
+      let values = array_new::<CtValue>()
+      match callee {
+        FieldExpr(owner, _, _) => values.push(ct_eval(machine, mi, owner, env))
+        _ => return ct_fail(machine, "checked receiver call requires a receiver expression")
+      }
+      for argument in args {
+        if machine.flow != 0u32 || machine.error.byte_length() != 0u32 {
+          return CtValue::Empty
+        }
+        values.push(ct_eval(machine, mi, argument, env))
+      }
+      ct_dynamic_trait_call(machine, requirement, key, kind, values)
+    }
     Some(Intrinsic(builtin_, kind)) => {
       let result = ct_typed_intrinsic(machine, builtin_, ct_eval_values(machine, mi, args, env), kind)
       ct_intrinsic_result(machine, result, kind)
@@ -215,6 +230,7 @@ fn ct_collect_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering:
 }
 
 fn ct_collect_module_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering, mi: U32, module_: SelfHostPlannedModuleLowering, expressions: Array<U32>, proofs: CtExecutionFrame, specialization: U32) -> Unit {
+  ct_collect_trait_objects(plan, collected, lowering, mi, module_, expressions, proofs, specialization)
   let source = collected.modules.at(mi)
     let calls = ct_source_call_targets(source, module_)
     let operators = ct_scalar_source_targets(source, module_)
@@ -274,6 +290,7 @@ fn ct_collect_module_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lo
         match expression {
           CallExpr(_, _, _) => Some(match module_.expressions[ei].call_target {
             SelectedBasicCallTarget(target, arguments) => SelectedBasicCallTarget(target, arguments)
+            DynamicTraitBasicCallTarget(trait_, requirement, slot, arguments) => DynamicTraitBasicCallTarget(trait_, requirement, slot, arguments)
             _ => calls[ei]
           })
           PrefixExpr(_, _, _) => Some(NoBasicCallTarget)
@@ -306,6 +323,7 @@ fn ct_collect_module_calls(plan: CtPlan, collected: SelfHostCollectedProgram, lo
                 }
                 _ => Some(ct_checked_source_target(plan, collected, declaration, ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, false)))
               }
+              DynamicTraitBasicCallTarget(trait_, requirement, slot, _) => Some(DynamicTrait(requirement, ct_trait_slot_key(trait_, slot), ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, false)))
               FunctionValueBasicCallTarget(_) => Some(FunctionValue(ct_checked_scalar_kind(plan, module_, module_.expressions[ei].type_, false)))
               NoBasicCallTarget => None
               _ => Some(Unsupported)

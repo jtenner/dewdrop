@@ -187,6 +187,7 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
       self_host_lowered_child_optional_expression(context, parent, receiver)
       self_host_lowered_child_arguments(context, parent, arguments)
     }
+    PlannedDynamicTraitCall(_, _, _, receiver, arguments, _),
     PlannedFunctionValueCall(receiver, arguments, _) => {
       self_host_lowered_child_expression(context, parent, receiver)
       self_host_lowered_child_arguments(context, parent, arguments)

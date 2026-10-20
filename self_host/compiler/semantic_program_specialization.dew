@@ -1378,6 +1378,7 @@ fn self_host_program_specialization_scan_one_body(
         module_,
         expression_index,
       )
+      self_host_materialize_transform_trait_methods(lowering, module_, body, caller_specialization, expression_index, reachable, reachable_seen, requests, shapes, request_head_by_declaration, request_next)
       self_host_program_specialization_mark_nominal(
         reachable,
         reachable_seen,
@@ -1967,6 +1968,25 @@ fn self_host_plan_program_specialization(
   self_host_plan_program_specialization_roots(lowering, emit_tests, None)
 }
 
+// A compile request exports one module. Private bodies stay reachable through
+// checked calls, function references, closures, and runtime initializers.
+fn self_host_plan_program_runtime_specialization(lowering: SelfHostPlannedProgramLowering, root: U32, emit_tests: Bool) -> SelfHostProgramSpecializationPlan {
+  self_host_assert_array_index(root, lowering.modules.length(), "LNK-504 runtime root module")
+  let roots = self_host_program_specialization_seen()
+  let _ = while 0u32 {
+    mi if mi < lowering.modules.length() => {
+      for callable in lowering.modules[mi].functions.callables {
+        if (mi == root && (callable.visibility is Public || (callable.main_code == 1296124238u32 && callable.kind is PlannedFunctionCallable(_)))) || (emit_tests && callable.is_test) {
+          roots.set(callable.declaration, true)
+        }
+      }
+      continue mi + 1u32
+    }
+    _ => break ()
+  }
+  self_host_plan_program_specialization_roots(lowering, emit_tests, Some(roots))
+}
+
 fn self_host_plan_program_specialization_roots(
   lowering: SelfHostPlannedProgramLowering,
   emit_tests: Bool,
@@ -2040,7 +2060,7 @@ fn self_host_plan_program_specialization_roots_excluding_bodies(
       let _ = while initializer_step_index {
         current => if current < module_.initialization.steps.length() {
           let step = module_.initialization.steps[current]
-        if declaration_roots is None && (!step.test_only || emit_tests) {
+        if (declaration_roots is None || !lowering.compile_time.transform_limited) && (!step.test_only || emit_tests) {
           match step.kind {
             PlannedInitializeModuleValue(declaration, body_id, _) => match self_host_program_specialization_body(
               module_,

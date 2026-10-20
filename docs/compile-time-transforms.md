@@ -175,6 +175,7 @@ work. Runnable examples are in `examples/transforms/`:
 | `callbacks.dew` | A function value that returns a closure |
 | `flow.dew` | Return from a call argument |
 | `generics.dew` | Generic helper results and typed default values |
+| `dynamic_traits.dew` | Checked trait values, generic erasure, and mutable receiver aliases |
 | `defaults.dew` | Deferred zero values inside generic enum payloads |
 | `scalar_values.dew` | Checked values in generic records, options, and tuples |
 | `signature_info.dew` | Structured parameter names and source types |
@@ -666,3 +667,17 @@ The second command uses Node. For Wago, use the patched pinned host built by
 `tools/build-wago-transform-host.py`. Both cold and saved-result requests pass
 with the self-built compiler. The unpatched pin has a reference-root fault.
 See [cache evidence and limits](research/transform-result-cache-2026-10-20.md).
+
+## Trait values in transforms
+
+Transforms can convert a checked value to a trait and call its methods. Generic
+helpers can return trait values. A trait value keeps the original receiver, so
+changes through a mutable receiver remain visible through its other aliases.
+Each conversion has a separate identity. Method selection uses the ordinary
+compiler checks, including generic implementation bounds. Generic trait methods
+and methods that return `Self` are not supported through a trait value.
+
+Try `examples/transforms/dynamic_traits.dew`; its `main` returns `42`.
+The Native and Dew transform interpreters support this example. The compiler
+written in Dew currently rejects live runtime trait objects with a clear error.
+Keep these trait values inside transform code when you use that compiler.

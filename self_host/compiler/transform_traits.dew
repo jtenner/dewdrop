@@ -1,0 +1,159 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.string_builder
+
+struct CtTraitMethod {
+  key: String
+  target: CtCallTarget
+}
+
+struct CtTraitObjectProof {
+  methods: Map<U64, CtTraitMethod>
+}
+
+struct CtTraitObjectValue {
+  receiver: CtValue
+  proof: CtTraitObjectProof
+}
+
+builtin ct_trait_object_identity(left: CtTraitObjectValue, right: CtTraitObjectValue) -> Bool = "ref.eq"
+
+fn ct_trait_slot_key(trait_: U64, slot: U32) -> String {
+  let out = StringBuilder::new()
+  out.append_u64(trait_)
+  out.append(":")
+  out.append_u32(slot)
+  out.finish()
+}
+
+fn ct_lookup_trait_object(machine: CtMachine, mi: U32, offset: U32) -> Option<CtTraitObjectProof> {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+    return None
+  }
+  if machine.plan.trait_objects.length() == 0u32 {
+    let local = match machine.plan.frames.get(machine.frame) {
+      Some(frame) => frame.trait_objects.length() != 0u32
+      None => false
+    }
+    if !local {
+      return None
+    }
+  }
+  let site = ct_site_key(machine.plan, mi, machine.file_path, offset)
+  match machine.plan.frames.get(machine.frame) {
+    Some(frame) => match frame.trait_objects.get(site) {
+      Some(value) => return Some(value)
+      None => {}
+    }
+    None => {}
+  }
+  machine.plan.trait_objects.get(site)
+}
+
+fn ct_trait_object(machine: CtMachine, receiver: CtValue, proof: CtTraitObjectProof) -> CtValue {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 || !ct_charge(machine, 40u32) {
+    return CtValue::Empty
+  }
+  CtValue::TraitObject({
+    receiver: receiver
+    proof: proof
+  })
+}
+
+fn ct_dynamic_trait_call(machine: CtMachine, requirement: U64, key: String, kind: String, values: Array<CtValue>) -> CtValue {
+  if machine.error.byte_length() != 0u32 || machine.flow != 0u32 {
+    return CtValue::Empty
+  }
+  if values.length() == 0u32 {
+    return ct_fail(machine, "checked dynamic trait call requires a trait value")
+  }
+  let object_ = match values[0u32] {
+    TraitObject(value) => value
+    _ => return ct_fail(machine, "checked dynamic trait call requires a trait value")
+  }
+  let method = match object_.proof.methods.get(requirement) {
+    Some(method) if method.key == key => method
+    _ => return ct_fail(machine, "checked dynamic trait method slot mismatch")
+  }
+  values[0u32] = object_.receiver
+  ct_intrinsic_result(machine, ct_bc_target(machine, method.target, values, CtValue::Empty), kind)
+}
+
+fn ct_trait_dictionary(plan: CtPlan, collected: SelfHostCollectedProgram, trait_: U64, methods: Array<SelfHostSelectedTraitObjectMethod>) -> CtTraitObjectProof {
+  let out = StringBuilder::new()
+  out.append_u64(trait_)
+  out.append(":")
+  for method in methods {
+    out.append_u64(method.requirement)
+    out.append(":")
+    out.append_u32(method.slot)
+    out.append(":")
+    out.append_u64(method.declaration)
+    out.append(":")
+    out.append_u32(method.specialization)
+    out.append(":")
+  }
+  let key = out.finish()
+  match plan.trait_dictionaries.get(key) {
+    Some(value) => return value
+    None => {}
+  }
+  let selected = map_empty::<U64, CtTraitMethod>()
+  for method in methods {
+    let target = ct_checked_source_target(plan, collected, method.declaration, "")
+    let frame = ct_frame_key(method.specialization)
+    let target = if frame == "" {
+      target
+    } else {
+      CtCallTarget::Framed(target, frame)
+    }
+    selected.set(method.requirement, {
+      key: ct_trait_slot_key(trait_, method.slot)
+      target: target
+    })
+  }
+  let proof = CtTraitObjectProof::{
+    methods: selected
+  }
+  plan.trait_dictionaries.set(key, proof)
+  proof
+}
+
+fn ct_collect_trait_objects(plan: CtPlan, collected: SelfHostCollectedProgram, lowering: SelfHostPlannedProgramLowering, mi: U32, module_: SelfHostPlannedModuleLowering, expressions: Array<U32>, frame: CtExecutionFrame, specialization: U32) -> Unit {
+  if module_.inferred.trait_object_coercions.length() == 0u32 {
+    return
+  }
+  let source = collected.modules.at(mi)
+  let _ = while 0u32 {
+    expression_index if expression_index < expressions.length() => {
+    let ei = expressions[expression_index]
+    let proof = match module_.inferred.trait_object_coercions.get(ei) {
+      Some(value) => value
+      None => continue expression_index + 1u32
+    }
+    let site = self_host_trait_object_site(module_.module_id, specialization, ei)
+    let methods = match lowering.compile_time.trait_methods.get(site) {
+      Some(value) => value
+      None => continue expression_index + 1u32
+    }
+    let dictionary = ct_trait_dictionary(plan, collected, proof.trait_declaration, methods)
+    let mut fi = 0u32
+    for file_id in source.files {
+      if file_id == source.expression_files[ei] {
+        for file in plan.files {
+          if file.module_index == mi && file.original.path == source.file_paths[fi] {
+            match ct_scalar_original_offset(file, source.expressions[ei].offset(), 0u32) {
+              Some(offset) => frame.trait_objects.set(ct_site_key(plan, mi, file.original.path, offset), dictionary)
+              None => {}
+            }
+          }
+        }
+      }
+      fi = fi + 1u32
+    }
+    continue expression_index + 1u32
+    }
+    _ => break ()
+  }
+}

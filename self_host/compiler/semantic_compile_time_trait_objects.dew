@@ -1,0 +1,164 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.string_builder
+
+struct SelfHostSelectedTraitObjectMethod {
+  requirement: U64
+  slot: U32
+  declaration: U64
+  specialization: U32
+}
+
+fn self_host_empty_selected_trait_methods() -> Map<String, Array<SelfHostSelectedTraitObjectMethod>> {
+  empty()
+}
+
+fn self_host_trait_object_site(module_: U64, specialization: U32, expression: U32) -> String {
+  let out = StringBuilder::new()
+  out.append_u64(module_)
+  out.append(":")
+  out.append_u32(specialization)
+  out.append(":")
+  out.append_u32(expression)
+  out.finish()
+}
+
+fn self_host_trait_method_type_shape(type_: SelfHostCompileTimeType, depth: U32) -> SelfHostPlannedValueShape {
+  if depth >= 128u32 {
+    return ErrorPlannedValueShape
+  }
+  match type_ {
+    PrimitiveCompileTimeType(primitive) => self_host_primitive_value_shape(primitive)
+    ProductCompileTimeType(values) => {
+      let fields = self_host_shape_fields()
+      for value in values {
+        fields.push(self_host_trait_method_type_shape(value, depth + 1u32))
+      }
+      ProductPlannedValueShape(fields)
+    }
+    NominalCompileTimeType(_), TraitCompileTimeType(_), AppliedCompileTimeType(_, _), FunctionCompileTimeType(_, _) => RefPlannedValueShape
+    _ => ErrorPlannedValueShape
+  }
+}
+
+// This runs in the ordinary selected-body work list. The interpreter consumes
+// its exact targets; it does not choose an implementation or guess a carrier.
+fn self_host_materialize_transform_trait_methods(
+  lowering: SelfHostPlannedProgramLowering,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
+  expression: U32,
+  reachable: Array<U64>,
+  reachable_seen: Map<U64, Bool>,
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_heads: Map<U64, U32>,
+  request_next: Array<U32>,
+) -> Unit {
+  if !lowering.compile_time.transform_limited {
+    return
+  }
+  let proof = match module_.inferred.trait_object_coercions.get(expression) {
+    Some(value) => value
+    None => return
+  }
+  let site = self_host_trait_object_site(module_.module_id, specialization, expression)
+  if lowering.compile_time.trait_methods.contains_key(site) {
+    return
+  }
+  let witness = match proof.witness {
+    Some(value) => value
+    None => return
+  }
+  let trait_owner = match lowering.index.declaration_owner(proof.trait_declaration) {
+    Some(value) => value
+    None => {
+      self_host_assert_compiler_invariant(false, "LNK-504 checked trait declaration has no owner")
+      unreachable()
+    }
+  }
+  let trait_module = lowering.modules[trait_owner]
+  let trait_source = lowering.collected.modules.at(trait_owner)
+  let view = match self_host_trait_signature_view(trait_source, trait_module.resolved_types, None, proof.trait_declaration) {
+    Some(value) => value
+    None => {
+      self_host_assert_compiler_invariant(false, "LNK-504 checked trait has no signature")
+      unreachable()
+    }
+  }
+  let selected = []
+  let mut slot = 0u32
+  let _ = while 0u32 {
+    requirement_index if requirement_index < view.requirements.length() => {
+    let requirement = view.requirements[requirement_index]
+    if !requirement.receiver {
+      continue requirement_index + 1u32
+    }
+    if requirement.generics.length != 0u32 {
+      return
+    }
+    let methods = witness.implementation.methods
+    self_host_assert_array_span(methods.start, methods.length, witness.index.methods.length(), "ARN-101 checked trait implementation methods")
+    let mut declaration = None
+    while 0u32 {
+      index if index < methods.length => {
+        let candidate = witness.index.methods[methods.start + index]
+        if candidate.requirement is Some(required) && required == requirement.declaration {
+          self_host_assert_compiler_invariant(declaration is None, "INV-001 duplicate checked trait method")
+          declaration = Some(candidate.declaration)
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let declaration = match declaration {
+      Some(value) => value
+      None => return
+    }
+    let owner = match lowering.index.declaration_owner(declaration) {
+      Some(value) => value
+      None => return
+    }
+    let method_module = lowering.modules[owner]
+    let method = match self_host_program_specialization_callable(method_module, declaration) {
+      Some(value) => value
+      None => return
+    }
+    self_host_assert_compiler_invariant(method.generic_parameters.length == 0u32, "INV-001 dynamic implementation has method parameters")
+    let parameters = self_host_program_specialization_callable_generics(method)
+    let candidates = self_host_shape_fields()
+    let logical = self_host_empty_specialization_evidence_types()
+    while 0u32 {
+      index if index < parameters.length => {
+        let id = self_host_make_semantic_id(parameters.module_id, parameters.local(index))
+        let type_ = match witness.bindings.parameters.get(id) {
+          Some(value) => value
+          None => return
+        }
+        candidates.push(self_host_trait_method_type_shape(type_, 0u32))
+        logical.push(self_host_compile_time_to_evidence_type(type_))
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let request = if parameters.length == 0u32 {
+      4294967295u32
+    } else {
+      self_host_program_specialization_add_request_at_call(requests, shapes, request_heads, request_next, declaration, candidates, logical, body.body, expression)
+    }
+    let _ = self_host_program_specialization_add_reachable(reachable, reachable_seen, declaration)
+    selected.push({
+      requirement: requirement.declaration
+      slot: slot
+      declaration: declaration
+      specialization: request
+    })
+    slot = slot + 1u32
+    continue requirement_index + 1u32
+    }
+    _ => break ()
+  }
+  lowering.compile_time.trait_methods.set(site, selected)
+}

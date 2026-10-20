@@ -24,6 +24,7 @@ pub struct SelfHostCompileTimeProgramContext {
   sensitive: Map<U64, Bool>
   instances: Map<U32, SelfHostCompileTimeInstance>
   diagnostics: Array<String>
+  trait_methods: Map<String, Array<SelfHostSelectedTraitObjectMethod>>
   query_constants: Map<U64, Map<U32, SelfHostPlannedExpressionKind>>
 }
 
@@ -61,6 +62,7 @@ fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowe
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()
     diagnostics: diagnostics
+    trait_methods: self_host_empty_selected_trait_methods()
     query_constants: source.query_constants
   }
   {
@@ -172,6 +174,7 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()
     diagnostics: []
+    trait_methods: self_host_empty_selected_trait_methods()
     query_constants: map_empty::<U64, Map<U32, SelfHostPlannedExpressionKind>>()
   }
 }

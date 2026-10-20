@@ -1,7 +1,8 @@
 // Opcodes: 1 constant, 2 load, 3 store, 4 binary, 5 charge, 6 enter,
 // 7 leave, 8 jump, 9 jump-false, 10 jump-true, 11 call, 12 typed read,
 // 13 prefix, 14 field read, 15 field write (+ owner word), 16 return,
-// 17 restore loop depth, 18 truth, 19 simple pattern, 20 literal compare.
+// 17 restore loop depth, 18 truth, 19 simple pattern, 20 literal compare,
+// 21 checked trait conversion.
 
 // Portable 32-bit instruction words. No host memory or host call is exposed.
 open dew.std.array
@@ -16,6 +17,7 @@ struct CtBytecodeFunction {
   prefixes: Array<CtBytecodePrefix>
   names: Array<String>
   kinds: Array<String>
+  trait_objects: Array<CtTraitObjectProof>
   slots: U32
   estimated_bytes: U32
 }
@@ -55,6 +57,7 @@ struct CtBytecodeBuilder {
   prefixes: Array<CtBytecodePrefix>
   names: Array<String>
   kinds: Array<String>
+  trait_objects: Array<CtTraitObjectProof>
   mutable_slots: Array<Bool>
   mut visits: U32
   mut depth: U32
@@ -147,6 +150,7 @@ fn ct_bc_scope(outer: Map<String, U32>) -> Map<String, U32> {
 fn ct_bc_target(machine: CtMachine, target: CtCallTarget, values: Array<CtValue>, closure: CtValue) -> CtValue {
   let selected = ct_unframe_call(target)
   match selected.target {
+    Some(DynamicTrait(requirement, key, kind)) => ct_dynamic_trait_call(machine, requirement, key, kind, values)
     Some(Constant(value)) => ct_checked_constant(machine, value)
     Some(Source(mi, path, function, kind)) => ct_intrinsic_result(machine, ct_source_call_frame(machine, mi, path, function, values, selected.frame), kind)
     Some(Intrinsic(builtin_, kind)) => ct_intrinsic_result(machine, ct_typed_intrinsic(machine, builtin_, values, kind), kind)
@@ -311,6 +315,8 @@ fn ct_run_bytecode_inner(machine: CtMachine, code: CtBytecodeFunction, arguments
         if machine.depth >= 128u32 {
           return ct_fail(machine, "transform depth limit exceeded")
         }
+      } else if op == 21u32 {
+        value = ct_trait_object(machine, value, code.trait_objects[arg])
       } else if op == 20u32 {
         value = CtValue::Boolean(ct_literal_pattern_equal(machine, value, slots[arg]))
       } else {

@@ -355,7 +355,7 @@ fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnviron
     return ct_fail(machine, "transform depth limit exceeded")
   }
   machine.depth = machine.depth + 1u32
-  let value = ct_eval_inner(machine, mi, expression, env)
+  let mut value = ct_eval_inner(machine, mi, expression, env)
   machine.depth = machine.depth - 1u32
   let scalar_read = match expression {
     NameExpr(_, _) => true
@@ -364,12 +364,17 @@ fn ct_eval(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnviron
   }
   if scalar_read {
     match ct_lookup_scalar_type(machine, mi, expression.offset()) {
-      Some(kind) => return ct_intrinsic_result(machine, value, kind)
+      Some(kind) => {
+        value = ct_intrinsic_result(machine, value, kind)
+      }
       _ => {
       }
     }
   }
-  value
+  match ct_lookup_trait_object(machine, mi, expression.offset()) {
+    Some(proof) => ct_trait_object(machine, value, proof)
+    None => value
+  }
 }
 
 fn ct_eval_inner(machine: CtMachine, mi: U32, expression: SelfHostExpr, env: CtEnvironment) -> CtValue {

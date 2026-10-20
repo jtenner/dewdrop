@@ -93,6 +93,7 @@ fn ct_inference_validation_view(lowering: SelfHostPlannedProgramLowering) -> Sel
       control_state_types: inferred.control_state_types
       control_result_types: inferred.control_result_types
       call_targets: inferred.call_targets
+      trait_object_coercions: inferred.trait_object_coercions
       operator_targets: inferred.operator_targets
       expression_selections: inferred.expression_selections
       object_field_targets: inferred.object_field_targets

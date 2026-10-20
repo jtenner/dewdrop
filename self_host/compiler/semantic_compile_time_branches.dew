@@ -200,6 +200,7 @@ fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering
       work.push(ExpressionCompileTimeReach(receiver))
       self_host_compile_time_push_children(module_, arguments, work)
     }
+    PlannedDynamicTraitCall(_, _, _, receiver, arguments, _),
     PlannedFunctionValueCall(receiver, arguments, _) => {
       work.push(ExpressionCompileTimeReach(receiver))
       self_host_compile_time_push_children(module_, arguments, work)

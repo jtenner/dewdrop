@@ -18,6 +18,7 @@ fn ct_reference_equal(machine: CtMachine, left: CtValue, right: CtValue) -> CtVa
     (DefaultValue, DefaultValue), (DefaultValue, NullValue), (NullValue, DefaultValue), (NullValue, NullValue) => CtValue::Boolean(true)
     (NullValue, _), (DefaultValue, _) => CtValue::Boolean(false)
     (_, NullValue), (_, DefaultValue) => CtValue::Boolean(false)
+    (TraitObject(left), TraitObject(right)) => CtValue::Boolean(ct_trait_object_identity(left, right))
     (RawArray(left), RawArray(right)) => CtValue::Boolean(ct_raw_storage_identity(left, right))
     (TextChunks(left, _), TextChunks(right, _)) => CtValue::Boolean(ct_reference_identity(left, right))
     (Record(_, left), Record(_, right)) => CtValue::Boolean(ct_binding_storage_identity(left.values, right.values))

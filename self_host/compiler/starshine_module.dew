@@ -9082,6 +9082,19 @@ fn self_host_emit_linked_i32_expression(
             return Some(message.finish())
           }
           let planned = module_.expressions[expression]
+          if planned.flow.falls_through && !(planned.kind is PlannedDeadExpression) && !(planned.kind is PlannedConsumedExpression) && (module_.inferred.trait_object_coercions.contains_key(expression) || planned.kind is PlannedDynamicTraitCall(_, _, _, _, _, _)) {
+            let message = StringBuilder::new()
+            message.append("runtime trait objects are not supported by the Dew backend module=")
+            message.append_u64(module_.module_id)
+            message.append(" body=")
+            message.append_u64(body.body)
+            message.append(" expression=")
+            message.append_u32(expression)
+            message.append(" offset=")
+            message.append_u32(planned.offset)
+            return Some(message.finish())
+          }
+
           let depth = if expression < expression_depths.length() && !self_host_u32_equal(
             expression_depths[expression],
             4294967295u32,
