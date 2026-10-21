@@ -1,0 +1,9 @@
+{
+  "public_commit": "8ed7bca95968283847f9ea1420f521ea52796a57",
+  "local_feature_commit": "ee75efbd007be04fb60f9ac8908048d4c8410fcb",
+  "installed_commit": "6894c7f8a9026ea8c4ef1d813813330414a248d7",
+  "pr": "https://github.com/wago-org/wago/pull/1007",
+  "closed_duplicate": "https://github.com/wago-org/wago/pull/1012",
+  "source_matches_exact_measured_files": true,
+  "arm64_edit_preserved": true
+}
