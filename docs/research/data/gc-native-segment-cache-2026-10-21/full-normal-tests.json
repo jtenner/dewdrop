@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags",
+    "wago_segmentcache",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/core/runtime/gc/native",
+    "./src/core/runtime",
+    "./src/wago",
+    "-count=1",
+    "-timeout=90s"
+  ],
+  "elapsed": 51.51290619399515,
+  "exit": 0
+}

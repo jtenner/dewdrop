@@ -1,0 +1,3 @@
+Wago e2fe43ffc83d; patch segment-cache-stats; workers unverified; Facet v0.1.0; locked project bindings
+transform result cache: miss
+segment-cache epoch=0 hits=0 fills=0 entries=0 flags=10 store=true

@@ -1,0 +1,11 @@
+{
+  "target_seconds": 4,
+  "accepted": false,
+  "reason": "Dense cache slower and higher RSS; bounded small cache showed only a marginal one-pair gain. No installation or publication.",
+  "base": "512d6493f",
+  "dense_seconds": 35.50102177599911,
+  "control_seconds": 33.43485724199854,
+  "dense_rss_kib": 1543128,
+  "control_rss_kib": 1129764,
+  "extra_rss_mib": 403.67578125
+}

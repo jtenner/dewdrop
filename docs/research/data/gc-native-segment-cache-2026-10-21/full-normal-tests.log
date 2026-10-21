@@ -1,0 +1,4 @@
+ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64	5.211s
+ok  	github.com/wago-org/wago/src/core/runtime/gc/native	1.782s
+ok  	github.com/wago-org/wago/src/core/runtime	0.441s
+ok  	github.com/wago-org/wago/src/wago	27.634s
