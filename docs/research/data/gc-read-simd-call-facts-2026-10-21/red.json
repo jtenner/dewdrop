@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags",
+    "wago_codegenstats",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/wago",
+    "-run",
+    "TestGCReadCallSummaryEffects/vector|TestGCReadSIMDCallFactsAdmission",
+    "-count=1"
+  ],
+  "elapsed": 0.6433855499926722,
+  "exit": 1
+}

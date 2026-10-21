@@ -1,0 +1,7 @@
+{
+  "Replace": {
+    "/tmp/wago-gc-immutable-loop-homes/src/wago/api.go": "/tmp/wago-four-seconds/admission/api.go.txt",
+    "/tmp/wago-gc-immutable-loop-homes/src/wago/real_shared_getter_capture.go": "/tmp/wago-four-seconds/admission/hook.go.txt",
+    "/tmp/wago-gc-immutable-loop-homes/src/wago/real_shared_getter_capture_test.go": "/tmp/wago-four-seconds/admission/capture_test.go.txt"
+  }
+}

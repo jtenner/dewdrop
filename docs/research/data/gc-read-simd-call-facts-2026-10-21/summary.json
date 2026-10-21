@@ -1,0 +1,19 @@
+{
+  "control_seconds": [
+    37.3314904430008,
+    34.42252964399813,
+    36.8280770220008
+  ],
+  "candidate_seconds": [
+    36.245573409003555,
+    35.87788848199125,
+    34.83783081799629
+  ],
+  "control_median": 36.8280770220008,
+  "candidate_median": 35.87788848199125,
+  "control_peak_rss_median_kib": 1131208,
+  "candidate_peak_rss_median_kib": 1135092,
+  "claim": "No reliable speed gain: one pair reverses, baseline varies by 2.9seconds. Four-second target unmet.",
+  "actual_home_override": "/tmp/wago-four-seconds/simd/homes/<label>",
+  "environment_record_caveat": "Base harness records WAGO_HOME before wrapper override; actual fresh paths are above."
+}

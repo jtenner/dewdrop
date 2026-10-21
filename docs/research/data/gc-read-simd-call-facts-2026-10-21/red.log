@@ -1,0 +1,10 @@
+--- FAIL: TestGCReadCallSummaryEffects (0.00s)
+    --- FAIL: TestGCReadCallSummaryEffects/vector (0.00s)
+        gc_read_call_facts_test.go:71: callee/caller=false/false wanttrue
+FAIL
+FAIL	github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64	0.006s
+--- FAIL: TestGCReadSIMDCallFactsAdmission (0.00s)
+    gc_read_call_facts_stats_amd64_test.go:58: read reuse=2 want3; counters=map[commute-mem-left:3 final-cast-scalar-get-fuse:4 frame-header-elide:1 gc-value-check-input:4 gc-value-check-plan:1 gc-value-check-reuse:2 gc-value-check-save:2 mixed-call-reg-arg:1]
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.014s
+FAIL

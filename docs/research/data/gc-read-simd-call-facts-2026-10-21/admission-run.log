@@ -1,0 +1,4 @@
+=== RUN   TestRealSharedGetterStaticAdmission
+    real_shared_getter_capture_test.go:78: fusions=4766 functions=1036 native_bytes=25972587 compile_seconds=0.507076 roots={Required:true Exact:true Reason: Safepoints:25794 Callsites:50438 MaximumRoots:77 MetadataBytes:1803076}
+--- PASS: TestRealSharedGetterStaticAdmission (0.53s)
+PASS

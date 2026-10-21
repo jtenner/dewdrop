@@ -1,0 +1,7 @@
+{
+  "base": "512d6493f407fbb2a2cc58614c77d4b97bcf00e7",
+  "candidate": "9d84600f1",
+  "source": "/tmp/wago-gc-immutable-loop-homes",
+  "installed": "local-gc-6894c7f8a",
+  "installed_arm64_call_sha256": "33b8f91b38727df8487afc9c7a99d6c59bca0ed5d8be1b927c0ad6fefa2f0818"
+}

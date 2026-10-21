@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags",
+    "wago_codegenstats",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/wago",
+    "-run",
+    "TestGCRead(Call|Load|SIMD)",
+    "-count=1",
+    "-timeout=90s"
+  ],
+  "seconds": 25.924430744998972,
+  "exit": 0
+}
