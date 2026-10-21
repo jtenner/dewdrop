@@ -1,0 +1,15 @@
+2026-10-21T21:23:43.2917430Z [36;1m  --platform "$CORPUS_PLATFORM" \[0m
+2026-10-21T21:23:43.3130290Z   CI_SOURCE_SHA: 32d007175df5b180a38426e97a42eac9c0d83d36
+2026-10-21T21:23:43.3132450Z   CORPUS_PLATFORM: darwin/amd64
+2026-10-21T21:23:43.3134250Z   CORPUS_SHARD: 2
+2026-10-21T21:23:43.3135130Z   CORPUS_SHARDS: 4
+2026-10-21T21:23:50.3898540Z [36;1mgo test -count=1 -timeout 20m -run '^(TestCorpus|TestCorpusSemanticExec)$' ./suite -args "-wago.corpus=$CORPUS_SELECTOR"[0m
+2026-10-21T21:23:50.4238520Z   CORPUS_SELECTOR: age-decrypt,brotli-decompress,cjson,clang-cpp-kernels,coreutils-sha256sum,drwav,embench-huffbench,grain-stdlib-string,icepack-pack,json-as,lzmadec-decompress,matmul,micropython-squares,miniz,nbody,php-buckets,polybench-2mm,polybench-covariance,polybench-doitgen,polybench-floyd-warshall,polybench-gesummv,polybench-gramschmidt,polybench-ludcmp,qoi,sha256,sqlite3-query,wren-modulo,xxhash,xzdec-decompress,yyjson,zlib,zstd
+2026-10-21T21:23:50.4251520Z   WAGO_CORPUS_TIMEOUT: 20s
+2026-10-21T21:27:34.3833110Z --- FAIL: TestCorpus (150.32s)
+2026-10-21T21:27:34.3923890Z     --- FAIL: TestCorpus/clang-cpp-kernels/CompileFull (15.06s)
+2026-10-21T21:27:34.3980540Z         corpus_runner_test.go:28: corpus child timed out after 15s: clang-cpp-kernels/CompileFull/
+2026-10-21T21:27:34.4048630Z FAIL
+2026-10-21T21:27:34.4070230Z FAIL	github.com/wago-org/wago/bench/suite	151.673s
+2026-10-21T21:27:34.4108940Z FAIL
+2026-10-21T21:27:34.6913920Z ##[error]Process completed with exit code 1.

@@ -30,3 +30,35 @@ source change. The clean diagnostic worktree is `/tmp/wago-pr980-ci-fix`, with
 its Go cache at `/tmp/wago-pr980-go-cache`. Saved job log, local test results,
 and the rerun rejection are in
 `docs/research/data/wago-pr980-darwin-host-gc-ci-2026-10-21/`.
+
+## Darwin AMD64 corpus follow-up
+
+The same run also fails
+[Corpus correctness / Darwin amd64 / shard 3 of 4](https://github.com/wago-org/wago/actions/runs/39606585738/job/119252800452).
+Its only reported failure is `TestCorpus/clang-cpp-kernels/CompileFull`:
+the child reaches the 15-second limit (15.06 s reported). There is no
+wrong-result or compiler error in the job log. The runner is macOS 15.7.9,
+AMD64, Go 1.27.1, testing merge `32d0071`.
+
+The job sets `WAGO_CORPUS_TIMEOUT=20s`, but `runCorpusChild` in
+`bench/suite/corpus_runner_test.go` uses a fixed 15-second limit. This
+observation does not justify raising the limit or hiding a slow compile.
+
+On the unchanged PR head, three focused Linux AMD64 runs pass in 2.67,
+2.71 and 2.68 s. The command is:
+
+```sh
+GOCACHE=/tmp/wago-pr980-go-cache GOWORK=off GOMAXPROCS=2 go test -v -count=3 -timeout=2m -run='^TestCorpus$/^clang-cpp-kernels$/^CompileFull$' ./suite -args -wago.corpus=clang-cpp-kernels
+```
+
+It runs from `/tmp/wago-pr980-ci-fix/bench`. Total elapsed time, including
+the Go test build, is 15.785 s; the test package reports 8.092 s. Linux
+success does not prove native Darwin behavior. No source was changed.
+
+A single attempt to rerun failed jobs is again rejected with HTTP 403:
+`This workflow is already running`. The workflow status remains `queued`
+while the returned completed jobs include both known failures. Keep the PR
+watch active and retry after the workflow ends. Do not cancel other jobs.
+Failure excerpts, local output and retry rejection are saved beside the
+earlier evidence with the `darwin-amd64-corpus` and `linux-compile-full`
+prefixes.

@@ -1,0 +1,14 @@
+=== RUN   TestCorpus
+=== RUN   TestCorpus/clang-cpp-kernels/CompileFull
+--- PASS: TestCorpus (2.70s)
+    --- PASS: TestCorpus/clang-cpp-kernels/CompileFull (2.67s)
+=== RUN   TestCorpus
+=== RUN   TestCorpus/clang-cpp-kernels/CompileFull
+--- PASS: TestCorpus (2.71s)
+    --- PASS: TestCorpus/clang-cpp-kernels/CompileFull (2.71s)
+=== RUN   TestCorpus
+=== RUN   TestCorpus/clang-cpp-kernels/CompileFull
+--- PASS: TestCorpus (2.68s)
+    --- PASS: TestCorpus/clang-cpp-kernels/CompileFull (2.68s)
+PASS
+ok  	github.com/wago-org/wago/bench/suite	8.092s
