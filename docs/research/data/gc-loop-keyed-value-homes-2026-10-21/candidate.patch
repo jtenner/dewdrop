@@ -1,0 +1,863 @@
+commit 399f7721bf72ea2c9b8c4d9864e43167770b2d2c
+Author:     jtenner <tenner.joshua@gmail.com>
+AuthorDate: Wed Oct 21 22:54:53 2026 +0000
+Commit:     jtenner <tenner.joshua@gmail.com>
+CommitDate: Wed Oct 21 22:54:53 2026 +0000
+
+    research: test bounded frame caches for GC loop reads
+
+diff --git a/docs/research/gc-loop-keyed-value-homes.md b/docs/research/gc-loop-keyed-value-homes.md
+new file mode 100644
+index 000000000..1ee0e9f02
+--- /dev/null
++++ b/docs/research/gc-loop-keyed-value-homes.md
+@@ -0,0 +1,90 @@
++# Bounded frame cache for loop reference checks
++
++Research-only experiment. This is not installed or published. The four-second
++Dew compilation target remains unmet. Full-job results and the acceptance
++decision are recorded below when the experiment ends.
++
++The source pass chooses at most eight fixed final struct type/exact extent
++pairs from cast/read sites inside loops. Only selected functions get homes.
++Each entry uses 16 private frame bytes: a full 64-bit reference word and a
++successful raw address. The maximum is 128 bytes before frame alignment.
++Address zero disables the entry. Both slots are excluded from GC roots.
++
++A lookup retains the original pop/flush/materialize/release order. It tests the
++saved address and compares all reference bits. A hit supplies an address, then
++executes the field load. A changed operand, foreign high bits, null, i31, type
++mismatch, or insufficient extent still takes the original full resolver. The
++keys never widen an earlier access to a later field's extent. The miss key is
++stored before resolving; only successful resolution stores an address. Failure
++unwinds the entire call tree. EH and custom-instruction modules are excluded.
++
++Every wrapper and register entry clears all address bytes before local-zeroing
++early returns. Unknown native calls, reference/indirect calls, dynamic/import
++context changes, and Go helpers clear owner-frame addresses before entry.
++`callHostSync` is the common GC-helper boundary, including allocation shortcuts.
++A caller clears before entering an unknown callee so suspended ancestor frames
++are protected too. Inline bodies clear absolute owner offsets through
++`localOff`. MOV-to-memory clears preserve registers and flags. Only the actual
++existing proven read-only call target preserves the frame entries.
++
++The new cache does not publish old per-value address/extent facts, register
++certificates, or child identities. Trapping guards and GC read regions use the
++original resolver path explicitly. Native payload writes still reload fields;
++they do not move or release existing objects. A Go boundary invalidates entries
++before object movement, freeing, or handle reuse can occur.
++
++Astra found no need for immutable parameters or rooted keys under these limits.
++Daybreak Blue found no safety fault, but found duplicate clearing at the GC
++helper wrapper and `callHostSync`. The redundant wrapper clear is removed.
++It also requested direct cross-instance and read-only-call tests; both are added.
++
++The red emitted-site test reports no cache site on the unchanged compiler. The
++first implementation passes focused combined register/stats checks. Tests cover
++same and alternating references, native field writes, forced collection, nested
++host reentry, direct/transitive/indirect/reference calls, both entry ABIs, codec
++reload, null zero-trip loops, entry after traps, parameter-only frames, all-eight-
++byte clearing, non-root homes, the eight-entry budget, and disabled inline use.
++Metadata corruption after filling an entry makes missing invalidation visible
++without relying on old evacuated bytes changing. Cross-instance tests include
++A -> native B -> Go collects A -> native A and handle corruption in the callback.
++
++The pinned real compiler gets 11,080 cache lookup sites in 1,018 functions.
++Old static per-value reuse falls from 4,766 to 3,583. Counts describe emitted
++sites, not measured dynamic cache hits. No dynamic hit/miss counters were added.
++Do not infer profitability from the emitted-site count.
++
++After removing duplicate clears, diagnostic compilation takes 0.548 seconds.
++Native bytes rise from 25,972,587 to 28,655,643 (+10.33%). Exact GC roots stay at
++25,794 safepoints, 50,438 callsites, 77 maximum roots and 1,803,076 metadata bytes.
++The candidate native SHA is
++c0b0ba13296d0f5798c7ad33f663e939a9a8eb8b14054590a6124dc357871b60.
++
++The first three pairs still contain duplicate clears. Their control median is
++36.450609 seconds; their candidate median is 38.472647 seconds. System load
++rises sharply during the last pair. These preliminary data show no large gain
++and cannot establish a precise regression. They are retained separately from
++the corrected final screening pair.
++
++Raw evidence is in `/tmp/wago-four-seconds/loop-keyed`. The prior SIMD/read-call
++source is the control. Both variants use the same pinned compiler/request,
++CPUs 12/14, GOMAXPROCS=2, 512 MiB heap and 64 MiB nursery. No task-owned tests
++or builds overlap any full-job timing. All accepted full jobs must keep the
++same output/cache hashes and validate main=42.
++
++## Final screen and decision
++
++The corrected pair is 36.158612 -> 34.675842 seconds (4.10% lower in this one
++pair), with peak RSS 1,139,016 -> 1,139,712 KiB (+696 KiB). Both outputs retain
++Wasm SHA 89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb
++and cache SHA c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240,
++and validate main=42. One pair cannot establish a reliable speed gain. The
++native code growth is substantial, and actual cache hit/miss counts are unknown.
++Hold this prototype; do not install or publish it as a performance win. The
++four-second target remains unmet.
++
++Full AMD64 backend, collector, runtime, and Wago tests pass normally and with
++wago_regalloccheck. Lanes take 55.57 and 55.45 seconds including build; Wago test
++execution takes 28.37 and 28.96 seconds. Focused statistics tests pass in 24.15
++seconds including build. The original installed compiler and ARM64 edit remain
++unchanged. The next requested work is a read-only assessment of Wago issues
++308, 309, 313, and 321.
+diff --git a/src/core/compiler/backend/railshot/amd64/call.go b/src/core/compiler/backend/railshot/amd64/call.go
+index 3a0eb73ea..c62acbe17 100644
+--- a/src/core/compiler/backend/railshot/amd64/call.go
++++ b/src/core/compiler/backend/railshot/amd64/call.go
+@@ -1289,6 +1289,7 @@ func (f *fn) gcFramePrefixRoots(roots []*elem, n int) []bool {
+ // globals are also synced around the call: the host may read or write the
+ // instance's globals through their cells.
+ func (f *fn) callHostSync(importIdx int, ft *wasm.CompType) error {
++	f.clearGCLoopValueHomes()
+ 	if err := f.assertGCReadOnlyNoGo("Go-capable host transition"); err != nil {
+ 		return err
+ 	}
+@@ -1942,6 +1943,7 @@ func (f *fn) emitDynamicHostOrCrossInstance(b ImportBinding, ft *wasm.CompType)
+ // callee entry, home memory, and target/caller contexts from the import dispatch
+ // cell; the immediate form remains only for focused backend callers.
+ func (f *fn) emitCrossInstanceCall(b ImportBinding, ft *wasm.CompType) error {
++	f.clearGCLoopValueHomes()
+ 	rootOffsets, recordRoots := f.prepareGCFrameCallsite(len(ft.Params))
+ 	kind := callKindCrossInstance
+ 	if b.Dynamic {
+@@ -2241,6 +2243,11 @@ func (f *fn) adoptWideWrapperResults(belowTypes []machineType, belowGCRoots []bo
+ // callInternal lowers a direct call to another local function. Admitted numeric
+ // and reference signatures use registers; other signatures use wrapper buffers.
+ func (f *fn) callInternal(localIdx int, ft *wasm.CompType, resHint int) error {
++	if !f.gcReadOnlyCall(uint32(localIdx + f.importedFunctionCount())) {
++		f.clearGCLoopValueHomes()
++	} else if len(f.gcLoopValues) != 0 {
++		f.stats.peep("gc-loop-value-call-preserve")
++	}
+ 	if f.gcReadRegion != nil {
+ 		return f.gcReadRegionViolation("ordinary call")
+ 	}
+@@ -2859,6 +2866,7 @@ func (f *fn) checkCallType(entry Reg, offset int32, key uint64, avoid regMask) {
+ }
+ 
+ func (f *fn) callRef(r *wasm.Reader) error {
++	f.clearGCLoopValueHomes()
+ 	f.stats.call("ref")
+ 	typeIdx, err := r.U32()
+ 	if err != nil {
+@@ -3488,6 +3496,7 @@ func (f *fn) returnCallIndirect(r *wasm.Reader) error {
+ // pointer via the wrapper ABI. Table layout matches the runtime (32-byte entries;
+ // +8 code ptr, +16 type key) with the descriptor pointer at [linMem-offTablePtr].
+ func (f *fn) callIndirect(r *wasm.Reader) error {
++	f.clearGCLoopValueHomes()
+ 	f.stats.call(callKindIndirect)
+ 	typeIdx, err := r.U32()
+ 	if err != nil {
+diff --git a/src/core/compiler/backend/railshot/amd64/compile.go b/src/core/compiler/backend/railshot/amd64/compile.go
+index c5efc639e..d222bcfe9 100644
+--- a/src/core/compiler/backend/railshot/amd64/compile.go
++++ b/src/core/compiler/backend/railshot/amd64/compile.go
+@@ -337,6 +337,7 @@ type fn struct {
+ 	localSlot           []uint32      // low 24 bits: byte offset; high 8 bits: bounded local-reference count
+ 	gcOpcodeBarrier     bool          // current 0xfb opcode emits real barrier work
+ 	gcValues            *gcValueChecks
++	gcLoopValues        []gcLoopValueHome
+ 	gcResolved          gcResolvedObject
+ 	gcReadRegion        *gcReadRegionState
+ 	gcReadRegionSites   int
+@@ -4069,6 +4070,9 @@ func compileFuncAttempt(m *wasm.Module, gcTypeLayouts []codegen.GCTypeLayout, fu
+ 	if err := f.reserveGCValueChecks(c.BodyBytes, c.LocalDeclBytes); err != nil {
+ 		return nil, nil, 0, err
+ 	}
++	if err := f.reserveGCLoopValueHomes(c.BodyBytes); err != nil {
++		return nil, nil, 0, err
++	}
+ 	if uint64(f.nLocalSlots)*8 > uint64(localSlotOffsetMask) {
+ 		return nil, nil, 0, fmt.Errorf("amd64: local frame %d bytes exceeds packed offset range %d", 8*f.nLocalSlots, localSlotOffsetMask)
+ 	}
+@@ -4801,6 +4805,7 @@ func (f *fn) prologue(localScores []uint32) {
+ // where reads materialize zero on demand and control-flow reconciliation stores it
+ // to the frame before paths diverge when required.
+ func (f *fn) zeroDeclaredLocals(localScores []uint32) {
++	f.clearGCLoopValueHomes()
+ 	f.zeroEHGCRootLanes()
+ 	if f.scalarSummary.Eligible {
+ 		// Shared locals start as zero constants. Its control agreements store
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_direct.go b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+index 291d27f2f..b6b8698f2 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_direct.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+@@ -841,7 +841,7 @@ func (f *fn) emitNativeDefinedTest(typeIndex uint32, nullable bool) error {
+ 	return nil
+ }
+ 
+-func (f *fn) emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, fieldBytes uint32, nullable bool) error {
++func (f *fn) emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, fieldBytes uint32, nullable, loopCache bool) error {
+ 	valueID := f.gcValueID(f.s.back())
+ 	if f.gcValues != nil {
+ 		f.stats.peep("gc-value-check-input")
+@@ -860,7 +860,28 @@ func (f *fn) emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, field
+ 	if required > math.MaxInt32 {
+ 		return fmt.Errorf("amd64: final struct field extent %d exceeds native immediate", required)
+ 	}
+-	if f.reuseGCValueCheck(valueID, typeIndex, uint32(required)) {
++
++	var loopHome *gcLoopValueHome
++	var loopDone int
++	if loopCache {
++		loopHome = f.gcLoopValueHome(typeIndex, uint32(required))
++	}
++	if loopHome != nil {
++		f.a.Load64(RSI, RSP, f.localOff(loopHome.home+1))
++		f.a.TestSelf(RSI, true)
++		empty := f.a.JccPlaceholder(condE)
++		f.a.Load64(RCX, RSP, f.localOff(loopHome.home))
++		f.a.Cmp64(RAX, RCX)
++		changed := f.a.JccPlaceholder(condNE)
++		f.a.MovReg64(RAX, RSI)
++		loopDone = f.a.JmpPlaceholder()
++		f.a.PatchRel32(empty, f.a.Len())
++		f.a.PatchRel32(changed, f.a.Len())
++		// A failure discards the entire frame; only success publishes an address.
++		f.a.Store64(RSP, f.localOff(loopHome.home), RAX)
++		f.stats.peep("gc-loop-value-home")
++	}
++	if loopHome == nil && f.reuseGCValueCheck(valueID, typeIndex, uint32(required)) {
+ 		return nil
+ 	}
+ 	f.a.MovImm32(RDX, int32(typeIndex))
+@@ -874,7 +895,7 @@ func (f *fn) emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, field
+ 		f.checkCallClobber()
+ 	}
+ 	site := f.a.CallRel32()
+-	cache := f.gcValues != nil && valueID != 0 && f.inlineDepth == 0 && f.gcValues.producers[f.wasmPC]
++	cache := loopHome == nil && f.gcValues != nil && valueID != 0 && f.inlineDepth == 0 && f.gcValues.producers[f.wasmPC]
+ 	if cache {
+ 		f.sc.gcValueStructStubSites = append(f.sc.gcValueStructStubSites, site)
+ 	} else {
+@@ -883,26 +904,30 @@ func (f *fn) emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, field
+ 	if cache {
+ 		f.recordGCValueCheck(valueID, typeIndex, uint32(required), RAX, RDX)
+ 	}
++	if loopHome != nil {
++		f.a.Store64(RSP, f.localOff(loopHome.home+1), RAX)
++		f.a.PatchRel32(loopDone, f.a.Len())
++	}
+ 	f.stats.call("gcnative")
+ 	return nil
+ }
+ 
+ func (f *fn) emitNativeFinalCastStructRefGet(typeIndex, fieldOffset uint32, nullable bool) error {
+ 	parentID := f.gcValueID(f.s.back())
+-	if err := f.emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, 4, nullable); err != nil {
++	if err := f.emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, 4, nullable, true); err != nil {
+ 		return err
+ 	}
+ 	f.a.Load32(RAX, RAX, int32(gc.PayloadOffset+fieldOffset))
+ 	result := f.pushReg(RAX, mtI64)
+ 	f.setStackGCRoot(result, true)
+-	if f.gcValues != nil {
++	if f.gcValues != nil && f.gcLoopValueHome(typeIndex, uint32(gc.PayloadOffset)+fieldOffset+4) == nil {
+ 		f.setGCValueID(result, f.gcValues.fieldValue(parentID, typeIndex, fieldOffset))
+ 	}
+ 	return nil
+ }
+ 
+ func (f *fn) emitNativeFinalCastStructScalarGet(typeIndex, fieldOffset uint32, scalar directGCScalar, signed, nullable bool) error {
+-	if err := f.emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, uint32(scalar.size), nullable); err != nil {
++	if err := f.emitNativeFinalCastStructFieldAddress(typeIndex, fieldOffset, uint32(scalar.size), nullable, true); err != nil {
+ 		return err
+ 	}
+ 	disp := int32(gc.PayloadOffset + fieldOffset)
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_loop_value_homes.go b/src/core/compiler/backend/railshot/amd64/gc_loop_value_homes.go
+new file mode 100644
+index 000000000..a57a29dc4
+--- /dev/null
++++ b/src/core/compiler/backend/railshot/amd64/gc_loop_value_homes.go
+@@ -0,0 +1,127 @@
++//go:build amd64
++
++package amd64
++
++import (
++	"fmt"
++	"github.com/wago-org/wago/src/core/compiler/wasm"
++	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
++	"math"
++)
++
++const gcLoopValueCapacity = 8
++
++type gcLoopValueHome struct {
++	typ, extent uint32
++	home        int
++}
++
++// Each fixed type/extent key has a full reference word and a successful raw
++// address. Neither home is a root. Address zero disables the entry; keys are
++// unread until an address is present. Go-capable boundaries clear all addresses
++// in the caller before entering any callee that may move/free/reuse objects.
++func (f *fn) reserveGCLoopValueHomes(code []byte) error {
++	if !f.hasLoop || !f.gcStructHelpers || f.moduleEH || len(f.customInstructions) != 0 || len(f.inlineTargets.gcReadOnly) == 0 {
++		return nil
++	}
++	var selected [gcLoopValueCapacity]gcLoopValueHome
++	count, depth := 0, 0
++	var loops []int
++	castType := uint32(0)
++	cast := false
++	r := wasm.ReaderFrom(code)
++	for r.BytesLeft() != 0 {
++		pc := r.Offset()
++		op, err := r.Byte()
++		if err != nil {
++			return err
++		}
++		var imm wasm.InstructionImmediate
++		if err = f.classifier.ClassifyInto(&r, op, &imm); err != nil {
++			return err
++		}
++		if cast && len(loops) != 0 && op == 0xfb && imm.Subopcode >= 2 && imm.Subopcode <= 4 && imm.Index == castType {
++			layout, final, ok := f.gcStructFieldLayout(imm.Index, imm.Index2)
++			extent := uint64(gc.PayloadOffset) + uint64(layout.Offset) + uint64(layout.Size)
++			if ok && final && extent <= math.MaxInt32 {
++				found := false
++				for i := 0; i < count; i++ {
++					found = found || selected[i].typ == castType && selected[i].extent == uint32(extent)
++				}
++				if !found && count < len(selected) {
++					selected[count] = gcLoopValueHome{typ: castType, extent: uint32(extent)}
++					count++
++				}
++			}
++		}
++		cast = false
++		if op == 0xfb && (imm.Subopcode == 22 || imm.Subopcode == 23) {
++			rr := wasm.ReaderFrom(code[pc+1:])
++			_, _ = rr.U32()
++			heap, exact, err := readRefHeapTypeImmediate(&rr)
++			if err == nil && !exact && heap >= 0 && heap <= math.MaxUint32 {
++				castType = uint32(heap)
++				cast = true
++			}
++		}
++		switch op {
++		case 0x02, 0x04:
++			depth++
++		case 0x03:
++			depth++
++			loops = append(loops, depth)
++		case 0x0b:
++			if len(loops) != 0 && loops[len(loops)-1] == depth {
++				loops = loops[:len(loops)-1]
++			}
++			if depth > 0 {
++				depth--
++			}
++		}
++	}
++	if count == 0 {
++		return nil
++	}
++	f.gcLoopValues = make([]gcLoopValueHome, count)
++	copy(f.gcLoopValues, selected[:count])
++	for i := range f.gcLoopValues {
++		f.gcLoopValues[i].home = len(f.localType)
++		for j := 0; j < 2; j++ {
++			home := len(f.localType)
++			for len(f.gcLocalTypes) <= home/64 {
++				f.gcLocalTypes = append(f.gcLocalTypes, 0)
++			}
++			f.gcLocalTypes[home/64] &^= uint64(1) << uint(home%64)
++			if uint64(f.nLocalSlots)*8 > uint64(localSlotOffsetMask) {
++				return fmt.Errorf("amd64: loop GC value homes exceed local frame range")
++			}
++			f.localType = append(f.localType, mtI64)
++			f.localSlot = append(f.localSlot, uint32(8*f.nLocalSlots))
++			f.locals = append(f.locals, localDef{reg: regNone, typ: mtI64, state: lsMem})
++			f.nLocalSlots++
++		}
++	}
++	f.skipFence = false
++	return nil
++}
++
++func (f *fn) gcLoopValueHome(typ, extent uint32) *gcLoopValueHome {
++	if f.inlineDepth != 0 || f.localBase != 0 || f.gcReadRegion != nil {
++		return nil
++	}
++	for i := range f.gcLoopValues {
++		e := &f.gcLoopValues[i]
++		if e.typ == typ && e.extent == extent {
++			return e
++		}
++	}
++	return nil
++}
++
++// MOV r/m64, imm32 sign-extends zero to all eight address bytes and preserves
++// registers and flags. Use absolute owner-frame offsets even inside inline code.
++func (f *fn) clearGCLoopValueHomes() {
++	for _, e := range f.gcLoopValues {
++		f.a.StoreImmIdx(RSP, RSP, f.localOff(e.home+1), 0, 8)
++	}
++}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_loop_value_homes_test.go b/src/core/compiler/backend/railshot/amd64/gc_loop_value_homes_test.go
+new file mode 100644
+index 000000000..b18e3f51d
+--- /dev/null
++++ b/src/core/compiler/backend/railshot/amd64/gc_loop_value_homes_test.go
+@@ -0,0 +1,67 @@
++//go:build amd64
++
++package amd64
++
++import (
++	"bytes"
++	"github.com/wago-org/wago/src/core/compiler/wasm"
++	enc "github.com/wago-org/wago/src/core/encoder/amd64"
++	"os"
++	"testing"
++)
++
++func TestGCLoopValueHomeClearWidthAndEntry(t *testing.T) {
++	f := fn{a: &enc.Asm{}, nLocals: 2, nParams: 2, compactFrameHeader: true, localSlot: []uint32{0, 8, 16, 24}, gcLoopValues: []gcLoopValueHome{{home: 2}}}
++	f.zeroDeclaredLocals(nil)
++	// mov qword ptr [rsp+24], 0. No register or flags are changed. This also
++	// verifies entry initialization before the parameter-only early return.
++	want := []byte{0x48, 0xc7, 0x44, 0x24, 0x18, 0, 0, 0, 0}
++	if !bytes.Equal(f.a.B, want) {
++		t.Fatalf("address clear=%x want full64bit MOV %x", f.a.B, want)
++	}
++}
++
++func TestGCLoopValueHomePlanBudget(t *testing.T) {
++	data, err := os.ReadFile("../../../../../../tests/fixtures/wasm/gc-loop-value-homes.wasm")
++	if err != nil {
++		t.Fatal(err)
++	}
++	m, err := wasm.DecodeModule(data)
++	if err != nil {
++		t.Fatal(err)
++	}
++	box := &m.Types[0].SubTypes[0]
++	for len(box.Comp.Fields) < 10 {
++		box.Comp.Fields = append(box.Comp.Fields, box.Comp.Fields[0])
++	}
++	body := []byte{3, 0x40}
++	for i := 0; i < 10; i++ {
++		body = append(body, 0x20, 0, 0xfb, 22, 0, 0xfb, 2, 0, byte(i), 0x1a)
++	}
++	body = append(body, 0x0b, 0x0b)
++	f := fn{m: m, hasLoop: true, classifier: wasm.NewModuleInstructionClassifier(m, true), inlineTargets: inlineTargetTable{gcReadOnly: []bool{false}}, gcLocalTypes: []uint64{^uint64(0)}}
++	f.gcStructHelpers = true
++	if err = f.reserveGCLoopValueHomes(body); err != nil {
++		t.Fatal(err)
++	}
++	if len(f.gcLoopValues) != 8 || f.nLocalSlots != 16 || f.nLocals != 0 || f.gcLocalTypes[0]&0xffff != 0 {
++		t.Fatalf("budget/roots: entries=%d slots=%d locals=%d roots=%x", len(f.gcLoopValues), f.nLocalSlots, f.nLocals, f.gcLocalTypes)
++	}
++	for i, e := range f.gcLoopValues {
++		if e.home != i*2 || e.extent != uint32(20+i*4) {
++			t.Fatalf("key %d=%+v", i, e)
++		}
++	}
++	if f.gcLoopValueHome(0, 20) == nil {
++		t.Fatal("selected home missing")
++	}
++	f.inlineDepth = 1
++	if f.gcLoopValueHome(0, 20) != nil {
++		t.Fatal("inline cache use admitted")
++	}
++	f.inlineDepth = 0
++	f.localBase = 1
++	if f.gcLoopValueHome(0, 20) != nil {
++		t.Fatal("inline local remapping admitted")
++	}
++}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_read_region.go b/src/core/compiler/backend/railshot/amd64/gc_read_region.go
+index 2c7b82337..1b9e83b7e 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_read_region.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_read_region.go
+@@ -466,7 +466,7 @@ func (f *fn) emitGCReadRegionGroup(r *wasm.Reader) error {
+ 			return err
+ 		}
+ 		defer func() { f.spillFloor = oldFloor }()
+-		if err := f.emitNativeFinalCastStructFieldAddress(g.typ, g.offset, uint32(g.scalar.size), g.nullable); err != nil {
++		if err := f.emitNativeFinalCastStructFieldAddress(g.typ, g.offset, uint32(g.scalar.size), g.nullable, false); err != nil {
+ 			return err
+ 		}
+ 		address = RAX
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_trapping_guard.go b/src/core/compiler/backend/railshot/amd64/gc_trapping_guard.go
+index ec531f068..559bc76c2 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_trapping_guard.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_trapping_guard.go
+@@ -217,7 +217,7 @@ func (f *fn) tryGCTrappingGuard(typeIndex uint32, nullable bool, r *wasm.Reader)
+ 	// pins. Establish the certificate and its lease together after that flush
+ 	// and the full resolver have returned, before any later instruction.
+ 	parentID := f.gcValueID(f.s.back())
+-	if err := f.emitNativeFinalCastStructFieldAddress(typeIndex, p.firstOffset, 4, nullable); err != nil {
++	if err := f.emitNativeFinalCastStructFieldAddress(typeIndex, p.firstOffset, 4, nullable, false); err != nil {
+ 		return true, err
+ 	}
+ 	if f.regUser[p.cache] != nil || f.pinned.union(f.pinnedLocalMask).union(f.reserved).has(p.cache) {
+diff --git a/src/wago/gc_loop_value_homes_amd64_test.go b/src/wago/gc_loop_value_homes_amd64_test.go
+new file mode 100644
+index 000000000..ffb9f04dd
+--- /dev/null
++++ b/src/wago/gc_loop_value_homes_amd64_test.go
+@@ -0,0 +1,208 @@
++//go:build linux && amd64 && !tinygo && !wago_guardpage
++
++package wago
++
++import (
++	"context"
++	"encoding/binary"
++	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
++	"os"
++	"testing"
++	"unsafe"
++)
++
++func TestGCLoopValueHomes(t *testing.T) {
++	data, err := os.ReadFile("../../tests/fixtures/wasm/gc-loop-value-homes.wasm")
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, regABI := range []bool{false, true} {
++		c, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3).WithOptimization("reg-abi", regABI), data)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if a := c.GCNativeRootAdmission(); !a.Required || !a.Exact {
++			t.Fatalf("roots=%+v", a)
++		}
++		loaded := publicArtifactRoundTrip(t, c)
++		for _, artifact := range []*Compiled{c, loaded} {
++			for _, cfg := range []GCConfig{{VerifyAfterCollect: true}, {CollectEveryAlloc: true, StressNurseryBytes: 128, VerifyAfterCollect: true}, {Profile: GCProfileTiny, TinyHeapBytes: 4096, TinyBlockBytes: 16, VerifyAfterCollect: true}} {
++				var in *Instance
++				calls := 0
++				imports := NewImports()
++				imports.HostFunc("env", "step", func(caller Caller, _ HostCall) {
++					calls++
++					if got, err := in.InvokeFromHost(context.Background(), caller, "inner"); err != nil || len(got) != 1 || got[0] != 11 {
++						t.Errorf("nested read=%v,%v", got, err)
++					}
++					if err := in.CollectGC(); err != nil {
++						t.Error(err)
++					}
++				})
++				in, err = Instantiate(artifact, InstantiateOptions{Imports: imports, GC: cfg})
++				if err != nil {
++					t.Fatal(err)
++				}
++				for _, mode := range []uint64{0, 1, 2, 3, 4, 5, 6, 7} {
++					if _, err = in.Invoke("init"); err != nil {
++						t.Fatal(err)
++					}
++					got, err := in.Invoke("run", 16, mode)
++					want := uint64(112)
++					if mode == 1 {
++						want = 144
++					}
++					if mode == 3 {
++						want = 136
++					}
++					if err != nil || len(got) != 1 || got[0] != want {
++						t.Fatalf("register=%v codec=%v mode=%d: %v,%v want%d", regABI, artifact == loaded, mode, got, err, want)
++					}
++				}
++				if _, err = in.Invoke("init"); err != nil {
++					t.Fatal(err)
++				}
++				if got, err := in.Invoke("read-only", 16); err != nil || len(got) != 1 || got[0] != 112 {
++					t.Fatalf("read-only call=%v,%v", got, err)
++				}
++				if calls != 64 {
++					t.Fatalf("host calls=%d want64", calls)
++				}
++				if got, err := in.Invoke("run", 0, 8); err != nil || len(got) != 1 || got[0] != 0 {
++					t.Fatalf("zero trip=%v,%v", got, err)
++				}
++				if _, err := in.Invoke("run", 1, 8); err == nil {
++					t.Fatal("null loop access did not trap")
++				}
++				if _, err = in.Invoke("init"); err != nil {
++					t.Fatal(err)
++				}
++				if got, err := in.Invoke("params", 32); err != nil || len(got) != 1 || got[0] != 0 {
++					t.Fatalf("parameter-only frame=%v,%v", got, err)
++				}
++				if got, err := in.Invoke("run", 16, 0); err != nil || len(got) != 1 || got[0] != 112 {
++					t.Fatalf("fresh entry after trap=%v,%v", got, err)
++				}
++				in.Close()
++			}
++		}
++		loaded.Close()
++		c.Close()
++	}
++}
++
++// Corruption after a filled entry makes missing caller invalidation visible even
++// if an evacuated object's old payload happens to retain the same field bytes.
++func TestGCLoopValueHomesHostInvalidation(t *testing.T) {
++	data, err := os.ReadFile("../../tests/fixtures/wasm/gc-loop-value-homes.wasm")
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3), data)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	loaded := publicArtifactRoundTrip(t, c)
++	defer loaded.Close()
++	for _, artifact := range []*Compiled{c, loaded} {
++		for _, mode := range []uint64{2, 5, 6, 7} {
++			for _, header := range []bool{false, true} {
++				var target []byte
++				imports := NewImports()
++				calls := 0
++				imports.HostFunc("env", "step", func() { calls++; binary.LittleEndian.PutUint32(target, 0) })
++				in, err := Instantiate(artifact, InstantiateOptions{Imports: imports})
++				if err != nil {
++					t.Fatal(err)
++				}
++				if _, err = in.Invoke("init"); err != nil {
++					t.Fatal(err)
++				}
++				bits := readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)
++				v := in.gc.NativeView()
++				h := unsafe.Slice((*byte)(offHeapPtr(v.Handles+uintptr(gc.Ref(uint32(bits))>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
++				if header {
++					obj := unsafe.Slice((*byte)(offHeapPtr(v.Spaces[h[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(h)))), 24)
++					target = obj[4:]
++				} else {
++					target = h[gc.NativeHandleSizeOffset:]
++				}
++				old := binary.LittleEndian.Uint32(target)
++				_, err = in.Invoke("run", 2, mode)
++				binary.LittleEndian.PutUint32(target, old)
++				if err == nil || calls != 1 {
++					t.Fatalf("mode=%d header=%v missing full recheck: calls=%d err=%v", mode, header, calls, err)
++				}
++				if got, err := in.Invoke("run", 2, 0); err != nil || len(got) != 1 || got[0] != 14 {
++					t.Fatalf("entry reset=%v,%v", got, err)
++				}
++				in.Close()
++			}
++		}
++	}
++}
++
++func TestGCLoopValueHomesCrossInstanceInvalidation(t *testing.T) {
++	data, err := os.ReadFile("../../tests/fixtures/wasm/gc-loop-value-homes.wasm")
++	if err != nil {
++		t.Fatal(err)
++	}
++	cfg := NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3)
++	c, err := cfg.Compile(data)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	rt := NewRuntime(WithRuntimeConfig(cfg))
++	defer rt.Close()
++	module, err := rt.Module(c)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var consumer *Instance
++	var target []byte
++	corrupt := false
++	calls := 0
++	imports := NewImports()
++	imports.HostFunc("env", "step", func() {
++		calls++
++		if corrupt {
++			binary.LittleEndian.PutUint32(target, 0)
++		} else if err := consumer.CollectGC(); err != nil {
++			t.Error(err)
++		}
++	})
++	provider, err := rt.Instantiate(context.Background(), module, WithImports(imports))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer provider.Close()
++	step, err := provider.ExportedFunc("step")
++	if err != nil {
++		t.Fatal(err)
++	}
++	consumer, err = rt.Instantiate(context.Background(), module, WithImports(NewImports().Function("env", "step", step)))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer consumer.Close()
++	if _, err = consumer.Invoke("init"); err != nil {
++		t.Fatal(err)
++	}
++	if got, err := consumer.Invoke("run", 4, 5); err != nil || len(got) != 1 || got[0] != 28 || calls != 4 {
++		t.Fatalf("cross-domain moving collection=%v,%v calls=%d", got, err, calls)
++	}
++	bits := readGlobalObject(consumer.globalCells[0], consumer.c.Globals[0].Type)
++	v := consumer.gc.NativeView()
++	h := unsafe.Slice((*byte)(offHeapPtr(v.Handles+uintptr(gc.Ref(uint32(bits))>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
++	target = h[gc.NativeHandleSizeOffset:]
++	old := binary.LittleEndian.Uint32(target)
++	corrupt = true
++	calls = 0
++	_, err = consumer.Invoke("run", 2, 5)
++	binary.LittleEndian.PutUint32(target, old)
++	if err == nil || calls != 1 {
++		t.Fatalf("cross-domain cache survived a Go callback: err=%v calls=%d", err, calls)
++	}
++}
+diff --git a/src/wago/gc_loop_value_homes_stats_amd64_test.go b/src/wago/gc_loop_value_homes_stats_amd64_test.go
+new file mode 100644
+index 000000000..5fff83c0b
+--- /dev/null
++++ b/src/wago/gc_loop_value_homes_stats_amd64_test.go
+@@ -0,0 +1,62 @@
++//go:build linux && amd64 && !tinygo && wago_codegenstats
++
++package wago
++
++import (
++	"os"
++	"testing"
++
++	backend "github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64"
++	"github.com/wago-org/wago/src/core/compiler/codegen"
++	"github.com/wago-org/wago/src/core/compiler/frontend"
++	"github.com/wago-org/wago/src/core/compiler/wasm"
++)
++
++func TestGCLoopValueHomesAdmission(t *testing.T) {
++	data, err := os.ReadFile("../../tests/fixtures/wasm/gc-loop-value-homes.wasm")
++	if err != nil {
++		t.Fatal(err)
++	}
++	m, err := wasm.DecodeModule(data)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = wasm.ValidateModule(m); err != nil {
++		t.Fatal(err)
++	}
++	meta, err := frontend.BuildGCTypeMetadata(m)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var diagnostic string
++	plan := newGCFrameRootPlan(m, true, &diagnostic, nil)
++	if plan == nil || diagnostic != "" {
++		t.Fatalf("root plan: %s", diagnostic)
++	}
++	var stats backend.ModuleStats
++	c, err := backend.CompileModuleWith(m, backend.CompileOptions{Stats: &stats, GCStructHelpers: true, GCArrayHelpers: true, GCFrameRoots: plan, Codegen: codegen.Options{Module: codegen.ModuleInfo{GCTypeDescs: meta.Descs, GCTypeLayouts: meta.Layouts}}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.CodeImage.Close()
++
++	seen := false
++	preserved := false
++	for _, s := range stats.Funcs {
++		if s != nil && s.Name == "read-only" {
++			preserved = s.Peephole["gc-loop-value-call-preserve"] > 0
++		}
++		if s != nil && s.Name == "run" {
++			seen = true
++			if s.Peephole["gc-loop-value-home"] != 1 {
++				t.Fatalf("loop does not emit one checked runtime cache site: %v", s.Peephole)
++			}
++		}
++	}
++	if !preserved {
++		t.Fatal("read-only callee did not preserve an actual loop cache")
++	}
++	if !seen {
++		t.Fatal("missing run function")
++	}
++}
+diff --git a/tests/fixtures/wasm/gc-loop-value-homes.wasm b/tests/fixtures/wasm/gc-loop-value-homes.wasm
+new file mode 100644
+index 0000000000000000000000000000000000000000..f92090de787ea436d4bf6b9d489a2be5f363dfaa
+GIT binary patch
+literal 566
+zcmYLFu`WbG6g~IOy!Unu$x4JoW1gk-4?6{k$|u-OY_ZFZwTndcmPil^g;qo512ih1
+zApS(Xje7^t%*;LK+%xB1bjAY$K+luO1jQ~_RM9R)Y6ERh)#gf&Hb*^$s`yTYWV-Rx
+zj*q)Tu(?sB#%yes=efO1f*~ls*O!U(5#9e$yeV4PUhEx%em$~YjNK888J$GfY}grf
+z2FUVskCE3$-Ok>|VLUiPt$vmK5#WetzAp6d2Za!dFh2#>5L{T&2f3654Y=E+Xwq~M
+zQwH42xpXi^u9_&>Q>bm()<-Paam%#4@z|Lofk|L*0v*{_lS<B1?VJ!s2^KqL`_oK3
+zy-k4n_e(1p7EOayZRHhK!n&qPK&F(mP{@_SJg1_N;*%FdqOPTxg?wh+Q%awb(Wd0W
+z?-<L{Py4GhCo<W`_0N#-Xk_kD3*t(qVK0GnNb0Xrc*nNrJ-b&`{Oy2}yC`*T<Np>V
+Q89X<NWzU+2Qy$~K0fFLix&QzG
+
+literal 0
+HcmV?d00001
+
+diff --git a/tests/fixtures/wasm/gc-loop-value-homes.wat b/tests/fixtures/wasm/gc-loop-value-homes.wat
+new file mode 100644
+index 000000000..8d24ada47
+--- /dev/null
++++ b/tests/fixtures/wasm/gc-loop-value-homes.wat
+@@ -0,0 +1,58 @@
++(module
++ (type $Box (struct (field (mut i32)) (field (mut i32))))
++ (type $Parent (struct (field (mut anyref))))
++ (type $Void (func))
++ (import "env" "step" (func $host))
++ (table 1 funcref) (elem (i32.const 0) $unknown)
++ (global $a (mut anyref) (ref.null any))
++ (global $b (mut anyref) (ref.null any))
++ (global $sink (mut anyref) (ref.null any))
++ (func (export "init")
++  i32.const 7 i32.const 17 struct.new $Box global.set $a
++  i32.const 11 i32.const 23 struct.new $Box global.set $b)
++ (func $unknown (export "step") call $host)
++ (func (export "inner") (result i32) global.get $b ref.cast (ref $Box) struct.get $Box 0)
++ (func $run (export "run") (param $n i32) (param $mode i32) (result i32)
++  (local $value anyref) (local $i i32) (local $sum i32)
++  global.get $a local.set $value
++  local.get $mode i32.const 8 i32.eq if ref.null any local.set $value end
++  block $done loop $again
++   local.get $i local.get $n i32.ge_u br_if $done
++   local.get $mode i32.const 1 i32.eq if
++    local.get $i i32.const 1 i32.and if
++     global.get $b local.set $value
++    else global.get $a local.set $value end
++   end
++   local.get $mode i32.const 3 i32.eq if
++    local.get $value ref.cast (ref $Box) local.get $i i32.const 1 i32.add struct.set $Box 0
++   end
++   local.get $sum local.get $value ref.cast (ref $Box) struct.get $Box 0 i32.add local.set $sum
++   local.get $mode i32.const 2 i32.eq if call $unknown end
++   local.get $mode i32.const 4 i32.eq if i32.const 31 i32.const 37 struct.new $Box global.set $sink end
++   local.get $mode i32.const 5 i32.eq if call $host end
++   local.get $mode i32.const 6 i32.eq if i32.const 0 call_indirect (type $Void) end
++   local.get $mode i32.const 7 i32.eq if ref.func $unknown call_ref $Void end
++   local.get $i i32.const 1 i32.add local.set $i br $again
++  end end local.get $sum)
++ (func $param (export "param") (param anyref) (param i32) (result i32)
++  block $done loop $again
++   local.get 1 i32.eqz br_if $done
++   local.get 0 ref.cast (ref $Box) struct.get $Box 0 drop
++   local.get 1 i32.const 1 i32.sub local.tee 1 br_if $again
++  end end i32.const 0)
++ (func (export "params") (param i32) (result i32) global.get $a local.get 0 call $param)
++ (func $pure (param i32) (result i32) (local $i i32) (local $sum i32)
++  loop $again
++   local.get $sum local.get 0 i32.add local.set $sum
++   local.get $i i32.const 1 i32.add local.tee $i i32.const 64 i32.lt_u br_if $again
++  end local.get $sum)
++ (func (export "read-only") (param $n i32) (result i32) (local $v anyref) (local $i i32) (local $sum i32)
++  global.get $a local.set $v
++  block $done loop $again
++   local.get $i local.get $n i32.ge_u br_if $done
++   local.get $sum local.get $v ref.cast (ref $Box) struct.get $Box 0 i32.add local.set $sum
++   local.get $i call $pure drop
++   local.get $i i32.const 1 i32.add local.set $i br $again
++  end end local.get $sum)
++
++)

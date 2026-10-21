@@ -1,0 +1,13 @@
+{
+  "decision": "Hold as a private research prototype; no installation/publication. Four-second target unmet. One corrected pair suggests a small gain but does not establish it; dynamic hit/miss counts are unmeasured.",
+  "control_seconds": 36.15861150198907,
+  "candidate_seconds": 34.67584154600627,
+  "screen_delta_percent": 4.100738093610803,
+  "control_peak_rss_kib": 1139016,
+  "candidate_peak_rss_kib": 1139712,
+  "native_bytes_base": 25972587,
+  "native_bytes_candidate": 28655643,
+  "native_sha256": "c0b0ba13296d0f5798c7ad33f663e939a9a8eb8b14054590a6124dc357871b60",
+  "sites": 11080,
+  "functions": 1018
+}

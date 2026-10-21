@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags",
+    "wago_regalloccheck",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/core/runtime/gc/native",
+    "./src/core/runtime",
+    "./src/wago",
+    "-count=1",
+    "-timeout=90s"
+  ],
+  "seconds": 55.44984797500365,
+  "exit": 0
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags",
+    "wago_codegenstats",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/wago",
+    "-run",
+    "TestGC(Read(Call|Load|SIMD)|LoopValue)",
+    "-count=1",
+    "-timeout=90s"
+  ],
+  "seconds": 24.15339129899803,
+  "exit": 0
+}

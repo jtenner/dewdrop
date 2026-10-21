@@ -1,0 +1,5 @@
+--- FAIL: TestGCLoopValueHomesAdmission (0.00s)
+    gc_loop_value_homes_stats_amd64_test.go:48: loop does not emit one checked runtime cache site: map[br-pair-fold:1 cmp-branch-fuse:9 commute-mem-left:1 final-cast-scalar-get-fuse:1 frame-header-elide:1 gc-dead-new:1 gc-dead-new-checked:1 gc-shared-resolve-call:1 immutable-table-type-check-elide:1 lone-predicate:1 monomorphic-call-indirect:1]
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.003s
+FAIL
