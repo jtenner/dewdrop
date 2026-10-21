@@ -1,0 +1,7 @@
+{
+  "large_artifacts": "/tmp/wago-four-seconds",
+  "candidate_worktree": "/tmp/wago-gc-read-call-facts",
+  "base": "6894c7f8a9026ea8c4ef1d813813330414a248d7",
+  "installed_unchanged": true,
+  "four_second_target_met": false
+}

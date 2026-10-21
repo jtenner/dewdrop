@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-p",
+    "2",
+    "-tags=wago_regalloccheck,wago_codegenstats",
+    "-run",
+    "^TestCommuteSelfUpdate$",
+    "./src/core/compiler/backend/railshot/amd64"
+  ],
+  "seconds": 8.693054939998547,
+  "exit": 1,
+  "stdout": "--- FAIL: TestCommuteSelfUpdate (0.00s)\n    commute_self_update_test.go:58: commute-self-update = 0, want 2 (all: map[compact-i32-frame:1 frame-header-elide:1])\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t0.002s\nFAIL\n",
+  "stderr": ""
+}

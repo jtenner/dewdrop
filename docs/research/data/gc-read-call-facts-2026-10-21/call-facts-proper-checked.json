@@ -1,0 +1,39 @@
+[
+  {
+    "label": "checked",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-count=1",
+      "-tags=wago_regalloccheck",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago"
+    ],
+    "seconds": 54.019318378996104,
+    "exit": 0,
+    "stdout": "ok  \tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t7.067s\nok  \tgithub.com/wago-org/wago/src/core/runtime/gc/native\t1.759s\nok  \tgithub.com/wago-org/wago/src/wago\t28.432s\n",
+    "stderr": ""
+  },
+  {
+    "label": "admission-build",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-tags=wago_codegenstats",
+      "-c",
+      "-overlay=/tmp/wago-four-seconds/admission/overlay.json",
+      "-o",
+      "/tmp/wago-four-seconds/admission/candidate.test",
+      "./src/wago"
+    ],
+    "seconds": 24.877493432999472,
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

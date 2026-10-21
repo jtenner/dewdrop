@@ -1,0 +1,26 @@
+{
+  "taskId": "node:delegated-task:command%3Amcp%3Aa677eafc-4fc5-423d-be72-8f8668df9a4d%3Adelegate-task%3Agc-read-call-facts-review-r1-20261021",
+  "childThreadId": "thread:delegated-task:command%3Amcp%3Aa677eafc-4fc5-423d-be72-8f8668df9a4d%3Adelegate-task%3Agc-read-call-facts-review-r1-20261021",
+  "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253Aa677eafc-4fc5-423d-be72-8f8668df9a4d%253Adelegate-task%253Agc-read-call-facts-review-r1-20261021:ordinal:1",
+  "childNodeId": "node:delegated-task:command%3Amcp%3Aa677eafc-4fc5-423d-be72-8f8668df9a4d%3Adelegate-task%3Agc-read-call-facts-review-r1-20261021",
+  "status": "completed",
+  "workState": "result_available",
+  "hasPendingChildRuns": false,
+  "latestTerminalRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253Aa677eafc-4fc5-423d-be72-8f8668df9a4d%253Adelegate-task%253Agc-read-call-facts-review-r1-20261021:ordinal:1",
+  "latestTerminalStatus": "completed",
+  "latestTerminalSummary": null,
+  "latestTerminalResultContextTransferId": null,
+  "providerInstanceId": "codex",
+  "model": "gpt-daybreak-blue-latest",
+  "options": [
+    {
+      "id": "reasoningEffort",
+      "value": "high"
+    }
+  ],
+  "summary": "- Issue: [gc_read_region.go:349](/tmp/wago-gc-read-call-facts/src/core/compiler/backend/railshot/amd64/gc_read_region.go:349) replaces the full `inlineTargetTable`. This drops `gcReadOnly`, which was set at [compile.go:1968](/tmp/wago-gc-read-call-facts/src/core/compiler/backend/railshot/amd64/compile.go:1968).\n\n  This happens when the module has no normal inline target but has a GC read-region target. The fixture has this shape. The `$peek` target causes the replacement, so the proven `$walk` summary is lost. Both planning and emission then reject the call. This explains the observed reuse count of 2 instead of 3.\n\nNo concrete safety, trap-order, rooting, or moving-GC issue found in the static review. I did not run tests or builds.",
+  "resultContextTransferId": "context-transfer:type:subagent_result:source-thread:thread%3Adelegated-task%3Acommand%253Amcp%253Aa677eafc-4fc5-423d-be72-8f8668df9a4d%253Adelegate-task%253Agc-read-call-facts-review-r1-20261021:target-thread:c2fee4b8-78e8-4b87-9151-8167af9b8785:6041530c-62e5-4644-b657-1ee259ace1ce",
+  "hasPendingQuestion": false,
+  "pendingApproval": null,
+  "waitTimedOut": false
+}

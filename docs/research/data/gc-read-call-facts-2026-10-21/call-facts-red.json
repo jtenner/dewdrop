@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-p",
+    "2",
+    "-tags=wago_codegenstats",
+    "-run",
+    "^TestGCReadCallFactsAdmission$",
+    "./src/wago"
+  ],
+  "seconds": 0.575279008000507,
+  "exit": 1,
+  "stdout": "--- FAIL: TestGCReadCallFactsAdmission (0.00s)\n    gc_read_call_facts_stats_amd64_test.go:31: read reuse=2 want3; counters=map[commute-mem-left:3 final-cast-scalar-get-fuse:4 frame-header-elide:1 gc-value-check-input:4 gc-value-check-plan:1 gc-value-check-reuse:2 gc-value-check-save:2]\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/wago\t0.003s\nFAIL\n",
+  "stderr": ""
+}

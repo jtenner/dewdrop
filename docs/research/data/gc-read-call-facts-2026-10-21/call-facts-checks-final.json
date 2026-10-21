@@ -1,0 +1,33 @@
+[
+  {
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-run",
+      "^TestGCReadCallSummaryEffects$",
+      "./src/core/compiler/backend/railshot/amd64"
+    ],
+    "seconds": 6.11156075001054,
+    "exit": 0,
+    "stdout": "ok  \tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t0.002s\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-tags=wago_codegenstats",
+      "-run",
+      "^TestGC(ReadCallFacts|ValueChecks)",
+      "./src/wago"
+    ],
+    "seconds": 25.02127282100264,
+    "exit": 0,
+    "stdout": "ok  \tgithub.com/wago-org/wago/src/wago\t0.008s\n",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/tmp/wago-four-seconds/admission/candidate.test",
+    "-test.run=^TestRealSharedGetterStaticAdmission$",
+    "-test.count=1",
+    "-test.v"
+  ],
+  "seconds": 0.5681977159983944,
+  "exit": 0,
+  "stdout": "=== RUN   TestRealSharedGetterStaticAdmission\n    real_shared_getter_capture_test.go:68: prior native SHA=add6f6c526d786080a80c214bbaac46cd88821fc2f7e426f1f40b9093c09dc71 new=add6f6c526d786080a80c214bbaac46cd88821fc2f7e426f1f40b9093c09dc71 equal=true\n    real_shared_getter_capture_test.go:78: fusions=4757 functions=1035 native_bytes=25972987 compile_seconds=0.512266 roots={Required:true Exact:true Reason: Safepoints:25794 Callsites:50438 MaximumRoots:77 MetadataBytes:1803076}\n--- PASS: TestRealSharedGetterStaticAdmission (0.56s)\nPASS\n",
+  "stderr": ""
+}

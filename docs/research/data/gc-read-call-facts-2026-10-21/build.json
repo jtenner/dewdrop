@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-tags=wago_profile",
+    "-ldflags=-X main.runtimePatchIdentity=4s-current-profile -X main.workerPluginIdentity=4s-current-profile",
+    "-o",
+    "/tmp/wago-four-seconds/profile-host",
+    "."
+  ],
+  "seconds": 9.014466688007815,
+  "exit": 0,
+  "stdout": "",
+  "stderr": ""
+}

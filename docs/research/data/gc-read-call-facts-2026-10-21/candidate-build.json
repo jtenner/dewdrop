@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=read-call-facts-candidate -X main.workerPluginIdentity=read-call-facts-candidate",
+    "-o",
+    "/tmp/wago-four-seconds/candidate-host",
+    "."
+  ],
+  "seconds": 8.52159744600067,
+  "exit": 0,
+  "stdout": "",
+  "stderr": ""
+}
