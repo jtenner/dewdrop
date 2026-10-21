@@ -1,0 +1,96 @@
+{
+  "assumptions": "Scalar payload, current16byte object alignment and existing size classes; arithmetic model only; not a new layout or measured speed estimate. V128 payload alignment needs separate design.",
+  "rows": [
+    {
+      "payload": 4,
+      "header16": {
+        "logical": 24,
+        "nursery": 32,
+        "old": 32
+      },
+      "header8": {
+        "logical": 16,
+        "nursery": 16,
+        "old": 32
+      }
+    },
+    {
+      "payload": 8,
+      "header16": {
+        "logical": 24,
+        "nursery": 32,
+        "old": 32
+      },
+      "header8": {
+        "logical": 16,
+        "nursery": 16,
+        "old": 32
+      }
+    },
+    {
+      "payload": 16,
+      "header16": {
+        "logical": 32,
+        "nursery": 32,
+        "old": 32
+      },
+      "header8": {
+        "logical": 24,
+        "nursery": 32,
+        "old": 32
+      }
+    },
+    {
+      "payload": 24,
+      "header16": {
+        "logical": 40,
+        "nursery": 48,
+        "old": 48
+      },
+      "header8": {
+        "logical": 32,
+        "nursery": 32,
+        "old": 32
+      }
+    },
+    {
+      "payload": 32,
+      "header16": {
+        "logical": 48,
+        "nursery": 48,
+        "old": 48
+      },
+      "header8": {
+        "logical": 40,
+        "nursery": 48,
+        "old": 48
+      }
+    },
+    {
+      "payload": 48,
+      "header16": {
+        "logical": 64,
+        "nursery": 64,
+        "old": 64
+      },
+      "header8": {
+        "logical": 56,
+        "nursery": 64,
+        "old": 64
+      }
+    },
+    {
+      "payload": 64,
+      "header16": {
+        "logical": 80,
+        "nursery": 80,
+        "old": 96
+      },
+      "header8": {
+        "logical": 72,
+        "nursery": 80,
+        "old": 96
+      }
+    }
+  ]
+}

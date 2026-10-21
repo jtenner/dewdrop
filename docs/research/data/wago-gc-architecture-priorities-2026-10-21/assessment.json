@@ -1,0 +1,20 @@
+{
+  "priority": [
+    308,
+    309,
+    313,
+    321
+  ],
+  "issue_state": "all closed/completed with release/deferred and will-do-later comments",
+  "already_present": {
+    "309": "16-byte handle and size-class allocation-size derivation"
+  },
+  "not_implemented_by_this_review": true,
+  "profile": {
+    "cpu_sample_seconds": 34.02,
+    "native_sample_seconds": 26.64,
+    "minor_collection_cumulative_seconds": 4.58,
+    "backing_growth_cumulative_seconds": 0.03
+  },
+  "speedup_claim": null
+}

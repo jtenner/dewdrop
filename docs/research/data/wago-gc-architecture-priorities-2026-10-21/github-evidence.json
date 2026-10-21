@@ -1,0 +1,367 @@
+{
+  "checked_at": {
+    "current_time": "2026-10-21 22:55:57 UTC"
+  },
+  "repository": "wago-org/wago",
+  "issues": [
+    {
+      "issue": {
+        "url": "https://github.com/wago-org/wago/issues/308",
+        "title": "[P1][GC] Reserve stable virtual-address backing for heap spaces and the handle table",
+        "issue_number": 308,
+        "body": "## Context\n\nThe current Throughput old-space backing and handle table are Go slices that can relocate when they grow. Generated code must reload bases and lengths through the native view, and old-space growth can allocate and copy the entire backing. Stable reserved address ranges would remove those copies and simplify native access.\n\n## Scope\n\n### Stable heap backing\n\n- [ ] Reserve the configured maximum Throughput heap as virtual address space when supported.\n- [ ] Commit/decommit physical pages lazily as allocation and reclamation require.\n- [ ] Keep nursery, old, large-object, and future region bases stable for the collector lifetime.\n- [ ] Preserve bounded configured limits and explicit exhaustion behavior.\n- [ ] Add a portable fallback for platforms/builds without the required mapping APIs.\n\n### Stable handle backing\n\n- [ ] Reserve a bounded virtual range for the handle table.\n- [ ] Commit handle pages lazily.\n- [ ] Preserve handle index zero as invalid/null protection.\n- [ ] Publish stable table base/capacity through the versioned native ABI.\n- [ ] Avoid slice reallocation and view refresh solely because a handle was appended.\n\n### Native integration\n\n- [ ] Patch or cache stable bases at instance setup where safe.\n- [ ] Remove hot-path pointer reloads that exist only because Go backing can move.\n- [ ] Preserve serialization, `Close`, ownership, and native execution synchronization.\n- [ ] Ensure no Go pointer is stored in guest-visible state.\n\n### Measurement\n\n- [ ] Report old-space backing-copy bytes eliminated.\n- [ ] Measure allocation latency at each commit boundary.\n- [ ] Measure RSS, committed bytes, reserved address space, page faults, and JIT instruction changes.\n- [ ] Test small heaps where virtual reservation overhead must remain negligible.\n\n## Correctness gates\n\n- [ ] Guard against address/length overflow and mapping failure.\n- [ ] Verify stale native views cannot access decommitted or closed backing.\n- [ ] Test guard-page and explicit bounds products on linux/amd64, linux/arm64, and Darwin/arm64 where supported.\n\n## Acceptance criteria\n\n- Normal old-space growth performs no full backing copy.\n- Normal handle growth does not relocate the native handle table.\n- Existing hard heap limits and fail-closed behavior remain exact.",
+        "state": "closed",
+        "user": {
+          "login": "jtenner",
+          "name": "jtenner",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+          "id": 3761339
+        },
+        "assignees": [
+          {
+            "login": "jtenner",
+            "name": "jtenner",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+            "id": 3761339
+          }
+        ],
+        "labels": [
+          {
+            "name": "enhancement",
+            "color": "a2eeef",
+            "description": "New feature or request"
+          },
+          {
+            "name": "performance",
+            "color": "aaaaaa",
+            "description": null
+          },
+          {
+            "name": "priority/P1",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "area/gc",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "release/deferred",
+            "color": "ededed",
+            "description": null
+          }
+        ],
+        "milestone": null,
+        "state_reason": "completed",
+        "comments": 1,
+        "created_at": "2026-08-04T06:10:38Z",
+        "updated_at": "2026-09-11T12:22:04Z",
+        "closed_at": "2026-09-11T12:22:04Z",
+        "display_url": "https://github.com/wago-org/wago/issues/308",
+        "display_title": "[P1][GC] Reserve stable virtual-address backing for heap spaces and the handle table"
+      },
+      "comments": [
+        {
+          "url": "https://github.com/wago-org/wago/issues/308#issuecomment-5634366297",
+          "body": "will do later",
+          "user": {
+            "login": "JairusSW",
+            "name": "JairusSW",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/60235514?v=4",
+            "id": 60235514
+          },
+          "id": 5634366297,
+          "pull_request_review_id": null,
+          "in_reply_to_id": null,
+          "created_at": null,
+          "updated_at": null,
+          "review": null,
+          "side": null,
+          "line": null,
+          "start_line": null,
+          "path": null,
+          "body_html": "<p dir=\"auto\">will do later</p>"
+        }
+      ]
+    },
+    {
+      "issue": {
+        "url": "https://github.com/wago-org/wago/issues/309",
+        "title": "[P1][GC] Prototype a 16-byte hot handle and compact object headers",
+        "issue_number": 309,
+        "body": "## Context\n\nThe current native handle stride is 20 bytes and objects carry a 16-byte header. Size and several flags are duplicated or derivable. The fixed handle-plus-header cost is therefore large for small WasmGC objects, and the 20-byte stride requires multiplication during handle resolution.\n\n## Scope\n\n### Hot handle layout\n\n- [ ] Prototype a 16-byte handle record with fields equivalent to region/offset, logical object size, canonical type or layout ID, and packed metadata.\n- [ ] Pack space, generation/age, size-class/region class, and required flags into the metadata word.\n- [ ] Move allocator-only `allocSize` into span/page/region metadata.\n- [ ] Move remembered/card membership into bitmaps or side metadata rather than every handle.\n- [ ] Derive allocation size from size class when possible.\n- [ ] Use shift/scaled addressing for handle resolution.\n\n### Object header\n\n- [ ] Remove duplicate object size from either the handle or object header.\n- [ ] Derive pointer-free and large-object state from type/region metadata.\n- [ ] Keep mark and age state outside guest object bytes.\n- [ ] Prototype an 8-byte header carrying only per-object dynamic data such as array length/auxiliary state.\n- [ ] Evaluate header-free structs where type/size live entirely in the handle.\n- [ ] Preserve exact array length, exception/object auxiliary data, and all layout alignment.\n\n### Safety and compatibility\n\n- [ ] Version the native collector ABI and reject incompatible persisted artifacts.\n- [ ] Preserve `RefEq` and stable handle identity across relocation.\n- [ ] Retain test-only stale-reference cookies/generations where needed without changing guest equality.\n\n### Measurement\n\n- [ ] Report metadata bytes/object and metadata bytes/live payload byte.\n- [ ] Measure handle-resolution instructions, cache misses, collector scan bandwidth, JIT bytes, and linked bytes.\n- [ ] Compare at least `16-byte handle + 8-byte header` and `16-byte handle + header-free struct` designs.\n\n## Acceptance criteria\n\n- The retained layout materially reduces metadata/cache traffic on small-object workloads.\n- Handle resolution is no slower on amd64 or arm64.\n- No semantic, codec, ownership, or stale-reference regression is introduced.",
+        "state": "closed",
+        "user": {
+          "login": "jtenner",
+          "name": "jtenner",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+          "id": 3761339
+        },
+        "assignees": [
+          {
+            "login": "jtenner",
+            "name": "jtenner",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+            "id": 3761339
+          }
+        ],
+        "labels": [
+          {
+            "name": "enhancement",
+            "color": "a2eeef",
+            "description": "New feature or request"
+          },
+          {
+            "name": "performance",
+            "color": "aaaaaa",
+            "description": null
+          },
+          {
+            "name": "priority/P1",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "area/gc",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "release/deferred",
+            "color": "ededed",
+            "description": null
+          }
+        ],
+        "milestone": null,
+        "state_reason": "completed",
+        "comments": 1,
+        "created_at": "2026-08-04T06:11:01Z",
+        "updated_at": "2026-09-11T12:22:02Z",
+        "closed_at": "2026-09-11T12:22:02Z",
+        "display_url": "https://github.com/wago-org/wago/issues/309",
+        "display_title": "[P1][GC] Prototype a 16-byte hot handle and compact object headers"
+      },
+      "comments": [
+        {
+          "url": "https://github.com/wago-org/wago/issues/309#issuecomment-5634365980",
+          "body": "will do later",
+          "user": {
+            "login": "JairusSW",
+            "name": "JairusSW",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/60235514?v=4",
+            "id": 60235514
+          },
+          "id": 5634365980,
+          "pull_request_review_id": null,
+          "in_reply_to_id": null,
+          "created_at": null,
+          "updated_at": null,
+          "review": null,
+          "side": null,
+          "line": null,
+          "start_line": null,
+          "path": null,
+          "body_html": "<p dir=\"auto\">will do later</p>"
+        }
+      ]
+    },
+    {
+      "issue": {
+        "url": "https://github.com/wago-org/wago/issues/313",
+        "title": "[P2][GC] Design and implement a stable-handle Immix-style old generation",
+        "issue_number": 313,
+        "body": "## Context\n\nWago's 32-bit guest references are stable handles rather than raw object pointers. This makes selective old-space evacuation unusually cheap: copy object bytes and update one handle entry without rewriting every heap reference. An Immix-style mark-region old generation is the strongest long-term fit for throughput, locality, fragmentation control, and compact implementation.\n\n## Scope\n\n### Region/block/line design\n\n- [ ] Define coarse old-space blocks/regions and fine-grained allocation lines.\n- [ ] Maintain per-region object-start, mark, card, generation, occupancy, and free-line metadata.\n- [ ] Allocate contiguously through free line runs using bump cursors.\n- [ ] Separate or classify pointer-free regions to reduce tracing work.\n- [ ] Give large objects dedicated independently reclaimable/ageable regions.\n\n### Mark and sweep\n\n- [ ] Pack mark state in bitmaps and clear logically with polarity/epochs.\n- [ ] Trace using precomputed type scan programs.\n- [ ] Group marking work by page/region for locality.\n- [ ] Scan dense reference arrays in bounded chunks.\n- [ ] Sweep lazily by region and immediately convert empty regions into bump arenas.\n- [ ] Maintain live-byte/line counts during marking.\n\n### Selective evacuation\n\n- [ ] Rank sparse regions by live bytes, connectivity/card cost, and evacuation benefit.\n- [ ] Copy selected live objects into destination regions.\n- [ ] Update only stable handle metadata after each object is completely copied.\n- [ ] Never retain a raw object address across a safepoint or evacuation boundary.\n- [ ] Reclaim evacuated regions transactionally.\n- [ ] Age surviving young large-object regions in place where safe.\n\n### Memory return\n\n- [ ] Decommit or `madvise` long-idle empty regions on supported platforms.\n- [ ] Preserve virtual reservation and hard heap limits.\n\n## Staging\n\n1. Region allocator and metadata behind an experimental profile.\n2. Mark/sweep without evacuation.\n3. Selective evacuation with shadow verification.\n4. Replace the current old generation only after sustained evidence.\n\n## Measurement\n\n- Long-running fragmented heaps, sparse and dense graphs, low/high liveness, large objects, and mixed object sizes.\n- Full-GC pause distribution, mark bandwidth, sweep cost, evacuated bytes, handle updates, fragmentation, cache misses, RSS, and mutator throughput.\n\n## Acceptance criteria\n\n- Old-space allocation and reclamation have bounded metadata behavior.\n- Fragmentation remains controlled over long randomized workloads.\n- Evacuation updates stable handles rather than rewriting the complete object graph.\n- The retained implementation improves full-GC throughput and memory efficiency without unacceptable linked-size growth.",
+        "state": "closed",
+        "user": {
+          "login": "jtenner",
+          "name": "jtenner",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+          "id": 3761339
+        },
+        "assignees": [
+          {
+            "login": "jtenner",
+            "name": "jtenner",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+            "id": 3761339
+          }
+        ],
+        "labels": [
+          {
+            "name": "enhancement",
+            "color": "a2eeef",
+            "description": "New feature or request"
+          },
+          {
+            "name": "performance",
+            "color": "aaaaaa",
+            "description": null
+          },
+          {
+            "name": "area/gc",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "release/deferred",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "priority/P2",
+            "color": "ededed",
+            "description": null
+          }
+        ],
+        "milestone": null,
+        "state_reason": "completed",
+        "comments": 1,
+        "created_at": "2026-08-04T06:12:49Z",
+        "updated_at": "2026-09-11T12:22:00Z",
+        "closed_at": "2026-09-11T12:22:00Z",
+        "display_url": "https://github.com/wago-org/wago/issues/313",
+        "display_title": "[P2][GC] Design and implement a stable-handle Immix-style old generation"
+      },
+      "comments": [
+        {
+          "url": "https://github.com/wago-org/wago/issues/313#issuecomment-5634365424",
+          "body": "will do later",
+          "user": {
+            "login": "JairusSW",
+            "name": "JairusSW",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/60235514?v=4",
+            "id": 60235514
+          },
+          "id": 5634365424,
+          "pull_request_review_id": null,
+          "in_reply_to_id": null,
+          "created_at": null,
+          "updated_at": null,
+          "review": null,
+          "side": null,
+          "line": null,
+          "start_line": null,
+          "path": null,
+          "body_html": "<p dir=\"auto\">will do later</p>"
+        }
+      ]
+    },
+    {
+      "issue": {
+        "url": "https://github.com/wago-org/wago/issues/321",
+        "title": "[P3][GC] Add parallel and concurrent collection only behind measured heap-size thresholds",
+        "issue_number": 321,
+        "body": "## Context\n\nWago should not begin with a G1/ZGC/Shenandoah-scale concurrent design. Concurrency becomes useful only after exact roots, card-driven minor collection, compact metadata, stable regions, and efficient single-threaded collection are complete. This issue records the explicitly deferred path and its admission criteria.\n\n## Required prerequisites\n\n- [ ] Collector-cycle telemetry and pause distributions are available.\n- [ ] Exact root maps cover the target generated workloads.\n- [ ] Real card/root remembered sets are collection inputs.\n- [ ] Mark state uses packed epoch/polarity metadata.\n- [ ] Stable heap/handle backing and region metadata exist.\n- [ ] Mutation barriers are already minimized and proven.\n\n## Staged scope\n\n### Phase 1: background sweeping\n\n- [ ] Sweep reclaimed old regions/spans outside the mutator pause where safe.\n- [ ] Preserve deterministic allocation fallback when background work is unavailable.\n\n### Phase 2: parallel stop-the-world marking\n\n- [ ] Enable only above measured live-heap/object thresholds.\n- [ ] Use per-worker local mark queues with work stealing.\n- [ ] Group work by region/page and use bounded queue-transfer synchronization.\n- [ ] Keep the single-mutator/small-heap path worker-free.\n\n### Phase 3: parallel evacuation\n\n- [ ] Give workers private survivor/old destination chunks.\n- [ ] Publish copied objects through stable handles only after complete initialization.\n- [ ] Preserve transactional failure semantics.\n\n### Phase 4: concurrent marking\n\n- [ ] Add safepoint handshakes, phase transitions, and a proven incremental-update or SATB barrier.\n- [ ] Keep foreground young collection compatible with background old marking.\n- [ ] Bound remark work and report p99/max latency.\n\n### Explicit non-goals unless later evidence demands them\n\n- [ ] Do not add colored pointers.\n- [ ] Do not add a load barrier to every object access.\n- [ ] Do not implement concurrent relocation by default.\n- [ ] Do not introduce a global process-wide collector.\n\n## Measurement\n\n- Compare one, two, four, and available-core worker counts.\n- Report pause distributions, total CPU, wall time, cache misses, synchronization, mutator throughput, RSS, and linked-size growth.\n- Demonstrate a clear benefit at large heaps and no regression for small/default workloads.\n\n## Acceptance criteria\n\n- Every phase lands separately behind thresholds and temporary A/B controls.\n- Parallelism is disabled when startup/synchronization costs exceed measured benefit.\n- Concurrent machinery can be excluded from minimal/Tiny products at build time.",
+        "state": "closed",
+        "user": {
+          "login": "jtenner",
+          "name": "jtenner",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+          "id": 3761339
+        },
+        "assignees": [
+          {
+            "login": "jtenner",
+            "name": "jtenner",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/3761339?v=4",
+            "id": 3761339
+          }
+        ],
+        "labels": [
+          {
+            "name": "enhancement",
+            "color": "a2eeef",
+            "description": "New feature or request"
+          },
+          {
+            "name": "performance",
+            "color": "aaaaaa",
+            "description": null
+          },
+          {
+            "name": "area/gc",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "release/deferred",
+            "color": "ededed",
+            "description": null
+          },
+          {
+            "name": "priority/P3",
+            "color": "ededed",
+            "description": null
+          }
+        ],
+        "milestone": null,
+        "state_reason": "completed",
+        "comments": 1,
+        "created_at": "2026-08-04T06:16:09Z",
+        "updated_at": "2026-09-11T12:21:54Z",
+        "closed_at": "2026-09-11T12:21:54Z",
+        "display_url": "https://github.com/wago-org/wago/issues/321",
+        "display_title": "[P3][GC] Add parallel and concurrent collection only behind measured heap-size thresholds"
+      },
+      "comments": [
+        {
+          "url": "https://github.com/wago-org/wago/issues/321#issuecomment-5634364497",
+          "body": "will do later",
+          "user": {
+            "login": "JairusSW",
+            "name": "JairusSW",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/u/60235514?v=4",
+            "id": 60235514
+          },
+          "id": 5634364497,
+          "pull_request_review_id": null,
+          "in_reply_to_id": null,
+          "created_at": null,
+          "updated_at": null,
+          "review": null,
+          "side": null,
+          "line": null,
+          "start_line": null,
+          "path": null,
+          "body_html": "<p dir=\"auto\">will do later</p>"
+        }
+      ]
+    }
+  ],
+  "default_branch_sources": [
+    {
+      "content": "package gc\n\nimport (\n\t\"fmt\"\n\t\"unsafe\"\n)\n\n// NativeABIVersion identifies the checked collector metadata layout consumed by\n// generated code. Artifact loading and instantiation must validate it before\n// publishing the basedata pointer; generated operations then trust that immutable\n// contract while reloading every mutable backing pointer/count they consume. The\n// view is refreshed in place whenever growable backing can relocate, and callers\n// must still serialize access with collector mutation.\n// Version 8 also gates the dead-reservation/native-preparation helper dispatch.\nconst NativeABIVersion uint32 = 9\n\n// Native allocation-stat offsets are relative to the AllocationCount pointer\n// in NativeCollectorView. Generated AMD64 dead charges use these counters to\n// invalidate pending-object accounting after a collection without adding work\n// to ordinary allocation or collection paths.\nconst (\n\tNativeAllocationMinorCollectionsOffset = 8\n\tNativeAllocationFullCollectionsOffset  = 16\n\tNativeAllocationDeadObjectsOffset      = 56\n)\n\n// Native handle-entry layout. These constants are part of NativeABIVersion and\n// are verified against handleEntry below.\nconst (\n\tNativeHandleStride                = 16\n\tNativeHandleOffsetOffset          = 0\n\tNativeHandleSizeOffset            = 4\n\tNativeHandleCardSlotOffset        = 8\n\tNativeHandleMetadataOffset        = 12\n\tNativeHandleSpaceOffset           = 14\n\tNativeHandleRememberedOffset      = 15\n\tNativeSpaceFree              byte = byte(spaceFree)\n\tNativeSpaceNursery           byte = byte(spaceNursery)\n\tNativeSpaceOld               byte = byte(spaceOld)\n\tNativeSpaceLarge             byte = byte(spaceLarge)\n\tNativeSpaceTiny              byte = byte(spaceTiny)\n\tNativeSpaceCount                  = 5\n\tNativeObjectCardStride            = 16\n\tNativeObjectCardHandleOffset      = 0\n\tNativeObjectCardStartOffset       = 4\n\tNativeObjectCardEndOffset         = 8\n\tNativeObjectCardNextOffset        = 12\n)\n\n// NativeSpaceView names one collector heap backing. Space zero deliberately\n// remains empty so a handle's native space byte indexes this array directly.\ntype NativeSpaceView struct {\n\tBase  uintptr\n\tBytes uint32\n\t_     uint32\n}\n\n// NativeCollectorView is a stable, versioned descriptor for the collector's\n// relocatable handle table and fixed heap spaces. The Collector owns this object\n// for its complete lifetime, so generated code may cache only the view pointer;",
+      "encoding": "utf-8",
+      "sha": "ccea273003d6c5237513ce7d175d5b190c52deac",
+      "display_url": "https://github.com/wago-org/wago/blob/main/src/core/runtime/gc/native/native_view.go",
+      "display_title": "native_view.go"
+    },
+    {
+      "content": "package gc\n\nimport (\n\t\"errors\"\n\t\"fmt\"\n\t\"unsafe\"\n)\n\n// ObjHeader is the stable guest-object header stored in the byte heap before\n// every payload. It is represented here for layout documentation/tests; heap\n// memory stores the fields little-endian, not as Go heap objects.\ntype ObjHeader struct {\n\tTypeID uint32\n\tSize   uint32 // total object size including header\n\tAux    uint32 // array length, or forwarding metadata during copying\n\tFlags  uint32 // generation/color/age/pointer-free/forwarding bits\n}\n\nconst (\n\tFlagPointerFree uint32 = 1 << iota\n\tFlagForwarded\n\tFlagMarked\n\tFlagOld\n\tFlagLarge\n)\n\nconst HeaderSize = uint32(unsafe.Sizeof(ObjHeader{}))\nconst PayloadOffset = HeaderSize\n\n// ErrAllocationTooLarge reports an object whose physical aligned extent cannot\n// be represented by the collector's uint32 heap ABI.\nvar ErrAllocationTooLarge = errors.New(\"gc: allocation size too large\")\n\nfunc Align8(v uint32) uint32  { return align(v, 8) }\nfunc Align16(v uint32) uint32 { return align(v, 16) }\n\nfunc makeAlignedBytes(size uint32, alignment uintptr) []byte {\n\tif size == 0 {\n\t\treturn nil\n\t}\n\traw := make([]byte, uint64(size)+uint64(alignment-1))\n\tbase := uintptr(unsafe.Pointer(&raw[0]))\n\tdelta := (alignment - base%alignment) % alignment\n\tstart := int(delta)\n\tend := start + int(size)\n\treturn raw[start:end:end]\n}\n\nfunc requiredObjectAlignment(types []TypeDesc) uint32 {\n\talignment := uint32(8)\n\tfor _, d := range types {\n\t\tif (d.Kind == KindStruct || d.Kind == KindArray) && d.Align > alignment {\n\t\t\talignment = d.Align\n\t\t}\n\t}\n\treturn alignment\n}\nfunc StructSize(d TypeDesc) (uint32, error) {\n\tif d.Kind != KindStruct {\n\t\treturn 0, fmt.Errorf(\"gc: type %d is not a struct\", d.ID)\n\t}\n\ttotal := uint64(HeaderSize) + uint64(d.Size)\n\tif total > uint64(^uint32(0)-7) {\n\t\treturn 0, fmt.Errorf(\"gc: struct size overflow: %w\", ErrAllocationTooLarge)\n\t}\n\treturn Align8(uint32(total)), nil\n}\nfunc ArraySize(d TypeDesc, length uint32) (uint32, error) {\n\tif d.Kind != KindArray {\n\t\treturn 0, fmt.Errorf(\"gc: type %d is not an array\", d.ID)\n\t}\n\tpayload := uint64(d.ElemSize) * uint64(length)\n\ttotal := uint64(HeaderSize) + payload\n\tif total > uint64(^uint32(0)-7) {\n\t\treturn 0, fmt.Errorf(\"gc: array size overflow: %w\", ErrAllocationTooLarge)\n\t}\n\treturn Align8(uint32(total)), nil\n}",
+      "encoding": "utf-8",
+      "sha": "58be029a26436d7280187c089d53f16dfc2d3ccb",
+      "display_url": "https://github.com/wago-org/wago/blob/main/src/core/runtime/gc/native/layout.go",
+      "display_title": "layout.go"
+    },
+    {
+      "content": "\tend := uint64(off) + uint64(size)\n\tif end > uint64(h.limit) || end > uint64(^uint32(0)) {\n\t\treturn 0, errThroughputHeapExhausted\n\t}\n\tneedLen, err := throughputReservationLen(end, h.pageBytes, h.limit)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif needLen > uint64(len(h.mem)) {\n\t\tif err := h.growBacking(needLen); err != nil {\n\t\t\treturn 0, err\n\t\t}\n\t}\n\th.bump = uint32(end)\n\treturn off, nil\n}\n\n//go:noinline\nfunc (h *throughputHeap) growBacking(needed uint64) error {\n\tif err := injectFailure(h, failBackingGrowth); err != nil {\n\t\treturn err\n\t}\n\treserve := needed\n\tcurrent, pageBytes, limit := uint64(len(h.mem)), uint64(h.pageBytes), uint64(h.limit)\n\tif current >= pageBytes {\n\t\tstep := current / 2\n\t\tif step < pageBytes {\n\t\t\tstep = pageBytes\n\t\t}\n\t\tgrown := align64(current+step, pageBytes)\n\t\tif grown > limit {\n\t\t\tgrown = limit\n\t\t}\n\t\tif grown > reserve {\n\t\t\treserve = grown\n\t\t}\n\t}\n\tif reserve > limit || reserve > uint64(^uint32(0)) || reserve > uint64(int(^uint(0)>>1)) {\n\t\treturn errors.New(\"gc: throughput heap reservation too large\")\n\t}\n\tnewMem := makeAlignedBytes(uint32(reserve), 16)\n\tcopy(newMem, h.mem)\n\th.mem = newMem\n\treturn nil\n}\n\nfunc throughputReservationLen(end uint64, pageBytes, limit uint32) (uint64, error) {\n\tneedLen := align64(end, uint64(pageBytes))\n\tif needLen > uint64(limit) {\n\t\tneedLen = end\n\t}\n\tif needLen > uint64(^uint32(0)) || needLen > uint64(int(^uint(0)>>1)) {\n\t\treturn 0, errors.New(\"gc: throughput heap reservation too large\")\n\t}\n\treturn needLen, nil\n}",
+      "encoding": "utf-8",
+      "sha": "25dab0d65b34bcbf7bf66d10c22f6971e6f5d0a2",
+      "display_url": "https://github.com/wago-org/wago/blob/main/src/core/runtime/gc/native/throughput_alloc.go",
+      "display_title": "throughput_alloc.go"
+    }
+  ]
+}
