@@ -1,0 +1,24 @@
+{
+  "required_ci": {
+    "run": 39735491072,
+    "conclusion": "success",
+    "draft_smoke": "skipped; full CI selected"
+  },
+  "additional_native_riscv64": {
+    "run": 39735491061,
+    "job": 119680322680,
+    "conclusion": "failure",
+    "stage": "Public ownership and compiler-free artifacts",
+    "test": "TestRV64PublicReferenceFunctionImportedStartGo/artifacttrue-vectortrue-widefalse-ownedfalse-success",
+    "symptom": "process killed after 16m30s; imported Go start callback in runtime.GC sweep loop; goroutine 0 in scheduler lock/futex",
+    "source_cause": "not established",
+    "rerun": "one failed job rerun accepted; no successful jobs rerun"
+  },
+  "source_diff": {
+    "base": "688303ebfa75384e89773e3fc865b8bccb2e6a71",
+    "head": "877363283b2564fff3b07de5a26520de2066fae3",
+    "runtime_rv64_backend_and_failed_test_changed_paths": [],
+    "note": "optimization catalog adds AMD64-only direct-reference-abi; absence of changes here does not establish baseline or transient classification"
+  },
+  "decision": "no speculative source patch, no timeout increase, no merge; native retry still required"
+}

@@ -70,3 +70,49 @@ and standalone TinyGo builds dominate the long activities. They exceed the
 are saved with full output, commands, CPU time, peak RSS and other resource
 measurements. Existing dirty compiler/host checkouts are untouched.
 T3 will watch the pushed branch for hosted CI results.
+
+
+## Required CI green; separate native RISC-V hang
+
+Head `877363283b2564fff3b07de5a26520de2066fae3` remains open,
+non-draft, and mergeable. The [required CI workflow](https://github.com/wago-org/wago/actions/runs/39735491072)
+is complete and successful. This is full CI, not draft smoke. The returned
+first page confirms green lint, race, Core v2/v3, documentation, platform and
+corpus jobs; the draft-smoke job is skipped. The regression-stress workflow is
+skipped. The job-list API returns only its first page, so the saved job list is
+not presented as an exhaustive inventory of the full matrix.
+
+The separate [native RISC-V job](https://github.com/wago-org/wago/actions/runs/39735491061/job/119680322680)
+fails in public ownership checks. Smoke, CLI/standalone qualification, and
+compiler/runtime correctness pass first. The public test process is killed
+after 16 minutes 30 seconds. Its last subtest is
+`TestRV64PublicReferenceFunctionImportedStartGo/artifacttrue-vectortrue-widefalse-ownedfalse-success`.
+The callback is inside `runtime.GC`, yielding in its sweep-completion loop;
+goroutine zero is waiting on a runtime scheduler lock/futex. The log does not
+establish a source cause. Do not classify the hang as transient or as a known
+baseline failure without further evidence.
+
+The same imported-start test passes ten full QEMU repetitions in each ordinary
+and register-check mode (Go 1.27.1, RVA20 baseline, GOMAXPROCS=2). Each run covers
+source/saved code, scalar/vector signatures, wide mode, owned host bindings,
+success/trap/panic/exit, cancellation, and instance close. All GC calls and
+lifetime/refund assertions remain active. Ordinary execution takes 14.149
+seconds for the package, 51.877 seconds including build, with peak RSS
+4,748,020 KiB. The checked command takes 51.476 seconds including build,
+with peak RSS 4,753,280 KiB. Long compiler/build work remains above the
+30-second target. QEMU passes do not establish native RISC-V safety or explain
+the hosted hang.
+
+There is no diff from live main in the runtime, RISC-V backend, or failed test;
+the shared optimization catalog adds only the AMD64 option. This limits the
+likely connection to the private-reference change but is not baseline proof.
+No source, timeout, or test assertion is changed on this evidence. One retry
+of only the failed native job is accepted. Successful jobs are not rerun.
+Native retry is pending, the PR stays unmerged, and T3 continues watching.
+
+[Hosted state](data/wago-pr1009-green-rise-2026-10-22/hosted-snapshot.json),
+[timeout trace](data/wago-pr1009-green-rise-2026-10-22/rise-timeout-trace.log),
+[classification and retry](data/wago-pr1009-green-rise-2026-10-22/classification.json),
+[ordinary repeats](data/wago-pr1009-green-rise-2026-10-22/imported-start-default.json),
+and [checked repeats](data/wago-pr1009-green-rise-2026-10-22/imported-start-checked.json)
+retain commands, raw output, resources, and the remaining native validation gap.

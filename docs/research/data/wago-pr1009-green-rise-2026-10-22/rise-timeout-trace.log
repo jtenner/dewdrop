@@ -1,0 +1,227 @@
+2026-10-22T07:16:25.4862137Z === RUN   TestRV64PublicReferenceFunctionImportedStartGo/artifacttrue-vectorfalse-widetrue-ownedtrue-cancel
+2026-10-22T07:16:25.5141637Z === RUN   TestRV64PublicReferenceFunctionImportedStartGo/artifacttrue-vectorfalse-widetrue-ownedtrue-instance-close
+2026-10-22T07:16:25.5438893Z === RUN   TestRV64PublicReferenceFunctionImportedStartGo/artifacttrue-vectortrue-widefalse-ownedfalse-success
+2026-10-22T07:29:23.0965673Z SIGQUIT: quit
+2026-10-22T07:29:23.0968533Z PC=0x81efc m=0 sigcode=0
+2026-10-22T07:29:23.0970137Z 
+2026-10-22T07:29:23.0971640Z goroutine 0 gp=0x20836c0 m=0 mp=0x2084680 [idle]:
+2026-10-22T07:29:23.0975187Z runtime.futex()
+2026-10-22T07:29:23.0981364Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/sys_linux_riscv64.s:440 +0x4 fp=0x3fffe9f3c0 sp=0x3fffe9f3c0 pc=0x81efc
+2026-10-22T07:29:23.0992791Z runtime.futexsleep(0x0?, 0x0?, 0x2721e?)
+2026-10-22T07:29:23.0999257Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/os_linux.go:73 +0x1c fp=0x3fffe9f400 sp=0x3fffe9f3c0 pc=0x4b86c
+2026-10-22T07:29:23.1004801Z runtime.semasleep(0xffffffffffffffff)
+2026-10-22T07:29:23.1010024Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/lock_futex.go:146 +0x42 fp=0x3fffe9f428 sp=0x3fffe9f400 pc=0x26f12
+2026-10-22T07:29:23.1017638Z runtime.lock2(0x2084de0)
+2026-10-22T07:29:23.1023331Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/lock_spinbit.go:259 +0x280 fp=0x3fffe9f498 sp=0x3fffe9f428 pc=0x27298
+2026-10-22T07:29:23.1031201Z runtime.lockWithRank(...)
+2026-10-22T07:29:23.1034888Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/lockrank_off.go:24
+2026-10-22T07:29:23.1038928Z runtime.lock(...)
+2026-10-22T07:29:23.1042462Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/lock_spinbit.go:161
+2026-10-22T07:29:23.1046668Z runtime.findRunnable()
+2026-10-22T07:29:23.1051805Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:3780 +0x7bc fp=0x3fffe9f658 sp=0x3fffe9f498 pc=0x553c4
+2026-10-22T07:29:23.1058085Z runtime.schedule()
+2026-10-22T07:29:23.1062895Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:4179 +0x86 fp=0x3fffe9f690 sp=0x3fffe9f658 pc=0x5668e
+2026-10-22T07:29:23.1068702Z runtime.park_m(0x3fa336c700)
+2026-10-22T07:29:23.1074826Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:4319 +0x1ee fp=0x3fffe9f6e8 sp=0x3fffe9f690 pc=0x56a4e
+2026-10-22T07:29:23.1080263Z runtime.mcall()
+2026-10-22T07:29:23.1086369Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:329 +0x36 fp=0x3fffe9f6f8 sp=0x3fffe9f6e8 pc=0x7fcee
+2026-10-22T07:29:23.1091096Z 
+2026-10-22T07:29:23.1092813Z goroutine 1 gp=0x3fa2fc41c0 m=nil [chan receive, 12 minutes]:
+2026-10-22T07:29:23.1097540Z runtime.gopark(0x3f9415dde8?, 0x202ad08?, 0x78?, 0x84?, 0x3c?)
+2026-10-22T07:29:23.1103313Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa30bb948 sp=0x3fa30bb930 pc=0x7bdf6
+2026-10-22T07:29:23.1109066Z runtime.chanrecv(0x3f9415dd80, 0x3fa30bba2f, 0x1)
+2026-10-22T07:29:23.1114783Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/chan.go:667 +0x3d0 fp=0x3fa30bb9c0 sp=0x3fa30bb948 pc=0x22ad8
+2026-10-22T07:29:23.1120650Z runtime.chanrecv1(0x18?, 0x1fb8588?)
+2026-10-22T07:29:23.1125950Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/chan.go:509 +0xe fp=0x3fa30bb9e0 sp=0x3fa30bb9c0 pc=0x226e6
+2026-10-22T07:29:23.1131804Z testing.(*T).Run(0x3fa30ee008, {0x1081b2b?, 0x3a?}, 0x2032960)
+2026-10-22T07:29:23.1138680Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2266 +0x37e fp=0x3fa30bbab0 sp=0x3fa30bb9e0 pc=0xecba6
+2026-10-22T07:29:23.1146311Z testing.runTests.func1(0x3fa30ee008)
+2026-10-22T07:29:23.1160118Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2742 +0x3a fp=0x3fa30bbae8 sp=0x3fa30bbab0 pc=0xf175a
+2026-10-22T07:29:23.1169448Z testing.tRunner(0x3fa30ee008, 0x3fa30bbc00)
+2026-10-22T07:29:23.1179361Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2193 +0xba fp=0x3fa30bbb30 sp=0x3fa30bbae8 pc=0xec7da
+2026-10-22T07:29:23.1191362Z testing.runTests({0x10101bc, 0x18}, {0x1035e9c, 0x21}, 0x3fa309c018, {0x20703f0, 0xba7, 0xba7}, {0xd4ae0?, 0x4f?, ...})
+2026-10-22T07:29:23.1201615Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2740 +0x374 fp=0x3fa30bbc20 sp=0x3fa30bbb30 pc=0xee2d4
+2026-10-22T07:29:23.1207662Z testing.(*M).Run(0x3fa30a61e0)
+2026-10-22T07:29:23.1213419Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2600 +0x51e fp=0x3fa30bbe58 sp=0x3fa30bbc20 pc=0xed4c6
+2026-10-22T07:29:23.1220339Z main.main()
+2026-10-22T07:29:23.1224169Z 	_testmain.go:6428 +0x92 fp=0x3fa30bbed0 sp=0x3fa30bbe58 pc=0xfda12a
+2026-10-22T07:29:23.1231879Z runtime.main()
+2026-10-22T07:29:23.1236429Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:302 +0x30e fp=0x3fa30bbfd8 sp=0x3fa30bbed0 pc=0x503a6
+2026-10-22T07:29:23.1241346Z runtime.goexit({})
+2026-10-22T07:29:23.1245989Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa30bbfd8 sp=0x3fa30bbfd8 pc=0x813c4
+2026-10-22T07:29:23.1250066Z 
+2026-10-22T07:29:23.1251760Z goroutine 17 gp=0x3fa3080000 m=nil [force gc (idle), 16 minutes]:
+2026-10-22T07:29:23.1255830Z runtime.gopark(0x20825f0?, 0x0?, 0x0?, 0x0?, 0x0?)
+2026-10-22T07:29:23.1263136Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa30087a8 sp=0x3fa3008790 pc=0x7bdf6
+2026-10-22T07:29:23.1269423Z runtime.goparkunlock(...)
+2026-10-22T07:29:23.1273977Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:480
+2026-10-22T07:29:23.1277723Z runtime.forcegchelper()
+2026-10-22T07:29:23.1282300Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:387 +0xb2 fp=0x3fa30087d8 sp=0x3fa30087a8 pc=0x5063a
+2026-10-22T07:29:23.1287207Z runtime.goexit({})
+2026-10-22T07:29:23.1291764Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa30087d8 sp=0x3fa30087d8 pc=0x813c4
+2026-10-22T07:29:23.1297801Z created by runtime.init.6 in goroutine 1
+2026-10-22T07:29:23.1302044Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:375 +0x24
+2026-10-22T07:29:23.1304967Z 
+2026-10-22T07:29:23.1306291Z goroutine 18 gp=0x3fa30801c0 m=nil [runnable]:
+2026-10-22T07:29:23.1309417Z runtime.goschedIfBusy()
+2026-10-22T07:29:23.1314091Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:426 +0x30 fp=0x3fa3008f90 sp=0x3fa3008f80 pc=0x506c0
+2026-10-22T07:29:23.1319411Z runtime.bgsweep(0x3fa3084000)
+2026-10-22T07:29:23.1326564Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgcsweep.go:303 +0xe0 fp=0x3fa3008fc8 sp=0x3fa3008f90 pc=0x3ec30
+2026-10-22T07:29:23.1332298Z runtime.gcenable.gowrap1()
+2026-10-22T07:29:23.1337651Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:214 +0x20 fp=0x3fa3008fd8 sp=0x3fa3008fc8 pc=0x745e0
+2026-10-22T07:29:23.1342845Z runtime.goexit({})
+2026-10-22T07:29:23.1347515Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa3008fd8 sp=0x3fa3008fd8 pc=0x813c4
+2026-10-22T07:29:23.1352852Z created by runtime.gcenable in goroutine 1
+2026-10-22T07:29:23.1356825Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:214 +0x62
+2026-10-22T07:29:23.1359692Z 
+2026-10-22T07:29:23.1361405Z goroutine 19 gp=0x3fa3080380 m=nil [GC scavenge wait, 12 minutes]:
+2026-10-22T07:29:23.1394989Z runtime.gopark(0x20832e0?, 0x3b9aca00?, 0x0?, 0x0?, 0x0?)
+2026-10-22T07:29:23.1401489Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa3009788 sp=0x3fa3009770 pc=0x7bdf6
+2026-10-22T07:29:23.1406730Z runtime.goparkunlock(...)
+2026-10-22T07:29:23.1410553Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:480
+2026-10-22T07:29:23.1414830Z runtime.(*scavengerState).park(0x20832e0)
+2026-10-22T07:29:23.1421073Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgcscavenge.go:425 +0x4e fp=0x3fa30097b0 sp=0x3fa3009788 pc=0x3cf96
+2026-10-22T07:29:23.1426557Z runtime.bgscavenge(0x3fa3084000)
+2026-10-22T07:29:23.1431707Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgcscavenge.go:658 +0x60 fp=0x3fa30097c8 sp=0x3fa30097b0 pc=0x3d398
+2026-10-22T07:29:23.1437174Z runtime.gcenable.gowrap2()
+2026-10-22T07:29:23.1441874Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:215 +0x20 fp=0x3fa30097d8 sp=0x3fa30097c8 pc=0x745b8
+2026-10-22T07:29:23.1446867Z runtime.goexit({})
+2026-10-22T07:29:23.1451507Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa30097d8 sp=0x3fa30097d8 pc=0x813c4
+2026-10-22T07:29:23.1457604Z created by runtime.gcenable in goroutine 1
+2026-10-22T07:29:23.1461864Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:215 +0x9a
+2026-10-22T07:29:23.1464767Z 
+2026-10-22T07:29:23.1466417Z goroutine 2 gp=0x3fa2fc4e00 m=nil [finalizer wait, 14 minutes]:
+2026-10-22T07:29:23.1470554Z runtime.gopark(0x20a3680?, 0x203b3f8?, 0x80?, 0x20?, 0x1000000010?)
+2026-10-22T07:29:23.1476341Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa3093da0 sp=0x3fa3093d88 pc=0x7bdf6
+2026-10-22T07:29:23.1481601Z runtime.runFinalizers()
+2026-10-22T07:29:23.1487688Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mfinal.go:210 +0xe2 fp=0x3fa3093fd8 sp=0x3fa3093da0 pc=0x3270a
+2026-10-22T07:29:23.1493165Z runtime.goexit({})
+2026-10-22T07:29:23.1498391Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa3093fd8 sp=0x3fa3093fd8 pc=0x813c4
+2026-10-22T07:29:23.1505898Z created by runtime.createfing in goroutine 1
+2026-10-22T07:29:23.1510072Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mfinal.go:172 +0x54
+2026-10-22T07:29:23.1513022Z 
+2026-10-22T07:29:23.1514498Z goroutine 72 gp=0x3fa3080a80 m=nil [GC worker (idle)]:
+2026-10-22T07:29:23.1518409Z runtime.gopark(0x15548af857ef3a?, 0x3fa3385400?, 0x1c?, 0xa?, 0x0?)
+2026-10-22T07:29:23.1524109Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa3009f48 sp=0x3fa3009f30 pc=0x7bdf6
+2026-10-22T07:29:23.1529389Z runtime.gcBgMarkWorker(0x3fa339a620)
+2026-10-22T07:29:23.1534536Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:1807 +0xb6 fp=0x3fa3009fc8 sp=0x3fa3009f48 pc=0x35156
+2026-10-22T07:29:23.1540866Z runtime.gcBgMarkStartWorkers.gowrap1()
+2026-10-22T07:29:23.1546156Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:1711 +0x20 fp=0x3fa3009fd8 sp=0x3fa3009fc8 pc=0x749c8
+2026-10-22T07:29:23.1551843Z runtime.goexit({})
+2026-10-22T07:29:23.1557769Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa3009fd8 sp=0x3fa3009fd8 pc=0x813c4
+2026-10-22T07:29:23.1563936Z created by runtime.gcBgMarkStartWorkers in goroutine 71
+2026-10-22T07:29:23.1568276Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:1711 +0x102
+2026-10-22T07:29:23.1571166Z 
+2026-10-22T07:29:23.1572843Z goroutine 73 gp=0x3fa336c700 m=nil [GC worker (idle), 12 minutes]:
+2026-10-22T07:29:23.1577997Z runtime.gopark(0x15548af85ed4e4?, 0x3fa3385600?, 0x1c?, 0xa?, 0x0?)
+2026-10-22T07:29:23.1586630Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa300a748 sp=0x3fa300a730 pc=0x7bdf6
+2026-10-22T07:29:23.1592554Z runtime.gcBgMarkWorker(0x3fa339a620)
+2026-10-22T07:29:23.1597724Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:1807 +0xb6 fp=0x3fa300a7c8 sp=0x3fa300a748 pc=0x35156
+2026-10-22T07:29:23.1603290Z runtime.gcBgMarkStartWorkers.gowrap1()
+2026-10-22T07:29:23.1608741Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:1711 +0x20 fp=0x3fa300a7d8 sp=0x3fa300a7c8 pc=0x749c8
+2026-10-22T07:29:23.1613967Z runtime.goexit({})
+2026-10-22T07:29:23.1619797Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa300a7d8 sp=0x3fa300a7d8 pc=0x813c4
+2026-10-22T07:29:23.1626754Z created by runtime.gcBgMarkStartWorkers in goroutine 71
+2026-10-22T07:29:23.1631241Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:1711 +0x102
+2026-10-22T07:29:23.1634228Z 
+2026-10-22T07:29:23.1636041Z goroutine 12800 gp=0x3fa33c68c0 m=nil [chan receive, 12 minutes]:
+2026-10-22T07:29:23.1640165Z runtime.gopark(0x3fa31cc668?, 0x202ad08?, 0x78?, 0x84?, 0x3c?)
+2026-10-22T07:29:23.1645785Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:474 +0xd6 fp=0x3fa30e8c80 sp=0x3fa30e8c68 pc=0x7bdf6
+2026-10-22T07:29:23.1651358Z runtime.chanrecv(0x3fa31cc600, 0x3fa30e8d67, 0x1)
+2026-10-22T07:29:23.1657455Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/chan.go:667 +0x3d0 fp=0x3fa30e8cf8 sp=0x3fa30e8c80 pc=0x22ad8
+2026-10-22T07:29:23.1664408Z runtime.chanrecv1(0x18?, 0x1fb8588?)
+2026-10-22T07:29:23.1669818Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/chan.go:509 +0xe fp=0x3fa30e8d18 sp=0x3fa30e8cf8 pc=0x226e6
+2026-10-22T07:29:23.1676159Z testing.(*T).Run(0x3fa3161448, {0x3fa3246140?, 0x3fa30e8f08?}, 0x3fa3038000)
+2026-10-22T07:29:23.1682455Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2266 +0x37e fp=0x3fa30e8de8 sp=0x3fa30e8d18 pc=0xecba6
+2026-10-22T07:29:23.1690206Z github.com/wago-org/wago/src/wago.TestRV64PublicReferenceFunctionImportedStartGo(0x3fa3161448)
+2026-10-22T07:29:23.1700389Z 	/home/runner/work/wago/wago/src/wago/public_reference_function_imported_start_riscv64_test.go:54 +0x1dc fp=0x3fa30e8f78 sp=0x3fa30e8de8 pc=0x9ac3a4
+2026-10-22T07:29:23.1707339Z testing.tRunner(0x3fa3161448, 0x2032960)
+2026-10-22T07:29:23.1714016Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2193 +0xba fp=0x3fa30e8fc0 sp=0x3fa30e8f78 pc=0xec7da
+2026-10-22T07:29:23.1720356Z testing.(*T).Run.gowrap1()
+2026-10-22T07:29:23.1726413Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2258 +0x24 fp=0x3fa30e8fd8 sp=0x3fa30e8fc0 pc=0xf157c
+2026-10-22T07:29:23.1732060Z runtime.goexit({})
+2026-10-22T07:29:23.1738020Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3fa30e8fd8 sp=0x3fa30e8fd8 pc=0x813c4
+2026-10-22T07:29:23.1743743Z created by testing.(*T).Run in goroutine 1
+2026-10-22T07:29:23.1747927Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2258 +0x36c
+2026-10-22T07:29:23.1750997Z 
+2026-10-22T07:29:23.1752367Z goroutine 12977 gp=0x3fa33c7340 m=nil [runnable]:
+2026-10-22T07:29:23.1755590Z runtime.Gosched(...)
+2026-10-22T07:29:23.1759170Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/proc.go:403
+2026-10-22T07:29:23.1763040Z runtime.GC()
+2026-10-22T07:29:23.1768577Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/mgc.go:565 +0x60 fp=0x3f94194d28 sp=0x3f94194cf0 pc=0x33340
+2026-10-22T07:29:23.1784154Z github.com/wago-org/wago/src/wago.TestRV64PublicReferenceFunctionImportedStartGo.func1.1({{0x3f940af408, 0x3f940d1b08, 0x3, 0x0, 0xd5d8, 0x3fa314ea80, 0x0, 0x0}}, {{}, {0x0, ...}, ...})
+2026-10-22T07:29:23.1796001Z 	/home/runner/work/wago/wago/src/wago/public_reference_function_imported_start_riscv64_test.go:84 +0x3ec fp=0x3f94194e60 sp=0x3f94194d28 pc=0xe4a484
+2026-10-22T07:29:23.1806838Z github.com/wago-org/wago/src/wago.(*syncHostBinding).callBoundUnchecked(0x3f9411d1a8, {0x3f940af408, 0x3f940d1b08, 0x3, 0x0, 0xd5d8, 0x3fa314ea80, 0x0, 0x0}, {0x0, ...}, ...)
+2026-10-22T07:29:23.1815648Z 	/home/runner/work/wago/wago/src/wago/hostcall.go:1830 +0x608 fp=0x3f94194f80 sp=0x3f94194e60 pc=0x422658
+2026-10-22T07:29:23.1826355Z github.com/wago-org/wago/src/wago.(*syncHostBinding).callUnchecked(0x3f942ab810?, {0x3f940af408, 0x3f940d1b08, 0x3, 0x0, 0xd5d8, 0x3fa314ea80, 0x0, 0x0}, {0x0?, ...}, ...)
+2026-10-22T07:29:23.1835449Z 	/home/runner/work/wago/wago/src/wago/hostcall.go:1796 +0x1be fp=0x3f94195010 sp=0x3f94194f80 pc=0x421fc6
+2026-10-22T07:29:23.1843662Z github.com/wago-org/wago/src/wago.(*syncHostBinding).call(0x3fa314ea80?, {0x3f940af408, 0x3f940d1b08, 0x3, 0x0, 0xd5d8, 0x3fa314ea80, 0x0, 0x0}, {0x0?, ...}, ...)
+2026-10-22T07:29:23.1851609Z 	/home/runner/work/wago/wago/src/wago/hostcall.go:1791 +0xd6 fp=0x3f941950c0 sp=0x3f94195010 pc=0x421d3e
+2026-10-22T07:29:23.1859803Z github.com/wago-org/wago/src/wago.callImportedStart({{0x1f7c560, 0x3fa348db30}, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, ...}, ...)
+2026-10-22T07:29:23.1892693Z 	/home/runner/work/wago/wago/src/wago/instantiate.go:2406 +0xc2 fp=0x3f941951a0 sp=0x3f941950c0 pc=0x453592
+2026-10-22T07:29:23.1903557Z github.com/wago-org/wago/src/wago.(*instanceBuilder).instantiateWithCleanup.func27(0x3f940af408, 0x3f94195f40, {{0x1f7c560, 0x3fa348db30}, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, ...})
+2026-10-22T07:29:23.1913097Z 	/home/runner/work/wago/wago/src/wago/instantiate.go:2329 +0x182 fp=0x3f941952e0 sp=0x3f941951a0 pc=0xc1da82
+2026-10-22T07:29:23.1921854Z github.com/wago-org/wago/src/wago.(*instanceBuilder).instantiateWithCleanup(0x3f94196bd8, 0x3fa33b5508, 0x3f9411e9b8)
+2026-10-22T07:29:23.1929641Z 	/home/runner/work/wago/wago/src/wago/instantiate.go:2333 +0x7be6 fp=0x3f94196910 sp=0x3f941952e0 pc=0x44f79e
+2026-10-22T07:29:23.1935844Z github.com/wago-org/wago/src/wago.(*instanceBuilder).instantiate.func1()
+2026-10-22T07:29:23.1942934Z 	/home/runner/work/wago/wago/src/wago/instantiate.go:459 +0x34 fp=0x3f94196940 sp=0x3f94196910 pc=0xc1d74c
+2026-10-22T07:29:23.1948768Z github.com/wago-org/wago/src/wago.(*resourceCleanup).run(0x3?, 0x1?)
+2026-10-22T07:29:23.1955975Z 	/home/runner/work/wago/wago/src/wago/resource_cleanup.go:24 +0x4e fp=0x3f94196970 sp=0x3f94196940 pc=0x4fe406
+2026-10-22T07:29:23.1963201Z github.com/wago-org/wago/src/wago.(*instanceBuilder).instantiate(0x3fa3296a88?, 0x3fa31d05a0?)
+2026-10-22T07:29:23.1970922Z 	/home/runner/work/wago/wago/src/wago/instantiate.go:459 +0x60 fp=0x3f94196a40 sp=0x3f94196970 pc=0x447af8
+2026-10-22T07:29:23.1980192Z github.com/wago-org/wago/src/wago.instantiateCoreWithModuleLease(_, {{0x0, 0x1}, 0x0, 0x0, 0x0, {0x0, 0x0, 0x0, 0x0, ...}, ...}, ...)
+2026-10-22T07:29:23.1987612Z 	/home/runner/work/wago/wago/src/wago/instantiate.go:198 +0x34a fp=0x3f941973d0 sp=0x3f94196a40 pc=0x445ec2
+2026-10-22T07:29:23.1994599Z github.com/wago-org/wago/src/wago.instantiateCoreWithModuleUse(_, {{0x0, 0x1}, 0x0, 0x0, 0x0, {0x0, 0x0, 0x0, 0x0, ...}, ...})
+2026-10-22T07:29:23.2003306Z 	/home/runner/work/wago/wago/src/wago/runtime.go:1242 +0xe6 fp=0x3f941975e8 sp=0x3f941973d0 pc=0x5044f6
+2026-10-22T07:29:23.2011752Z github.com/wago-org/wago/src/wago.(*Runtime).instantiateWithHooksOrigin(0x3fa33688c0, {0x202d698, 0x3fa348d860}, 0x3f94187560, 0x3fa31d05a0, 0x0, {0x0, 0x0, 0x0, 0x0, ...}, ...)
+2026-10-22T07:29:23.2020956Z 	/home/runner/work/wago/wago/src/wago/runtime.go:1165 +0x3e8 fp=0x3f941978d0 sp=0x3f941975e8 pc=0x503ad0
+2026-10-22T07:29:23.2030040Z github.com/wago-org/wago/src/wago.(*Runtime).instantiateOrigin(0x3fa33688c0, {0x202d698, 0x3fa348d860}, 0x3f94187560, 0x0, 0x2?, {0x3f9411fe78, 0x1, 0x1907d00?})
+2026-10-22T07:29:23.2038326Z 	/home/runner/work/wago/wago/src/wago/runtime.go:989 +0x6c8 fp=0x3f94197ce0 sp=0x3f941978d0 pc=0x502018
+2026-10-22T07:29:23.2043523Z github.com/wago-org/wago/src/wago.(*Runtime).Instantiate(...)
+2026-10-22T07:29:23.2047380Z 	/home/runner/work/wago/wago/src/wago/runtime.go:919
+2026-10-22T07:29:23.2052797Z github.com/wago-org/wago/src/wago.TestRV64PublicReferenceFunctionImportedStartGo.func1(0x3fa3160008)
+2026-10-22T07:29:23.2061697Z 	/home/runner/work/wago/wago/src/wago/public_reference_function_imported_start_riscv64_test.go:118 +0x4e2 fp=0x3f94197f78 sp=0x3f94197ce0 pc=0xe4989a
+2026-10-22T07:29:23.2068040Z testing.tRunner(0x3fa3160008, 0x3fa3038000)
+2026-10-22T07:29:23.2073157Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2193 +0xba fp=0x3f94197fc0 sp=0x3f94197f78 pc=0xec7da
+2026-10-22T07:29:23.2079101Z testing.(*T).Run.gowrap1()
+2026-10-22T07:29:23.2084041Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2258 +0x24 fp=0x3f94197fd8 sp=0x3f94197fc0 pc=0xf157c
+2026-10-22T07:29:23.2089157Z runtime.goexit({})
+2026-10-22T07:29:23.2093651Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/runtime/asm_riscv64.s:574 +0x4 fp=0x3f94197fd8 sp=0x3f94197fd8 pc=0x813c4
+2026-10-22T07:29:23.2100014Z created by testing.(*T).Run in goroutine 12800
+2026-10-22T07:29:23.2104211Z 	/home/runner/work/_temp/wago-riscv64-tools/go/src/testing/testing.go:2258 +0x36c
+2026-10-22T07:29:23.2107131Z 
+2026-10-22T07:29:23.2108198Z ra  0x4b86c	sp  0x3fffe9f3c0
+2026-10-22T07:29:23.2110838Z gp  0x2ab7bb7b94	tp  0x3fee332780
+2026-10-22T07:29:23.2113468Z t0  0x1	t1  0x2084403
+2026-10-22T07:29:23.2115828Z t2  0x1	s0  0x101
+2026-10-22T07:29:23.2118098Z s1  0x2084bb0	a0  0x2084bb0
+2026-10-22T07:29:23.2120735Z a1  0x80	a2  0xffffffffffffffff
+2026-10-22T07:29:23.2123368Z a3  0x0	a4  0x0
+2026-10-22T07:29:23.2125705Z a5  0x0	a6  0x0
+2026-10-22T07:29:23.2128035Z a7  0x62	s2  0x3fffe9f468
+2026-10-22T07:29:23.2130595Z s3  0x2084680	s4  0x3fa2fc6000
+2026-10-22T07:29:23.2133075Z s5  0x10	s6  0x0
+2026-10-22T07:29:23.2135412Z s7  0x0	s8  0x3fa2ffc5a0
+2026-10-22T07:29:23.2139069Z s9  0x4	s10 0x203b650
+2026-10-22T07:29:23.2141755Z s11 0x20836c0	t3  0x17
+2026-10-22T07:29:23.2144505Z t4  0x1d5a8257c02482	t5  0xffffffffffffffff
+2026-10-22T07:29:23.2147852Z t6  0x0	pc  0x81efc
+2026-10-22T07:29:23.2150685Z *** Test killed with quit: ran too long (16m30s).
+2026-10-22T07:29:23.2154382Z FAIL	github.com/wago-org/wago/src/wago	990.055s
+2026-10-22T07:29:23.2157526Z FAIL
+2026-10-22T07:29:23.3990495Z ##[error]Process completed with exit code 1.
+2026-10-22T07:29:23.5438676Z Post job cleanup.
+2026-10-22T07:29:24.2677978Z [command]/usr/bin/git version
+2026-10-22T07:29:24.3061626Z git version 2.43.0
+2026-10-22T07:29:24.3484182Z Temporarily overriding HOME='/home/runner/work/_temp/fcd34a24-dfcc-41d0-b9a3-44b3d2210c9b' before making global git config changes
+2026-10-22T07:29:24.3510122Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-22T07:29:24.3582407Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/wago/wago
+2026-10-22T07:29:24.3849400Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-22T07:29:24.4267155Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-22T07:29:24.5780341Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-22T07:29:24.6020210Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-22T07:29:24.7332888Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-22T07:29:24.7534592Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-22T07:29:24.9992988Z Cleaning up orphan processes
+2026-10-22T07:29:25.0726521Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+

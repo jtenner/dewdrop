@@ -1,0 +1,368 @@
+{
+  "head": "877363283b2564fff3b07de5a26520de2066fae3",
+  "prState": "open",
+  "draft": false,
+  "mergeable": true,
+  "runs": [
+    {
+      "id": 39735491006,
+      "name": "Regression stress",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 1225,
+      "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39735491006/jobs",
+      "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39735491006/logs",
+      "workflow_id": 325379040
+    },
+    {
+      "id": 39735491072,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 4923,
+      "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39735491072/jobs",
+      "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39735491072/logs",
+      "workflow_id": 302447088
+    },
+    {
+      "id": 39735491061,
+      "name": "Linux RISC-V64 / RISE",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_number": 162,
+      "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39735491061/jobs",
+      "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39735491061/logs",
+      "workflow_id": 382573256
+    }
+  ],
+  "ciJobsFirstPage": [
+    {
+      "id": 119680075194,
+      "name": "Plan CI profile",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680077233,
+      "name": "Draft smoke / Linux amd64",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 119680286000,
+      "name": "Regression corpus integrity",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286056,
+      "name": "Bounded fuzzing / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286092,
+      "name": "Lint & format",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286096,
+      "name": "Current Go / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286114,
+      "name": "Core v2 conformance / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286156,
+      "name": "Race detector / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286160,
+      "name": "Core v3 conformance / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286168,
+      "name": "Documentation",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286204,
+      "name": "Core v2 conformance / Linux arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286205,
+      "name": "TinyGo / Linux / arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286222,
+      "name": "WebAssembly 1.0 conformance / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286228,
+      "name": "TinyGo / Darwin / amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286252,
+      "name": "Corpus correctness / Windows arm64 / shard 1 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286254,
+      "name": "Core v3 conformance / Darwin arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286269,
+      "name": "Darwin / amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286274,
+      "name": "TinyGo / Linux / amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286281,
+      "name": "Windows / amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286282,
+      "name": "Application corpus / Windows amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286295,
+      "name": "Application corpus / Darwin arm64 / shard 1 of 2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286303,
+      "name": "Core v3 conformance / Linux arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286305,
+      "name": "Corpus correctness / Darwin amd64 / shard 1 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286310,
+      "name": "Darwin / arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286317,
+      "name": "Application corpus / Linux amd64 / shard 1 of 2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286325,
+      "name": "Application corpus / Darwin arm64 / shard 2 of 2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286330,
+      "name": "Corpus correctness / Windows arm64 / shard 4 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286339,
+      "name": "Corpus correctness / Darwin amd64 / shard 4 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286340,
+      "name": "Corpus correctness / Darwin amd64 / shard 2 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119680286341,
+      "name": "Application corpus / Linux arm64 / shard 1 of 2",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "riseJobs": [
+    {
+      "id": 119680075517,
+      "name": "Prepare pinned specification fixtures",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 39735491061,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Prepare pinned fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Compare encoder output with Clang",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Upload pinned fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Post Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        }
+      ]
+    },
+    {
+      "id": 119680322680,
+      "name": "JIT / native Linux RISC-V64",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_id": 39735491061,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Verify native runner and install pinned Go",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Download pinned fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify native tools and fixture paths",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Native runtime and JIT smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Native riscv64 CLI and standalone qualification",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Compiler and runtime correctness",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Public ownership and compiler-free artifacts",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 9
+        },
+        {
+          "name": "Guard pages and thread behavior",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21
+        }
+      ]
+    }
+  ]
+}

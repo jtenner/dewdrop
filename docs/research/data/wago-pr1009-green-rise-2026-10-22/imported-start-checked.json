@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=10",
+    "-timeout=2m",
+    "-tags=wago_regalloccheck",
+    "-exec",
+    "/tmp/wago-pr1009-main-sync-20261022/scripts/qemu-riscv64.sh",
+    "./src/wago",
+    "-run",
+    "^TestRV64PublicReferenceFunctionImportedStartGo$"
+  ],
+  "seconds": 51.47617560099752,
+  "exit": 0,
+  "user_seconds": 74.638416,
+  "system_seconds": 2.301687,
+  "peak_rss_kib": 4753280,
+  "minor_faults": 446475,
+  "major_faults": 5,
+  "voluntary_context_switches": 38958,
+  "involuntary_context_switches": 3149
+}
