@@ -63,3 +63,22 @@ switch counts are retained in
 The [resolution diff](data/wago-pr997-main-sync-2026-10-22/merge-resolutions.patch)
 retains the actual conflict choices. Existing dirty Wago and Dewdrop host
 checkouts are untouched. T3 will watch the pushed draft for host check results.
+
+
+## Required green check: draft profile, 2026-10-22
+
+The exact PR head remains `26d272e49f7f36d66034a7afa20b6c472ad06f5c`, open,
+draft, and without a merge conflict. Required CI run `39734486860` completes
+successfully. Its executed qualification is **Draft smoke / Linux amd64**;
+the full platform, lint, race, corpus, documentation, and conformance matrix is
+skipped by draft policy. This is not a full native CI qualification.
+Regression stress run `39734486862` also reports success. Separate native RISE
+run `39734486778` has completed fixture preparation and is still running
+`JIT / native Linux RISC-V64` (job `119677151197`) at this snapshot.
+
+The PR body still says changes required and forbids merging or auto-merging.
+The known unused-table and A-to-B-to-A scalar relay root failures remain.
+Keep draft status and leave the PR unmerged. T3 continues watching because the
+native RISC-V64 result is pending; no source or CI retry is justified by a
+successful smoke check. The service state is saved in
+[data](data/wago-pr997-main-sync-2026-10-22/required-green-draft-snapshot.json).

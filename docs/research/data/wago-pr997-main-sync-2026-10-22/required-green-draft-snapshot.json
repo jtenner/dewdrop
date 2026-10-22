@@ -1,0 +1,492 @@
+{
+  "head": "26d272e49f7f36d66034a7afa20b6c472ad06f5c",
+  "pr_state": "open",
+  "draft": true,
+  "mergeable": true,
+  "workflows": {
+    "workflow_runs": [
+      {
+        "id": 39734486862,
+        "name": "Regression stress",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 1224,
+        "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39734486862/jobs",
+        "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39734486862/logs",
+        "workflow_id": 325379040
+      },
+      {
+        "id": 39734486860,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 4922,
+        "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39734486860/jobs",
+        "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39734486860/logs",
+        "workflow_id": 302447088
+      },
+      {
+        "id": 39734486778,
+        "name": "Linux RISC-V64 / RISE",
+        "status": "in_progress",
+        "conclusion": null,
+        "run_number": 161,
+        "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39734486778/jobs",
+        "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39734486778/logs",
+        "workflow_id": 382573256
+      }
+    ]
+  },
+  "ci_jobs": {
+    "jobs": [
+      {
+        "id": 119676884784,
+        "name": "Draft smoke / Linux amd64",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Plan draft smoke and report its profile",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run bounded code smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run documentation preflight",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 7
+          },
+          {
+            "name": "Post Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          }
+        ]
+      },
+      {
+        "id": 119676886040,
+        "name": "Plan CI profile",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886471,
+        "name": "Documentation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886491,
+        "name": "GC hardening / bounded",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886550,
+        "name": "Core v2 conformance / ${{ matrix.name }}",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886574,
+        "name": "Regression corpus integrity",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886626,
+        "name": "Race detector / Linux amd64",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886715,
+        "name": "Current Go / Linux amd64",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886782,
+        "name": "matrix.name",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676886987,
+        "name": "WebAssembly 1.0 conformance / ${{ matrix.name }}",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887162,
+        "name": "Application corpus / ${{ matrix.name }}",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887166,
+        "name": "TinyGo / ${{ matrix.name }}",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887188,
+        "name": "Regenerate regression corpus from pinned source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887196,
+        "name": "Lint & format",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887237,
+        "name": "Core v3 conformance / ${{ matrix.name }}",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887363,
+        "name": "Build size",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887419,
+        "name": "Corpus correctness / ${{ matrix.name }}",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676887461,
+        "name": "Bounded fuzzing / Linux amd64",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119676888442,
+        "name": "Verify corpus shard coverage",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 119677386575,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39734486860,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Identify qualification profile",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify every expected CI result",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Record exact main-branch qualification",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 6
+          },
+          {
+            "name": "Upload exact main-branch qualification",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 7
+          },
+          {
+            "name": "Post Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          }
+        ]
+      }
+    ]
+  },
+  "riscv64_jobs": {
+    "jobs": [
+      {
+        "id": 119676884072,
+        "name": "Prepare pinned specification fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39734486778,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Prepare pinned fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Compare encoder output with Clang",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Upload pinned fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      },
+      {
+        "id": 119677151197,
+        "name": "JIT / native Linux RISC-V64",
+        "status": "in_progress",
+        "conclusion": null,
+        "run_id": 39734486778,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Verify native runner and install pinned Go",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Download pinned fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify native tools and fixture paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Native runtime and JIT smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Native riscv64 CLI and standalone qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Compiler and runtime correctness",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Public ownership and compiler-free artifacts",
+            "status": "in_progress",
+            "conclusion": null,
+            "number": 9
+          },
+          {
+            "name": "Guard pages and thread behavior",
+            "status": "pending",
+            "conclusion": null,
+            "number": 10
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "pending",
+            "conclusion": null,
+            "number": 20
+          }
+        ]
+      }
+    ]
+  },
+  "readiness": "known GC root correctness blockers remain; required success is draft smoke, not full matrix",
+  "watch_reason": "native RISC-V64 job is still running"
+}
