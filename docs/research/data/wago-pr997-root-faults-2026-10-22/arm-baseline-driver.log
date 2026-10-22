@@ -1,0 +1,17 @@
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=1", "-timeout=1m", "-tags=wago_regalloccheck", "-exec", "/usr/bin/qemu-aarch64", "./tests/integration/runtimeconcurrency", "-run", "^TestRuntimeConcurrencyHarness$/^seed-439000001$/^threads-shared-memory-wait-close$"], "seconds": 24.508548393001547, "exit": 1, "user_seconds": 35.099485, "system_seconds": 4.852419, "peak_rss_kib": 597180, "minor_faults": 63512, "major_faults": 3, "voluntary_context_switches": 2176898, "involuntary_context_switches": 3269}
+=== RUN   TestRuntimeConcurrencyHarness
+=== RUN   TestRuntimeConcurrencyHarness/seed-439000001
+=== RUN   TestRuntimeConcurrencyHarness/seed-439000001/threads-shared-memory-wait-close
+    harness_test.go:762: guest did not publish its wait marker
+=== NAME  TestRuntimeConcurrencyHarness/seed-439000001
+    harness_test.go:652: reproduce with: WAGO_CONCURRENCY_SEED=439000001 WAGO_CONCURRENCY_ROUNDS=12 go test -count=1 -run '^TestRuntimeConcurrencyHarness/seed-439000001$' ./tests/integration/runtimeconcurrency
+    harness_test.go:659: bounded concurrency trace:
+    harness_test.go:661: start goos=linux goarch=arm64 rounds=12
+    harness_test.go:661: threads workers=4 atomic-total=151
+--- FAIL: TestRuntimeConcurrencyHarness (15.08s)
+    --- FAIL: TestRuntimeConcurrencyHarness/seed-439000001 (15.08s)
+        --- FAIL: TestRuntimeConcurrencyHarness/seed-439000001/threads-shared-memory-wait-close (15.07s)
+FAIL
+FAIL	github.com/wago-org/wago/tests/integration/runtimeconcurrency	15.149s
+FAIL
+

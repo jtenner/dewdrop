@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/tmp/wago-pr997-root-faults-evidence/baseline.test",
+    "-test.run=^$",
+    "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$",
+    "-test.benchtime=200ms",
+    "-test.count=1"
+  ],
+  "seconds": 2.5802137469872832,
+  "exit": 0,
+  "user_seconds": 2.555093,
+  "system_seconds": 0.027613,
+  "peak_rss_kib": 23832,
+  "minor_faults": 5635,
+  "major_faults": 0,
+  "voluntary_context_switches": 1126,
+  "involuntary_context_switches": 125
+}

@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "-timeout=30s",
+    "./src/wago",
+    "./tests/integration/runtimeconcurrency",
+    "-run",
+    "^TestGCScalarAdapterForeignHostCollection$"
+  ],
+  "seconds": 24.39130606899562,
+  "exit": 0,
+  "user_seconds": 48.705224,
+  "system_seconds": 1.141996,
+  "peak_rss_kib": 3589144,
+  "minor_faults": 98178,
+  "major_faults": 8,
+  "voluntary_context_switches": 9091,
+  "involuntary_context_switches": 2317
+}

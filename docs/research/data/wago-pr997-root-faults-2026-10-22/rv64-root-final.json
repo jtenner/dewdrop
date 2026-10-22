@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=1",
+    "-timeout=2m",
+    "-tags=wago_regalloccheck",
+    "-exec",
+    "/usr/bin/qemu-riscv64",
+    "./src/wago",
+    "-run",
+    "Test(RV64GCDomainHostRoots|PluginScalarHostImportStaysOrdinary)"
+  ],
+  "seconds": 39.15529350101133,
+  "exit": 0,
+  "user_seconds": 63.076006,
+  "system_seconds": 2.00294,
+  "peak_rss_kib": 4904076,
+  "minor_faults": 438978,
+  "major_faults": 6,
+  "voluntary_context_switches": 19960,
+  "involuntary_context_switches": 2643
+}

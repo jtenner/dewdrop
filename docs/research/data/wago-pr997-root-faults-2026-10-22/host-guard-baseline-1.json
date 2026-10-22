@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/tmp/wago-pr997-root-faults-evidence/baseline.test",
+    "-test.run=^$",
+    "-test.bench=BenchmarkHostRoundtripLoopCaller/mem(0|4)/parallelfalse/host1/n64$",
+    "-test.benchtime=200ms",
+    "-test.count=1"
+  ],
+  "seconds": 0.7317172690236475,
+  "exit": 0,
+  "user_seconds": 0.7234269999999999,
+  "system_seconds": 0.007669,
+  "peak_rss_kib": 22028,
+  "minor_faults": 977,
+  "major_faults": 0,
+  "voluntary_context_switches": 821,
+  "involuntary_context_switches": 111
+}

@@ -1,0 +1,245 @@
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=1", "-timeout=2m", "-tags=wago_regalloccheck", "./src/wago", "-run", "Test(GC|GenericGC|PluginGC|Compiled|Marshal|Unmarshal|Codec|Artifact)"], "seconds": 28.541195429002983, "exit": 0, "user_seconds": 44.484765, "system_seconds": 1.115256, "peak_rss_kib": 3643352, "minor_faults": 120576, "major_faults": 4, "voluntary_context_switches": 17786, "involuntary_context_switches": 1476}
+ejectsMalformedMetadata/negative_table_size (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/table_size_without_table (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/table_import_without_table (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/imported_table_max_without_has_max (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/imported_table_max_below_min (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/elements_without_table (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/entry_funcs_mismatch (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/entry_at_end_of_code (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/func_type_count_mismatch (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/global_export_out_of_range (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/element_func_out_of_range (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/passive_element_func_out_of_range (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/global_init_ref_out_of_range (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/data_offset_ref_mutable (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/arena_footprint_arithmetic_overflow (0.00s)
+    --- PASS: TestCompiledValidateRejectsMalformedMetadata/passive_explicit_null_allowed (0.00s)
+=== RUN   TestGCSyncHostSlotCapacityRejectsU16Overflow
+--- PASS: TestGCSyncHostSlotCapacityRejectsU16Overflow (0.00s)
+=== RUN   TestGCInternalHelperSlotCapacity
+=== RUN   TestGCInternalHelperSlotCapacity/none
+=== RUN   TestGCInternalHelperSlotCapacity/fixed-struct
+=== RUN   TestGCInternalHelperSlotCapacity/array
+=== RUN   TestGCInternalHelperSlotCapacity/generic-array
+=== RUN   TestGCInternalHelperSlotCapacity/both
+--- PASS: TestGCInternalHelperSlotCapacity (0.00s)
+    --- PASS: TestGCInternalHelperSlotCapacity/none (0.00s)
+    --- PASS: TestGCInternalHelperSlotCapacity/fixed-struct (0.00s)
+    --- PASS: TestGCInternalHelperSlotCapacity/array (0.00s)
+    --- PASS: TestGCInternalHelperSlotCapacity/generic-array (0.00s)
+    --- PASS: TestGCInternalHelperSlotCapacity/both (0.00s)
+=== RUN   TestCompiledCodecRejectsMalformedImportModuleEnd
+--- PASS: TestCompiledCodecRejectsMalformedImportModuleEnd (0.00s)
+=== RUN   TestCompiledCodecBoundsDecodedImportDirectoryAllocation
+--- PASS: TestCompiledCodecBoundsDecodedImportDirectoryAllocation (0.00s)
+=== RUN   TestCompiledCodecRejectsImportCountMismatchBeforeAllocation
+--- PASS: TestCompiledCodecRejectsImportCountMismatchBeforeAllocation (0.00s)
+=== RUN   TestGCFrameCodeRangeIndexMatchesLinear
+--- PASS: TestGCFrameCodeRangeIndexMatchesLinear (0.00s)
+=== RUN   TestGCFrameCodeRangeSingletonPromotesAndRetires
+--- PASS: TestGCFrameCodeRangeSingletonPromotesAndRetires (0.00s)
+=== RUN   TestCompiledActiveDataPrivateOwnership
+    input_retention_test.go:35: public data still aliases caller input; compact-copy candidate was rejected
+--- PASS: TestCompiledActiveDataPrivateOwnership (0.00s)
+=== RUN   TestMarshalRejectsInvalidInternalEntries
+--- PASS: TestMarshalRejectsInvalidInternalEntries (0.00s)
+=== RUN   TestCompiledIndexedMemoryDirectoryCodecAndMetadata
+--- PASS: TestCompiledIndexedMemoryDirectoryCodecAndMetadata (0.00s)
+=== RUN   TestPluginGCHostImportsBoundaryOnlyNulls
+=== RUN   TestPluginGCHostImportsBoundaryOnlyNulls/null-result
+=== RUN   TestPluginGCHostImportsBoundaryOnlyNulls/null-param
+--- PASS: TestPluginGCHostImportsBoundaryOnlyNulls (0.00s)
+    --- PASS: TestPluginGCHostImportsBoundaryOnlyNulls/null-result (0.00s)
+    --- PASS: TestPluginGCHostImportsBoundaryOnlyNulls/null-param (0.00s)
+=== RUN   TestPluginGCHostImportInvocationContext
+--- PASS: TestPluginGCHostImportInvocationContext (0.00s)
+=== RUN   TestPluginGCHostImportsNonNullRoundTripAndZeroCopyWrite
+=== RUN   TestPluginGCHostImportsNonNullRoundTripAndZeroCopyWrite/legacy
+=== RUN   TestPluginGCHostImportsNonNullRoundTripAndZeroCopyWrite/concrete
+--- PASS: TestPluginGCHostImportsNonNullRoundTripAndZeroCopyWrite (0.00s)
+    --- PASS: TestPluginGCHostImportsNonNullRoundTripAndZeroCopyWrite/legacy (0.00s)
+    --- PASS: TestPluginGCHostImportsNonNullRoundTripAndZeroCopyWrite/concrete (0.00s)
+=== RUN   TestPluginGCHostImportDifferentExactTypesAndDomains
+=== RUN   TestPluginGCHostImportDifferentExactTypesAndDomains/mutable-first
+=== RUN   TestPluginGCHostImportDifferentExactTypesAndDomains/immutable-first
+--- PASS: TestPluginGCHostImportDifferentExactTypesAndDomains (0.00s)
+    --- PASS: TestPluginGCHostImportDifferentExactTypesAndDomains/mutable-first (0.00s)
+    --- PASS: TestPluginGCHostImportDifferentExactTypesAndDomains/immutable-first (0.00s)
+=== RUN   TestPluginGCHostImportCodecRoundTrip
+--- PASS: TestPluginGCHostImportCodecRoundTrip (0.00s)
+=== RUN   TestPluginGCHostImportValidation
+=== RUN   TestPluginGCHostImportValidation/wrong_ABI
+=== RUN   TestPluginGCHostImportValidation/struct_where_plugin_requires_array
+=== RUN   TestPluginGCHostImportValidation/wrong_array_storage
+=== RUN   TestPluginGCHostImportValidation/non-null_rejects_null
+=== RUN   TestPluginGCHostImportValidation/raw_compact_result_rejects
+=== RUN   TestPluginGCHostImportValidation/immutable_write_rejects
+--- PASS: TestPluginGCHostImportValidation (0.00s)
+    --- PASS: TestPluginGCHostImportValidation/wrong_ABI (0.00s)
+    --- PASS: TestPluginGCHostImportValidation/struct_where_plugin_requires_array (0.00s)
+    --- PASS: TestPluginGCHostImportValidation/wrong_array_storage (0.00s)
+    --- PASS: TestPluginGCHostImportValidation/non-null_rejects_null (0.00s)
+    --- PASS: TestPluginGCHostImportValidation/raw_compact_result_rejects (0.00s)
+    --- PASS: TestPluginGCHostImportValidation/immutable_write_rejects (0.00s)
+=== RUN   TestPluginGCHostImportLosesRuntimeAuthorityWhenCopiedAsHostFunc
+--- PASS: TestPluginGCHostImportLosesRuntimeAuthorityWhenCopiedAsHostFunc (0.00s)
+=== RUN   TestPluginGCHostImportRawLowLevelHostFuncRejected
+--- PASS: TestPluginGCHostImportRawLowLevelHostFuncRejected (0.00s)
+=== RUN   TestPluginGCHostImportOnlyModuleUsesEmptyExactRootSet
+--- PASS: TestPluginGCHostImportOnlyModuleUsesEmptyExactRootSet (0.00s)
+=== RUN   TestPluginGCWideScalarHostImportUsesSynchronousABI
+--- PASS: TestPluginGCWideScalarHostImportUsesSynchronousABI (0.00s)
+=== RUN   TestPluginGCWideScalarCallerUsesSynchronousABI
+--- PASS: TestPluginGCWideScalarCallerUsesSynchronousABI (0.00s)
+=== RUN   TestGCWideDynamicCallRefRetainsRegisterABIProof
+--- PASS: TestGCWideDynamicCallRefRetainsRegisterABIProof (0.00s)
+=== RUN   TestPluginGCHostBoundaryWideWrapperABI
+=== RUN   TestPluginGCHostBoundaryWideWrapperABI/wide-host-result-and-unrelated-wide-import
+=== RUN   TestPluginGCHostBoundaryWideWrapperABI/four-result-caller
+--- PASS: TestPluginGCHostBoundaryWideWrapperABI (0.00s)
+    --- PASS: TestPluginGCHostBoundaryWideWrapperABI/wide-host-result-and-unrelated-wide-import (0.00s)
+    --- PASS: TestPluginGCHostBoundaryWideWrapperABI/four-result-caller (0.00s)
+=== RUN   TestGCI31ReductionGoEntry
+--- PASS: TestGCI31ReductionGoEntry (0.00s)
+=== RUN   TestGCI31ReductionGoRollback
+=== RUN   TestGCI31ReductionGoRollback/reg-abi
+=== RUN   TestGCI31ReductionGoRollback/prepared-direct-entry
+=== RUN   TestGCI31ReductionGoRollback/prepared-bounded-entry
+--- PASS: TestGCI31ReductionGoRollback (0.00s)
+    --- PASS: TestGCI31ReductionGoRollback/reg-abi (0.00s)
+    --- PASS: TestGCI31ReductionGoRollback/prepared-direct-entry (0.00s)
+    --- PASS: TestGCI31ReductionGoRollback/prepared-bounded-entry (0.00s)
+=== RUN   TestGCI31ReductionGoParallelProofs
+--- PASS: TestGCI31ReductionGoParallelProofs (0.00s)
+=== RUN   TestGCI31ReductionGoAdmissionFallback
+=== RUN   TestGCI31ReductionGoAdmissionFallback/revoked
+=== RUN   TestGCI31ReductionGoAdmissionFallback/shared
+=== RUN   TestGCI31ReductionGoAdmissionFallback/borrowed
+=== RUN   TestGCI31ReductionGoAdmissionFallback/closed
+=== RUN   TestGCI31ReductionGoAdmissionFallback/arity
+--- PASS: TestGCI31ReductionGoAdmissionFallback (0.00s)
+    --- PASS: TestGCI31ReductionGoAdmissionFallback/revoked (0.00s)
+    --- PASS: TestGCI31ReductionGoAdmissionFallback/shared (0.00s)
+    --- PASS: TestGCI31ReductionGoAdmissionFallback/borrowed (0.00s)
+    --- PASS: TestGCI31ReductionGoAdmissionFallback/closed (0.00s)
+    --- PASS: TestGCI31ReductionGoAdmissionFallback/arity (0.00s)
+=== RUN   TestGCDeadInductionEntry
+=== RUN   TestGCDeadInductionEntry/struct
+=== RUN   TestGCDeadInductionEntry/array
+=== RUN   TestGCDeadInductionEntry/fill
+--- PASS: TestGCDeadInductionEntry (0.00s)
+    --- PASS: TestGCDeadInductionEntry/struct (0.00s)
+    --- PASS: TestGCDeadInductionEntry/array (0.00s)
+    --- PASS: TestGCDeadInductionEntry/fill (0.00s)
+=== RUN   TestGCDeadInductionWrapperParity
+--- PASS: TestGCDeadInductionWrapperParity (0.07s)
+=== RUN   TestGCDeadInductionParallelDirectory
+--- PASS: TestGCDeadInductionParallelDirectory (0.00s)
+=== RUN   TestGCDeadInductionRollback
+=== RUN   TestGCDeadInductionRollback/reg-abi
+=== RUN   TestGCDeadInductionRollback/prepared-direct-entry
+=== RUN   TestGCDeadInductionRollback/prepared-bounded-entry
+--- PASS: TestGCDeadInductionRollback (0.00s)
+    --- PASS: TestGCDeadInductionRollback/reg-abi (0.00s)
+    --- PASS: TestGCDeadInductionRollback/prepared-direct-entry (0.00s)
+    --- PASS: TestGCDeadInductionRollback/prepared-bounded-entry (0.00s)
+=== RUN   TestGCDeadInductionInterruptedBeforeCharge
+--- PASS: TestGCDeadInductionInterruptedBeforeCharge (0.00s)
+=== RUN   TestGCDeadInductionWithoutCachedNativeContext
+--- PASS: TestGCDeadInductionWithoutCachedNativeContext (0.00s)
+=== RUN   TestGCDeadInductionPreparesOnlyOneIdentity
+--- PASS: TestGCDeadInductionPreparesOnlyOneIdentity (0.00s)
+=== RUN   TestCompiledSignatureReportsImportedFunctionReexport
+--- PASS: TestCompiledSignatureReportsImportedFunctionReexport (0.00s)
+=== RUN   TestGCInvocationDomainUsesRegisteredAssociation
+--- PASS: TestGCInvocationDomainUsesRegisteredAssociation (0.00s)
+=== RUN   TestGCDomainCollectorIndexTracksOrderedTopology
+--- PASS: TestGCDomainCollectorIndexTracksOrderedTopology (0.00s)
+=== RUN   TestGCFrameCodeRangeRepresentativeOwnerUnlinksInConstantTime
+--- PASS: TestGCFrameCodeRangeRepresentativeOwnerUnlinksInConstantTime (0.00s)
+=== RUN   TestCompiledModuleInstantiationIsolation
+--- PASS: TestCompiledModuleInstantiationIsolation (0.00s)
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=0
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=1
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=2
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=3
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=4
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=5
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=8
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=9
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=16
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=32
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=64
+=== RUN   TestGCInvocationDomainSetSortMatchesOrderedIDs/N=129
+--- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=0 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=1 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=2 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=3 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=4 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=5 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=8 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=9 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=16 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=32 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=64 (0.00s)
+    --- PASS: TestGCInvocationDomainSetSortMatchesOrderedIDs/N=129 (0.00s)
+=== RUN   TestGCInvocationDomainSetInlineSortDoesNotAllocate
+--- PASS: TestGCInvocationDomainSetInlineSortDoesNotAllocate (0.00s)
+=== RUN   TestCompiledStructuralCallIdentityCacheLifecycle
+--- PASS: TestCompiledStructuralCallIdentityCacheLifecycle (0.00s)
+=== RUN   TestCompiledStructuralCallIdentityCacheBudget
+--- PASS: TestCompiledStructuralCallIdentityCacheBudget (0.00s)
+=== RUN   TestCompiledValidationRejectsInvalidTableInitializerFunction
+=== RUN   TestCompiledValidationRejectsInvalidTableInitializerFunction/at_function_count
+=== RUN   TestCompiledValidationRejectsInvalidTableInitializerFunction/large_uint32
+--- PASS: TestCompiledValidationRejectsInvalidTableInitializerFunction (0.00s)
+    --- PASS: TestCompiledValidationRejectsInvalidTableInitializerFunction/at_function_count (0.00s)
+    --- PASS: TestCompiledValidationRejectsInvalidTableInitializerFunction/large_uint32 (0.00s)
+=== RUN   TestCompiledCodecPreservesTableExportNames
+--- PASS: TestCompiledCodecPreservesTableExportNames (0.00s)
+=== RUN   TestCompiledCodecPreservesTableImport
+--- PASS: TestCompiledCodecPreservesTableImport (0.00s)
+=== RUN   TestCompiledCodecPreservesMinOnlyTableImportAndAcceptsLargerHostTable
+--- PASS: TestCompiledCodecPreservesMinOnlyTableImportAndAcceptsLargerHostTable (0.00s)
+=== RUN   TestCompiledCodecPreservesPassiveNullElementPayloads
+--- PASS: TestCompiledCodecPreservesPassiveNullElementPayloads (0.00s)
+=== RUN   TestCompiledCodecMinOnlyTableImportRejectsBelowMinAfterLoad
+--- PASS: TestCompiledCodecMinOnlyTableImportRejectsBelowMinAfterLoad (0.00s)
+=== RUN   TestCompiledRoundtrip
+--- PASS: TestCompiledRoundtrip (0.00s)
+=== RUN   TestCompiledRoundtripPreservesDebugNames
+--- PASS: TestCompiledRoundtripPreservesDebugNames (0.00s)
+=== RUN   TestCompiledUnsupportedVersionsRejected
+--- PASS: TestCompiledUnsupportedVersionsRejected (0.00s)
+=== RUN   TestCompiledGCTypeDescsRoundTrip
+--- PASS: TestCompiledGCTypeDescsRoundTrip (0.00s)
+=== RUN   TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata
+=== RUN   TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/final_super
+=== RUN   TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/struct_extends_array
+=== RUN   TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/array_extends_struct
+=== RUN   TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/heap_extends_func
+--- PASS: TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata (0.00s)
+    --- PASS: TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/final_super (0.00s)
+    --- PASS: TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/struct_extends_array (0.00s)
+    --- PASS: TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/array_extends_struct (0.00s)
+    --- PASS: TestCompiledUnmarshalRejectsMalformedGCTypeSuperMetadata/heap_extends_func (0.00s)
+=== RUN   TestCompiledValidateGCTypeDescFailures
+=== RUN   TestCompiledValidateGCTypeDescFailures/id_mismatch
+=== RUN   TestCompiledValidateGCTypeDescFailures/invalid_super
+=== RUN   TestCompiledValidateGCTypeDescFailures/invalid_kind
+=== RUN   TestCompiledValidateGCTypeDescFailures/invalid_ref_offset
+=== RUN   TestCompiledValidateGCTypeDescFailures/overlapping_ref_field
+=== RUN   TestCompiledValidateGCTypeDescFailures/malformed_func
+--- PASS: TestCompiledValidateGCTypeDescFailures (0.00s)
+    --- PASS: TestCompiledValidateGCTypeDescFailures/id_mismatch (0.00s)
+    --- PASS: TestCompiledValidateGCTypeDescFailures/invalid_super (0.00s)
+    --- PASS: TestCompiledValidateGCTypeDescFailures/invalid_kind (0.00s)
+    --- PASS: TestCompiledValidateGCTypeDescFailures/invalid_ref_offset (0.00s)
+    --- PASS: TestCompiledValidateGCTypeDescFailures/overlapping_ref_field (0.00s)
+    --- PASS: TestCompiledValidateGCTypeDescFailures/malformed_func (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	3.437s
+

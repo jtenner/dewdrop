@@ -1,0 +1,75 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   73531	      3183 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   73483	      3188 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   86700	      2704 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   57216	      4163 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   49831	      4777 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   14226	     16866 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	16619616	        14.61 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  405850	       585.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    6514	     36495 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n0-2         	  828238	       289.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n1-2         	  721852	       287.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n8-2         	  813190	       287.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n64-2        	  680704	       335.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n1024-2      	  207764	      1164 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n0-2         	  827406	       286.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n1-2         	  285826	       739.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n8-2         	  116960	      2057 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n64-2        	   19377	     12403 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n1024-2      	    1275	    188185 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n0-2          	 1472587	       163.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n1-2          	 1450651	       164.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n8-2          	 1430900	       173.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n64-2         	 1221535	       197.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n1024-2       	  393207	       608.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n0-2          	 1466734	       163.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n1-2          	  609154	       384.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n8-2          	  225493	      1059 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n64-2         	   38678	      6475 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n1024-2       	    2390	     95718 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n0-2         	  812260	       289.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n1-2         	  836779	       287.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n8-2         	  794091	       286.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n64-2        	  729626	       341.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n1024-2      	  194908	      1165 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n0-2         	  833413	       287.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n1-2         	  321501	       740.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n8-2         	  115714	      2098 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n64-2        	   19287	     12419 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n1024-2      	    1270	    186388 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n0-2          	 1464410	       168.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n1-2          	 1458850	       168.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n8-2          	 1393992	       167.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n64-2         	 1246641	       196.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n1024-2       	  396270	       611.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n0-2          	 1472731	       163.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n1-2          	  592204	       387.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n8-2          	  223189	      1067 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n64-2         	   37537	      6336 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n1024-2       	    2398	     95441 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n0-2         	  715050	       318.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n1-2         	  745953	       316.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n8-2         	  726570	       320.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n64-2        	  648841	       368.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n1024-2      	  175977	      1196 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n0-2         	  731842	       316.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n1-2         	  305817	       778.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n8-2         	  112795	      2133 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n64-2        	   17212	     12436 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n1024-2      	    1246	    189080 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n0-2          	 1256649	       182.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n1-2          	 1318885	       181.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n8-2          	 1287390	       184.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n64-2         	 1000000	       216.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n1024-2       	  358290	       628.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n0-2          	 1330694	       180.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n1-2          	  556682	       405.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n8-2          	  217711	      1098 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n64-2         	   37572	      6393 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n1024-2       	    2426	     97215 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCScalarRelayCompile-2                                        	   17781	     13426 ns/op	       437.0 native-B	        33.00 return-map-B	   20666 B/op	     102 allocs/op
+PASS

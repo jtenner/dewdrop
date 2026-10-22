@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/just/1.58.0/just",
+    "lint"
+  ],
+  "seconds": 196.62159378899378,
+  "exit": 0,
+  "user_seconds": 395.041506,
+  "system_seconds": 15.657622,
+  "peak_rss_kib": 3628364,
+  "minor_faults": 2589011,
+  "major_faults": 19,
+  "voluntary_context_switches": 221676,
+  "involuntary_context_switches": 33900
+}

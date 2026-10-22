@@ -1,0 +1,14 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   73994	      3223 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   72424	      3232 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   87598	      2740 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   56403	      4193 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   48559	      4867 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   14202	     16867 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	17219631	        14.17 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  481018	       511.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7458	     31981 ns/op	       0 B/op	       0 allocs/op
+PASS

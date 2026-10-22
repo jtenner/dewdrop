@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "./..."
+  ],
+  "seconds": 162.8975115499925,
+  "exit": 1,
+  "user_seconds": 284.864332,
+  "system_seconds": 31.221978,
+  "peak_rss_kib": 3554256,
+  "minor_faults": 6252280,
+  "major_faults": 842,
+  "voluntary_context_switches": 395413,
+  "involuntary_context_switches": 20474
+}

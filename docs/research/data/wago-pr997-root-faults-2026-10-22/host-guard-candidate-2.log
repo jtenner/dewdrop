@@ -1,0 +1,7 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n64-2         	   20954	     11458 ns/op	       0 B/op	       0 allocs/op
+BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n64-2         	   20523	     11529 ns/op	       0 B/op	       0 allocs/op
+PASS

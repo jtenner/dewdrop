@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=1",
+    "-timeout=1m",
+    "-tags=wago_regalloccheck",
+    "-exec",
+    "/usr/bin/qemu-aarch64",
+    "./tests/integration/runtimeconcurrency",
+    "-run",
+    "^TestRuntimeConcurrencyHarness$/^seed-439000001$/^threads-shared-memory-wait-close$"
+  ],
+  "seconds": 24.508548393001547,
+  "exit": 1,
+  "user_seconds": 35.099485,
+  "system_seconds": 4.852419,
+  "peak_rss_kib": 597180,
+  "minor_faults": 63512,
+  "major_faults": 3,
+  "voluntary_context_switches": 2176898,
+  "involuntary_context_switches": 3269
+}

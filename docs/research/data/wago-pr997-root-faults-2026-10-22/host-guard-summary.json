@@ -1,0 +1,10 @@
+{
+  "baseline": {
+    "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n64-2": 11855.0,
+    "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n64-2": 11885.0
+  },
+  "candidate": {
+    "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n64-2": 11458.0,
+    "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n64-2": 11624.0
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-c",
+    "-o",
+    "/tmp/wago-pr997-root-faults-evidence/baseline.test",
+    "./src/wago"
+  ],
+  "seconds": 23.972961146995658,
+  "exit": 0,
+  "user_seconds": 41.275999,
+  "system_seconds": 0.934118,
+  "peak_rss_kib": 3637192,
+  "minor_faults": 61224,
+  "major_faults": 5,
+  "voluntary_context_switches": 7217,
+  "involuntary_context_switches": 1509
+}

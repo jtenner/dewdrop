@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "-tags=wago_regalloccheck",
+    "./src/wago",
+    "./tests/integration/runtimeconcurrency"
+  ],
+  "seconds": 48.92908033099957,
+  "exit": 0,
+  "user_seconds": 69.285407,
+  "system_seconds": 5.247063,
+  "peak_rss_kib": 3607224,
+  "minor_faults": 1122323,
+  "major_faults": 13,
+  "voluntary_context_switches": 104068,
+  "involuntary_context_switches": 7258
+}

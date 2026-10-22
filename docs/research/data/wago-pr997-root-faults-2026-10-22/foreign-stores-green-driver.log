@@ -1,0 +1,22 @@
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=1", "-timeout=2m", "-tags=wago_regalloccheck", "./src/wago", "-run", "^TestGCScalarAdapterRevisitedDomainAcrossStores$"], "seconds": 24.921108561000437, "exit": 0, "user_seconds": 40.930797, "system_seconds": 0.8797079999999999, "peak_rss_kib": 3608088, "minor_faults": 63265, "major_faults": 5, "voluntary_context_switches": 6869, "involuntary_context_switches": 907}
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=true
+--- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=true (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=true (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=true (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=true (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.007s
+

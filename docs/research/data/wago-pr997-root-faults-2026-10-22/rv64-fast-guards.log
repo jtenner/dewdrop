@@ -1,0 +1,10 @@
+=== RUN   TestRV64GCDomainHostRootsAcrossReentry
+=== RUN   TestRV64GCDomainHostRootsAcrossReentry/artifact=false
+=== RUN   TestRV64GCDomainHostRootsAcrossReentry/artifact=true
+--- PASS: TestRV64GCDomainHostRootsAcrossReentry (0.18s)
+    --- PASS: TestRV64GCDomainHostRootsAcrossReentry/artifact=false (0.15s)
+    --- PASS: TestRV64GCDomainHostRootsAcrossReentry/artifact=true (0.03s)
+=== RUN   TestPluginScalarHostImportStaysOrdinary
+--- PASS: TestPluginScalarHostImportStaysOrdinary (0.06s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.340s

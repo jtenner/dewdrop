@@ -1,0 +1,1124 @@
+{
+  "initial": [
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=1/entries=256-2",
+      "baseline": {
+        "ns/op": 4529.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 4194.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -7.396776330315746
+    },
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=1/entries=8-2",
+      "baseline": {
+        "ns/op": 2762.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 2726.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -1.303403330919628
+    },
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=8/entries=256-2",
+      "baseline": {
+        "ns/op": 18764.0,
+        "B/op": 169.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 16964.0,
+        "B/op": 169.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -9.592837348113402
+    },
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=8/entries=8-2",
+      "baseline": {
+        "ns/op": 4860.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 4798.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -1.275720164609051
+    },
+    {
+      "name": "BenchmarkGCExternLocalRoots/op26-2",
+      "baseline": {
+        "ns/op": 3273.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "candidate": {
+        "ns/op": 3183.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "percent_ns": -2.7497708524289677
+    },
+    {
+      "name": "BenchmarkGCExternLocalRoots/op27-2",
+      "baseline": {
+        "ns/op": 3272.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "candidate": {
+        "ns/op": 3188.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "percent_ns": -2.5672371638141844
+    },
+    {
+      "name": "BenchmarkGCNativeFrameRootsMappedStack/frames=1-2",
+      "baseline": {
+        "ns/op": 13.81,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 14.79,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 7.09630702389572
+    },
+    {
+      "name": "BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2",
+      "baseline": {
+        "ns/op": 31371.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 36495.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 16.333556469350686
+    },
+    {
+      "name": "BenchmarkGCNativeFrameRootsMappedStack/frames=64-2",
+      "baseline": {
+        "ns/op": 501.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 585.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 16.89944134078212
+    },
+    {
+      "name": "BenchmarkGCScalarRelayCompile-2",
+      "baseline": {
+        "ns/op": 12071.0,
+        "native-B": 437.0,
+        "return-map-B": 0.0,
+        "B/op": 20146.0,
+        "allocs/op": 91.0
+      },
+      "candidate": {
+        "ns/op": 13426.0,
+        "native-B": 437.0,
+        "return-map-B": 33.0,
+        "B/op": 20665.0,
+        "allocs/op": 102.0
+      },
+      "percent_ns": 11.225250600613034
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n0-2",
+      "baseline": {
+        "ns/op": 274.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 294.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 6.947981084030563
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n1-2",
+      "baseline": {
+        "ns/op": 274.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 287.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 4.547108039287018
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n1024-2",
+      "baseline": {
+        "ns/op": 940.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 1170.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 24.428373923215997
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n64-2",
+      "baseline": {
+        "ns/op": 326.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 335.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.602571953459898
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host0/n8-2",
+      "baseline": {
+        "ns/op": 277.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 287.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.6023054755043304
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n0-2",
+      "baseline": {
+        "ns/op": 275.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 290.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.259339862169021
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n1-2",
+      "baseline": {
+        "ns/op": 719.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 739.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.7661940505977256
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n1024-2",
+      "baseline": {
+        "ns/op": 178150.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 188185.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.632893628964353
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n64-2",
+      "baseline": {
+        "ns/op": 11748.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 12450.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.9754851889683325
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/parallelfalse/host1/n8-2",
+      "baseline": {
+        "ns/op": 1987.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 2098.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.586311021640666
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n0-2",
+      "baseline": {
+        "ns/op": 167.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 164.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -1.6138673042438878
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n1-2",
+      "baseline": {
+        "ns/op": 167.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 165.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -1.2544802867383464
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n1024-2",
+      "baseline": {
+        "ns/op": 510.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 608.5,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 19.29033522838659
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n64-2",
+      "baseline": {
+        "ns/op": 187.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 197.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.232247730912953
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host0/n8-2",
+      "baseline": {
+        "ns/op": 170.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 173.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 1.7028772753963528
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n0-2",
+      "baseline": {
+        "ns/op": 167.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 163.5,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -2.620607504466943
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n1-2",
+      "baseline": {
+        "ns/op": 374.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 387.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.3351120597651995
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n1024-2",
+      "baseline": {
+        "ns/op": 91187.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 95718.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 4.968910042001595
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n64-2",
+      "baseline": {
+        "ns/op": 5976.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 6475.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 8.350066934404277
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem0/paralleltrue/host1/n8-2",
+      "baseline": {
+        "ns/op": 1012.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 1088.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 7.509881422924902
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n0-2",
+      "baseline": {
+        "ns/op": 277.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 289.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 4.548736462093861
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n1-2",
+      "baseline": {
+        "ns/op": 273.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 283.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.956043956043964
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n1024-2",
+      "baseline": {
+        "ns/op": 932.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 1165.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 24.9195796697405
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n64-2",
+      "baseline": {
+        "ns/op": 322.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 335.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.9962825278810232
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host0/n8-2",
+      "baseline": {
+        "ns/op": 276.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 286.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.911626222383169
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n0-2",
+      "baseline": {
+        "ns/op": 276.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 287.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.7558685446009488
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n1-2",
+      "baseline": {
+        "ns/op": 714.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 740.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.7104452534304055
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n1024-2",
+      "baseline": {
+        "ns/op": 178225.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 186700.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 4.7552251367653176
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n64-2",
+      "baseline": {
+        "ns/op": 11989.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 12419.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.5866210693135336
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/parallelfalse/host1/n8-2",
+      "baseline": {
+        "ns/op": 2010.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 2059.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.437810945273622
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n0-2",
+      "baseline": {
+        "ns/op": 166.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 166.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -0.36014405762304635
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n1-2",
+      "baseline": {
+        "ns/op": 166.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 164.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -1.1983223487118
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n1024-2",
+      "baseline": {
+        "ns/op": 510.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 611.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 19.823529411764707
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n64-2",
+      "baseline": {
+        "ns/op": 191.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 196.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.5614218504965924
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host0/n8-2",
+      "baseline": {
+        "ns/op": 168.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 167.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -0.7109004739336622
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n0-2",
+      "baseline": {
+        "ns/op": 166.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 163.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -1.9772318753744855
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n1-2",
+      "baseline": {
+        "ns/op": 377.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 387.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.624602332979853
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n1024-2",
+      "baseline": {
+        "ns/op": 91067.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 95572.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 4.946907222155117
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n64-2",
+      "baseline": {
+        "ns/op": 6071.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 6284.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.508482951737779
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem1/paralleltrue/host1/n8-2",
+      "baseline": {
+        "ns/op": 1018.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 1067.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 4.813359528487227
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n0-2",
+      "baseline": {
+        "ns/op": 315.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 321.6,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 1.9011406844106515
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n1-2",
+      "baseline": {
+        "ns/op": 312.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 316.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 1.472942683317302
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n1024-2",
+      "baseline": {
+        "ns/op": 974.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 1196.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 22.780002053177295
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n64-2",
+      "baseline": {
+        "ns/op": 364.5,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 372.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.0850480109739333
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host0/n8-2",
+      "baseline": {
+        "ns/op": 318.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 320.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 0.6587202007528159
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n0-2",
+      "baseline": {
+        "ns/op": 311.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 319.5,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.6011560693641744
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n1-2",
+      "baseline": {
+        "ns/op": 770.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 778.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 1.0773624091381162
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n1024-2",
+      "baseline": {
+        "ns/op": 179270.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 189080.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.472192781837459
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n64-2",
+      "baseline": {
+        "ns/op": 11726.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 12619.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 7.615555176530786
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/parallelfalse/host1/n8-2",
+      "baseline": {
+        "ns/op": 2031.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 2140.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.366814377154117
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n0-2",
+      "baseline": {
+        "ns/op": 182.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 182.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 0.10982976386602061
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n1-2",
+      "baseline": {
+        "ns/op": 185.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 181.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -1.9956850053937547
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n1024-2",
+      "baseline": {
+        "ns/op": 534.3,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 639.2,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 19.633164888639353
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n64-2",
+      "baseline": {
+        "ns/op": 200.1,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 214.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 7.346326836581718
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host0/n8-2",
+      "baseline": {
+        "ns/op": 184.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 184.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 0.10828370330266957
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n0-2",
+      "baseline": {
+        "ns/op": 181.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 180.8,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": -0.604727872457389
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n1-2",
+      "baseline": {
+        "ns/op": 397.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 406.9,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 2.493702770780848
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n1024-2",
+      "baseline": {
+        "ns/op": 91123.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 96735.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 6.158708558761239
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n64-2",
+      "baseline": {
+        "ns/op": 6033.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 6393.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.967180507210346
+    },
+    {
+      "name": "BenchmarkHostRoundtripLoopCaller/mem4/paralleltrue/host1/n8-2",
+      "baseline": {
+        "ns/op": 1038.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 1098.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 5.780346820809257
+    }
+  ],
+  "fast_guards": [
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=1/entries=256-2",
+      "baseline": {
+        "ns/op": 4524.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 4208.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -6.9849690539345755
+    },
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=1/entries=8-2",
+      "baseline": {
+        "ns/op": 2756.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 2751.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -0.18142235123367323
+    },
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=8/entries=256-2",
+      "baseline": {
+        "ns/op": 18593.0,
+        "B/op": 169.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 16867.0,
+        "B/op": 169.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": -9.283063518528479
+    },
+    {
+      "name": "BenchmarkGCExternForeignRoots/locals=8/entries=8-2",
+      "baseline": {
+        "ns/op": 4855.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "candidate": {
+        "ns/op": 4913.0,
+        "B/op": 168.0,
+        "allocs/op": 9.0
+      },
+      "percent_ns": 1.1946446961895063
+    },
+    {
+      "name": "BenchmarkGCExternLocalRoots/op26-2",
+      "baseline": {
+        "ns/op": 3238.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "candidate": {
+        "ns/op": 3229.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "percent_ns": -0.2779493514515119
+    },
+    {
+      "name": "BenchmarkGCExternLocalRoots/op27-2",
+      "baseline": {
+        "ns/op": 3252.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "candidate": {
+        "ns/op": 3272.0,
+        "wrong/op": 0.0,
+        "B/op": 224.0,
+        "allocs/op": 12.0
+      },
+      "percent_ns": 0.6150061500614923
+    },
+    {
+      "name": "BenchmarkGCNativeFrameRootsMappedStack/frames=1-2",
+      "baseline": {
+        "ns/op": 13.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 14.17,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.430656934306575
+    },
+    {
+      "name": "BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2",
+      "baseline": {
+        "ns/op": 31939.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 32021.0,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 0.25673940949935137
+    },
+    {
+      "name": "BenchmarkGCNativeFrameRootsMappedStack/frames=64-2",
+      "baseline": {
+        "ns/op": 496.4,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "candidate": {
+        "ns/op": 513.7,
+        "B/op": 0.0,
+        "allocs/op": 0.0
+      },
+      "percent_ns": 3.4850926672038707
+    }
+  ]
+}

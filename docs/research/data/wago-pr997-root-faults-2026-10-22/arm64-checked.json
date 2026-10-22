@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=3",
+    "-timeout=2m",
+    "-tags=wago_regalloccheck",
+    "-exec",
+    "/usr/bin/qemu-aarch64",
+    "./src/wago",
+    "-run",
+    "Test(GCScalarAdapter|GCCollectorFreeReturnMaps|GCExtern|GCNativeFrameOwner|GCNativeFrameRoots|GCSingleNativeFrameRoots)"
+  ],
+  "seconds": 27.822731897991616,
+  "exit": 0,
+  "user_seconds": 42.769103,
+  "system_seconds": 1.364463,
+  "peak_rss_kib": 2740140,
+  "minor_faults": 146985,
+  "major_faults": 5,
+  "voluntary_context_switches": 25785,
+  "involuntary_context_switches": 2049
+}

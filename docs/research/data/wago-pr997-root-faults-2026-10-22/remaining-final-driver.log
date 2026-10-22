@@ -1,0 +1,227 @@
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=3", "-timeout=2m", "-tags=wago_regalloccheck", "-exec", "/usr/bin/qemu-aarch64", "./src/wago", "-run", "Test(CachedBoundedNumericEntry|DetachedNumeric|RuntimeConcurrencyHarness|NativeScalarLeafShortEntry|PluginScalarHostImportStaysOrdinary|GCScalarAdapter|GCCollectorFreeReturnMaps|GCExtern|GCNativeFrameOwner|GCNativeFrameRoots|GCSingleNativeFrameRoots)"], "seconds": 3.3434224159864243, "exit": 0, "user_seconds": 3.276919, "system_seconds": 0.37512199999999996, "peak_rss_kib": 263208, "minor_faults": 64468, "major_faults": 5, "voluntary_context_switches": 12583, "involuntary_context_switches": 362}
+e=false (0.01s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/unused-table/object=true/unusedSignature=true (0.01s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/indirect/object=false/unusedSignature=false (0.00s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/indirect/object=false/unusedSignature=true (0.00s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/indirect/object=true/unusedSignature=false (0.00s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/indirect/object=true/unusedSignature=true (0.00s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/ref/object=false/unusedSignature=false (0.01s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/ref/object=false/unusedSignature=true (0.00s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/ref/object=true/unusedSignature=false (0.00s)
+        --- PASS: TestGCScalarAdapterCallerOwnership/saved=true/register=true/ref/object=true/unusedSignature=true (0.00s)
+=== RUN   TestGCScalarAdapterAllocOnlyCallee
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/saved=false
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/saved=false/register=false
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/saved=false/register=true
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/saved=true
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/saved=true/register=false
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/saved=true/register=true
+--- PASS: TestGCScalarAdapterAllocOnlyCallee (0.01s)
+    --- PASS: TestGCScalarAdapterAllocOnlyCallee/saved=false (0.01s)
+        --- PASS: TestGCScalarAdapterAllocOnlyCallee/saved=false/register=false (0.00s)
+        --- PASS: TestGCScalarAdapterAllocOnlyCallee/saved=false/register=true (0.00s)
+    --- PASS: TestGCScalarAdapterAllocOnlyCallee/saved=true (0.01s)
+        --- PASS: TestGCScalarAdapterAllocOnlyCallee/saved=true/register=false (0.00s)
+        --- PASS: TestGCScalarAdapterAllocOnlyCallee/saved=true/register=true (0.00s)
+=== RUN   TestGCScalarAdapterRevisitedDomain
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=false/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=false/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=true/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=true/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=false/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=false/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=true/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=true/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=false/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=false/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=true/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=true/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=false/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=false/register=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=true
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=true/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=true/register=true
+--- PASS: TestGCScalarAdapterRevisitedDomain (0.09s)
+    --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false (0.04s)
+        --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false (0.02s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=false/register=false (0.00s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=false/register=true (0.01s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=true (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=true/register=false (0.00s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=false/saved=true/register=true (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true (0.02s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=false/register=false (0.00s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=false/register=true (0.00s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=true (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=true/register=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=false/relayObject=true/saved=true/register=true (0.01s)
+    --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true (0.04s)
+        --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false (0.02s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=false/register=false (0.00s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=false/register=true (0.00s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=true (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=true/register=false (0.00s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=false/saved=true/register=true (0.01s)
+        --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true (0.02s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=false/register=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=false/register=true (0.00s)
+            --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=true (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=true/register=false (0.01s)
+                --- PASS: TestGCScalarAdapterRevisitedDomain/tiny=true/relayObject=true/saved=true/register=true (0.01s)
+=== RUN   TestGCCollectorFreeReturnMapsCannotPublishObjectRoots
+=== RUN   TestGCCollectorFreeReturnMapsCannotPublishObjectRoots/root
+    gc_foreign_frame_roots_test.go:346: rejected invalid root metadata: GC frame-root metadata requires exact native GC roots or collector-free return maps
+=== RUN   TestGCCollectorFreeReturnMapsCannotPublishObjectRoots/safepoint
+    gc_foreign_frame_roots_test.go:346: rejected invalid safepoint metadata: GC frame-root metadata requires exact native GC roots or collector-free return maps
+--- PASS: TestGCCollectorFreeReturnMapsCannotPublishObjectRoots (0.00s)
+    --- PASS: TestGCCollectorFreeReturnMapsCannotPublishObjectRoots/root (0.00s)
+    --- PASS: TestGCCollectorFreeReturnMapsCannotPublishObjectRoots/safepoint (0.00s)
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=true/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=true/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=true/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=true/retired=true
+--- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores (0.18s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1 (0.04s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=false/retired=false (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=false/retired=true (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=true/retired=false (0.01s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=false/saved=true/retired=true (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=false/retired=false (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=false/retired=true (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=true/retired=false (0.00s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=1/register=true/saved=true/retired=true (0.01s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40 (0.14s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=false/retired=false (0.02s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=false/retired=true (0.02s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=true/retired=false (0.02s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=false/saved=true/retired=true (0.02s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=false/retired=false (0.02s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=false/retired=true (0.01s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=true/retired=false (0.02s)
+        --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/depth=40/register=true/saved=true/retired=true (0.02s)
+=== RUN   TestGCScalarAdapterForeignHostCollection
+=== RUN   TestGCScalarAdapterForeignHostCollection/foreignStore=false/register=false
+=== RUN   TestGCScalarAdapterForeignHostCollection/foreignStore=false/register=true
+=== RUN   TestGCScalarAdapterForeignHostCollection/foreignStore=true/register=false
+=== RUN   TestGCScalarAdapterForeignHostCollection/foreignStore=true/register=true
+--- PASS: TestGCScalarAdapterForeignHostCollection (0.01s)
+    --- PASS: TestGCScalarAdapterForeignHostCollection/foreignStore=false/register=false (0.00s)
+    --- PASS: TestGCScalarAdapterForeignHostCollection/foreignStore=false/register=true (0.00s)
+    --- PASS: TestGCScalarAdapterForeignHostCollection/foreignStore=true/register=false (0.00s)
+    --- PASS: TestGCScalarAdapterForeignHostCollection/foreignStore=true/register=true (0.00s)
+=== RUN   TestGCNativeFrameRootsDeepMappedStack
+--- PASS: TestGCNativeFrameRootsDeepMappedStack (0.00s)
+=== RUN   TestGCNativeFrameRootsMappedStackBounds
+=== RUN   TestGCNativeFrameRootsMappedStackBounds/frame
+=== RUN   TestGCNativeFrameRootsMappedStackBounds/return_word
+--- PASS: TestGCNativeFrameRootsMappedStackBounds (0.00s)
+    --- PASS: TestGCNativeFrameRootsMappedStackBounds/frame (0.00s)
+    --- PASS: TestGCNativeFrameRootsMappedStackBounds/return_word (0.00s)
+=== RUN   TestGCNativeFrameRootsParkedActivationUsesPhysicalStack
+--- PASS: TestGCNativeFrameRootsParkedActivationUsesPhysicalStack (0.00s)
+=== RUN   TestGCNativeFrameRootsDirectHelperUsesPhysicalStack
+--- PASS: TestGCNativeFrameRootsDirectHelperUsesPhysicalStack (0.00s)
+=== RUN   TestGCNativeFrameRootsRISCV64SavedRAWalk
+--- PASS: TestGCNativeFrameRootsRISCV64SavedRAWalk (0.00s)
+=== RUN   TestGCNativeFrameRootsRISCV64ForeignBridgeStackAdjustment
+--- PASS: TestGCNativeFrameRootsRISCV64ForeignBridgeStackAdjustment (0.00s)
+=== RUN   TestGCNativeFrameRootsCallsiteFreeForeignTargetReturnsToCallerOwner
+--- PASS: TestGCNativeFrameRootsCallsiteFreeForeignTargetReturnsToCallerOwner (0.00s)
+=== RUN   TestGCNativeFrameRootsARM64FrameRecordWalk
+--- PASS: TestGCNativeFrameRootsARM64FrameRecordWalk (0.00s)
+=== RUN   TestGCNativeFrameRootsDeepInBoundsChain
+--- PASS: TestGCNativeFrameRootsDeepInBoundsChain (0.00s)
+=== RUN   TestGCNativeFrameRootsARM64ForeignWrapperStackAdjustment
+--- PASS: TestGCNativeFrameRootsARM64ForeignWrapperStackAdjustment (0.00s)
+=== RUN   TestGCNativeFrameRootsARM64ExternalReturnTerminates
+--- PASS: TestGCNativeFrameRootsARM64ExternalReturnTerminates (0.00s)
+=== RUN   TestNativeScalarLeafShortEntryIsolation
+--- PASS: TestNativeScalarLeafShortEntryIsolation (0.00s)
+=== RUN   TestNativeScalarLeafShortEntrySharingRevokesIsolation
+--- PASS: TestNativeScalarLeafShortEntrySharingRevokesIsolation (0.00s)
+=== RUN   TestNativeScalarLeafShortEntryArtifactDropsProof
+--- PASS: TestNativeScalarLeafShortEntryArtifactDropsProof (0.00s)
+=== RUN   TestPluginScalarHostImportStaysOrdinary
+--- PASS: TestPluginScalarHostImportStaysOrdinary (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	2.832s
+
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=1", "-timeout=2m", "-tags=wago_regalloccheck", "-exec", "/usr/bin/qemu-riscv64", "./src/wago", "-run", "Test(RV64GCDomainHostRoots|PluginScalarHostImportStaysOrdinary)"], "seconds": 39.15529350101133, "exit": 0, "user_seconds": 63.076006, "system_seconds": 2.00294, "peak_rss_kib": 4904076, "minor_faults": 438978, "major_faults": 6, "voluntary_context_switches": 19960, "involuntary_context_switches": 2643}
+=== RUN   TestRV64GCDomainHostRootsAcrossReentry
+=== RUN   TestRV64GCDomainHostRootsAcrossReentry/artifact=false
+=== RUN   TestRV64GCDomainHostRootsAcrossReentry/artifact=true
+--- PASS: TestRV64GCDomainHostRootsAcrossReentry (0.18s)
+    --- PASS: TestRV64GCDomainHostRootsAcrossReentry/artifact=false (0.15s)
+    --- PASS: TestRV64GCDomainHostRootsAcrossReentry/artifact=true (0.03s)
+=== RUN   TestPluginScalarHostImportStaysOrdinary
+--- PASS: TestPluginScalarHostImportStaysOrdinary (0.07s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.346s
+
+START bench-build-baseline
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "2", "-c", "-o", "/tmp/wago-pr997-root-faults-evidence/baseline.test", "./src/wago"], "seconds": 23.972961146995658, "exit": 0, "user_seconds": 41.275999, "system_seconds": 0.934118, "peak_rss_kib": 3637192, "minor_faults": 61224, "major_faults": 5, "voluntary_context_switches": 7217, "involuntary_context_switches": 1509}
+
+START bench-build-candidate
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "2", "-c", "-o", "/tmp/wago-pr997-root-faults-evidence/candidate.test", "./src/wago"], "seconds": 23.726878992980346, "exit": 0, "user_seconds": 41.311519, "system_seconds": 0.9005409999999999, "peak_rss_kib": 3562132, "minor_faults": 59211, "major_faults": 5, "voluntary_context_switches": 6888, "involuntary_context_switches": 1247}
+
+START bench-baseline-0
+{"command": ["/tmp/wago-pr997-root-faults-evidence/baseline.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots)|GCScalarRelayCompile|HostRoundtripLoopCaller)$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 0.004594583006110042, "exit": 2, "user_seconds": 0.0010559999999999999, "system_seconds": 0.001058, "peak_rss_kib": 11732, "minor_faults": 224, "major_faults": 0, "voluntary_context_switches": 20, "involuntary_context_switches": 3}
+panic: open ../../tests/fixtures/wasm/fib.wasm: no such file or directory
+
+goroutine 1 [running]:
+github.com/wago-org/wago/src/wago.testdata({0x167d6de?, 0x1ffa7278d320?})
+	/tmp/wago-pr997-main-sync-20261022/src/wago/wago_test.go:27 +0xb7
+github.com/wago-org/wago/src/wago.init()
+	/tmp/wago-pr997-main-sync-20261022/src/wago/wago_test.go:36 +0x1afe
+
+Traceback (most recent call last):
+  File "/tmp/wago-pr997-root-faults-evidence/benchmarks.py", line 24, in <module>
+    run('bench-'+label+'-'+str(iteration),[e/(label+'.test'),'-test.run=^$','-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots)|GCScalarRelayCompile|HostRoundtripLoopCaller)$','-test.benchtime=200ms','-test.count=1'],r)
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/wago-pr997-root-faults-evidence/benchmarks.py", line 8, in run
+    print('START',label,flush=True);subprocess.run(['python3',str(e/'measure.py'),label,*map(str,args)],cwd=cwd,env=env,check=True)
+                                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['python3', '/tmp/wago-pr997-root-faults-evidence/measure.py', 'bench-baseline-0', '/tmp/wago-pr997-root-faults-evidence/baseline.test', '-test.run=^$', '-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots)|GCScalarRelayCompile|HostRoundtripLoopCaller)$', '-test.benchtime=200ms', '-test.count=1']' returned non-zero exit status 2.
+Traceback (most recent call last):
+  File "/tmp/wago-pr997-root-faults-evidence/remaining.py", line 5, in <module>
+    subprocess.run(['python3',*(str(root/name) if i==0 else name for i,name in enumerate(args))],cwd=root,check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['python3', '/tmp/wago-pr997-root-faults-evidence/benchmarks.py']' returned non-zero exit status 1.

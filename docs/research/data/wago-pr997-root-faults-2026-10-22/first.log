@@ -1,0 +1,80 @@
+=== RUN   TestGCScalarAdapterCallerOwnership
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/direct/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/direct/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/direct/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/direct/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/indirect/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/indirect/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/indirect/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/indirect/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/ref/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/ref/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/ref/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=false/ref/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/direct/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/direct/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/direct/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/direct/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/indirect/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/indirect/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/indirect/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/indirect/object=true/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/ref/object=false/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/ref/object=false/unusedSignature=true
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/ref/object=true/unusedSignature=false
+=== RUN   TestGCScalarAdapterCallerOwnership/register=true/ref/object=true/unusedSignature=true
+--- PASS: TestGCScalarAdapterCallerOwnership (0.02s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/direct/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/direct/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/direct/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/direct/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/unused-table/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/indirect/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/indirect/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/indirect/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/indirect/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/ref/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/ref/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/ref/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=false/ref/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/direct/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/direct/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/direct/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/direct/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/unused-table/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/indirect/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/indirect/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/indirect/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/indirect/object=true/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/ref/object=false/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/ref/object=false/unusedSignature=true (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/ref/object=true/unusedSignature=false (0.00s)
+    --- PASS: TestGCScalarAdapterCallerOwnership/register=true/ref/object=true/unusedSignature=true (0.00s)
+=== RUN   TestGCScalarAdapterAllocOnlyCallee
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/register=false
+=== RUN   TestGCScalarAdapterAllocOnlyCallee/register=true
+--- PASS: TestGCScalarAdapterAllocOnlyCallee (0.00s)
+    --- PASS: TestGCScalarAdapterAllocOnlyCallee/register=false (0.00s)
+    --- PASS: TestGCScalarAdapterAllocOnlyCallee/register=true (0.00s)
+=== RUN   TestGCScalarAdapterRevisitedDomain
+=== RUN   TestGCScalarAdapterRevisitedDomain/register=false
+=== RUN   TestGCScalarAdapterRevisitedDomain/register=true
+--- PASS: TestGCScalarAdapterRevisitedDomain (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomain/register=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomain/register=true (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.021s

@@ -1,0 +1,12 @@
+{
+  "pull_request": "https://github.com/wago-org/wago/pull/997",
+  "baseline": "d329e9df9f09488f8906dfa3cee7f396574851d0",
+  "candidate": "d868ee7fb3fb8c123669a2301154da8bbcd62c8e",
+  "source_checkout": "/tmp/wago-pr997-root-faults-20261022",
+  "go": "1.27.1",
+  "spec_revision": "9d36019973201a19f9c9ebb0f10828b2fe2374aa",
+  "unrelated_baseline_failure": "ARM64 QEMU shared-memory wait marker, same isolated seed on d329e9df9",
+  "native_arm64_result": "pending hosted qualification; QEMU root/host/codec controls pass",
+  "independent_review": "not claimed",
+  "notes": "Raw failing attempts are retained. Compiled test binaries and corpus clones are excluded."
+}

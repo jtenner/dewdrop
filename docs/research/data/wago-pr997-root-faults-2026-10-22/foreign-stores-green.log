@@ -1,0 +1,20 @@
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=true
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=false
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=true
+--- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=true (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=true (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=true (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=false (0.00s)
+    --- PASS: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=true (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.007s

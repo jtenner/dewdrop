@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "./src/wago",
+    "./tests/integration/runtimeconcurrency",
+    "-run",
+    "Test(CachedBoundedNumericEntry|StagedGCTypeSubtypingProductsCompile|NativeScalarLeafShortEntry|PluginScalarHostImportStaysOrdinary|PreparedBoundedAMD64CallIndirectAndTrapRecovery|DetachedNumeric|RuntimeConcurrencyHarness|GCScalarAdapter|GCCollectorFreeReturnMaps)"
+  ],
+  "seconds": 26.82997591199819,
+  "exit": 0,
+  "user_seconds": 52.574818,
+  "system_seconds": 1.221676,
+  "peak_rss_kib": 3580788,
+  "minor_faults": 116935,
+  "major_faults": 11,
+  "voluntary_context_switches": 10843,
+  "involuntary_context_switches": 2077
+}

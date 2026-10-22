@@ -1,0 +1,259 @@
+SIGQUIT: quit
+PC=0x4943a1 m=0 sigcode=0
+
+goroutine 0 gp=0x247dfc0 m=0 mp=0x247efc0 [idle]:
+runtime.futex(0x247f118, 0x80, 0x0, 0x0, 0x0, 0x0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/sys_linux_amd64.s:575 +0x21 fp=0x7fff6a739768 sp=0x7fff6a739760 pc=0x4943a1
+runtime.futexsleep(0x247efc0?, 0x6a7397e0?, 0x45f9e8?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/os_linux.go:73 +0x30 fp=0x7fff6a7397b8 sp=0x7fff6a739768 pc=0x44bb30
+runtime.notesleep(0x247f118)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/lock_futex.go:47 +0x87 fp=0x7fff6a7397f0 sp=0x7fff6a7397b8 pc=0x41e3c7
+runtime.mPark(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:1985
+runtime.stopm()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:3023 +0x8c fp=0x7fff6a739820 sp=0x7fff6a7397f0 pc=0x45686c
+runtime.findRunnable()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:3811 +0xeb7 fp=0x7fff6a7399f0 sp=0x7fff6a739820 pc=0x4583f7
+runtime.schedule()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:4179 +0xb1 fp=0x7fff6a739a30 sp=0x7fff6a7399f0 pc=0x459511
+runtime.park_m(0x29fc89733a40)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:4319 +0x279 fp=0x7fff6a739a90 sp=0x7fff6a739a30 pc=0x459999
+runtime.mcall()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:463 +0x53 fp=0x7fff6a739aa8 sp=0x7fff6a739a90 pc=0x490e53
+
+goroutine 1 gp=0x29fc897321e0 m=nil [chan receive]:
+runtime.gopark(0x7fda350ad108?, 0x7fda350b6420?, 0x20?, 0x7d?, 0x236d700?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc897d3908 sp=0x29fc897d38e8 pc=0x48b76a
+runtime.chanrecv(0x29fc89752280, 0x29fc897d39ef, 0x1)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:667 +0x4ae fp=0x29fc897d3980 sp=0x29fc897d3908 pc=0x41896e
+runtime.chanrecv1(0x18?, 0x23ba558?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:509 +0x12 fp=0x29fc897d39a8 sp=0x29fc897d3980 pc=0x418492
+testing.(*T).Run(0x29fc897fa008, {0x16e308f?, 0x29fc897d3aa0?}, 0x2432e60)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2266 +0x4f2 fp=0x29fc897d3a80 sp=0x29fc897d39a8 pc=0x52dbd2
+testing.runTests.func1(0x29fc897fa008)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2742 +0x37 fp=0x29fc897d3ac0 sp=0x29fc897d3a80 pc=0x534697
+testing.tRunner(0x29fc897fa008, 0x29fc897d3bc8)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea fp=0x29fc897d3b10 sp=0x29fc897d3ac0 pc=0x52d66a
+testing.runTests({0x16a4573, 0x18}, {0x16c378a, 0x21}, 0x29fc8973e330, {0x246ce30, 0x9d3, 0x9d3}, {0xc2ae992bc925d685, 0x8bb2d04074, ...})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2740 +0x510 fp=0x29fc897d3bf8 sp=0x29fc897d3b10 pc=0x52fc30
+testing.(*M).Run(0x29fc897a48c0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2600 +0x6af fp=0x29fc897d3e38 sp=0x29fc897d3bf8 pc=0x52e7ef
+main.main()
+	_testmain.go:5906 +0x9b fp=0x29fc897d3eb8 sp=0x29fc897d3e38 pc=0x1674a7b
+runtime.main()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:302 +0x427 fp=0x29fc897d3fe0 sp=0x29fc897d3eb8 pc=0x451e87
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc897d3fe8 sp=0x29fc897d3fe0 pc=0x492841
+
+goroutine 2 gp=0x29fc89732780 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc8976efa8 sp=0x29fc8976ef88 pc=0x48b76a
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.forcegchelper()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:387 +0xb3 fp=0x29fc8976efe0 sp=0x29fc8976efa8 pc=0x452153
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc8976efe8 sp=0x29fc8976efe0 pc=0x492841
+created by runtime.init.7 in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:375 +0x1a
+
+goroutine 3 gp=0x29fc89732d20 m=nil [GC sweep wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc8976f788 sp=0x29fc8976f768 pc=0x48b76a
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.bgsweep(0x29fc89752080)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgcsweep.go:279 +0x94 fp=0x29fc8976f7c8 sp=0x29fc8976f788 pc=0x43af94
+runtime.gcenable.gowrap1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:214 +0x17 fp=0x29fc8976f7e0 sp=0x29fc8976f7c8 pc=0x481597
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc8976f7e8 sp=0x29fc8976f7e0 pc=0x492841
+created by runtime.gcenable in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:214 +0x66
+
+goroutine 4 gp=0x29fc89732f00 m=nil [GC scavenge wait]:
+runtime.gopark(0x29fc89752080?, 0x17797a8?, 0x1?, 0x0?, 0x29fc89732f00?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc8976ff78 sp=0x29fc8976ff58 pc=0x48b76a
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.(*scavengerState).park(0x247dbe0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgcscavenge.go:425 +0x49 fp=0x29fc8976ffa8 sp=0x29fc8976ff78 pc=0x438b49
+runtime.bgscavenge(0x29fc89752080)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgcscavenge.go:653 +0x3c fp=0x29fc8976ffc8 sp=0x29fc8976ffa8 pc=0x43909c
+runtime.gcenable.gowrap2()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:215 +0x17 fp=0x29fc8976ffe0 sp=0x29fc8976ffc8 pc=0x481557
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc8976ffe8 sp=0x29fc8976ffe0 pc=0x492841
+created by runtime.gcenable in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:215 +0xa5
+
+goroutine 5 gp=0x29fc897334a0 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0x29fc8976e658?, 0x4f?, 0x94?, 0x29fc897520e8?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc8976e620 sp=0x29fc8976e600 pc=0x48b76a
+runtime.runFinalizers()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mfinal.go:210 +0x107 fp=0x29fc8976e7e0 sp=0x29fc8976e620 pc=0x42c027
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc8976e7e8 sp=0x29fc8976e7e0 pc=0x492841
+created by runtime.createfing in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mfinal.go:172 +0x3d
+
+goroutine 6 gp=0x29fc89733680 m=nil [cleanup wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc89770768 sp=0x29fc89770748 pc=0x48b76a
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.(*cleanupQueue).dequeue(0x247dec0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mcleanup.go:522 +0xd3 fp=0x29fc897707a0 sp=0x29fc89770768 pc=0x428d53
+runtime.runCleanups()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mcleanup.go:718 +0x45 fp=0x29fc897707e0 sp=0x29fc897707a0 pc=0x4293c5
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc897707e8 sp=0x29fc897707e0 pc=0x492841
+created by runtime.(*cleanupQueue).createGs in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mcleanup.go:672 +0xa5
+
+goroutine 7 gp=0x29fc89733860 m=nil [chan receive]:
+runtime.gopark(0x7fda350ad108?, 0x7fda350b6420?, 0x20?, 0x7d?, 0x236d700?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc89796d70 sp=0x29fc89796d50 pc=0x48b76a
+runtime.chanrecv(0x29fc89752300, 0x29fc89796e57, 0x1)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:667 +0x4ae fp=0x29fc89796de8 sp=0x29fc89796d70 pc=0x41896e
+runtime.chanrecv1(0x18?, 0x23ba558?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:509 +0x12 fp=0x29fc89796e10 sp=0x29fc89796de8 pc=0x418492
+testing.(*T).Run(0x29fc897fa248, {0x29fc8974c900?, 0x29fc89770f30?}, 0x29fc8973e3a8)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2266 +0x4f2 fp=0x29fc89796ee8 sp=0x29fc89796e10 pc=0x52dbd2
+github.com/wago-org/wago/src/wago.TestGCScalarAdapterForeignHostCollection(0x29fc897fa248)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/gc_foreign_frame_roots_test.go:455 +0xa5 fp=0x29fc89796f70 sp=0x29fc89796ee8 pc=0xc444c5
+testing.tRunner(0x29fc897fa248, 0x2432e60)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea fp=0x29fc89796fc0 sp=0x29fc89796f70 pc=0x52d66a
+testing.(*T).Run.gowrap1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x1b fp=0x29fc89796fe0 sp=0x29fc89796fc0 pc=0x53441b
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc89796fe8 sp=0x29fc89796fe0 pc=0x492841
+created by testing.(*T).Run in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+
+goroutine 8 gp=0x29fc89733a40 m=nil [chan receive]:
+runtime.gopark(0x0?, 0x29fc898272d8?, 0x26?, 0x75?, 0x7?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xca fp=0x29fc89827290 sp=0x29fc89827270 pc=0x48b76a
+runtime.chanrecv(0x29fc897463f0, 0x0, 0x1)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:667 +0x4ae fp=0x29fc89827308 sp=0x29fc89827290 pc=0x41896e
+runtime.chanrecv1(0x29fc89741220?, 0x80?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:509 +0x12 fp=0x29fc89827330 sp=0x29fc89827308 pc=0x418492
+github.com/wago-org/wago/src/wago.(*invocationGate).lockContext(0x29fc89830388, {0x0, 0x0})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/instance_entry.go:103 +0x2a5 fp=0x29fc898273d0 sp=0x29fc89827330 pc=0x91c625
+github.com/wago-org/wago/src/wago.(*invocationGate).lockAfterFastAttempt(0x29fc89830380?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/instance_entry.go:55 +0x53 fp=0x29fc898273f8 sp=0x29fc898273d0 pc=0x91c2f3
+github.com/wago-org/wago/src/wago.(*invocationGate).Lock(0x29fc89830380?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/instance_entry.go:45 +0x39 fp=0x29fc89827410 sp=0x29fc898273f8 pc=0x91c239
+github.com/wago-org/wago/src/wago.gcInvocationDomainView.lock({0x29fc89830380, 0x0, 0x0, 0x0, 0x0, 0x0})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/reference_store.go:548 +0xda fp=0x29fc89827478 sp=0x29fc89827410 pc=0x97627a
+github.com/wago-org/wago/src/wago.(*Instance).lockGCInvocationContext(0x29fc89820808, {0x242f630?, 0x249dd40?}, 0x2)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/reference_store.go:1589 +0x551 fp=0x29fc89827578 sp=0x29fc89827478 pc=0x97ac11
+github.com/wago-org/wago/src/wago.(*Instance).lockGCInvocation(0x0?, 0x0?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/reference_store.go:1535 +0xae fp=0x29fc89827648 sp=0x29fc89827578 pc=0x97a5ee
+github.com/wago-org/wago/src/wago.(*Instance).lockManagedFunctionCollectionInvocation(...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/function_environment_other.go:18
+github.com/wago-org/wago/src/wago.(*Instance).CollectGC(0x29fc89820808)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/gc_collect.go:41 +0x278 fp=0x29fc89827860 sp=0x29fc89827648 pc=0x89ccf8
+github.com/wago-org/wago/src/wago.TestGCScalarAdapterForeignHostCollection.func1.1({0x241e7c0?, 0x29fc89827940?}, {0x7fda34e308e0?, 0x482220?, 0x2487020?}, {0x29fc8972fd38, 0x1, 0x4f?})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/gc_foreign_frame_roots_test.go:471 +0x25 fp=0x29fc89827880 sp=0x29fc89827860 pc=0x1421c85
+github.com/wago-org/wago/src/wago.testSetImport.func2({{0x29fc89820408, 0x29fc897ec8c0, 0x2, 0x0, 0x1, 0x0, 0x29fc897a4c80, 0x0}}, {{}, {0x29fc8972fb38, ...}, ...})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/imports_legacy_test.go:32 +0x195 fp=0x29fc89827910 sp=0x29fc89827880 pc=0x149a1f5
+github.com/wago-org/wago/src/wago.(*syncHostBinding).callBoundUnchecked(0x29fc89791570, {0x29fc89820408, 0x29fc897ec8c0, 0x2, 0x0, 0x1, 0x0, 0x29fc897a4c80, 0x0}, {0x29fc8972fb38, ...}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:1830 +0x57f fp=0x29fc89827a38 sp=0x29fc89827910 pc=0x8ffd1f
+github.com/wago-org/wago/src/wago.dispatchSyncHostScalar(0x29fc89820408, 0x29fc897ec8c0, 0x0?, 0x29fc89791570, {0x29fc8972fb38, 0x0, 0x40}, {0x29fc8972fd38, 0x1, 0x40}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:2339 +0x6b2 fp=0x29fc89827bf8 sp=0x29fc89827a38 pc=0x907152
+github.com/wago-org/wago/src/wago.(*Instance).dispatchHostCall(0x29fc89820408, 0x7fda34e08078, 0x0, {0x29fc8972fb38, 0x0, 0x40}, {0x29fc8972fd38, 0x1, 0x40}, {{}, ...})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:2465 +0x430 fp=0x29fc89827dd0 sp=0x29fc89827bf8 pc=0x908550
+github.com/wago-org/wago/src/wago.(*Instance).callHostDispatch(0x0?, 0x29fc89827558?, 0x927d73?, {0x29fc8972fb38?, 0x0?, 0x0?}, {0x29fc8972fd38?, 0x29fc89827558?, 0x29fc89827f20?}, {{}, ...}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/host_execution.go:624 +0xc8 fp=0x29fc89827e68 sp=0x29fc89827dd0 pc=0x8ece08
+github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchActive(0x29fc898287a0, 0x29fc89820408, 0x7fda34e08078, 0x0, {0x29fc8972fb38, 0x0, 0x40}, {0x29fc8972fd38, 0x1, 0x40})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/host_execution.go:566 +0xac5 fp=0x29fc89828228 sp=0x29fc89827e68 pc=0x8ec6c5
+github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchForeignControl(0x29fc898287a0?, 0x29fc89820408?, 0x7fda34e08078?, 0x0?, {0x29fc8972fb38?, 0x0?, 0x40?}, {0x29fc8972fd38, 0x1, 0x40})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/host_execution.go:329 +0x19d fp=0x29fc89828378 sp=0x29fc89828228 pc=0x8ebb5d
+github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch(0x29fc898287a0, 0x7fda34e08078?, 0x0, {0x29fc8972fb38, 0x0, 0x40}, {0x29fc8972fd38, 0x1, 0x40})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/host_execution.go:310 +0x28c fp=0x29fc89828438 sp=0x29fc89828378 pc=0x8eb7ac
+github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch-fm(0x7fda34e03078?, 0x34e08078?, {0x29fc8972fb38?, 0x7fda34e03510?, 0x7fda34e03508?}, {0x29fc8972fd38?, 0x17b1160?, 0x236d9c0?})
+	<autogenerated>:1 +0x3e fp=0x29fc89828490 sp=0x29fc89828438 pc=0x161929e
+github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop(0x29fc8972fb08, 0x7fda34e04000, {0x7fda34e034e0, 0x28, 0x29fc89828ce0?}, 0x7fd9ee08f120, {0x7fda34e03510, 0x18, 0x18}, {0x7fda34e03508, ...}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/core/runtime/engine_host.go:368 +0x83f fp=0x29fc89828560 sp=0x29fc89828490 pc=0x6b137f
+github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostBase(0x29fc8972fb08, 0x7fda34e04000, {0x7fda34e034e0, 0x28, 0x28}, 0x7fd9ee08f120, {0x7fda34e03510, 0x18, 0x18}, {0x7fda34e03508, ...}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/core/runtime/engine_host.go:241 +0x434 fp=0x29fc898286d0 sp=0x29fc89828560 pc=0x6b05d4
+github.com/wago-org/wago/src/core/runtime.(*Engine).CallWithHostBase(...)
+	/tmp/wago-pr997-root-faults-20261022/src/core/runtime/engine_host.go:43
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncUnpreparedAdmitted(0x29fc89820808, 0x7fda34e04000, {0x7fda34e03510, 0x18, 0x18}, {0x0, 0x0}, 0x0)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:3085 +0x18f7 fp=0x29fc89828a10 sp=0x29fc898286d0 pc=0x90e117
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncAdmitted(0x0?, 0x29fc89828b40?, {0x7fda34e03510?, 0x29fc89820808?, 0x1?}, {0x0?, 0x0?}, 0x29fc89828b88?, 0x29fc89828b48?, 0x0, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:2720 +0x1dd fp=0x29fc89828ac0 sp=0x29fc89828a10 pc=0x90ad5d
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext.func1()
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:2691 +0x4f fp=0x29fc89828b30 sp=0x29fc89828ac0 pc=0x135eaef
+github.com/wago-org/wago/src/wago.(*resourceCleanup).run(0x29fc89828b98?, 0x44e033?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/resource_cleanup.go:24 +0x51 fp=0x29fc89828b68 sp=0x29fc89828b30 pc=0x990331
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext(0x29fc89820808, 0x7fda34e04000, {0x7fda34e03510, 0x18, 0x18}, {0x0, 0x0})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/hostcall.go:2685 +0x150 fp=0x29fc89828c38 sp=0x29fc89828b68 pc=0x90aab0
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithTokenAdmittedBody(0x29fc89820808, {0x16861f2, 0x3}, {0x0, 0x0, 0x0}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:5136 +0xa78 fp=0x29fc89828fa8 sp=0x29fc89828c38 pc=0x839298
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithTokenAdmitted.func1()
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:5030 +0x114 fp=0x29fc89829080 sp=0x29fc89828fa8 pc=0x1354894
+github.com/wago-org/wago/src/wago.(*resourceCleanup).run(0x29fc898361b0?, 0x29fc897ec280?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/resource_cleanup.go:24 +0x51 fp=0x29fc898290b8 sp=0x29fc89829080 pc=0x990331
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithTokenAdmitted(0x0?, {0x16861f2?, 0x0?}, {0x0?, 0x0?, 0x0?}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:5029 +0x17a fp=0x29fc898291d0 sp=0x29fc898290b8 pc=0x83873a
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithTokenLeased.func1()
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:5010 +0xf8 fp=0x29fc89829298 sp=0x29fc898291d0 pc=0x13546f8
+github.com/wago-org/wago/src/wago.(*resourceCleanup).run(0x0?, 0x0?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/resource_cleanup.go:24 +0x51 fp=0x29fc898292d0 sp=0x29fc89829298 pc=0x990331
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithTokenLeased(0x29fc89820808, {0x16861f2?, 0x0?}, {0x0?, 0x0?, 0x0?}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:5009 +0x18d fp=0x29fc89829440 sp=0x29fc898292d0 pc=0x8383ad
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken.func1()
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4990 +0x694 fp=0x29fc89829680 sp=0x29fc89829440 pc=0x1354494
+github.com/wago-org/wago/src/wago.(*resourceCleanup).run(0x0?, 0x242f630?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/resource_cleanup.go:24 +0x51 fp=0x29fc898296b8 sp=0x29fc89829680 pc=0x990331
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken(0x29fc89820808, {0x16861f2?, 0x29fc89829860?}, {0x0?, 0x994e12?, 0x0?}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4950 +0x19c fp=0x29fc898297e8 sp=0x29fc898296b8 pc=0x8380fc
+github.com/wago-org/wago/src/wago.(*Instance).invokeEntryLockedBody(0x0?, {0x16861f2?, 0x0?}, {0x0?, 0x0?, 0x0?}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4815 +0x9d8 fp=0x29fc898299b8 sp=0x29fc898297e8 pc=0x836b98
+github.com/wago-org/wago/src/wago.(*Instance).invokeEntryLocked(...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4761
+github.com/wago-org/wago/src/wago.(*Instance).invokeEntry.func1()
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4731 +0x96 fp=0x29fc89829a50 sp=0x29fc898299b8 pc=0x1353c16
+github.com/wago-org/wago/src/wago.(*resourceCleanup).run(0x29fc89820808?, 0x0?)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/resource_cleanup.go:24 +0x51 fp=0x29fc89829a88 sp=0x29fc89829a50 pc=0x990331
+github.com/wago-org/wago/src/wago.(*Instance).invokeEntry(0x29fc89820808, {0x16861f2, 0x3}, {0x0, 0x0, 0x0}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4730 +0x317 fp=0x29fc89829be8 sp=0x29fc89829a88 pc=0x835e77
+github.com/wago-org/wago/src/wago.(*Instance).Invoke(0x29fc89820808, {0x16861f2, 0x3}, {0x0, 0x0, 0x0})
+	/tmp/wago-pr997-root-faults-20261022/src/wago/api.go:4329 +0x629 fp=0x29fc89829c80 sp=0x29fc89829be8 pc=0x833529
+github.com/wago-org/wago/src/wago.TestGCScalarAdapterForeignHostCollection.func1(0x29fc897fa488)
+	/tmp/wago-pr997-root-faults-20261022/src/wago/gc_foreign_frame_roots_test.go:495 +0x7cb fp=0x29fc89829f70 sp=0x29fc89829c80 pc=0x142196b
+testing.tRunner(0x29fc897fa488, 0x29fc8973e3a8)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea fp=0x29fc89829fc0 sp=0x29fc89829f70 pc=0x52d66a
+testing.(*T).Run.gowrap1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x1b fp=0x29fc89829fe0 sp=0x29fc89829fc0 pc=0x53441b
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_amd64.s:1264 +0x1 fp=0x29fc89829fe8 sp=0x29fc89829fe0 pc=0x492841
+created by testing.(*T).Run in goroutine 7
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+
+rax    0xca
+rbx    0x0
+rcx    0x4943a3
+rdx    0x0
+rdi    0x247f118
+rsi    0x80
+rbp    0x7fff6a7397a8
+rsp    0x7fff6a739760
+r8     0x0
+r9     0x0
+r10    0x0
+r11    0x286
+r12    0x1
+r13    0x1
+r14    0x247dfc0
+r15    0x0
+rip    0x4943a1
+rflags 0x286
+cs     0x33
+fs     0x0
+gs     0x0
+FAIL	github.com/wago-org/wago/src/wago	12.701s
+ok  	github.com/wago-org/wago/tests/integration/runtimeconcurrency	0.002s [no tests to run]
+FAIL

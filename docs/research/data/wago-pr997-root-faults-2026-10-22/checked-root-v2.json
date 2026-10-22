@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "-tags=wago_regalloccheck",
+    "./..."
+  ],
+  "seconds": 150.0943486530159,
+  "exit": 0,
+  "user_seconds": 277.536532,
+  "system_seconds": 34.959375,
+  "peak_rss_kib": 3506104,
+  "minor_faults": 6946532,
+  "major_faults": 835,
+  "voluntary_context_switches": 416810,
+  "involuntary_context_switches": 19636
+}

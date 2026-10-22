@@ -1,0 +1,105 @@
+START fast-guards-build-candidate
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "2", "-c", "-o", "/tmp/wago-pr997-root-faults-evidence/candidate-fast.test", "./src/wago"], "seconds": 23.86160087600001, "exit": 0, "user_seconds": 40.958769, "system_seconds": 0.900137, "peak_rss_kib": 3560956, "minor_faults": 63756, "major_faults": 6, "voluntary_context_switches": 6426, "involuntary_context_switches": 1208}
+
+START fast-guards-baseline-0
+{"command": ["/tmp/wago-pr997-root-faults-evidence/baseline.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 2.5802137469872832, "exit": 0, "user_seconds": 2.555093, "system_seconds": 0.027613, "peak_rss_kib": 23832, "minor_faults": 5635, "major_faults": 0, "voluntary_context_switches": 1126, "involuntary_context_switches": 125}
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   74496	      3240 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   72446	      3264 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   85359	      2790 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   51958	      4574 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   49250	      4852 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   12820	     19219 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	16947930	        13.81 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  477519	       503.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7459	     32234 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+START fast-guards-candidate-0
+{"command": ["/tmp/wago-pr997-root-faults-evidence/candidate-fast.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 2.728256208996754, "exit": 0, "user_seconds": 2.707318, "system_seconds": 0.023750999999999998, "peak_rss_kib": 26060, "minor_faults": 6138, "major_faults": 0, "voluntary_context_switches": 1493, "involuntary_context_switches": 139}
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   74820	      3229 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   73339	      3272 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   85281	      2751 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   56628	      4208 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   48475	      4915 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   14145	     16823 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	15842496	        14.14 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  457054	       513.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7504	     32021 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+START fast-guards-baseline-1
+{"command": ["/tmp/wago-pr997-root-faults-evidence/baseline.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 2.557386353990296, "exit": 0, "user_seconds": 2.542784, "system_seconds": 0.018659, "peak_rss_kib": 23732, "minor_faults": 5722, "major_faults": 0, "voluntary_context_switches": 1132, "involuntary_context_switches": 89}
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   73044	      3238 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   72397	      3242 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   87160	      2746 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   52988	      4524 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   48753	      4887 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   12760	     18566 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	16558671	        13.70 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  489112	       490.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7678	     31068 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+START fast-guards-candidate-1
+{"command": ["/tmp/wago-pr997-root-faults-evidence/candidate-fast.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 2.5577334469999187, "exit": 0, "user_seconds": 2.545796, "system_seconds": 0.0209, "peak_rss_kib": 25992, "minor_faults": 5760, "major_faults": 0, "voluntary_context_switches": 1365, "involuntary_context_switches": 33}
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   73994	      3223 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   72424	      3232 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   87598	      2740 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   56403	      4193 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   48559	      4867 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   14202	     16867 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	17219631	        14.17 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  481018	       511.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7458	     31981 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+START fast-guards-baseline-2
+{"command": ["/tmp/wago-pr997-root-faults-evidence/baseline.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 2.578295467013959, "exit": 0, "user_seconds": 2.567365, "system_seconds": 0.01496, "peak_rss_kib": 26240, "minor_faults": 5795, "major_faults": 0, "voluntary_context_switches": 1348, "involuntary_context_switches": 89}
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   74491	      3217 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   72724	      3252 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   86176	      2756 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   52928	      4502 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   49406	      4855 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   12860	     18593 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	17655152	        13.69 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  488787	       496.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7512	     31939 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+START fast-guards-candidate-2
+{"command": ["/tmp/wago-pr997-root-faults-evidence/candidate-fast.test", "-test.run=^$", "-test.bench=Benchmark(GCNativeFrameRootsMappedStack|GCExtern(LocalRoots|ForeignRoots))$", "-test.benchtime=200ms", "-test.count=1"], "seconds": 2.5682052169868257, "exit": 0, "user_seconds": 2.541769, "system_seconds": 0.027462, "peak_rss_kib": 26028, "minor_faults": 5861, "major_faults": 0, "voluntary_context_switches": 1253, "involuntary_context_switches": 171}
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkGCExternLocalRoots/op26-2         	   73497	      3343 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternLocalRoots/op27-2         	   71713	      3289 ns/op	         0 wrong/op	     224 B/op	      12 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=8-2         	   87074	      2751 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=1/entries=256-2       	   56835	      4266 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=8-2         	   47755	      4913 ns/op	     168 B/op	       9 allocs/op
+BenchmarkGCExternForeignRoots/locals=8/entries=256-2       	   14070	     16969 ns/op	     169 B/op	       9 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=1-2          	17275089	        14.25 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=64-2         	  465884	       514.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGCNativeFrameRootsMappedStack/frames=4098-2       	    7458	     32055 ns/op	       0 B/op	       0 allocs/op
+PASS
+

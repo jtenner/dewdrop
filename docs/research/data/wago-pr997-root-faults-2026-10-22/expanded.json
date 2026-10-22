@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=1",
+    "-timeout=2m",
+    "-tags=wago_regalloccheck",
+    "./src/wago",
+    "-run",
+    "^TestGCScalarAdapter(CallerOwnership|AllocOnlyCallee|RevisitedDomain)$"
+  ],
+  "seconds": 25.266231792003964,
+  "exit": 0,
+  "user_seconds": 41.575487,
+  "system_seconds": 0.9499209999999999,
+  "peak_rss_kib": 3662920,
+  "minor_faults": 65403,
+  "major_faults": 5,
+  "voluntary_context_switches": 7009,
+  "involuntary_context_switches": 1418
+}

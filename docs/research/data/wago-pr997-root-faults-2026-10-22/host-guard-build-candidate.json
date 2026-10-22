@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-c",
+    "-o",
+    "/tmp/wago-pr997-root-faults-evidence/candidate-host.test",
+    "./src/wago"
+  ],
+  "seconds": 23.938360675994772,
+  "exit": 0,
+  "user_seconds": 41.207425,
+  "system_seconds": 0.9698019999999999,
+  "peak_rss_kib": 3609836,
+  "minor_faults": 88053,
+  "major_faults": 5,
+  "voluntary_context_switches": 7287,
+  "involuntary_context_switches": 3304
+}

@@ -1,0 +1,31 @@
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=1", "-timeout=2m", "-tags=wago_regalloccheck", "./src/wago", "-run", "^TestGCScalarAdapterRevisitedDomainAcrossStores$"], "seconds": 24.801777011991362, "exit": 1, "user_seconds": 40.956097, "system_seconds": 0.850282, "peak_rss_kib": 3660352, "minor_faults": 62577, "major_faults": 5, "voluntary_context_switches": 6675, "involuntary_context_switches": 1032}
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=false
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=true
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=false
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=true
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=false
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=true
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=false
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+=== RUN   TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=true
+    gc_foreign_frame_roots_test.go:428: root across foreign-store relay = [0], <nil>; want [73], nil
+--- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=false (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=false/retired=true (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=false (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=false/saved=true/retired=true (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=false (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=false/retired=true (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=false (0.00s)
+    --- FAIL: TestGCScalarAdapterRevisitedDomainAcrossStores/register=true/saved=true/retired=true (0.00s)
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.007s
+FAIL
+
