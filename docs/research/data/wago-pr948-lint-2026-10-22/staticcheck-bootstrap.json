@@ -1,0 +1,16 @@
+{
+  "command": [
+    "bash",
+    "scripts/bootstrap-staticcheck.sh",
+    "--verify"
+  ],
+  "seconds": 6.319824487000005,
+  "exit": 0,
+  "user_seconds": 13.101034,
+  "system_seconds": 1.594088,
+  "peak_rss_kib": 323744,
+  "minor_faults": 169999,
+  "major_faults": 8,
+  "voluntary_context_switches": 38661,
+  "involuntary_context_switches": 1862
+}

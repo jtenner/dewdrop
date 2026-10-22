@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-count=1",
+    "-tags=wago_codegenstats,wago_regalloccheck",
+    "./src/wago",
+    "-run",
+    "Test(GCNumericLeafInline|GCTrappingGuard.*Admission)"
+  ],
+  "seconds": 3.8777669120026985,
+  "exit": 1,
+  "user_seconds": 5.7041319999999995,
+  "system_seconds": 0.228156,
+  "peak_rss_kib": 398684,
+  "minor_faults": 20754,
+  "major_faults": 0,
+  "voluntary_context_switches": 1957,
+  "involuntary_context_switches": 232
+}

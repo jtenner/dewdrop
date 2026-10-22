@@ -1,0 +1,14 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/948",
+  "head": "1d9fbd47205e4d1686f868074a1fcd5aebbee01d",
+  "parent": "72e684df38cef599be936dbed3229a5a5b85999e",
+  "push_accepted": true,
+  "force_pushed": false,
+  "pr_merged": false,
+  "worktree": "/tmp/wago-pr948-main-sync-20261022",
+  "branch": "dewdrop/pr948-main-sync-20261022",
+  "worktree_clean": true,
+  "github_head": "1d9fbd47205e4d1686f868074a1fcd5aebbee01d",
+  "github_mergeable": true,
+  "github_state": "open"
+}

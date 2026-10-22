@@ -1,0 +1,15 @@
+# github.com/wago-org/wago/src/wago [github.com/wago-org/wago/src/wago.test]
+src/wago/gc_numeric_leaf_inline_stats_amd64_test.go:23:51: not enough arguments in call to newGCFrameRootPlan
+	have (*wasm.Module, bool, *string, nil)
+	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+src/wago/gc_numeric_leaf_inline_stats_amd64_test.go:54:52: not enough arguments in call to newGCFrameRootPlan
+	have (*wasm.Module, bool, *string, nil)
+	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+src/wago/gc_trapping_guard_stats_amd64_test.go:32:52: not enough arguments in call to newGCFrameRootPlan
+	have (*wasm.Module, bool, *string, nil)
+	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+src/wago/gc_trapping_guard_stats_amd64_test.go:129:51: not enough arguments in call to newGCFrameRootPlan
+	have (*wasm.Module, bool, *string, nil)
+	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+FAIL	github.com/wago-org/wago/src/wago [build failed]
+FAIL

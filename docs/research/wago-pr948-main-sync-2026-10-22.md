@@ -45,3 +45,35 @@ update makes no new speed claim. Hosted CI for the new merge is pending.
 are saved with commands, raw failures, final output, CPU time and peak RSS.
 The isolated Wago branch is `dewdrop/pr948-main-sync-20261022`, at
 `/tmp/wago-pr948-main-sync-20261022`. Existing dirty checkouts are untouched.
+
+
+## Tagged lint follow-up: 2026-10-22
+
+The hosted [lint job](https://github.com/wago-org/wago/actions/runs/39732958160/job/119672128373)
+exposes four old root-planner calls in the numeric-leaf and trapping-guard stats
+fixtures. These files are excluded from ordinary/register-check builds and
+included by the diagnostics lint profile. The error is a compile failure,
+wrapped in the baseline runner's incomplete-diagnostic message.
+
+Commit `1d9fbd472` supplies the new exact-roots and generic-execution inputs in
+all four calls. The source/native callsite, root, trap, pin, import, selection,
+and counter assertions remain intact. Runtime lowering and the lint baseline
+are unchanged. The focused combined stats/register-check command reproduces
+all four errors before the fix and passes afterward: 25.450 s including build,
+0.009 s package execution, peak RSS 3,664,760 KiB.
+
+The full `just lint` gate passes with verified Staticcheck 2026.2.1 built by
+Go 1.27.1: formatting, generated-file sync, both vet profiles, all four
+Staticcheck profiles, and four script test commands. The lint gate takes
+172.806 s and peaks at 3,649,928 KiB RSS. Existing baseline findings remain
+visible; all profiles report zero new findings. Documentation passes for 99
+Markdown files. The long activities remain above the 30-second target and
+make no new compiler speed claim.
+
+The fast-forward push to the existing PR branch is accepted. No force push or
+PR merge was made. Hosted CI for the new head is pending; T3 keeps watching.
+[Identity](data/wago-pr948-lint-2026-10-22/identity.json),
+[red build](data/wago-pr948-lint-2026-10-22/stats-fixtures-red.log),
+[green tagged tests](data/wago-pr948-lint-2026-10-22/stats-fixtures-green.json), and
+[full lint](data/wago-pr948-lint-2026-10-22/full-lint.json)
+retain exact commands, output, verified tool provenance, and resource use.
