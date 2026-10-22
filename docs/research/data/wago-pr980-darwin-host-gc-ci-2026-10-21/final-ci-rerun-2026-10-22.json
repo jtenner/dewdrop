@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-22 05:55:37 UTC",
+  "pull_request": "https://github.com/wago-org/wago/pull/980",
+  "head": "a8b72ce7a0775c5d3d4a642357aec9dfbbb72d57",
+  "run_id": 39606585738,
+  "aggregate_job": 119577547741,
+  "root_failures": [
+    {
+      "job": 119252800446,
+      "test": "TestBoundedHostYieldAllowsGCAndCancellationWithOneP/HostCall",
+      "error": "bounded host segments prevented GC progress"
+    },
+    {
+      "job": 119252800452,
+      "test": "TestCorpus/clang-cpp-kernels/CompileFull",
+      "error": "corpus child timed out after 15s"
+    }
+  ],
+  "aggregate_error": "expected CI job app-corpus-verify did not succeed: skipped",
+  "workflow_before_retry": {
+    "status": "completed",
+    "conclusion": "failure"
+  },
+  "action": "rerun_failed_workflow_run_jobs",
+  "result": {
+    "success": true
+  },
+  "source_changes": false,
+  "native_darwin_result": "pending"
+}

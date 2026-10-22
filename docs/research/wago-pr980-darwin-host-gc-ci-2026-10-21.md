@@ -62,3 +62,17 @@ watch active and retry after the workflow ends. Do not cancel other jobs.
 Failure excerpts, local output and retry rejection are saved beside the
 earlier evidence with the `darwin-amd64-corpus` and `linux-compile-full`
 prefixes.
+
+## Final CI result and accepted retry: 2026-10-22
+
+The completed workflow's final [CI job](https://github.com/wago-org/wago/actions/runs/39606585738/job/119577547741)
+fails because `app-corpus-verify` was skipped. Its inputs also show failures in
+`platform-test` and `corpus-correctness`. The detailed logs confirm the same two
+Darwin failures described above; the aggregate adds no new compiler failure.
+
+The workflow now reports `completed/failure`, so the earlier running-workflow
+restriction no longer applies. One request to rerun only failed jobs succeeds.
+The request/result and exact job IDs are saved in
+`data/wago-pr980-darwin-host-gc-ci-2026-10-21/final-ci-rerun-2026-10-22.json`.
+No source or timeout limit changed. Native Darwin results remain pending.
+T3 Code continues to watch PR #980 and will wake this thread when results change.
