@@ -1,0 +1,237 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/948",
+  "head": "de5213561684394b128519446486e4809ea89096",
+  "state": "open",
+  "draft": false,
+  "mergeable": true,
+  "notification": "All 4 reported checks passed",
+  "runs": [
+    {
+      "id": 39740480177,
+      "name": "CI",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 4926,
+      "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39740480177/jobs",
+      "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39740480177/logs",
+      "workflow_id": 302447088
+    },
+    {
+      "id": 39740480145,
+      "name": "Regression stress",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 1228,
+      "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39740480145/jobs",
+      "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39740480145/logs",
+      "workflow_id": 325379040
+    },
+    {
+      "id": 39740480144,
+      "name": "Linux RISC-V64 / RISE",
+      "status": "in_progress",
+      "conclusion": null,
+      "run_number": 165,
+      "jobs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39740480144/jobs",
+      "logs_url": "https://api.github.com/repos/wago-org/wago/actions/runs/39740480144/logs",
+      "workflow_id": 382573256
+    }
+  ],
+  "ciJobsFirstPage": [
+    {
+      "id": 119696778556,
+      "name": "Plan CI profile",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119696780474,
+      "name": "Draft smoke / Linux amd64",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 119697327795,
+      "name": "Lint & format",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697327831,
+      "name": "Documentation",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697327866,
+      "name": "Regression corpus integrity",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697327954,
+      "name": "Core v2 conformance / Linux arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328002,
+      "name": "Build size",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328003,
+      "name": "Core v3 conformance / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328014,
+      "name": "Windows / arm64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328031,
+      "name": "WebAssembly 1.0 conformance / Linux arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328037,
+      "name": "Core v3 conformance / Linux arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328047,
+      "name": "Linux / amd64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328072,
+      "name": "Darwin / amd64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328091,
+      "name": "Windows / amd64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328107,
+      "name": "Race detector / Linux amd64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328115,
+      "name": "WebAssembly 1.0 conformance / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328121,
+      "name": "TinyGo / Linux / arm64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328130,
+      "name": "Darwin / arm64",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 119697328163,
+      "name": "Core v3 conformance / Darwin arm64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328181,
+      "name": "Core v2 conformance / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328183,
+      "name": "TinyGo / Linux / amd64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328237,
+      "name": "Current Go / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328279,
+      "name": "Corpus correctness / Darwin amd64 / shard 3 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328313,
+      "name": "Corpus correctness / Windows arm64 / shard 2 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328328,
+      "name": "Linux / arm64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119697328347,
+      "name": "Bounded fuzzing / Linux amd64",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328355,
+      "name": "Corpus correctness / Windows arm64 / shard 4 of 4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328367,
+      "name": "Application corpus / Darwin arm64 / shard 1 of 2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328373,
+      "name": "Application corpus / Linux arm64 / shard 2 of 2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119697328378,
+      "name": "Corpus correctness / Darwin amd64 / shard 1 of 4",
+      "status": "queued",
+      "conclusion": null
+    }
+  ],
+  "riseJobs": [
+    {
+      "id": 119696589566,
+      "name": "Prepare pinned specification fixtures",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119696865746,
+      "name": "JIT / native Linux RISC-V64",
+      "status": "in_progress",
+      "conclusion": null
+    }
+  ],
+  "decision": "Native RISC-V job and full required CI remain incomplete. Keep watch; no source change, retry, or merge."
+}

@@ -136,3 +136,21 @@ new head is pending; T3 keeps watching. [Identity and push state](data/wago-pr94
 [source-mode results](data/wago-pr948-riscv-artifact-2026-10-22/source-dispatcher-and-cached-starts.json),
 and [compiler-free results](data/wago-pr948-riscv-artifact-2026-10-22/precompiled-managed-dispatch.json)
 retain commands, raw output, resources, and generated artifacts.
+
+
+## Reported green checks; full CI still pending
+
+The four-check success notice is for current head `de5213561`. GitHub confirms
+that the PR remains open, non-draft, and mergeable. The
+[full CI run](https://github.com/wago-org/wago/actions/runs/39740480177)
+has green lint, docs, build size, several conformance and corpus jobs, but
+platform, race, and TinyGo jobs are still in progress or queued in the returned
+first page. Draft smoke is skipped. Regression stress is skipped.
+The separate [native RISC-V job](https://github.com/wago-org/wago/actions/runs/39740480144/job/119696865746)
+is still running after successful fixture preparation. This notice does not
+establish that the dispatcher repair has passed native qualification yet.
+
+[The hosted snapshot](data/wago-pr948-riscv-artifact-2026-10-22/reported-green-ci-pending.json)
+records these states and the job-list pagination limit. No new source change,
+old-run retry, or merge is needed. Keep T3 watching until the remaining jobs
+finish; monitoring is not handed back as complete.
