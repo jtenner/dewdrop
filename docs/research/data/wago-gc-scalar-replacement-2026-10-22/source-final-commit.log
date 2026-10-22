@@ -1,0 +1,5 @@
+wago: running gofmt on staged Go files
+wago: gofmt ok
+[dewdrop/gc-large-promotion-sort-20261022 44bb8e1bc] perf(gc): reuse bounded workspace for large promotion sorts
+ 3 files changed, 171 insertions(+), 5 deletions(-)
+ create mode 100644 docs/research/large-promotion-sort-2026-10-22.md

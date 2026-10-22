@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run",
+    "^TestPromotionSort",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 14.35437776800245,
+  "exit": 0,
+  "user_seconds": 15.627611,
+  "system_seconds": 0.264961,
+  "peak_rss_kib": 324012
+}

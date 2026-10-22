@@ -1,0 +1,230 @@
+From 44bb8e1bc3b2b175b20600f9870d58d4a1219fef Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 12:40:50 +0000
+Subject: [PATCH] perf(gc): reuse bounded workspace for large promotion sorts
+
+---
+ .../large-promotion-sort-2026-10-22.md        | 92 +++++++++++++++++++
+ src/core/runtime/gc/native/promotion_sort.go  | 10 +-
+ .../runtime/gc/native/promotion_sort_test.go  | 74 ++++++++++++++-
+ 3 files changed, 171 insertions(+), 5 deletions(-)
+ create mode 100644 docs/research/large-promotion-sort-2026-10-22.md
+
+diff --git a/docs/research/large-promotion-sort-2026-10-22.md b/docs/research/large-promotion-sort-2026-10-22.md
+new file mode 100644
+index 000000000..bbd0e830b
+--- /dev/null
++++ b/docs/research/large-promotion-sort-2026-10-22.md
+@@ -0,0 +1,92 @@
++# Large promotion sorting after the scalar-replacement screen
++
++The four-second Dew compiler target remains unmet. This is a small local GC
++improvement above deferred-GC commit `7f748b9ed0cb2822a69af4913871ccb0a1aa193f`.
++It is not installed or published.
++
++## Scope and discarded approaches
++
++A fresh diagnostic run of the frozen deferred-GC host records 29.95 sampled CPU
++seconds: 23.02 seconds in generated code, 1.60 cumulative seconds in dead nursery
++handle cleanup, and 0.62 cumulative seconds in promotion sorting. Diagnostic
++elapsed time and RSS are not production comparisons.
++
++The first bounded scalar-replacement screen finds 2,948 nonempty scalar-only
++constructors, 201 immediately assigned to locals, and two adjacent local reads.
++Neither adjacent read is a qualifying scalar projection. This does not rule out
++wider escape analysis. Returned wrappers, reference payloads, and analysis across
++calls need a broader proof. No scalar-replacement optimization was added.
++
++A four-handle cleanup prototype retains every check and passes mixed-object and
++exceptional-ledger tests. Its isolated dense and scattered cases regress, so its
++production change was removed. The patch and tests remain research evidence.
++
++A diagnostic size census finds 79 promotion sorts, 70 above the old 65,536-plan
++limit; the largest has 500,664 plans. A temporary large workspace improves the
++isolated sort, but gives an overlapping 28.7163-to-28.4683-second full-job median
++and about 9.6 MiB higher median RSS. That version is superseded.
++
++## Final change
++
++Increase the lazily grown stable counting-sort workspace limit from 65,536 to
++1,048,576 plans: 20 MiB per collector at its maximum, versus 1.25 MiB before.
++Small collections allocate only their existing needed capacity. Larger batches
++keep the in-place comparison sort. Close releases the workspace.
++
++Use the allocation-size key already filled by `promotionPlansSorted` instead of
++reading the handle table again in both bucket passes. All production sorting
++calls fill these keys first. The stable kind/size order, equal-key order,
++allocation groups, failure points, roots, handles, and native ABI remain intact.
++The existing reference sort remains the independent order oracle.
++
++Large-buffer reuse avoids a new temporary allocation on every collection. Tests
++check both sides of the bound, exact stable ordering, mixed plan kinds, cleared
++workspace entries, and zero warm allocations. The raw microbenchmark includes
++amortized initial workspace bytes; zero bytes/op is not claimed.
++
++## Matched full jobs
++
++Use the same pinned compiler, request, frozen private managed-instance host,
++512 MiB heap, 64 MiB nursery, CPUs 12/14, GOMAXPROCS=2, no transform workers,
++and fresh native/result caches. No task-owned builds or tests overlap timing.
++The control and final candidate differ only in `promotion_sort.go`.
++
++Three serial pairs, with order control/candidate, candidate/control,
++control/candidate, give these elapsed seconds:
++
++- 28.973310 / 28.845930: saves 0.127380 seconds.
++- 28.661564 / 28.533480: saves 0.128084 seconds.
++- 28.933298 / 28.581888: saves 0.351410 seconds.
++
++All three pairs improve. Independent medians are 28.933298 and 28.581888 seconds
++(1.215% lower); the median paired saving is 0.128084 seconds. The overlapping
++ranges and three-pair sample limit the strength of the result. This is a small
++measured gain, not a general speed claim or a route established to four seconds.
++
++Median CPU is 29.305909 versus 28.927885 seconds. Median RSS is 648,956 versus
++649,232 KiB (+276 KiB); ranges overlap, so no memory gain is claimed. Retained
++workspace can still grow more on other workloads. Isolated large-sort cases
++improve 12.4–14.1 times. These factors do not apply to the full job.
++
++All six output Wasm/cache hashes match the pinned expected values. Wasm validation
++passes, and output `main` returns 42. V8 was not rerun.
++
++## Validation and limits
++
++Full collector, runtime, and Wago suites pass. Collector fault-injection,
++padded-header, workers/concurrent-product, race-focused sort, and checked Wago GC
++lanes pass. The final memory-bound assertion also passes. No assertion, root map,
++trap check, failure point, or product gate was relaxed.
++
++The initial full suite failed because this new checkout lacked the pinned
++Release 3 corpus. Restoring the existing pinned files and interpreter made the
++rerun pass. The failure remains in the raw record. Early setup failures and a
++no-match cleanup test command are excluded from measurements. Full Wago test
++execution still takes about 40 seconds, and some build/test processes exceed
++30 seconds and 3 GiB RSS; these remain test/build budget problems, not production
++memory results.
++
++Source and timed hosts remain under `/tmp/wago-gc-scalar-replacement-20261022`
++and `/tmp/wago-gc-scalar-evidence`. Small logs, scripts, discarded patches, output
++hashes, and large-artifact hashes are saved in Dewdrop at
++`docs/research/data/wago-gc-scalar-replacement-2026-10-22/`.
+diff --git a/src/core/runtime/gc/native/promotion_sort.go b/src/core/runtime/gc/native/promotion_sort.go
+index 58633199e..6df5cf6ff 100644
+--- a/src/core/runtime/gc/native/promotion_sort.go
++++ b/src/core/runtime/gc/native/promotion_sort.go
+@@ -5,9 +5,9 @@ import (
+ 	"slices"
+ )
+ 
+-// A plan has no Go pointers. Bound the extra retained storage to 1.25 MiB
+-// (65536 * 20 bytes); larger collections keep the in-place stable sort.
+-const maxPromotionSortPlans = 65536
++// A plan has no Go pointers. Bound the lazily grown workspace to 20 MiB
++// (1048576 * 20 bytes); larger collections keep the in-place stable sort.
++const maxPromotionSortPlans = 1 << 20
+ const minPromotionSortPlans = 64
+ 
+ // sortPromotionPlans preserves the existing stable (kind, allocation-size)
+@@ -59,7 +59,9 @@ func (c *Collector) promotionSortBucket(p plannedPromotion) int {
+ 	case spaceNursery:
+ 		return 0
+ 	case spaceFree:
+-		size := Align16(c.handles[p.handle].size)
++		// promotionPlansSorted cached the exact allocation-size key for every
++		// free plan before sorting. Reuse it instead of revisiting the handle.
++		size := p.entry.size
+ 		if size <= c.throughput.classLimit {
+ 			if class := c.throughput.classFor(size); class >= 0 {
+ 				return class + 1
+diff --git a/src/core/runtime/gc/native/promotion_sort_test.go b/src/core/runtime/gc/native/promotion_sort_test.go
+index 71fca4ba5..15fa60c45 100644
+--- a/src/core/runtime/gc/native/promotion_sort_test.go
++++ b/src/core/runtime/gc/native/promotion_sort_test.go
+@@ -52,7 +52,7 @@ func promotionSortFixture(n int, classLimit uint32, mixed bool) (*Collector, []p
+ 
+ func TestPromotionSortMatchesStableOrder(t *testing.T) {
+ 	for _, limit := range []uint32{32, 128, 4096, 32768} {
+-		for _, n := range []int{0, 1, 17, 32, 127, 4096, maxPromotionSortPlans, maxPromotionSortPlans + 1} {
++		for _, n := range []int{0, 1, 17, 32, 127, 4096, 65536, 65537} {
+ 			t.Run(fmt.Sprintf("limit-%d/plans-%d", limit, n), func(t *testing.T) {
+ 				c, plans := promotionSortFixture(n, limit, true)
+ 				want := slices.Clone(plans)
+@@ -133,3 +133,75 @@ func BenchmarkPromotionPlanSort(b *testing.B) {
+ 		}
+ 	}
+ }
++
++func TestPromotionSortLargeStableOrderAndBound(t *testing.T) {
++	for _, n := range []int{65537, 262144, maxPromotionSortPlans, maxPromotionSortPlans + 1} {
++		t.Run(fmt.Sprint(n), func(t *testing.T) {
++			c, plans := promotionSortFixture(n, 4096, false)
++			for i := range plans {
++				if i%11 == 0 {
++					plans[i].entry = handleEntry{space: spaceNursery, off: uint32(i), size: c.handles[plans[i].handle].size}
++				} else if i%11 == 1 {
++					plans[i].entry = handleEntry{space: spaceLarge, off: uint32(i), size: c.handles[plans[i].handle].size}
++				}
++			}
++			want := slices.Clone(plans)
++			referencePromotionSort(c, want)
++			c.sortPromotionPlans(plans)
++			if !slices.Equal(plans, want) {
++				for i := range plans {
++					if plans[i] != want[i] {
++						t.Fatalf("plan %d: got %+v want %+v", i, plans[i], want[i])
++					}
++				}
++			}
++			if cap(c.promotionSortScratch) > maxPromotionSortPlans {
++				t.Fatalf("large sort retained %d plans", cap(c.promotionSortScratch))
++			}
++			if n > maxPromotionSortPlans && cap(c.promotionSortScratch) != 0 {
++				t.Fatalf("oversized sort allocated workspace: %d plans", cap(c.promotionSortScratch))
++			}
++			for i, p := range c.promotionSortScratch[:cap(c.promotionSortScratch)] {
++				if p != (plannedPromotion{}) {
++					t.Fatalf("workspace %d retains %+v", i, p)
++				}
++			}
++		})
++	}
++}
++
++func TestPromotionSortLargeReusesWorkspace(t *testing.T) {
++	c, seed := promotionSortFixture(262144, 4096, false)
++	plans := slices.Clone(seed)
++	c.sortPromotionPlans(plans)
++	capacity := cap(c.promotionSortScratch)
++	allocs := testing.AllocsPerRun(5, func() { copy(plans, seed); c.sortPromotionPlans(plans) })
++	if allocs != 0 {
++		t.Fatalf("warm large sort allocated %g times", allocs)
++	}
++	small := slices.Clone(seed[:4096])
++	c.sortPromotionPlans(small)
++	if cap(c.promotionSortScratch) != capacity || capacity > maxPromotionSortPlans {
++		t.Fatalf("workspace capacity changed %d -> %d", capacity, cap(c.promotionSortScratch))
++	}
++	for i, p := range c.promotionSortScratch[:capacity] {
++		if p != (plannedPromotion{}) {
++			t.Fatalf("workspace %d retains %+v", i, p)
++		}
++	}
++}
++
++func BenchmarkPromotionPlanSortLarge(b *testing.B) {
++	for _, n := range []int{65537, 262144, 524288} {
++		b.Run(fmt.Sprint(n), func(b *testing.B) {
++			c, seed := promotionSortFixture(n, 4096, false)
++			plans := slices.Clone(seed)
++			b.ReportAllocs()
++			b.ResetTimer()
++			for range b.N {
++				copy(plans, seed)
++				c.sortPromotionPlans(plans)
++			}
++		})
++	}
++}
+-- 
+2.47.3
+

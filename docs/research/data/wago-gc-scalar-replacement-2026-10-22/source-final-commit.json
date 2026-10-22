@@ -1,0 +1,13 @@
+{
+  "command": [
+    "git",
+    "commit",
+    "-m",
+    "perf(gc): reuse bounded workspace for large promotion sorts"
+  ],
+  "seconds": 0.04179774801013991,
+  "exit": 0,
+  "user_seconds": 0.019473999999999998,
+  "system_seconds": 0.042706999999999995,
+  "peak_rss_kib": 12236
+}

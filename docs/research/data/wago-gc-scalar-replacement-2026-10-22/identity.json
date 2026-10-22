@@ -1,0 +1,299 @@
+{
+  "base_commit": "7f748b9ed0cb2822a69af4913871ccb0a1aa193f",
+  "source": "/tmp/wago-gc-scalar-replacement-20261022",
+  "frozen_host_base": "/tmp/wago-gc-deferred-evidence/final-source",
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+  "production_changes": [
+    "src/core/runtime/gc/native/promotion_sort.go"
+  ],
+  "no_install": true,
+  "checks": {
+    "candidate-sort-check": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-run",
+        "^TestPromotionSort",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 4.501028059981763,
+      "exit": 0,
+      "user_seconds": 6.083563,
+      "system_seconds": 0.17618999999999999,
+      "peak_rss_kib": 300988
+    },
+    "sort-faults": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wagodebug",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 6.122748221998336,
+      "exit": 0,
+      "user_seconds": 7.591169,
+      "system_seconds": 0.506026,
+      "peak_rss_kib": 322308
+    },
+    "sort-padded": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wago_gc_struct_headers",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 6.13641850501881,
+      "exit": 0,
+      "user_seconds": 7.616111,
+      "system_seconds": 0.512413,
+      "peak_rss_kib": 317364
+    },
+    "sort-workers": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wago_gc_workers wago_gc_concurrent",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 6.452353458997095,
+      "exit": 0,
+      "user_seconds": 7.948168,
+      "system_seconds": 0.581069,
+      "peak_rss_kib": 329280
+    },
+    "sort-race": {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^TestPromotionSort",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 13.615750453987857,
+      "exit": 0,
+      "user_seconds": 13.203765,
+      "system_seconds": 0.46099799999999996,
+      "peak_rss_kib": 452892
+    },
+    "sort-checked": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wago_regalloccheck",
+        "-run",
+        "TestGC",
+        "./src/wago"
+      ],
+      "seconds": 31.70756713699666,
+      "exit": 0,
+      "user_seconds": 52.558274,
+      "system_seconds": 2.607902,
+      "peak_rss_kib": 3416176
+    },
+    "sort-normal": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "./src/core/runtime/gc/native",
+        "./src/core/runtime",
+        "./src/wago"
+      ],
+      "seconds": 64.6574346209818,
+      "exit": 1,
+      "user_seconds": 80.051789,
+      "system_seconds": 14.252558,
+      "peak_rss_kib": 3405508
+    },
+    "sort-normal-r2": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "./src/core/runtime/gc/native",
+        "./src/core/runtime",
+        "./src/wago"
+      ],
+      "seconds": 40.91571361399838,
+      "exit": 0,
+      "user_seconds": 33.974396,
+      "system_seconds": 15.177641,
+      "peak_rss_kib": 681816
+    }
+  },
+  "hosts": {
+    "control": {
+      "sha256": "473f38894dc4276af6814e0b68c5af694df3991106263b8f64a6b934d3f008bc",
+      "bytes": 17357751
+    },
+    "candidate": {
+      "sha256": "c107407548b6286d4554128f2861c4737212ebe23034e67531ef72d9351c3637",
+      "bytes": 17357791
+    }
+  },
+  "final_branch": "dewdrop/gc-large-promotion-sort-20261022",
+  "final_host": {
+    "path": "/tmp/wago-gc-scalar-evidence/reuse-host",
+    "bytes": 17353247,
+    "sha256": "69bce56dacad8f3b185c1c12287e663010a942a348483df994a5094fdb98bf90"
+  },
+  "qualified_checks": {
+    "reuse-normal": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "./src/core/runtime/gc/native",
+        "./src/core/runtime",
+        "./src/wago"
+      ],
+      "seconds": 68.27499608899234,
+      "exit": 0,
+      "user_seconds": 83.549298,
+      "system_seconds": 16.975217,
+      "peak_rss_kib": 3462700
+    },
+    "reuse-faults": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wagodebug",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 5.691161651018774,
+      "exit": 0,
+      "user_seconds": 7.170397,
+      "system_seconds": 0.330242,
+      "peak_rss_kib": 328548
+    },
+    "reuse-checked": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wago_regalloccheck",
+        "-run",
+        "TestGC",
+        "./src/wago"
+      ],
+      "seconds": 30.18824561400106,
+      "exit": 0,
+      "user_seconds": 49.183964,
+      "system_seconds": 1.862708,
+      "peak_rss_kib": 3423296
+    },
+    "reuse-padded": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wago_gc_struct_headers",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 5.906201306002913,
+      "exit": 0,
+      "user_seconds": 7.455934,
+      "system_seconds": 0.342922,
+      "peak_rss_kib": 320012
+    },
+    "reuse-race": {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^TestPromotionSort",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 14.181445418013027,
+      "exit": 0,
+      "user_seconds": 13.811105,
+      "system_seconds": 0.46765799999999996,
+      "peak_rss_kib": 504944
+    },
+    "reuse-workers": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-tags=wago_gc_workers wago_gc_concurrent",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 5.626668212993536,
+      "exit": 0,
+      "user_seconds": 7.020718,
+      "system_seconds": 0.307922,
+      "peak_rss_kib": 341148
+    },
+    "final-sort-bound": {
+      "command": [
+        "go",
+        "test",
+        "-count=1",
+        "-run",
+        "^TestPromotionSortLarge",
+        "./src/core/runtime/gc/native"
+      ],
+      "seconds": 3.614686564018484,
+      "exit": 0,
+      "user_seconds": 5.006016,
+      "system_seconds": 0.160401,
+      "peak_rss_kib": 309852
+    }
+  },
+  "raw_artifacts": {
+    "profile-baseline/cpu.pprof": {
+      "path": "/tmp/wago-gc-scalar-evidence/profile-baseline/cpu.pprof",
+      "bytes": 32301,
+      "sha256": "4dca76178c01928292b2ce135c01eb90b10c2fbce3f819373b76f74256015301"
+    },
+    "profile-baseline/code-map.json": {
+      "path": "/tmp/wago-gc-scalar-evidence/profile-baseline/code-map.json",
+      "bytes": 51050087,
+      "sha256": "84f8994f73be6dcfa357721c21f8874c65e90a619c44c9c5861baaf66750faba"
+    },
+    "profile/cpu.pprof": {
+      "path": "/tmp/wago-gc-scalar-evidence/profile/cpu.pprof",
+      "bytes": 32131,
+      "sha256": "9b9c979cd1b5e5c7db80f205d0c0966ffddc994e6026b09dc01307196d6ef2bc"
+    },
+    "profile/code-map.json": {
+      "path": "/tmp/wago-gc-scalar-evidence/profile/code-map.json",
+      "bytes": 51050087,
+      "sha256": "5b068db94ade57f2ad327f2725cdb37c90923f69b3a4b82dd1fa14df407fd9c7"
+    },
+    "control-host": {
+      "path": "/tmp/wago-gc-scalar-evidence/control-host",
+      "bytes": 17357751,
+      "sha256": "473f38894dc4276af6814e0b68c5af694df3991106263b8f64a6b934d3f008bc"
+    },
+    "candidate-host": {
+      "path": "/tmp/wago-gc-scalar-evidence/candidate-host",
+      "bytes": 17357791,
+      "sha256": "c107407548b6286d4554128f2861c4737212ebe23034e67531ef72d9351c3637"
+    },
+    "reuse-host": {
+      "path": "/tmp/wago-gc-scalar-evidence/reuse-host",
+      "bytes": 17353247,
+      "sha256": "69bce56dacad8f3b185c1c12287e663010a942a348483df994a5094fdb98bf90"
+    },
+    "compiler.wat": {
+      "path": "/tmp/wago-gc-scalar-evidence/compiler.wat",
+      "bytes": 28344413,
+      "sha256": "ebc455ceed1108c4b9d39a760bfde6758378864a9b3e60e209531f376a7a7f52"
+    }
+  },
+  "final_source_commit": "44bb8e1bc3b2b175b20600f9870d58d4a1219fef",
+  "final_patch_sha256": "582101dc4018cfeaf1eee186e0fc4c6848379514ccf56492501b4971a0048637",
+  "final_production_file_sha256": "a9b8c49ba134196a8208468d5c0ab9eadb52647ae2e1c466811351a590d892f0"
+}

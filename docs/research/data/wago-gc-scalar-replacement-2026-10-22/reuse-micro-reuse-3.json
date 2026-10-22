@@ -1,0 +1,17 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "15",
+    "/tmp/wago-gc-scalar-evidence/reuse-sort.test",
+    "-test.run=^$",
+    "-test.bench=^BenchmarkPromotionPlanSortLarge$",
+    "-test.benchtime=200ms",
+    "-test.count=2"
+  ],
+  "seconds": 1.742423014016822,
+  "exit": 0,
+  "user_seconds": 1.724804,
+  "system_seconds": 0.009946,
+  "peak_rss_kib": 47196
+}

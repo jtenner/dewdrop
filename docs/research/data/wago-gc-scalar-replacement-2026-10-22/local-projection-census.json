@@ -1,0 +1,9 @@
+{
+  "seconds": 0.6147474329918623,
+  "counts": {
+    "scalar constructors": 2948,
+    "local set": 201,
+    "adjacent local projection": 2
+  },
+  "examples": []
+}

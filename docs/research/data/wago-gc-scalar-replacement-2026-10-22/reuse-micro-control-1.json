@@ -1,0 +1,17 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "15",
+    "/tmp/wago-gc-scalar-evidence/control-sort.test",
+    "-test.run=^$",
+    "-test.bench=^BenchmarkPromotionPlanSortLarge$",
+    "-test.benchtime=200ms",
+    "-test.count=2"
+  ],
+  "seconds": 2.4446622579998802,
+  "exit": 0,
+  "user_seconds": 2.429551,
+  "system_seconds": 0.004965,
+  "peak_rss_kib": 36884
+}

@@ -1,0 +1,34 @@
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 91a0d778b..b9c7b9cdb 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -297,6 +297,29 @@ func (c *Collector) finishSparseMinorEvacuation() {
+ 	// Descending traversal leaves every unread free-list and nursery entry in
+ 	// place. Retained young identities occupy the already-read nursery suffix.
+ 	for i := len(nursery) - 1; i >= 0; i-- {
++		// Independent handle reads can overlap when the young ledger is
++		// scattered across a large table. Keep the common dead/card-free case
++		// in groups of four; any exception uses the unchanged scalar path.
++		// The copied free-list already has all four identities in source order.
++		if i >= 3 {
++			h0, h1, h2, h3 := nursery[i], nursery[i-1], nursery[i-2], nursery[i-3]
++			if h0 != 0 && int(h0) < len(c.handles) &&
++				h1 != 0 && int(h1) < len(c.handles) &&
++				h2 != 0 && int(h2) < len(c.handles) &&
++				h3 != 0 && int(h3) < len(c.handles) &&
++				h0 != h1 && h0 != h2 && h0 != h3 && h1 != h2 && h1 != h3 && h2 != h3 {
++				e0, e1, e2, e3 := &c.handles[h0], &c.handles[h1], &c.handles[h2], &c.handles[h3]
++				if !c.mark[h0] && !c.mark[h1] && !c.mark[h2] && !c.mark[h3] &&
++					e0.space == spaceNursery && e1.space == spaceNursery &&
++					e2.space == spaceNursery && e3.space == spaceNursery &&
++					c.cardSlot(h0) == 0 && c.cardSlot(h1) == 0 &&
++					c.cardSlot(h2) == 0 && c.cardSlot(h3) == 0 {
++					e0.space, e1.space, e2.space, e3.space = spaceFree, spaceFree, spaceFree, spaceFree
++					i -= 3
++					continue
++				}
++			}
++		}
+ 		h := nursery[i]
+ 		if h != 0 && int(h) < len(c.handles) {
+ 			if c.mark[h] {

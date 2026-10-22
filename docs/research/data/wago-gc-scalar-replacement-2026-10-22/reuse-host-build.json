@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X=main.runtimePatchIdentity=gc-sort-reuse",
+    "-o",
+    "/tmp/wago-gc-scalar-evidence/reuse-host",
+    "."
+  ],
+  "seconds": 7.9267220410110895,
+  "exit": 0,
+  "user_seconds": 14.959978,
+  "system_seconds": 0.7625379999999999,
+  "peak_rss_kib": 561164
+}

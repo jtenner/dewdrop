@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run",
+    "^TestSparseCleanupMixedPositions$",
+    "-bench",
+    "^BenchmarkSparseCleanup$",
+    "-benchtime=150ms",
+    "-count=3",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 3.827449032018194,
+  "exit": 0,
+  "user_seconds": 5.320968,
+  "system_seconds": 0.198845,
+  "peak_rss_kib": 323928
+}

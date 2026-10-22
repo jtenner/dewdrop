@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X=main.runtimePatchIdentity=gc-sort-control",
+    "-o",
+    "/tmp/wago-gc-scalar-evidence/control-host",
+    "."
+  ],
+  "seconds": 8.599188429012429,
+  "exit": 0,
+  "user_seconds": 16.536095,
+  "system_seconds": 0.801024,
+  "peak_rss_kib": 541720
+}

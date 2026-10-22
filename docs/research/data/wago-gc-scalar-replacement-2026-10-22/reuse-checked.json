@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags=wago_regalloccheck",
+    "-run",
+    "TestGC",
+    "./src/wago"
+  ],
+  "seconds": 30.18824561400106,
+  "exit": 0,
+  "user_seconds": 49.183964,
+  "system_seconds": 1.862708,
+  "peak_rss_kib": 3423296
+}

@@ -1,0 +1,167 @@
+//go:build (amd64 || arm64) && !tinygo
+
+package gc
+
+import (
+	"fmt"
+	"testing"
+)
+
+// Move survivors and large allocations through every position of a small group.
+// Verify object values, dead identities, and reuse across two real collections.
+func TestSparseCleanupMixedPositions(t *testing.T) {
+	for position := 0; position < 8; position++ {
+		t.Run(fmt.Sprint(position), func(t *testing.T) {
+			leaf, err := NewStructDesc(0, []StorageKind{StorageI32})
+			if err != nil {
+				t.Fatal(err)
+			}
+			array, err := NewArrayDesc(1, StorageI32)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c, err := NewCollector(Config{NurseryBytes: 64 << 10, SurvivorBytes: 32 << 10, LargeObjectBytes: 64, VerifyAfterCollect: true}, []TypeDesc{leaf, array})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer c.Close()
+			for cycle := 0; cycle < 2; cycle++ {
+				var dead []Ref
+				var roots Slots
+				var live []Ref
+				for i := 0; i < 257; i++ {
+					var ref Ref
+					if i%64 == position {
+						ref, err = c.NewArrayDefault(1, 64)
+					} else {
+						ref, err = c.NewStructDefault(0)
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					if i%64 == (position+3)%8 {
+						if err = c.StructSet(ref, 0, I32Value(int32(i+1))); err != nil {
+							t.Fatal(err)
+						}
+						slot := Root(ref)
+						roots = append(roots, &slot)
+						live = append(live, ref)
+					} else {
+						dead = append(dead, ref)
+					}
+				}
+				if err = c.CollectMinor(roots); err != nil {
+					t.Fatal(err)
+				}
+				for _, ref := range dead {
+					if c.validObjectRef(ref) {
+						t.Fatalf("cycle %d dead reference %d remains live", cycle, ref)
+					}
+				}
+				for _, ref := range live {
+					v, err := c.StructGet(ref, 0)
+					if err != nil || v.I32() == 0 {
+						t.Fatalf("cycle %d survivor %d value %v: %v", cycle, ref, v, err)
+					}
+				}
+				if err = c.Verify(roots); err != nil {
+					t.Fatal(err)
+				}
+				seen := make(map[uint32]bool, len(c.freeHandles))
+				for _, h := range c.freeHandles {
+					if h == 0 || int(h) >= len(c.handles) || seen[h] {
+						t.Fatalf("invalid or duplicate free handle %d", h)
+					}
+					seen[h] = true
+				}
+				if err = c.CollectMinor(EmptyRoots{}); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+// Include metadata restoration in both versions. The scattered case separates
+// unrelated hot-handle cache lines without changing the identities or checks.
+func BenchmarkSparseCleanup(b *testing.B) {
+	for _, scatter := range []bool{false, true} {
+		b.Run(fmt.Sprintf("scattered=%v", scatter), func(b *testing.B) {
+			const count = 65536
+			table := count + 1
+			if scatter {
+				table = (1 << 20) + 1
+			}
+			c := &Collector{handles: make([]handleEntry, table), mark: make([]bool, table), cardSlots: make([]uint32, table), freeHandles: make([]uint32, 0, count)}
+			ledger := make([]uint32, count)
+			for i := range ledger {
+				h := uint32(i + 1)
+				if scatter {
+					h = uint32((i*65521)&((1<<20)-1)) + 1
+				}
+				ledger[i] = h
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for range b.N {
+				for i, h := range ledger {
+					c.handles[h].space = spaceNursery
+					c.mark[h] = i%128 == 0
+				}
+				c.nurseryHandles = ledger
+				c.freeHandles = c.freeHandles[:0]
+				c.finishSparseMinorEvacuation()
+				if len(c.freeHandles) != count-count/128 || len(c.nurseryHandles) != count/128 {
+					b.Fatal("cleanup changed live/dead counts")
+				}
+				// Cleanup compacts its input, so reconstruct the source order as well.
+				for i := range ledger {
+					h := uint32(i + 1)
+					if scatter {
+						h = uint32((i*65521)&((1<<20)-1)) + 1
+					}
+					ledger[i] = h
+				}
+			}
+		})
+	}
+}
+
+func TestSparseCleanupExceptionalLedger(t *testing.T) {
+	for padding := 0; padding < 8; padding++ {
+		t.Run(fmt.Sprint(padding), func(t *testing.T) {
+			c := &Collector{handles: make([]handleEntry, 32), mark: make([]bool, 32), freeHandles: make([]uint32, 0, 32)}
+			for h := uint32(1); h < 32; h++ {
+				c.handles[h].space = spaceNursery
+			}
+			c.handles[4].space = spaceOld
+			c.handles[5].space = spaceFree
+			c.handles[6].space = spaceOld
+			c.mark[3], c.mark[6] = true, true
+			c.nurseryHandles = []uint32{0, 32, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+			for i := 0; i < padding; i++ {
+				c.nurseryHandles = append(c.nurseryHandles, uint32(10+i))
+			}
+			c.finishSparseMinorEvacuation()
+			want := map[uint32]bool{1: true, 2: true, 7: true, 8: true, 9: true}
+			for i := 0; i < padding; i++ {
+				want[uint32(10+i)] = true
+			}
+			for _, h := range c.freeHandles {
+				if !want[h] {
+					t.Fatalf("unexpected or repeated free handle %d", h)
+				}
+				delete(want, h)
+			}
+			if len(want) != 0 {
+				t.Fatalf("missing free handles: %v", want)
+			}
+			if len(c.nurseryHandles) != 1 || c.nurseryHandles[0] != 3 || c.mark[3] || c.mark[6] {
+				t.Fatalf("retained young/marks: %v / %v", c.nurseryHandles, c.mark)
+			}
+			if c.handles[3].space != spaceNursery || c.handles[4].space != spaceOld || c.handles[6].space != spaceOld {
+				t.Fatal("cleanup changed retained object spaces")
+			}
+		})
+	}
+}

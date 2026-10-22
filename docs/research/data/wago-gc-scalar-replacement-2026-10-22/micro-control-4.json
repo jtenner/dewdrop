@@ -1,0 +1,17 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "15",
+    "/tmp/wago-gc-scalar-evidence/control-gc.test",
+    "-test.run=^TestSparseCleanup",
+    "-test.bench=^BenchmarkSparseCleanup$",
+    "-test.benchtime=200ms",
+    "-test.count=3"
+  ],
+  "seconds": 1.5836906190088484,
+  "exit": 0,
+  "user_seconds": 1.5705909999999998,
+  "system_seconds": 0.005946,
+  "peak_rss_kib": 30524
+}

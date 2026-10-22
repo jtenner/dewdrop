@@ -1,0 +1,18 @@
+{
+  "command": [
+    "git",
+    "-c",
+    "user.name=Codex",
+    "-c",
+    "user.email=codex@openai.com",
+    "add",
+    "src/core/runtime/gc/native/promotion_sort.go",
+    "src/core/runtime/gc/native/promotion_sort_test.go",
+    "docs/research/large-promotion-sort-2026-10-22.md"
+  ],
+  "seconds": 0.008672285010106862,
+  "exit": 1,
+  "user_seconds": 0.002582,
+  "system_seconds": 0.006024,
+  "peak_rss_kib": 11656
+}

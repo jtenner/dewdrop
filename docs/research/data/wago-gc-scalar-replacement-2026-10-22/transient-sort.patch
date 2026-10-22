@@ -1,0 +1,127 @@
+diff --git a/src/core/runtime/gc/native/promotion_sort.go b/src/core/runtime/gc/native/promotion_sort.go
+index 58633199e..29002e3f3 100644
+--- a/src/core/runtime/gc/native/promotion_sort.go
++++ b/src/core/runtime/gc/native/promotion_sort.go
+@@ -10,13 +10,17 @@ import (
+ const maxPromotionSortPlans = 65536
+ const minPromotionSortPlans = 64
+ 
++// Large survivor batches may use up to 20 MiB temporarily. Keep the retained
++// workspace limit unchanged; still larger batches use the in-place sort.
++const maxTransientPromotionSortPlans = 1 << 20
++
+ // sortPromotionPlans preserves the existing stable (kind, allocation-size)
+ // order, including the order of equal-size allocations and failure points.
+ // Most objects occupy one of a fixed number of old-space size classes, so
+ // counting buckets avoid comparison-sort swaps. Only oversized allocations
+ // still need a comparison sort. No object or allocation state is changed here.
+ func (c *Collector) sortPromotionPlans(plans []plannedPromotion) {
+-	if !nativeCollectorFastPaths || len(plans) < minPromotionSortPlans || len(plans) > maxPromotionSortPlans {
++	if !nativeCollectorFastPaths || len(plans) < minPromotionSortPlans || len(plans) > maxTransientPromotionSortPlans {
+ 		c.sortPromotionPlansByComparison(plans)
+ 		return
+ 	}
+@@ -36,18 +40,25 @@ func (c *Collector) sortPromotionPlans(plans []plannedPromotion) {
+ 		total += count
+ 	}
+ 	overflowStart, overflowEnd := next[overflow], next[large]
+-	if cap(c.promotionSortScratch) < len(plans) {
+-		capacity := max(len(plans), min(maxPromotionSortPlans, 2*cap(c.promotionSortScratch)))
+-		c.promotionSortScratch = make([]plannedPromotion, capacity)
++	var scratch []plannedPromotion
++	if len(plans) > maxPromotionSortPlans {
++		scratch = make([]plannedPromotion, len(plans))
++	} else {
++		if cap(c.promotionSortScratch) < len(plans) {
++			capacity := max(len(plans), min(maxPromotionSortPlans, 2*cap(c.promotionSortScratch)))
++			c.promotionSortScratch = make([]plannedPromotion, capacity)
++		}
++		scratch = c.promotionSortScratch[:len(plans)]
+ 	}
+-	scratch := c.promotionSortScratch[:len(plans)]
+ 	for _, p := range plans {
+ 		bucket := c.promotionSortBucket(p)
+ 		scratch[next[bucket]] = p
+ 		next[bucket]++
+ 	}
+ 	copy(plans, scratch)
+-	clear(scratch)
++	if len(plans) <= maxPromotionSortPlans {
++		clear(scratch)
++	}
+ 	c.promotionSortScratch = c.promotionSortScratch[:0]
+ 	if overflowEnd-overflowStart > 1 {
+ 		c.sortPromotionPlansByComparison(plans[overflowStart:overflowEnd])
+diff --git a/src/core/runtime/gc/native/promotion_sort_test.go b/src/core/runtime/gc/native/promotion_sort_test.go
+index 71fca4ba5..c7c08d408 100644
+--- a/src/core/runtime/gc/native/promotion_sort_test.go
++++ b/src/core/runtime/gc/native/promotion_sort_test.go
+@@ -133,3 +133,68 @@ func BenchmarkPromotionPlanSort(b *testing.B) {
+ 		}
+ 	}
+ }
++
++func TestPromotionSortTransientStableOrderAndBound(t *testing.T) {
++	for _, n := range []int{maxPromotionSortPlans + 1, 262144, maxTransientPromotionSortPlans, maxTransientPromotionSortPlans + 1} {
++		t.Run(fmt.Sprint(n), func(t *testing.T) {
++			c, plans := promotionSortFixture(n, 4096, false)
++			for i := range plans {
++				if i%11 == 0 {
++					plans[i].entry = handleEntry{space: spaceNursery, off: uint32(i), size: c.handles[plans[i].handle].size}
++				} else if i%11 == 1 {
++					plans[i].entry = handleEntry{space: spaceLarge, off: uint32(i), size: c.handles[plans[i].handle].size}
++				}
++			}
++			want := slices.Clone(plans)
++			referencePromotionSort(c, want)
++			c.sortPromotionPlans(plans)
++			if !slices.Equal(plans, want) {
++				for i := range plans {
++					if plans[i] != want[i] {
++						t.Fatalf("plan %d: got %+v want %+v", i, plans[i], want[i])
++					}
++				}
++			}
++			if cap(c.promotionSortScratch) != 0 {
++				t.Fatalf("large sort retained %d plans", cap(c.promotionSortScratch))
++			}
++		})
++	}
++}
++
++func TestPromotionSortTransientKeepsSmallWorkspace(t *testing.T) {
++	c, small := promotionSortFixture(4096, 4096, false)
++	c.sortPromotionPlans(small)
++	capacity := cap(c.promotionSortScratch)
++	other, large := promotionSortFixture(maxPromotionSortPlans+1, 4096, false)
++	c.handles = other.handles
++	c.sortPromotionPlans(large)
++	for i := 1; i < len(large); i++ {
++		if large[i-1].entry.size > large[i].entry.size {
++			t.Fatalf("unordered plans at %d", i)
++		}
++	}
++	if cap(c.promotionSortScratch) != capacity {
++		t.Fatalf("small workspace grew from %d to %d", capacity, cap(c.promotionSortScratch))
++	}
++	for i, p := range c.promotionSortScratch[:capacity] {
++		if p != (plannedPromotion{}) {
++			t.Fatalf("small workspace %d retains %+v", i, p)
++		}
++	}
++}
++
++func BenchmarkPromotionPlanSortLarge(b *testing.B) {
++	for _, n := range []int{65537, 262144, 524288} {
++		b.Run(fmt.Sprint(n), func(b *testing.B) {
++			c, seed := promotionSortFixture(n, 4096, false)
++			plans := slices.Clone(seed)
++			b.ReportAllocs()
++			b.ResetTimer()
++			for range b.N {
++				copy(plans, seed)
++				c.sortPromotionPlans(plans)
++			}
++		})
++	}
++}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "tool",
+    "pprof",
+    "-top",
+    "-nodecount=25",
+    "/tmp/wago-gc-scalar-evidence/profile-baseline/cpu.pprof"
+  ],
+  "seconds": 0.05528239900013432,
+  "exit": 0,
+  "user_seconds": 0.15037399999999998,
+  "system_seconds": 0.07976,
+  "peak_rss_kib": 40204
+}

@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-tags=wago_profile",
+    "-ldflags=-X=main.runtimePatchIdentity=scalar-sort-size",
+    "-o",
+    "/tmp/wago-gc-scalar-evidence/profile-host",
+    "."
+  ],
+  "seconds": 7.805023182998411,
+  "exit": 0,
+  "user_seconds": 13.155244,
+  "system_seconds": 0.6184029999999999,
+  "peak_rss_kib": 504276
+}

@@ -1,0 +1,449 @@
+{
+  "seconds": 0.16881168200052343,
+  "functions": 7012,
+  "total": 19481,
+  "patterns": [
+    [
+      "global.set N | iN.const N | iN.const N",
+      1115
+    ],
+    [
+      "else | local.get N | ref.test (ref N)",
+      1071
+    ],
+    [
+      "return | else | end",
+      1037
+    ],
+    [
+      "call $append#N#N | local.get N | local.get N",
+      893
+    ],
+    [
+      "return | end | local.get N",
+      599
+    ],
+    [
+      "call N | drop | local.get N",
+      573
+    ],
+    [
+      "call $equals#N#N | if ;; label = @N | local.get N",
+      533
+    ],
+    [
+      "struct.new N | return | else",
+      498
+    ],
+    [
+      "struct.new N | else | local.get N",
+      479
+    ],
+    [
+      "return | else | local.get N",
+      451
+    ],
+    [
+      "call $equals#N#N | end | if (result iN) ;; label = @N",
+      435
+    ],
+    [
+      "call $ct_fail#N#N | return | else",
+      349
+    ],
+    [
+      "return | else | unreachable",
+      310
+    ],
+    [
+      "call $eq#N#N | if (result eqref) ;; label = @N | local.get N",
+      309
+    ],
+    [
+      "local.set N | local.get N | local.get N",
+      308
+    ],
+    [
+      "else | unreachable | end",
+      306
+    ],
+    [
+      "global.set N | global.get N | ref.as_non_null",
+      248
+    ],
+    [
+      "br N (;@N;) | else | local.get N",
+      175
+    ],
+    [
+      "local.set N | local.get N | ref.cast (ref N)",
+      173
+    ],
+    [
+      "call $push#N#N | else | local.get N",
+      170
+    ],
+    [
+      "global.set N | iN.const N | struct.new N",
+      166
+    ],
+    [
+      "local.set N | local.get N | local.set N",
+      147
+    ],
+    [
+      "call $push#N#N | local.get N | local.get N",
+      146
+    ],
+    [
+      "local.set N | iN.const N | local.set N",
+      144
+    ],
+    [
+      "else | local.get N | local.tee N",
+      131
+    ],
+    [
+      "local.get N | ref.cast (ref N) | struct.get N N",
+      124
+    ],
+    [
+      "else | local.get N | iN.const N",
+      123
+    ],
+    [
+      "else | local.get N | ref.cast (ref N)",
+      116
+    ],
+    [
+      "call $push#N#N | local.get N | iN.const N",
+      114
+    ],
+    [
+      "global.set N | iN.const N | global.get N",
+      110
+    ]
+  ],
+  "examples": [
+    {
+      "line": 16592,
+      "before": [
+        "    local.set 1",
+        "    i32.const 0",
+        "    local.set 2"
+      ],
+      "after": [
+        "local.set 3",
+        "local.get 1",
+        "local.get 2",
+        "local.get 3",
+        "struct.new 2469",
+        ")"
+      ]
+    },
+    {
+      "line": 18543,
+      "before": [
+        "    array.len",
+        "    call $map_bucket_index#18446462645977481223#4294967295",
+        "    local.set 3"
+      ],
+      "after": [
+        "local.set 4",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 3"
+      ]
+    },
+    {
+      "line": 18628,
+      "before": [
+        "              br 4 (;@1;)",
+        "            else",
+        "              local.get 5"
+      ],
+      "after": [
+        "local.set 4",
+        "local.get 5",
+        "ref.cast (ref 2468)",
+        "struct.get 2468 0",
+        "local.set 8",
+        "br 3 (;@2;)"
+      ]
+    },
+    {
+      "line": 18792,
+      "before": [
+        "    array.len",
+        "    call $map_bucket_index#18446462645977481223#4294967295",
+        "    local.set 3"
+      ],
+      "after": [
+        "local.set 4",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 3"
+      ]
+    },
+    {
+      "line": 18877,
+      "before": [
+        "              br 4 (;@1;)",
+        "            else",
+        "              local.get 5"
+      ],
+      "after": [
+        "local.set 4",
+        "local.get 5",
+        "ref.cast (ref 2468)",
+        "struct.get 2468 0",
+        "local.set 8",
+        "br 3 (;@2;)"
+      ]
+    },
+    {
+      "line": 18906,
+      "before": [
+        "    local.set 1",
+        "    i32.const 0",
+        "    local.set 2"
+      ],
+      "after": [
+        "local.set 3",
+        "local.get 1",
+        "local.get 2",
+        "local.get 3",
+        "struct.new 2469",
+        ")"
+      ]
+    },
+    {
+      "line": 19198,
+      "before": [
+        "    local.set 1",
+        "    i32.const 0",
+        "    local.set 2"
+      ],
+      "after": [
+        "local.set 3",
+        "local.get 1",
+        "local.get 2",
+        "local.get 3",
+        "struct.new 2469",
+        ")"
+      ]
+    },
+    {
+      "line": 19347,
+      "before": [
+        "    local.set 1",
+        "    i32.const 0",
+        "    local.set 2"
+      ],
+      "after": [
+        "local.set 3",
+        "local.get 1",
+        "local.get 2",
+        "local.get 3",
+        "struct.new 2469",
+        ")"
+      ]
+    },
+    {
+      "line": 19745,
+      "before": [
+        "          struct.new 9031",
+        "          local.get 10",
+        "          struct.new 9030"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 19916,
+      "before": [
+        "          struct.new 9031",
+        "          local.get 10",
+        "          struct.new 9031"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 20015,
+      "before": [
+        "          struct.new 9031",
+        "          local.get 10",
+        "          struct.new 9030"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 20180,
+      "before": [
+        "          local.get 9",
+        "          struct.new 9031",
+        "          local.get 10"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 20351,
+      "before": [
+        "          struct.new 9031",
+        "          local.get 10",
+        "          struct.new 9030"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 20584,
+      "before": [
+        "          local.get 9",
+        "          struct.new 9031",
+        "          local.get 10"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 20683,
+      "before": [
+        "          struct.new 9030",
+        "          local.get 10",
+        "          struct.new 9030"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 20850,
+      "before": [
+        "          struct.new 9030",
+        "          local.get 10",
+        "          struct.new 9030"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 21084,
+      "before": [
+        "          local.get 9",
+        "          local.get 10",
+        "          struct.new 9030"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 21250,
+      "before": [
+        "          local.get 8",
+        "          local.get 9",
+        "          local.get 10"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 21347,
+      "before": [
+        "          local.get 9",
+        "          struct.new 9031",
+        "          local.get 10"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    },
+    {
+      "line": 21580,
+      "before": [
+        "          local.get 9",
+        "          struct.new 9031",
+        "          local.get 10"
+      ],
+      "after": [
+        "local.set 6",
+        "local.get 0",
+        "ref.cast (ref 2467)",
+        "struct.get 2467 0",
+        "ref.cast (ref 9021)",
+        "local.get 5"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-scalar-evidence/reuse-sort.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.397568535991013,
+  "exit": 0,
+  "user_seconds": 4.038116,
+  "system_seconds": 0.163611,
+  "peak_rss_kib": 313760
+}

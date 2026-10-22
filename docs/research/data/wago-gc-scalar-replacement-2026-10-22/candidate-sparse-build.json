@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-scalar-evidence/candidate-gc.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.412705572991399,
+  "exit": 0,
+  "user_seconds": 3.95875,
+  "system_seconds": 0.17751699999999998,
+  "peak_rss_kib": 326292
+}

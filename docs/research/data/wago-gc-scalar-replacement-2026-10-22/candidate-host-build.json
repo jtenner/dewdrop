@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X=main.runtimePatchIdentity=gc-sort-candidate",
+    "-o",
+    "/tmp/wago-gc-scalar-evidence/candidate-host",
+    "."
+  ],
+  "seconds": 8.5628067740181,
+  "exit": 0,
+  "user_seconds": 16.429247,
+  "system_seconds": 0.8187209999999999,
+  "peak_rss_kib": 516600
+}
