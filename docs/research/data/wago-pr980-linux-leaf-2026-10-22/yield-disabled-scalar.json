@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/usr/bin/qemu-aarch64",
+    "/tmp/wago-pr980-linux-leaf-evidence/yield-disabled.test",
+    "-test.v",
+    "-test.count=1",
+    "-test.timeout=45s",
+    "-test.run=^TestInlineHostBridgeAllowsGCWithLeafCallbacks$/^scalar$"
+  ],
+  "seconds": 3.5594464099995093,
+  "exit": 1,
+  "user_seconds": 3.547338,
+  "system_seconds": 0.007946,
+  "peak_rss_kib": 29876,
+  "minor_faults": 1896,
+  "major_faults": 0,
+  "voluntary_context_switches": 1825,
+  "involuntary_context_switches": 30
+}

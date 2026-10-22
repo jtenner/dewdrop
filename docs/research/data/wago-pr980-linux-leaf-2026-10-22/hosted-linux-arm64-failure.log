@@ -1,0 +1,20 @@
+2026-10-22T07:08:08.4288908Z ok  	github.com/wago-org/wago/src/core/nativeabi	0.003s
+2026-10-22T07:08:08.4289342Z ok  	github.com/wago-org/wago/src/core/plugins	0.009s
+2026-10-22T07:08:08.4289866Z --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.02s)
+2026-10-22T07:08:08.4290827Z     --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+2026-10-22T07:08:08.4294516Z         inline_host_yield_arm64_test.go:144: collector progress observed by last callback = 0, want 1 before native return
+2026-10-22T07:08:08.4295324Z FAIL
+2026-10-22T07:08:08.4295635Z FAIL	github.com/wago-org/wago/src/core/runtime	0.532s
+2026-10-22T07:08:08.4296222Z ok  	github.com/wago-org/wago/src/core/runtime/abi	0.008s
+2026-10-22T07:08:08.4296682Z ok  	github.com/wago-org/wago/src/core/runtime/arm64spike	0.006s
+2026-10-22T07:08:08.4297224Z ok  	github.com/wago-org/wago/src/core/runtime/gc	0.004s
+2026-10-22T07:08:08.4297670Z ok  	github.com/wago-org/wago/src/core/runtime/gc/native	2.781s
+2026-10-22T07:08:42.9437895Z ok  	github.com/wago-org/wago/tests/tools/staticcheck-baseline	0.003s
+2026-10-22T07:08:42.9438551Z ok  	github.com/wago-org/wago/tests/tools/tinygo-cache	0.009s
+2026-10-22T07:08:42.9439150Z FAIL
+2026-10-22T07:08:43.1778173Z error: recipe `unit` failed on line 17 with exit code 1
+2026-10-22T07:08:43.1799430Z ##[error]Process completed with exit code 1.
+2026-10-22T07:08:43.2260578Z Post job cleanup.
+2026-10-22T07:08:43.3070591Z [command]/usr/bin/git version
+2026-10-22T07:08:43.3113509Z git version 2.55.0
+2026-10-22T07:08:43.3152221Z Temporarily overriding HOME='/home/runner/work/_temp/20be8bee-b894-4900-a2b2-58f206311676' before making global git config changes

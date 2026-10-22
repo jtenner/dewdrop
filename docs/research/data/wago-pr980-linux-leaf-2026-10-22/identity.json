@@ -1,0 +1,12 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/980",
+  "job": "https://github.com/wago-org/wago/actions/runs/39737641460/job/119687183896",
+  "failed_head": "ed3783423aa090a39967847e3d9d1044a5abd975",
+  "head": "33f5dbc392bb3064d4661c2b614f4550541101a5",
+  "worktree": "/tmp/wago-pr980-ci-fix",
+  "branch": "perf/native-array-len",
+  "push": "accepted fast-forward",
+  "mergeable": true,
+  "native_ci": "pending, T3 watches",
+  "negative_control": "only production yield macros disabled during a separate build; header restored in finally; binary omitted from repository evidence"
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "run",
+    "./tests/tools/docs-check"
+  ],
+  "seconds": 0.13636566400236916,
+  "exit": 0,
+  "user_seconds": 0.119004,
+  "system_seconds": 0.040024,
+  "peak_rss_kib": 69544,
+  "minor_faults": 5007,
+  "major_faults": 3,
+  "voluntary_context_switches": 831,
+  "involuntary_context_switches": 20
+}

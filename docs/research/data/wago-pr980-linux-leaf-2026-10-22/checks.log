@@ -1,0 +1,244 @@
+START yield-disabled-build
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-c", "-p", "1", "-o", "/tmp/wago-pr980-linux-leaf-evidence/yield-disabled.test", "./src/core/runtime"], "seconds": 0.837745785000152, "exit": 0, "user_seconds": 1.125027, "system_seconds": 0.106483, "peak_rss_kib": 142484, "minor_faults": 11582, "major_faults": 4, "voluntary_context_switches": 1429, "involuntary_context_switches": 96}
+
+START yield-disabled-scalar
+{"command": ["/usr/bin/qemu-aarch64", "/tmp/wago-pr980-linux-leaf-evidence/yield-disabled.test", "-test.v", "-test.count=1", "-test.timeout=45s", "-test.run=^TestInlineHostBridgeAllowsGCWithLeafCallbacks$/^scalar$"], "seconds": 3.5594464099995093, "exit": 1, "user_seconds": 3.547338, "system_seconds": 0.007946, "peak_rss_kib": 29876, "minor_faults": 1896, "major_faults": 0, "voluntary_context_switches": 1825, "involuntary_context_switches": 30}
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+    inline_host_yield_arm64_test.go:176: collector progress observed by last callback = 0 after 16777216 callbacks (limit 16777216), want 1 before native return
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+    inline_host_yield_arm64_test.go:168: cancelled bridge outcome=0 trap=0 callbacks=16777216, want interrupted Go return
+--- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks (3.49s)
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (1.75s)
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (1.74s)
+FAIL
+
+START leaf-gc-event-checked
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=30", "-timeout=2m", "-tags=wago_regalloccheck,wago_inline_host_experiment", "-exec", "/usr/bin/qemu-aarch64", "./src/core/runtime", "-run", "Test(InlineHostBridge|InlineBoundedBridge|LiveBounded|BoundedHelper)"], "seconds": 2.3755867139989277, "exit": 0, "user_seconds": 2.877365, "system_seconds": 0.176431, "peak_rss_kib": 137872, "minor_faults": 21145, "major_faults": 3, "voluntary_context_switches": 15033, "involuntary_context_switches": 258}
+HostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestBoundedHelperBorrowedFrame
+=== RUN   TestBoundedHelperBorrowedFrame/accepted
+=== RUN   TestBoundedHelperBorrowedFrame/different-helper
+=== RUN   TestBoundedHelperBorrowedFrame/overlapping-tag
+=== RUN   TestBoundedHelperBorrowedFrame/different-shape
+--- PASS: TestBoundedHelperBorrowedFrame (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/accepted (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-helper (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/overlapping-tag (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-shape (0.00s)
+=== RUN   TestInlineBoundedBridgePreservesNativeFP
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/scalar
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/view
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/context
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/view-context
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/prepared-context
+--- PASS: TestInlineBoundedBridgePreservesNativeFP (0.02s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/scalar (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/view (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/context (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/view-context (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/prepared-context (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestBoundedHelperBorrowedFrame
+=== RUN   TestBoundedHelperBorrowedFrame/accepted
+=== RUN   TestBoundedHelperBorrowedFrame/different-helper
+=== RUN   TestBoundedHelperBorrowedFrame/overlapping-tag
+=== RUN   TestBoundedHelperBorrowedFrame/different-shape
+--- PASS: TestBoundedHelperBorrowedFrame (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/accepted (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-helper (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/overlapping-tag (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-shape (0.00s)
+=== RUN   TestInlineBoundedBridgePreservesNativeFP
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/scalar
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/view
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/context
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/view-context
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/prepared-context
+--- PASS: TestInlineBoundedBridgePreservesNativeFP (0.02s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/scalar (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/view (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/context (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/view-context (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/prepared-context (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestBoundedHelperBorrowedFrame
+=== RUN   TestBoundedHelperBorrowedFrame/accepted
+=== RUN   TestBoundedHelperBorrowedFrame/different-helper
+=== RUN   TestBoundedHelperBorrowedFrame/overlapping-tag
+=== RUN   TestBoundedHelperBorrowedFrame/different-shape
+--- PASS: TestBoundedHelperBorrowedFrame (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/accepted (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-helper (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/overlapping-tag (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-shape (0.00s)
+=== RUN   TestInlineBoundedBridgePreservesNativeFP
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/scalar
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/view
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/context
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/view-context
+=== RUN   TestInlineBoundedBridgePreservesNativeFP/prepared-context
+--- PASS: TestInlineBoundedBridgePreservesNativeFP (0.01s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/scalar (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/view (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/context (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/view-context (0.00s)
+    --- PASS: TestInlineBoundedBridgePreservesNativeFP/prepared-context (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedEntryRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry
+--- PASS: TestLiveBoundedViewContextRejectsMalformedCtrlBeforeNativeEntry (0.00s)
+=== RUN   TestBoundedHelperBorrowedFrame
+=== RUN   TestBoundedHelperBorrowedFrame/accepted
+=== RUN   TestBoundedHelperBorrowedFrame/different-helper
+=== RUN   TestBoundedHelperBorrowedFrame/overlapping-tag
+=== RUN   TestBoundedHelperBorrowedFrame/different-shape
+--- PASS: TestBoundedHelperBorrowedFrame (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/accepted (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-helper (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/overlapping-tag (0.00s)
+    --- PASS: TestBoundedHelperBorrowedFrame/different-shape (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/core/runtime	1.630s
+

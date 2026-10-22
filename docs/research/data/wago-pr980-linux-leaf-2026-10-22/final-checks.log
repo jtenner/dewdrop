@@ -1,0 +1,221 @@
+START leaf-gc-event-default
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=30", "-timeout=2m", "-exec", "/usr/bin/qemu-aarch64", "./src/core/runtime", "-run", "^TestInlineHostBridgeAllowsGCWithLeafCallbacks$"], "seconds": 1.831738429988036, "exit": 0, "user_seconds": 2.092527, "system_seconds": 0.119504, "peak_rss_kib": 141968, "minor_faults": 12788, "major_faults": 3, "voluntary_context_switches": 4693, "involuntary_context_switches": 99}
+estInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel
+--- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.03s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32/cancel (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.00s)
+    --- PASS: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view/cancel (0.00s)
+PASS
+ok  	github.com/wago-org/wago/src/core/runtime	1.046s
+
+START darwin-runtime-test-build
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-c", "-p", "1", "-o", "/tmp/wago-pr980-linux-leaf-evidence/darwin-runtime.test", "./src/core/runtime"], "seconds": 0.7712842830078444, "exit": 0, "user_seconds": 1.005751, "system_seconds": 0.10251299999999999, "peak_rss_kib": 142032, "minor_faults": 11692, "major_faults": 4, "voluntary_context_switches": 1597, "involuntary_context_switches": 101}
+
+START docs-check
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "run", "./tests/tools/docs-check"], "seconds": 0.13636566400236916, "exit": 0, "user_seconds": 0.119004, "system_seconds": 0.040024, "peak_rss_kib": 69544, "minor_faults": 5007, "major_faults": 3, "voluntary_context_switches": 831, "involuntary_context_switches": 20}
+docs-check: validated 84 Markdown files
+

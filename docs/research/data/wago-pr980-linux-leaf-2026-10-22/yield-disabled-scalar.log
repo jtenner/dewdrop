@@ -1,0 +1,9 @@
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar
+    inline_host_yield_arm64_test.go:176: collector progress observed by last callback = 0 after 16777216 callbacks (limit 16777216), want 1 before native return
+=== RUN   TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel
+    inline_host_yield_arm64_test.go:168: cancelled bridge outcome=0 trap=0 callbacks=16777216, want interrupted Go return
+--- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks (3.49s)
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (1.75s)
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar/cancel (1.74s)
+FAIL

@@ -120,3 +120,46 @@ for the new head is still required. T3 continues to watch the new CI attempt.
 [checked ARM64 result](data/wago-pr980-arm64-host-yield-2026-10-22/arm64-runtime-focused-checked.json),
 and [baseline emulator comparison](data/wago-pr980-arm64-host-yield-2026-10-22/qemu-baseline-comparison.json)
 include the commands, raw logs, resource use, and validation limits.
+
+
+## Linux ARM64 leaf-test follow-up: 2026-10-22
+
+The [Linux ARM64 job](https://github.com/wago-org/wago/actions/runs/39737641460/job/119687183896)
+on `ed37834` fails the new scalar leaf-callback fixture. The original public
+three-second GC/cancel test passes. The new test requires GC completion within
+65,536 callbacks, or 64 explicit yields. That assumes the first collection will
+finish inside a short fixed native loop. The failure is visible only on this
+native run; earlier QEMU runs passed that original fixture.
+
+Commit `33f5dbc392bb3064d4661c2b614f4550541101a5` changes the fixture to wait for the
+completion event. The callback's atomic count gates the collector so collection
+starts after native entry. The guest stops when a callback sees completion;
+a 16,777,216-callback hard cap still returns and reports clear failure if the
+bridge cannot yield. Failure cleanup joins the worker even when native entry
+fails before the first callback. All eight owner and interrupt cases remain.
+Runtime source, its 1,024-callback yield interval, and the public three-second
+GC/cancel limit stay unchanged.
+
+A negative control disables only the production yield macros during a separate
+build and restores the header afterward. With async preemption disabled, both
+scalar progress and cancellation cases reach the hard cap and fail explicitly.
+That run takes 3.559 seconds and peaks at 29,876 KiB RSS; the binary build takes
+0.838 seconds and peaks at 142,484 KiB. The test still detects a bridge that
+cannot yield; the separate control binary is not committed.
+
+The real bridge passes 30 ARM64 QEMU repeats with register checks, stack growth,
+FP preservation, admission, and bounded helpers: 2.376 seconds including build,
+1.630 seconds of package tests, peak RSS 137,872 KiB. Default-build leaf tests
+also pass 30 repeats: 1.832 seconds including build, peak RSS 141,968 KiB.
+Darwin ARM64 runtime tests build in 0.771 seconds, peak RSS 142,032 KiB.
+Documentation passes for 84 Markdown files in 0.136 seconds, peak RSS 69,544 KiB.
+No full-suite or native-hardware result is inferred from these focused runs.
+
+The fast-forward push to `perf/native-array-len` is accepted and the PR is
+mergeable. New native Linux/Darwin checks are pending; T3 keeps watching.
+[Identity](data/wago-pr980-linux-leaf-2026-10-22/identity.json),
+[hosted failure](data/wago-pr980-linux-leaf-2026-10-22/hosted-linux-arm64-failure.log),
+[negative control](data/wago-pr980-linux-leaf-2026-10-22/yield-disabled-scalar.log),
+[checked repeats](data/wago-pr980-linux-leaf-2026-10-22/leaf-gc-event-checked.json),
+and [default repeats](data/wago-pr980-linux-leaf-2026-10-22/leaf-gc-event-default.json)
+retain commands, raw output, resource measurements, and source changes.

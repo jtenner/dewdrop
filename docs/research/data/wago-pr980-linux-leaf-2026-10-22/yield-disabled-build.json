@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-c",
+    "-p",
+    "1",
+    "-o",
+    "/tmp/wago-pr980-linux-leaf-evidence/yield-disabled.test",
+    "./src/core/runtime"
+  ],
+  "seconds": 0.837745785000152,
+  "exit": 0,
+  "user_seconds": 1.125027,
+  "system_seconds": 0.106483,
+  "peak_rss_kib": 142484,
+  "minor_faults": 11582,
+  "major_faults": 4,
+  "voluntary_context_switches": 1429,
+  "involuntary_context_switches": 96
+}
