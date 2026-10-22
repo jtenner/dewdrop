@@ -1,0 +1,12 @@
+{
+  "generator_head": "1d9fbd47205e4d1686f868074a1fcd5aebbee01d",
+  "bytes": 2987,
+  "changed_offsets": [
+    4
+  ],
+  "old_version": 6,
+  "new_version": 7,
+  "old_sha256": "056b25bd0c2ecdb326ebe645fb44eb4e182e70bffed17d7aee5a460a57dfd51a",
+  "new_sha256": "4e75f233e518b6c2935e062e678ecc7231a60f1a31ca947e1ec7986c7ad88952",
+  "identical_after_version_byte": true
+}

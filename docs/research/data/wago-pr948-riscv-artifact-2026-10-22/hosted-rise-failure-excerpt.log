@@ -1,0 +1,14 @@
+2026-10-22T06:44:31.6437230Z     --- PASS: TestRV64ImportedFunctionDynamicTypeCalls/tail-reference/artifacttrue/subtypefalse (0.02s)
+2026-10-22T06:44:31.6444994Z === RUN   TestRV64ManagedDispatcherBuiltinMatchesSource
+2026-10-22T06:44:31.6452091Z     managed_dispatcher_source_riscv64_test.go:32: built-in managed dispatcher differs from its source; regenerate the artifact
+2026-10-22T06:44:31.6477734Z --- FAIL: TestRV64ManagedDispatcherBuiltinMatchesSource (0.00s)
+2026-10-22T06:44:31.6484331Z === RUN   TestImportDedupPreservesInsertionOrderAndReleasesReferences
+2026-10-22T06:44:31.6491178Z --- PASS: TestImportDedupPreservesInsertionOrderAndReleasesReferences (0.00s)
+2026-10-22T06:44:31.6502732Z === RUN   TestRV64ManagedVoidTableHostAndRetiredProducer
+2026-10-22T06:52:15.4623089Z FAIL
+2026-10-22T06:52:15.4762083Z FAIL	github.com/wago-org/wago/src/wago	493.689s
+2026-10-22T06:52:15.5299059Z FAIL
+2026-10-22T06:52:15.7858410Z ##[error]Process completed with exit code 1.
+2026-10-22T06:52:15.9233049Z Post job cleanup.
+2026-10-22T06:52:16.5331761Z [command]/usr/bin/git version
+2026-10-22T06:52:16.5572137Z git version 2.43.0

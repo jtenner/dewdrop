@@ -96,3 +96,43 @@ by current head `1d9fbd47205e4d1686f868074a1fcd5aebbee01d`. Keep monitoring the
 new head; do not retry or change source for the superseded aggregate result.
 The aggregate failure excerpt and classification are saved beside the lint
 and Linux evidence.
+
+
+## Native RISC-V artifact follow-up: 2026-10-22
+
+The [native RISE job](https://github.com/wago-org/wago/actions/runs/39732958257/job/119672147331)
+reports a separate failure in `TestRV64ManagedDispatcherBuiltinMatchesSource`.
+The bundled image uses main's artifact version 6, but this PR deliberately uses
+version 7 and rejects older cached files that can omit start-function data.
+The issue remains present at the prior lint-fix head `1d9fbd472`.
+
+Commit `de5213561684394b128519446486e4809ea89096` regenerates the bundled image with the
+existing source-comparison test's output hook. Both images are 2,987 bytes.
+Only byte offset 4 changes, from 6 to 7. All native code and later metadata are
+identical. The generated SHA-256 is
+`4e75f233e518b6c2935e062e678ecc7231a60f1a31ca947e1ec7986c7ad88952`.
+Keep the version-7 contract, cached-start tests, and exact byte comparison.
+No compiler source or test assertion changes are needed.
+
+The exact source-comparison check fails before regeneration and passes after it.
+Two source-mode QEMU repeats with register checks pass: exact image comparison,
+version rejection, local/imported/trapping cached starts, managed table dispatch,
+caller identity, and retired foreign producers. The command takes 37.969 seconds
+including its cross-build, with peak RSS 4,863,224 KiB; package tests take
+0.289 seconds. The cross-build exceeds the 30-second compiler activity budget.
+
+Two compiler-free QEMU repeats with register checks also pass using saved table
+fixtures and the updated embedded dispatcher. The command takes 29.747 seconds
+including its cross-build, with peak RSS 4,326,764 KiB; package tests take
+0.181 seconds. Source-only cases explicitly skip in this build and execute in
+the source-mode run. The docs check passes for 100 Markdown files in 0.063
+seconds, with peak RSS 25,316 KiB. QEMU verifies these paths; native hardware CI
+must still qualify the platform. No new speed claim is made.
+
+The fast-forward push is accepted and the PR is mergeable. Native CI for the
+new head is pending; T3 keeps watching. [Identity and push state](data/wago-pr948-riscv-artifact-2026-10-22/identity.json),
+[byte comparison](data/wago-pr948-riscv-artifact-2026-10-22/artifact-comparison.json),
+[red check](data/wago-pr948-riscv-artifact-2026-10-22/dispatcher-red.json),
+[source-mode results](data/wago-pr948-riscv-artifact-2026-10-22/source-dispatcher-and-cached-starts.json),
+and [compiler-free results](data/wago-pr948-riscv-artifact-2026-10-22/precompiled-managed-dispatch.json)
+retain commands, raw output, resources, and generated artifacts.

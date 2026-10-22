@@ -1,0 +1,40 @@
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifactfalse
+    managed_table_riscv64_test.go:40: precompiled artifact path only
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifacttrue
+    managed_table_riscv64_test.go:40: loaded compiler-free artifact managed-producer-false
+    managed_table_riscv64_test.go:116: warm managed table allocations = 0
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifactfalse
+    managed_table_riscv64_test.go:40: precompiled artifact path only
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifacttrue
+    managed_table_riscv64_test.go:40: loaded compiler-free artifact managed-producer-true
+    managed_table_riscv64_test.go:67: loaded compiler-free artifact managed-consumer
+    managed_table_riscv64_test.go:76: loaded compiler-free artifact managed-ordinary-consumer
+    managed_table_riscv64_test.go:116: warm managed table allocations = 5
+    managed_table_riscv64_test.go:126: ordinary foreign table allocations = 11
+--- PASS: TestRV64ManagedVoidTableHostAndRetiredProducer (0.10s)
+    --- SKIP: TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifactfalse (0.01s)
+    --- PASS: TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifacttrue (0.05s)
+    --- SKIP: TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifactfalse (0.00s)
+    --- PASS: TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifacttrue (0.04s)
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifactfalse
+    managed_table_riscv64_test.go:40: precompiled artifact path only
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifacttrue
+    managed_table_riscv64_test.go:40: loaded compiler-free artifact managed-producer-false
+    managed_table_riscv64_test.go:116: warm managed table allocations = 0
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifactfalse
+    managed_table_riscv64_test.go:40: precompiled artifact path only
+=== RUN   TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifacttrue
+    managed_table_riscv64_test.go:40: loaded compiler-free artifact managed-producer-true
+    managed_table_riscv64_test.go:67: loaded compiler-free artifact managed-consumer
+    managed_table_riscv64_test.go:76: loaded compiler-free artifact managed-ordinary-consumer
+    managed_table_riscv64_test.go:116: warm managed table allocations = 5
+    managed_table_riscv64_test.go:126: ordinary foreign table allocations = 11
+--- PASS: TestRV64ManagedVoidTableHostAndRetiredProducer (0.02s)
+    --- SKIP: TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifactfalse (0.00s)
+    --- PASS: TestRV64ManagedVoidTableHostAndRetiredProducer/foreignfalse/artifacttrue (0.00s)
+    --- SKIP: TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifactfalse (0.00s)
+    --- PASS: TestRV64ManagedVoidTableHostAndRetiredProducer/foreigntrue/artifacttrue (0.02s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.181s

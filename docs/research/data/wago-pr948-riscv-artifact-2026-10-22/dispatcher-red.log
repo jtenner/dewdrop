@@ -1,0 +1,5 @@
+--- FAIL: TestRV64ManagedDispatcherBuiltinMatchesSource (0.05s)
+    managed_dispatcher_source_riscv64_test.go:32: built-in managed dispatcher differs from its source; regenerate the artifact
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.112s
+FAIL

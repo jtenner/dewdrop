@@ -1,0 +1,12 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/948",
+  "failed_job": "https://github.com/wago-org/wago/actions/runs/39732958257/job/119672147331",
+  "failed_head": "72e684df38cef599be936dbed3229a5a5b85999e",
+  "parent": "1d9fbd47205e4d1686f868074a1fcd5aebbee01d",
+  "head": "de5213561684394b128519446486e4809ea89096",
+  "worktree": "/tmp/wago-pr948-main-sync-20261022",
+  "remote_branch": "codex/fix-cached-start-and-host-allocations",
+  "push": "accepted, fast-forward",
+  "mergeable": true,
+  "native_ci": "pending; T3 watches"
+}
