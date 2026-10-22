@@ -1,0 +1,13 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/948",
+  "head_before": "58cbd04c9c95001a479ad264d8c1e0dd47fa8d7f",
+  "api_reported_base": "83c51e61fad72f3c258c2be8275977704ce681d3",
+  "live_main": "688303ebfa75384e89773e3fc865b8bccb2e6a71",
+  "merge_commit": "72e684df38cef599be936dbed3229a5a5b85999e",
+  "branch": "dewdrop/pr948-main-sync-20261022",
+  "worktree": "/tmp/wago-pr948-main-sync-20261022",
+  "manual_resolution_sha256": "3d889bb82c63b7fd40994ee22ab0c86a338bae83e5d1547a0bf7203be141a034",
+  "codec_matches_main": true,
+  "merge_has_both_parents": true,
+  "push_result": "Fast-forward push accepted: 58cbd04c9..72e684df3"
+}

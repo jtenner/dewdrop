@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-count=1",
+    "-run",
+    "Test(ScalarSyncHost|TypedScalarSyncHost|HostFuncRef|HostReference|HostCall|HostScope|RetainedHostToken|TypedFunctionReferenceHostBoundary|CachedStartFunctions|HostInvocationBinding)",
+    "./src/wago"
+  ],
+  "seconds": 27.366465547995176,
+  "exit": 0,
+  "user_seconds": 48.8986,
+  "system_seconds": 1.373669,
+  "peak_rss_kib": 3601836,
+  "minor_faults": 128075,
+  "major_faults": 17,
+  "voluntary_context_switches": 17621,
+  "involuntary_context_switches": 1506
+}
