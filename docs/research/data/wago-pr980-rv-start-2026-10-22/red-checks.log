@@ -1,0 +1,10 @@
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-v", "-count=1", "-timeout=2m", "-tags=wago_regalloccheck", "-exec", "/tmp/wago-pr980-rv-start-20261022/scripts/qemu-riscv64.sh", "./src/wago", "-run", "^TestRV64PublicNativeImportedStartStateReentryAndLifecycle$/^sharedtrue-artifactfalse-runtimetrue-runtime-close$"], "seconds": 38.3714470279956, "exit": 1, "user_seconds": 62.38992, "system_seconds": 1.9341659999999998, "peak_rss_kib": 4649540, "minor_faults": 343497, "major_faults": 6, "voluntary_context_switches": 21293, "involuntary_context_switches": 2007}
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+    public_native_start_riscv64_test.go:389: failed native start leaked attachment/publication: producer roots=1 want=0, importer memory=true thunks=true
+--- FAIL: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.15s)
+    --- FAIL: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.14s)
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.211s
+FAIL
+

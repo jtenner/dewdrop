@@ -1,0 +1,17 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/980",
+  "failed_job": "https://github.com/wago-org/wago/actions/runs/39741136024/job/119699280029",
+  "failed_head": "33f5dbc392bb3064d4661c2b614f4550541101a5",
+  "ci_merge": "1c9bb87f815d5128f167e4dd68c0ec253324334f",
+  "parents": [
+    "33f5dbc392bb3064d4661c2b614f4550541101a5",
+    "688303ebfa75384e89773e3fc865b8bccb2e6a71"
+  ],
+  "head": "d27c59c2461ec32434ddb1deb0f422f2d6cbfbb0",
+  "worktree": "/tmp/wago-pr980-rv-start-20261022",
+  "branch": "perf/native-array-len",
+  "push": "accepted fast-forward",
+  "mergeable": true,
+  "native_ci": "pending, T3 watches",
+  "production_source": "identical to old required-CI-green merge; only RV64 test and note differ"
+}

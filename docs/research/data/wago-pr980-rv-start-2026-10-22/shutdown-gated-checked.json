@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=50",
+    "-timeout=2m",
+    "-tags=wago_regalloccheck",
+    "-exec",
+    "/tmp/wago-pr980-rv-start-20261022/scripts/qemu-riscv64.sh",
+    "./src/wago",
+    "-run",
+    "^TestRV64PublicNativeImportedStartStateReentryAndLifecycle$/^shared.*-runtime-close$"
+  ],
+  "seconds": 35.78013935800118,
+  "exit": 0,
+  "user_seconds": 57.312622,
+  "system_seconds": 1.620841,
+  "peak_rss_kib": 4872684,
+  "minor_faults": 384745,
+  "major_faults": 7,
+  "voluntary_context_switches": 17374,
+  "involuntary_context_switches": 1920
+}

@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-v",
+    "-count=3",
+    "-timeout=2m",
+    "-tags=",
+    "-exec",
+    "/tmp/wago-pr980-rv-start-20261022/scripts/qemu-riscv64.sh",
+    "./src/wago",
+    "-run",
+    "^TestRV64PublicNativeImportedStart"
+  ],
+  "seconds": 3.6344843660044717,
+  "exit": 0,
+  "user_seconds": 3.670649,
+  "system_seconds": 0.29836199999999996,
+  "peak_rss_kib": 352328,
+  "minor_faults": 31280,
+  "major_faults": 7,
+  "voluntary_context_switches": 9299,
+  "involuntary_context_switches": 241
+}

@@ -163,3 +163,54 @@ mergeable. New native Linux/Darwin checks are pending; T3 keeps watching.
 [checked repeats](data/wago-pr980-linux-leaf-2026-10-22/leaf-gc-event-checked.json),
 and [default repeats](data/wago-pr980-linux-leaf-2026-10-22/leaf-gc-event-default.json)
 retain commands, raw output, resource measurements, and source changes.
+
+
+## RISC-V native imported-start shutdown assertion
+
+Required CI on `33f5dbc39` passes, including Linux and Darwin ARM64. A separate
+[native RISC-V job](https://github.com/wago-org/wago/actions/runs/39741136024/job/119699280029)
+fails the checked
+`TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close`
+case with `failed native start leaked attachment/publication`. The ordinary
+pass succeeds. This is distinct from the ARM64 leaf-callback fixture.
+
+The test joins a failed constructor but not the runtime close worker.
+`Runtime.Close` explicitly returns promptly; a concurrent Instance.Close also
+returns promptly when another goroutine owns preparation. That owner can still
+hold resources when the constructor returns. Runtime completion is published
+through `Closed` and joined with `WaitClosed`.
+
+A controlled BeforeClose gate reproduces the exact failure under checked QEMU:
+producer roots remain 1 rather than 0, and importer memory/thunks remain live
+while the other close owner is held. The revised fixture proves that construction
+can return with shutdown pending, releases that gate, waits for `Runtime.WaitClosed`
+with a five-second context, then performs every original root/resource/effect
+assertion. Deferred cleanup releases both gates. No production close behavior,
+assertion, test timeout, or public cancellation limit is weakened.
+
+Commit `d27c59c2461ec32434ddb1deb0f422f2d6cbfbb0` merges exact tested main `688303e`
+into old head `33f5dbc39`. Its unmodified auto-merge index equals hosted CI merge
+`1c9bb87` byte-for-byte. Only the RV64 fixture and its research note differ from
+that previously required-CI-green merge. The branch's AMD64 array-length and
+ARM64 yield changes remain. The isolated checkout is
+`/tmp/wago-pr980-rv-start-20261022`; existing dirty checkouts stay untouched.
+
+The deterministic red command fails as intended in 38.371 seconds including
+build, with peak RSS 4,649,540 KiB. Fifty shutdown-case repeats pass in each mode:
+ordinary 39.869 seconds / 4,728,068 KiB, checked 35.780 seconds / 4,872,684 KiB.
+All native imported-start tests pass three repeats per mode: ordinary 3.634
+seconds / 352,328 KiB, checked 3.519 seconds / 357,120 KiB. Their package
+execution phases are 2.671 and 2.617 seconds. Documentation passes for 86 files
+in 0.060 seconds / 27,392 KiB. Long cross-builds exceed the 30-second target;
+no new runtime or memory speed claim is made. QEMU does not qualify native
+hardware. Full workspace gates are not repeated for this test-only difference
+from the exact production merge tree already exercised by required hosted CI.
+
+The fast-forward push is accepted, the PR is open and mergeable, and new CI is
+pending. T3 keeps watching; no merge or force push is made.
+[Identity](data/wago-pr980-rv-start-2026-10-22/identity.json),
+[hosted failure](data/wago-pr980-rv-start-2026-10-22/hosted-failure.log),
+[controlled red](data/wago-pr980-rv-start-2026-10-22/shutdown-gated-red.log),
+[checked repeats](data/wago-pr980-rv-start-2026-10-22/shutdown-gated-checked.json),
+and [patch against the tested merge](data/wago-pr980-rv-start-2026-10-22/fix.patch)
+retain source, raw output, resources, and validation limits.

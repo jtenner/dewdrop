@@ -1,0 +1,10 @@
+{
+  "ci_merge": "1c9bb87f815d5128f167e4dd68c0ec253324334f",
+  "head_parent": "33f5dbc392bb3064d4661c2b614f4550541101a5",
+  "main_parent": "688303ebfa75384e89773e3fc865b8bccb2e6a71",
+  "auto_merge_index_equal_to_ci_merge": true,
+  "unstaged_diff_paths_before_documentation": [
+    "src/wago/public_native_start_riscv64_test.go"
+  ],
+  "runtime_and_compiler_sources_equal_to_ci_merge": true
+}

@@ -1,0 +1,502 @@
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.19s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.14s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.02s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close
+=== RUN   TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close
+--- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle (0.05s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedfalse-artifacttrue-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifactfalse-runtimetrue-runtime-close (0.01s)
+    --- PASS: TestRV64PublicNativeImportedStartStateReentryAndLifecycle/sharedtrue-artifacttrue-runtimetrue-runtime-close (0.01s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	2.865s
