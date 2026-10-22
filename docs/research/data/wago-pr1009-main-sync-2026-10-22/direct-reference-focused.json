@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "./src/wago",
+    "-run",
+    "Test(DirectReferenceABI|StagedGCTypeSubtypingProductsCompile)"
+  ],
+  "seconds": 27.017677272990113,
+  "exit": 0,
+  "user_seconds": 48.493166,
+  "system_seconds": 1.286795,
+  "peak_rss_kib": 3614040,
+  "minor_faults": 116568,
+  "major_faults": 4,
+  "voluntary_context_switches": 15406,
+  "involuntary_context_switches": 1605
+}

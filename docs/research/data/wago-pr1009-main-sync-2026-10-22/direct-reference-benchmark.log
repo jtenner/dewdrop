@@ -1,0 +1,18 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/wago
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkDirectReferenceABI/referenceResultfalse/enabledfalse-2         	    7506	     32303 ns/op	      33 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResultfalse/enabledfalse-2         	    7488	     32499 ns/op	      33 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResultfalse/enabledfalse-2         	    7357	     32238 ns/op	      34 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResultfalse/enabledtrue-2          	    8163	     27742 ns/op	      30 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResultfalse/enabledtrue-2          	    8574	     27758 ns/op	      29 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResultfalse/enabledtrue-2          	    8283	     28949 ns/op	      30 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResulttrue/enabledfalse-2          	    6616	     32207 ns/op	      37 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResulttrue/enabledfalse-2          	    7202	     31062 ns/op	      34 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResulttrue/enabledfalse-2          	    7774	     30859 ns/op	      32 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResulttrue/enabledtrue-2           	    8773	     26190 ns/op	      28 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResulttrue/enabledtrue-2           	    8845	     26292 ns/op	      28 B/op	       0 allocs/op
+BenchmarkDirectReferenceABI/referenceResulttrue/enabledtrue-2           	    9043	     26456 ns/op	      27 B/op	       0 allocs/op
+PASS
+ok  	github.com/wago-org/wago/src/wago	2.864s

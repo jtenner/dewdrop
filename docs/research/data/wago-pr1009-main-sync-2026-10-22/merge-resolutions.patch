@@ -1,0 +1,31 @@
+diff --git a/src/core/compiler/optimization/catalog.go b/src/core/compiler/optimization/catalog.go
+index 6b6a424aa..af4c8a0ae 100644
+--- a/src/core/compiler/optimization/catalog.go
++++ b/src/core/compiler/optimization/catalog.go
+@@ -527,12 +527,8 @@ var catalog = []Definition{
+ 	amd64("gc-native-alloc", "Native GC allocation", "allocate admitted GC objects through native nursery fast paths"),
+ 	both("v128-const-cache", "Vector constant cache", "reserve repeated vector constants and target-specific masks"),
+ 	both("v128-pins", "Vector pins", "pin hot vector locals in registers"),
+-<<<<<<< HEAD
+-	both("reg-abi", "Register ABI", "use Wago's internal register calling convention"),
+-	amd64("direct-reference-abi", "Direct reference register ABI", "pass bounded ordinary local reference signatures through registers"),
+-=======
+ 	{Name: "reg-abi", Label: "Register ABI", Description: "use Wago's internal register calling convention", Default: true, Architectures: []string{"amd64", "arm64", "riscv64"}},
+->>>>>>> origin/main
++	amd64("direct-reference-abi", "Direct reference register ABI", "pass bounded ordinary local reference signatures through registers"),
+ 	both("inline", "Inlining", "inline eligible callees"),
+ 	both("stack-fence", "Stack fence", "emit the stack-overflow guard fence"),
+ 	both("stack-reg", "Stack register", "keep the guest stack pointer in a register"),
+diff --git a/src/wago/direct_reference_abi_stats_amd64_test.go b/src/wago/direct_reference_abi_stats_amd64_test.go
+index 31891946a..ea8d1c72f 100644
+--- a/src/wago/direct_reference_abi_stats_amd64_test.go
++++ b/src/wago/direct_reference_abi_stats_amd64_test.go
+@@ -21,7 +21,7 @@ func TestDirectReferenceABIUsesRegisterCall(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	var diagnostic string
+-	plan := newGCFrameRootPlan(m, true, &diagnostic, nil)
++	plan := newGCFrameRootPlan(m, true, true, &diagnostic, nil)
+ 	if plan == nil || diagnostic != "" {
+ 		t.Fatalf("root plan: %s", diagnostic)
+ 	}

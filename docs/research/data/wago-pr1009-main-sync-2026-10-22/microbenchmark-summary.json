@@ -1,0 +1,19 @@
+{
+  "rows": [
+    {
+      "reference_result": false,
+      "disabled_median_ns": 32303,
+      "enabled_median_ns": 27758,
+      "reduction_percent": 14.069900628424605,
+      "samples_per_mode": 3
+    },
+    {
+      "reference_result": true,
+      "disabled_median_ns": 31062,
+      "enabled_median_ns": 26292,
+      "reduction_percent": 15.356384006181186,
+      "samples_per_mode": 3
+    }
+  ],
+  "scope": "8192 private direct calls per invocation; 200ms samples; concurrent test activity; not an end-to-end compiler result"
+}

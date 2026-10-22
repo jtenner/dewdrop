@@ -1,0 +1,18 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/1009",
+  "head": "877363283b2564fff3b07de5a26520de2066fae3",
+  "parents": [
+    "ec8e26decce5904b4d9875f3c1bdab1243d32548",
+    "688303ebfa75384e89773e3fc865b8bccb2e6a71"
+  ],
+  "branch": "dewdrop/pr1009-main-sync-20261022",
+  "worktree": "/tmp/wago-pr1009-main-sync-20261022",
+  "push_accepted": true,
+  "forced_push": false,
+  "pr_merged": false,
+  "worktree_clean": true,
+  "github_mergeable": true,
+  "github_head": "877363283b2564fff3b07de5a26520de2066fae3",
+  "github_base": "688303ebfa75384e89773e3fc865b8bccb2e6a71",
+  "github_draft": false
+}
