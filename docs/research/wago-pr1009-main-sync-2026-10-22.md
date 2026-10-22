@@ -116,3 +116,12 @@ Native retry is pending, the PR stays unmerged, and T3 continues watching.
 [ordinary repeats](data/wago-pr1009-green-rise-2026-10-22/imported-start-default.json),
 and [checked repeats](data/wago-pr1009-green-rise-2026-10-22/imported-start-checked.json)
 retain commands, raw output, resources, and the remaining native validation gap.
+
+
+The later failure notice names old job `119680322680`, already inspected above.
+The latest run attempt has [native retry job 119699190118](https://github.com/wago-org/wago/actions/runs/39735491061/job/119699190118)
+in progress, with pinned fixture preparation successful. The head is unchanged
+at `8773632`, open and mergeable. This is a delayed notice, not a second native
+failure. [The retry snapshot](data/wago-pr1009-green-rise-2026-10-22/late-failure-retry-snapshot.json)
+records the distinct job IDs. No duplicate retry, source patch, or timeout
+change is made. T3 remains assigned to the existing retry.

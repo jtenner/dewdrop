@@ -1,0 +1,20 @@
+{
+  "notificationJob": 119680322680,
+  "notification": "Previously inspected native RISC-V GC hang; delayed notification, not a second failure",
+  "head": "877363283b2564fff3b07de5a26520de2066fae3",
+  "retryJobs": [
+    {
+      "id": 119699190118,
+      "name": "JIT / native Linux RISC-V64",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 119699193190,
+      "name": "Prepare pinned specification fixtures",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "decision": "Native retry job 119699190118 is already running. Do not start a duplicate retry or alter source based on the old notification; keep watch."
+}
