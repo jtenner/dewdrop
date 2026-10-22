@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-count=1",
+    "./src/wago",
+    "-run",
+    "Test(GCExtern|GC.*Root|GenericGC.*Root|GC.*Footprint|GC.*State|GCNativeFrame|PluginGC)"
+  ],
+  "seconds": 27.437623014993733,
+  "exit": 0,
+  "user_seconds": 49.168187,
+  "system_seconds": 1.314007,
+  "peak_rss_kib": 3557456,
+  "minor_faults": 124665,
+  "major_faults": 7,
+  "voluntary_context_switches": 16760,
+  "involuntary_context_switches": 2064
+}

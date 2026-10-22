@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=3m",
+    "-exec",
+    "/tmp/wago-pr997-main-sync-20261022/scripts/qemu-riscv64.sh",
+    "./src/wago",
+    "-run",
+    "Test(GCNativeFrame|GCCollectFrameRoots|RV64PublicGCExtern)"
+  ],
+  "seconds": 49.83183779599494,
+  "exit": 0,
+  "user_seconds": 78.136436,
+  "system_seconds": 2.938565,
+  "peak_rss_kib": 4867516,
+  "minor_faults": 368308,
+  "major_faults": 12,
+  "voluntary_context_switches": 50079,
+  "involuntary_context_switches": 3038
+}

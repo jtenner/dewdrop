@@ -1,0 +1,425 @@
+diff --git a/src/core/runtime/basedata.go b/src/core/runtime/basedata.go
+index 3e0ac099a..e5f30f54e 100644
+--- a/src/core/runtime/basedata.go
++++ b/src/core/runtime/basedata.go
+@@ -305,7 +305,6 @@ func (j *JobMemory) LinMemBase() uintptr {
+ // guard ([linMem - 72]).
+ func (j *JobMemory) SetStackFence(v uintptr) { j.putU64(offStackFence, uint64(v)) }
+ 
+-<<<<<<< HEAD
+ // TrapStackReentry returns the active entry's trap landing stack address.
+ // The caller must hold the native execution lease while reading this word.
+ func (j *JobMemory) TrapStackReentry() uintptr {
+@@ -314,10 +313,9 @@ func (j *JobMemory) TrapStackReentry() uintptr {
+ 	}
+ 	return uintptr(j.getU64(offTrapStackReentry))
+ }
+-=======
++
+ // StackFence returns the currently bound native stack's low address.
+ func (j *JobMemory) StackFence() uintptr { return uintptr(j.getU64(offStackFence)) }
+->>>>>>> origin/main
+ 
+ // BindTrapCell installs the stable trap-buffer pointer used by native trap
+ // stubs and establishes the zero-on-entry invariant required by
+diff --git a/src/wago/api.go b/src/wago/api.go
+index 492d429c2..4860dc1e2 100644
+--- a/src/wago/api.go
++++ b/src/wago/api.go
+@@ -1444,11 +1444,6 @@ func compileWithFrontendFeaturesAndInstructions(cfg *RuntimeConfig, wasmBytes []
+ 	genericGCExecution := gcStructProduct == stagedGCStructGeneric || gcArrayProduct == stagedGCArrayProductNewData || gcArrayProduct == stagedGCArrayProductNewElem || gcArrayProduct == stagedGCArrayProductGeneric
+ 	collectorReferenceCallBoundary := moduleHasCollectorReferenceCallBoundary(m)
+ 	gcAllocationSites := moduleHasGCAllocationSitesWithValidation(m, &validationAnalysis)
+-<<<<<<< HEAD
+-	// The extern identity bridge can coexist with allocating Wasm instructions.
+-	// Its native locals need the same exact roots as generic GC execution.
+-	exactNativeGCRoots := genericGCExecution || gcStructProduct == stagedGCStructExtern || collectorReferenceCallBoundary
+-=======
+ 	// These exact source products retain their bounded persistent-root proof and
+ 	// fixed artifact image. Generic collector calls use frame-root maps.
+ 	boundedPersistentGCRoots := exactGCRefTestAbstractSource || exactGCExternSource || exactGCRefCastAbstractSource || exactGCBrOnCastAbstractSource || exactGCBrOnCastFailAbstractSource ||
+@@ -1456,9 +1451,9 @@ func compileWithFrontendFeaturesAndInstructions(cfg *RuntimeConfig, wasmBytes []
+ 	ownedExceptionReferences := railshotManagedExceptionReferences(m)
+ 	opaqueExternFrames := compiledArchitecture == 4 && len(m.Code) > 0 && (requiredByModule.IsEnabled(CoreFeatureGC) || moduleHasOpaqueExternTable(m)) && exactGCRootedScalarSource && moduleHasOpaqueExternSignatures(m) && !genericGCExecution && !boundedPersistentGCRoots && !ownedExceptionReferences && !collectorReferenceCallBoundary && !moduleHasInternalCollectorReferenceFunctions(m)
+ 	rootedReferenceDeclarations := opaqueExternFrames || compiledArchitecture == 4 && exactGCRootedScalarSource && (!metadataOnlyTypes || opaqueExternFrames) && gcStructProduct == 0 && gcArrayProduct == 0 && !gcAllocationSites && (opaqueExternFrames || moduleHasInternalCollectorReferenceFunctions(m) || collectorReferenceCallBoundary)
+-	exactNativeGCRoots := genericGCExecution || collectorReferenceCallBoundary && !boundedPersistentGCRoots || ownedExceptionReferences || rootedReferenceDeclarations
++	// AMD64 and ARM64 extern bridges also retain live locals across allocation.
++	exactNativeGCRoots := genericGCExecution || compiledArchitecture != 4 && gcStructProduct == stagedGCStructExtern || collectorReferenceCallBoundary && !boundedPersistentGCRoots || ownedExceptionReferences || rootedReferenceDeclarations
+ 	functionEnvironmentFrames := compiledArchitecture == 4 && exactNativeGCRoots && !ownedExceptionReferences && !wasm.ModuleFunctionReferenceStorage(m) && wasm.ModuleFunctionReferenceCarriers(m)
+->>>>>>> origin/main
+ 	var gcFrameRootDiagnostic string
+ 	gcFrameRoots := newGCFrameRootPlanWithInstructions(m, exactNativeGCRoots, genericGCExecution, &gcFrameRootDiagnostic, &validationAnalysis, customInstructions)
+ 	indexedFunctionRefTest, indexedFunctionRefCast := requirements.indexedFuncRefTest, requirements.indexedFuncRefCast
+@@ -1699,12 +1694,14 @@ func compileWithFrontendFeaturesAndInstructions(cfg *RuntimeConfig, wasmBytes []
+ 	if guardPageBuilt && cfg.boundsChecks == BoundsChecksSignalsBased {
+ 		compiled.codeCache.flags |= compiledCacheGuardMemory
+ 	}
+-<<<<<<< HEAD
+-	validGCFrameRoots := validGCModuleFrameRootPlan(gcFrameRoots)
++	validGCFrameRoots := validGCModuleFrameRootPlanKinds(gcFrameRoots, compiledArchitecture == 4 && (ownedExceptionReferences || functionEnvironmentFrames || genericGCExecution && wasm.ModuleFunctionReferenceStorage(m)), compiledArchitecture == 4)
++	if (ownedExceptionReferences || compiledArchitecture == 4 && (genericGCExecution || collectorReferenceCallBoundary)) && len(m.Code) == 0 && gcFrameRoots != nil && gcFrameRoots.FunctionCount() == 0 {
++		validGCFrameRoots = true // State-only owned values have no native frame or return PC.
++	}
+ 	// A complete RootNone graph needs no parked frame slots. Keep an exact
+ 	// empty plan for non-allocating extern modules rather than changing their
+ 	// collector profile merely because no safepoint vector was needed.
+-	if !validGCFrameRoots && gcStructProduct == stagedGCStructExtern && !gcAllocationSites && importedFuncs == 0 && gcFrameRoots != nil && len(m.Code) != 0 && gcFrameRoots.FunctionCount() == len(m.Code) {
++	if !validGCFrameRoots && compiledArchitecture != 4 && gcStructProduct == stagedGCStructExtern && !gcAllocationSites && importedFuncs == 0 && gcFrameRoots != nil && len(m.Code) != 0 && gcFrameRoots.FunctionCount() == len(m.Code) {
+ 		validGCFrameRoots = true
+ 		for function := 0; function < gcFrameRoots.FunctionCount(); function++ {
+ 			if gcFrameRoots.FunctionPending(function) || gcFrameRoots.Function(function) != nil {
+@@ -1713,14 +1710,7 @@ func compileWithFrontendFeaturesAndInstructions(cfg *RuntimeConfig, wasmBytes []
+ 			}
+ 		}
+ 	}
+-	if validGCFrameRoots && (gcAllocationSites || genericGCExecution && !collectorReferenceCallBoundary) {
+-=======
+-	validGCFrameRoots := validGCModuleFrameRootPlanKinds(gcFrameRoots, compiledArchitecture == 4 && (ownedExceptionReferences || functionEnvironmentFrames || genericGCExecution && wasm.ModuleFunctionReferenceStorage(m)), compiledArchitecture == 4)
+-	if (ownedExceptionReferences || compiledArchitecture == 4 && (genericGCExecution || collectorReferenceCallBoundary)) && len(m.Code) == 0 && gcFrameRoots != nil && gcFrameRoots.FunctionCount() == 0 {
+-		validGCFrameRoots = true // State-only owned values have no native frame or return PC.
+-	}
+ 	if validGCFrameRoots && len(m.Code) != 0 && (gcAllocationSites || compiledArchitecture != 4 && genericGCExecution && !collectorReferenceCallBoundary) {
+->>>>>>> origin/main
+ 		hasAllocationSafepoint := false
+ 		for function := 0; function < gcFrameRoots.FunctionCount(); function++ {
+ 			plan := gcFrameRoots.Function(function)
+diff --git a/src/wago/code_mapping.go b/src/wago/code_mapping.go
+index aa21a7d4e..fbd3c9832 100644
+--- a/src/wago/code_mapping.go
++++ b/src/wago/code_mapping.go
+@@ -421,11 +421,7 @@ func (c *Compiled) hasCollectorDeclarationRoots() bool {
+ // GC and extern-conversion products can collect with native Wasm frames live,
+ // as can collector-reference host/cross-instance boundaries.
+ func (c *Compiled) needsExactNativeGCRoots() bool {
+-<<<<<<< HEAD
+-	return c != nil && (c.usesGenericGCExecution() || c.stagedGCStructProduct() == stagedGCStructExtern || c.hasCollectorReferenceCallBoundary())
+-=======
+-	return c != nil && (c.usesGenericGCExecution() || c.hasCollectorReferenceCallBoundary() || c.needsOwnedExceptionReferences() || c.hasCollectorDeclarationRoots())
+->>>>>>> origin/main
++	return c != nil && (c.usesGenericGCExecution() || compiledArchitecture != 4 && c.stagedGCStructProduct() == stagedGCStructExtern || c.hasCollectorReferenceCallBoundary() || c.needsOwnedExceptionReferences() || c.hasCollectorDeclarationRoots())
+ }
+ 
+ // needsRuntimeGCCollectorDomain is the instantiated-module predicate. A module
+diff --git a/src/wago/gc_frame_roots.go b/src/wago/gc_frame_roots.go
+index e67d1e00d..ee576d754 100644
+--- a/src/wago/gc_frame_roots.go
++++ b/src/wago/gc_frame_roots.go
+@@ -488,11 +488,6 @@ func validateCompiledGCFrameRoots(c *Compiled, rootMap *compiledGCFrameRoots) er
+ 			return fmt.Errorf("GC frame-root metadata rejects import %d signature", i)
+ 		}
+ 	}
+-<<<<<<< HEAD
+-	// Source extern modules may have a complete, proven RootNone graph. Their
+-	// bridge admission is not persisted, so decoded artifacts still reject.
+-	if len(rootMap.safepoints) == 0 && len(rootMap.callsites) == 0 && c.stagedGCStructProduct() != stagedGCStructExtern {
+-=======
+ 	if len(rootMap.safepoints) == 0 && len(rootMap.callsites) == 0 {
+ 		if ownedState && len(c.Funcs) == 0 && len(rootMap.adapterReturnOffsets) == 0 {
+ 			return nil
+@@ -506,7 +501,11 @@ func validateCompiledGCFrameRoots(c *Compiled, rootMap *compiledGCFrameRoots) er
+ 		if compiledArchitecture == 4 && memo != nil && memo.rv64FreshRootedGC && memo.rv64RootedNoCollectingBodies && sha256.Sum256(c.code) == memo.rv64FreshRootedGCDigest && len(rootMap.adapterReturnOffsets) == 0 {
+ 			return nil
+ 		}
+->>>>>>> origin/main
++		// The source-only extern bridge can prove an empty RootNone graph.
++		// This bridge admission is not persisted in saved artifacts.
++		if compiledArchitecture != 4 && c.stagedGCStructProduct() == stagedGCStructExtern {
++			return nil
++		}
+ 		return fmt.Errorf("GC frame-root metadata has no safepoints or callsites")
+ 	}
+ 	if len(rootMap.safepoints) == 0 && c.usesGenericGCExecution() && !c.hasCollectorReferenceCallBoundary() {
+@@ -544,6 +543,8 @@ func validCompiledGCFunctionTables(c *Compiled) bool {
+ 	}
+ 	totalFuncs := c.NumImports + len(c.Funcs)
+ 	opaqueExtern := c.compactExternFrameRoots()
++	sourceExtern := compiledArchitecture != 4 && c.stagedGCStructProduct() == stagedGCStructExtern
++	allowExternTables := opaqueExtern || sourceExtern
+ 	validValues := func(refType ValType, values []RefInit) bool {
+ 		refType = normalizedElemRefType(refType)
+ 		for k, value := range values {
+@@ -587,11 +588,7 @@ func validCompiledGCFunctionTables(c *Compiled) bool {
+ 				}
+ 				continue
+ 			}
+-<<<<<<< HEAD
+-			if (!isGCRefValType(refType) && refType != ValExternRef) || !value.Null {
+-=======
+-			if !isGCRefValType(refType) && (!opaqueExtern || refType != ValExternRef) || !value.Null {
+->>>>>>> origin/main
++			if !isGCRefValType(refType) && (!allowExternTables || refType != ValExternRef) || !value.Null {
+ 				return false
+ 			}
+ 		}
+@@ -599,8 +596,7 @@ func validCompiledGCFunctionTables(c *Compiled) bool {
+ 	}
+ 	for tableIndex := 0; tableIndex < c.tableCount(); tableIndex++ {
+ 		typ := c.tableElementType(tableIndex)
+-<<<<<<< HEAD
+-		if typ == ValExternRef && c.stagedGCStructProduct() == stagedGCStructExtern {
++		if typ == ValExternRef && sourceExtern {
+ 			if _, imported := c.tableImportAt(tableIndex); imported {
+ 				return false
+ 			}
+@@ -609,10 +605,7 @@ func validCompiledGCFunctionTables(c *Compiled) bool {
+ 					return false
+ 				}
+ 			}
+-		} else if typ != ValFuncRef && !isGCRefValType(typ) {
+-=======
+-		if typ != ValFuncRef && !isGCRefValType(typ) && (!opaqueExtern || typ != ValExternRef) {
+->>>>>>> origin/main
++		} else if typ != ValFuncRef && !isGCRefValType(typ) && (!opaqueExtern || typ != ValExternRef) {
+ 			return false
+ 		}
+ 		if tableIndex == 0 {
+diff --git a/src/wago/gc_struct_helper_amd64_test.go b/src/wago/gc_struct_helper_amd64_test.go
+index ecad7d4cf..70990211c 100644
+--- a/src/wago/gc_struct_helper_amd64_test.go
++++ b/src/wago/gc_struct_helper_amd64_test.go
+@@ -320,17 +320,13 @@ func TestStagedGCStructHelperFootprint(t *testing.T) {
+ 	if got := unsafe.Sizeof(compiledCodeCache{}) - unsafe.Sizeof(profileCacheState{}); got != 64 {
+ 		t.Fatalf("compiledCodeCache non-profiling size = %d, want 64", got)
+ 	}
+-<<<<<<< HEAD
+-	if got := unsafe.Sizeof(gcPublicState{}); got != 7728 {
+-		t.Fatalf("gcPublicState size = %d, want 7728 with full-depth host activation landing snapshots", got)
+-=======
+ 	// Raising the activation bound from 8 to 33 adds 25 records (96 bytes
+ 	// each), two 64-entry root-slot arrays and four tracking bytes per level,
+ 	// plus four bytes of final alignment: 7864 + 25*(96+512+4) + 4.
+-	const wantGCState = 23168
++	// The entry landing snapshot adds one pointer plus 33 activation pointers.
++	const wantGCState = 23168 + 34*8
+ 	if got := unsafe.Sizeof(gcPublicState{}); got != wantGCState {
+ 		t.Fatalf("gcPublicState size = %d, want %d with RV64 roots and full-depth host activation storage", got, wantGCState)
+->>>>>>> origin/main
+ 	}
+ 	if got := unsafe.Sizeof(gcRefTokenEntry{}); got != 48 {
+ 		t.Fatalf("gcRefTokenEntry size = %d, want 48", got)
+diff --git a/src/wago/instantiate.go b/src/wago/instantiate.go
+index 02276ae64..0ebec5fed 100644
+--- a/src/wago/instantiate.go
++++ b/src/wago/instantiate.go
+@@ -299,13 +299,12 @@ func (b *instanceBuilder) prepareCollector() error {
+ 		return nil
+ 	}
+ 	gcConfig := b.opts.GC
+-<<<<<<< HEAD
+-	if b.c.needsExactNativeGCRoots() && b.c.genericGCFrameRoots() == nil {
++	needsFrameRoots := b.c.usesGenericGCExecution()
++	if compiledArchitecture != 4 {
++		needsFrameRoots = b.c.needsExactNativeGCRoots()
++	}
++	if needsFrameRoots && b.c.genericGCFrameRoots() == nil && !rv64OfficialGCRefEq(b.c) && !rv64GCRefTestTable(b.c) && !rv64GCRefTestConcrete(b.c) && !rv64GCRefCastConcrete(b.c) && !rv64GCBrOnCastConcrete(b.c) && !rv64GCBrOnCastFailConcrete(b.c) && !rv64GCBrOnCastNullability(b.c) && !rv64GCBrOnCastFailNullability(b.c) && !rv64GCRefTestAbstract(b.c) && !rv64GCExtern(b.c) && !rv64GCRefCastAbstract(b.c) && !rv64GCBrOnCastAbstract(b.c) && !rv64GCBrOnCastFailAbstract(b.c) && !rv64GCStructGet(b.c) && !rv64GCStructMutation(b.c) && !rv64GCStructNull(b.c) && !rv64GCStructPacked(b.c) && !rv64GCStructBasic(b.c) && !rv64GCArrayLocal(b.c) && !rv64GCArrayUniform(b.c) && !rv64GCArrayFixedLocal(b.c) && !rv64GCArrayFixedOfficial(b.c) && !rv64GCArrayDefaultOfficial(b.c) && !rv64GCArrayPackedData(b.c) && !rv64GCArrayReference(b.c) && !rv64GCArrayInitElem(b.c) && !rv64GCArrayInitData(b.c) && !rv64GCArrayFill(b.c) && !rv64GCArrayCopy(b.c) {
+ 		// Products outside the validated native root-map slice still do
+-=======
+-	if b.c.usesGenericGCExecution() && b.c.genericGCFrameRoots() == nil && !rv64OfficialGCRefEq(b.c) && !rv64GCRefTestTable(b.c) && !rv64GCRefTestConcrete(b.c) && !rv64GCRefCastConcrete(b.c) && !rv64GCBrOnCastConcrete(b.c) && !rv64GCBrOnCastFailConcrete(b.c) && !rv64GCBrOnCastNullability(b.c) && !rv64GCBrOnCastFailNullability(b.c) && !rv64GCRefTestAbstract(b.c) && !rv64GCExtern(b.c) && !rv64GCRefCastAbstract(b.c) && !rv64GCBrOnCastAbstract(b.c) && !rv64GCBrOnCastFailAbstract(b.c) && !rv64GCStructGet(b.c) && !rv64GCStructMutation(b.c) && !rv64GCStructNull(b.c) && !rv64GCStructPacked(b.c) && !rv64GCStructBasic(b.c) && !rv64GCArrayLocal(b.c) && !rv64GCArrayUniform(b.c) && !rv64GCArrayFixedLocal(b.c) && !rv64GCArrayFixedOfficial(b.c) && !rv64GCArrayDefaultOfficial(b.c) && !rv64GCArrayPackedData(b.c) && !rv64GCArrayReference(b.c) && !rv64GCArrayInitElem(b.c) && !rv64GCArrayInitData(b.c) && !rv64GCArrayFill(b.c) && !rv64GCArrayCopy(b.c) {
+-		// Generic products outside the validated native root-map slice still do
+->>>>>>> origin/main
+ 		// not publish every native reference at allocating helper safepoints. Keep
+ 		// them stable and bounded rather than scanning an incomplete frame. The
+ 		// exact RV64 allocating products have no live native reference across an
+diff --git a/src/wago/reference_store.go b/src/wago/reference_store.go
+index 625d42b6a..2374c8f45 100644
+--- a/src/wago/reference_store.go
++++ b/src/wago/reference_store.go
+@@ -744,42 +744,11 @@ func (r *gcNativeFrameRoots) RangeClassifiedRootRefs(sink gc.ClassifiedRootRefSi
+ 	if !r.rangeChain(nil, classifiedRootSink{sink: sink, class: gc.RootNativeFrame}, r.physicalStack) {
+ 		return false
+ 	}
+-<<<<<<< HEAD
+-	state := r.suspended
+-	if state != nil && state.hostRootPlan != nil {
+-		for i := int(state.hostActivationCount) - 1; i >= 0; i-- {
+-			activation := &state.hostActivations[i]
+-			if activation.stack == nil || activation.noFrame {
+-				continue
+-			}
+-			if int(activation.callsite) >= len(state.hostRootPlan.callsites) {
+-				panic(gcHelperFailuref("generic GC host activation callsite %d is unavailable", activation.callsite))
+-			}
+-			callsite := &state.hostRootPlan.callsites[activation.callsite]
+-			chain := gcNativeFrameRoots{
+-				owner:                r.owner,
+-				entryReturnSlot:      activation.entryReturnSlot,
+-				base:                 activation.base,
+-				offsets:              callsite.offsets,
+-				frameBytes:           callsite.frameBytes,
+-				frameLayout:          r.frameLayout,
+-				allowExternalReturn:  r.allowExternalReturn,
+-				codeBase:             state.hostCodeBase,
+-				codeBytes:            state.hostCodeBytes,
+-				adapterReturnOffsets: state.hostRootPlan.adapterReturnOffsets,
+-				callsites:            state.hostRootPlan.callsites,
+-			}
+-			if !chain.rangeChain(nil, classifiedRootSink{sink: sink, class: gc.RootNativeFrame}, activation.stack) {
+-				return false
+-			}
+-		}
+-=======
+ 	if !r.rangeSuspendedRoots(r.owner, r.suspended, nil, classifiedRootSink{sink: sink, class: gc.RootNativeFrame}) {
+ 		return false
+ 	}
+ 	if r.domainHostRoots && r.owner != nil && r.owner.refStore != nil && !r.owner.refStore.rangeGCDomainSuspendedRoots(r.owner.gc, r.suspended, r, nil, classifiedRootSink{sink: sink, class: gc.RootNativeFrame}) {
+ 		return false
+->>>>>>> origin/main
+ 	}
+ 	if r.owner != nil && r.owner.refStore != nil && r.owner.refStore.ownsGCCollector(r.owner.gc) {
+ 		return r.owner.refStore.rangeGCDomainPersistentRootsClassified(r.owner.gc, sink)
+@@ -802,12 +771,8 @@ func (r *gcNativeFrameRoots) rangeSuspendedRoots(owner *Instance, state *gcPubli
+ 			}
+ 			callsite := &state.hostRootPlan.callsites[activation.callsite]
+ 			chain := gcNativeFrameRoots{
+-<<<<<<< HEAD
+-				owner:                r.owner,
+-				entryReturnSlot:      activation.entryReturnSlot,
+-=======
+ 				owner:                owner,
+->>>>>>> origin/main
++				entryReturnSlot:      activation.entryReturnSlot,
+ 				base:                 activation.base,
+ 				offsets:              callsite.offsets,
+ 				frameBytes:           callsite.frameBytes,
+@@ -912,25 +877,7 @@ func (in *Instance) rangeLocalGCTableRoots(fn func(gc.RootSlot) bool, sink gc.Ro
+ 	if in == nil || in.c == nil {
+ 		return true
+ 	}
+-<<<<<<< HEAD
+ 	mirrored := in.existingGCRefTestTableState()
+-	for tableIndex := 0; tableIndex < in.c.tableCount(); tableIndex++ {
+-		if !isGCRefValType(in.c.tableElementType(tableIndex)) {
+-			continue
+-		}
+-		// Staged tables already own checked collector slots. Those slots retain
+-		// objects and represent foreign anyref identities as non-collector null.
+-		if mirrored != nil && tableIndex < len(mirrored.kinds) && mirrored.kinds[tableIndex] == gcRefTableRoot {
+-			continue
+-		}
+-		desc := in.tableDescriptor(tableIndex)
+-		if len(desc) < 8 {
+-			panic(gcHelperFailuref("generic GC table %d descriptor is unavailable", tableIndex))
+-		}
+-		roots := gcNativeTableRoots{desc: uintptr(unsafe.Pointer(&desc[0])), bytes: uintptr(len(desc))}
+-		if !roots.walk(fn, sink) {
+-			return false
+-=======
+ 	if !rangeLocalCompactExternRoots(in, fn, sink) {
+ 		return false
+ 	}
+@@ -945,6 +892,10 @@ func (in *Instance) rangeLocalGCTableRoots(fn func(gc.RootSlot) bool, sink gc.Ro
+ 			if !isGCRefValType(in.c.tableElementType(tableIndex)) {
+ 				continue
+ 			}
++			// Staged mirrors retain checked collector roots and filter foreign identities.
++			if compiledArchitecture != 4 && mirrored != nil && tableIndex < len(mirrored.kinds) && mirrored.kinds[tableIndex] == gcRefTableRoot {
++				continue
++			}
+ 			desc := in.tableDescriptor(tableIndex)
+ 			if len(desc) < 8 {
+ 				panic(gcHelperFailuref("generic GC table %d descriptor is unavailable", tableIndex))
+@@ -953,7 +904,6 @@ func (in *Instance) rangeLocalGCTableRoots(fn func(gc.RootSlot) bool, sink gc.Ro
+ 			if !roots.walk(fn, sink) {
+ 				return false
+ 			}
+->>>>>>> origin/main
+ 		}
+ 	}
+ 	passiveBase := in.jm.PassiveElemPtr()
+@@ -1032,12 +982,6 @@ func (r *gcNativeFrameRoots) rangeChain(fn func(gc.RootSlot) bool, sink gc.RootR
+ 			return false
+ 		}
+ 		for _, off := range offsets {
+-<<<<<<< HEAD
+-			bits := binary.LittleEndian.Uint64(unsafe.Slice((*byte)(offHeapPtr(base+uintptr(off))), 8))
+-			if bits != uint64(gc.Ref(uint32(bits))) {
+-				if owner == nil || !owner.isForeignAnyref(bits) {
+-					panic(gcHelperFailuref("generic GC frame-root offset %d contains non-compact reference %#x", off, bits))
+-=======
+ 			encoded := off
+ 			off = shared.GCFrameRootOffset(encoded)
+ 			if encoded&shared.GCFrameExternRefRootFlag != 0 {
+@@ -1051,10 +995,18 @@ func (r *gcNativeFrameRoots) rangeChain(fn func(gc.RootSlot) bool, sink gc.RootR
+ 				word := nativeGCFrameWord(base + uintptr(off))
+ 				if !visitManagedFunctionFrameRoot(owner, word, fn, sink) {
+ 					return false
+->>>>>>> origin/main
+ 				}
+ 				continue
+ 			}
++			if r.frameLayout&gcNativeFrameLayoutMask != gcNativeFrameLayoutRISCV64 {
++				bits := nativeGCFrameWord(base + uintptr(off))
++				if bits != uint64(gc.Ref(uint32(bits))) {
++					if owner == nil || !owner.isForeignAnyref(bits) {
++						panic(gcHelperFailuref("generic GC frame-root offset %d contains non-compact reference %#x", off, bits))
++					}
++					continue
++				}
++			}
+ 			// gc.Ref is the low 32 bits of the validated little-endian native qword.
+ 			// Expose the actual off-heap word so a moving/reference-rewriting policy
+ 			// updates the parked frame rather than a copied scratch value.
+@@ -1096,41 +1048,8 @@ func (r *gcNativeFrameRoots) rangeChain(fn func(gc.RootSlot) bool, sink gc.RootR
+ 		if stackTop != 0 && (retAddr > stackTop || stackTop-retAddr < 8) {
+ 			panic(gcHelperFailuref("generic GC native return address exceeds stack bounds"))
+ 		}
+-<<<<<<< HEAD
+-		retWord := unsafe.Slice((*byte)(offHeapPtr(retAddr)), 8)
+-		retPC := uintptr(binary.LittleEndian.Uint64(retWord))
+-		calleeOwner := owner
+-=======
+ 		retPC := uintptr(nativeGCFrameWord(retAddr))
+-		if retPC < codeBase || retPC-codeBase >= codeBytes {
+-			if owner == nil || owner.refStore == nil || !owner.refStore.ownsGCCollector(owner.gc) {
+-				return true
+-			}
+-			foreign := owner.refStore.gcFrameOwner(retPC, owner.gc)
+-			if foreign == nil {
+-				if r.allowExternalReturn {
+-					return true
+-				}
+-				panic(gcHelperFailuref("generic GC foreign return PC %#x has no Runtime GC-domain owner", retPC))
+-			}
+-			owner = foreign
+-			plan := foreign.c.genericGCFrameRoots()
+-			codeBase, codeBytes = foreign.base, uintptr(len(foreign.c.code))
+-			adapterReturnOffsets, callsites = plan.adapterReturnOffsets, plan.callsites
+-		}
+-		rel := uint32(retPC - codeBase)
+-		adapterIndex := 0
+-		if len(adapterReturnOffsets) <= 8 {
+-			for adapterIndex < len(adapterReturnOffsets) && adapterReturnOffsets[adapterIndex] < rel {
+-				adapterIndex++
+-			}
+-		} else {
+-			adapterIndex = sort.Search(len(adapterReturnOffsets), func(i int) bool { return adapterReturnOffsets[i] >= rel })
+-		}
+-		if adapterIndex < len(adapterReturnOffsets) && adapterReturnOffsets[adapterIndex] == rel {
+-			return true
+-		}
+->>>>>>> origin/main
++		calleeOwner := owner
+ 		if base > ^uintptr(0)-uintptr(frameBytes)-callerFrameBias {
+ 			panic(gcHelperFailuref("generic GC caller frame address overflows"))
+ 		}
+@@ -1189,6 +1108,11 @@ func (r *gcNativeFrameRoots) rangeChain(fn func(gc.RootSlot) bool, sink gc.RootR
+ 			if adapterIndex == len(adapterReturnOffsets) || adapterReturnOffsets[adapterIndex] != rel {
+ 				break
+ 			}
++			// RV64 keeps its validated adapter boundary. The physical record
++			// traversal below is specific to AMD64 and ARM64.
++			if r.frameLayout&gcNativeFrameLayoutMask == gcNativeFrameLayoutRISCV64 {
++				return true
++			}
+ 			if owner == nil || owner.c == nil {
+ 				return true // This chain has no retained compiled wrapper.
+ 			}
+@@ -1237,7 +1161,7 @@ func (r *gcNativeFrameRoots) rangeChain(fn func(gc.RootSlot) bool, sink gc.RootR
+ 		// native-context pointer: AMD64 at record+8, ARM64 at record+0.
+ 		// Code can be shared by instances, so its representative owner only
+ 		// selects the immutable plan; this saved identity selects the roots.
+-		if stackAdjust == 64 && owner != nil && owner.refStore != nil {
++		if r.frameLayout&gcNativeFrameLayoutMask != gcNativeFrameLayoutRISCV64 && stackAdjust == 64 && owner != nil && owner.refStore != nil {
+ 			if returnBase > ^uintptr(0)-64 || stackTop != 0 && (returnBase > stackTop || stackTop-returnBase < 64) {
+ 				panic(gcHelperFailuref("generic GC caller context record exceeds stack bounds"))
+ 			}

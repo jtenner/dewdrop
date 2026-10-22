@@ -1,0 +1,8 @@
+START arm64-gc-qemu
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-count=1", "-timeout=3m", "-exec", "/usr/bin/qemu-aarch64", "./src/wago", "-run", "Test(GCExtern|GCNativeFrame|GCCollectFrameRoots)"], "seconds": 26.640339188001235, "exit": 0, "user_seconds": 42.160364, "system_seconds": 1.180049, "peak_rss_kib": 2708972, "minor_faults": 112624, "major_faults": 6, "voluntary_context_switches": 18661, "involuntary_context_switches": 1276}
+ok  	github.com/wago-org/wago/src/wago	0.485s
+
+START riscv64-gc-qemu
+{"command": ["/home/dev/.local/share/mise/installs/go/1.27.1/bin/go", "test", "-p", "1", "-count=1", "-timeout=3m", "-exec", "/tmp/wago-pr997-main-sync-20261022/scripts/qemu-riscv64.sh", "./src/wago", "-run", "Test(GCNativeFrame|GCCollectFrameRoots|RV64PublicGCExtern)"], "seconds": 49.83183779599494, "exit": 0, "user_seconds": 78.136436, "system_seconds": 2.938565, "peak_rss_kib": 4867516, "minor_faults": 368308, "major_faults": 12, "voluntary_context_switches": 50079, "involuntary_context_switches": 3038}
+ok  	github.com/wago-org/wago/src/wago	0.268s
+

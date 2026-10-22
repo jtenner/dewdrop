@@ -1,0 +1,18 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/997",
+  "head": "26d272e49f7f36d66034a7afa20b6c472ad06f5c",
+  "parents": [
+    "dba9d9670bc2fe1710bd4b83f7c9f70bbbfb1e46",
+    "688303ebfa75384e89773e3fc865b8bccb2e6a71"
+  ],
+  "branch": "dewdrop/pr997-main-sync-20261022",
+  "worktree": "/tmp/wago-pr997-main-sync-20261022",
+  "draft": true,
+  "known_root_blockers_resolved": false,
+  "forced_push": false,
+  "pr_merged": false,
+  "push_accepted": true,
+  "github_mergeable": true,
+  "github_head": "26d272e49f7f36d66034a7afa20b6c472ad06f5c",
+  "github_base": "688303ebfa75384e89773e3fc865b8bccb2e6a71"
+}
