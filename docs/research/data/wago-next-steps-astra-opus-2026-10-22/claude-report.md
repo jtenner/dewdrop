@@ -1,0 +1,96 @@
+I did not edit, build, test, or benchmark anything. The only files I wrote are scratch analysis scripts and a WAT print, all in `/tmp/claude-research-scripts`. The two checkouts are unchanged.
+
+# Next GC and code-generation steps for Dew on Wago (research report)
+
+## Short answer
+
+1. **Nobody has optimized or measured the pinned compiler Wasm.** It looks like raw debug output. Dewdrop already has optimizer lanes for it, but they are off.
+2. **About 24 s is a floor for any engine that does no optimizing on this Wasm.** V8 with only its baseline compiler takes 23.96 s. Wago takes 28.58 s. GC tweaks or one-pass code tweaks alone cannot reach 4 s on this exact Wasm.
+3. **The main remaining limit:** the Wasm needs an optimizer (inlining, cast removal, fewer allocations), and Wago is a one-pass compiler. So supply that optimizer work ahead of time, in the Wasm, before more Wago tuning.
+
+## What I found (my own read-only analysis)
+
+| Fact | Value | Where |
+| --- | --- | --- |
+| Wasm size and native code size | 2,723,633 B Wasm becomes 25,280,167 B native code (7,012 functions) | `profile-baseline/code-map.json` |
+| Native bytes from `struct.new` | 11,451,073 B: 57.6% of the bytes the source map ties to opcodes (45% of all native bytes). Median 614 B per site, 19,517 sites. | code map + `wasm-tools print --print-offsets` |
+| Next largest | `ref.cast` 8.4%, `call` 8.2%, `struct.get` 4.6% | same |
+| Opcode mix | Of 664,773 ops: `call` 66,363, `struct.get` 49,047, `ref.cast` 40,692, `struct.new` 19,481. Arithmetic opcodes are rare. | `compiler.wat` |
+| Tiny callees | Of 49,869 named direct call sites, 69.0% call functions with 4 or fewer instructions. 45.1% are forwarders, for example `$push` → `$array_push`. 23.9% are operator leaves: `$add`, `$lt`, `$gte`. | `compiler.wat` |
+| Unoptimized output | Raw `local.set`/`local.get` chains and 3-instruction forwarders are still in the module. The Binaryen lane in `tools/check-self-host-bootstrap.sh:16,72-86` is off by default. Dew builds default to `--optimize none`. | `compiler.wat`, tools, `compiler-cli-optimization-2026-09-10.md` |
+| `for` allocates on every step | `parser_control.dew:1145-1210` turns `for` into `iter()` plus a `while` loop on `next()`. `std/array.dew:1410` `array_iter_next_option` makes a new `Some` or `None` on each call. `None` (type 2453) is a new zero-field final struct each time. `Option<U64>` also boxes the `u64` (type 9031). | Dew source + WAT funcs 465, 2293 |
+| Quadratic scans still in source | `semantic_impl_index.dew:1412,1432` still scan all imported callables inside loops. Each step of those loops allocates an `Option`. | Dew source |
+| Cost of one checked read | `emitCheckedGCObject` (`gc_direct.go:673`): about 10 loads, 7 branches, and 1 frame spill for each new handle. | Wago source |
+| Cost of one allocation | `emitNativeStructAlloc` (`gc_direct.go:1681-2016`): about 15 state loads, about 10 fallback branches, a handle check for each reference field (typed fields also get a type check), and 4 stores into the handle entry. The cold Go fallback code is also inline (`call.go:1644`). | Wago source |
+| Minor-GC cleanup cost | `finishSparseMinorEvacuation` (`collect.go:291`) does work for every nursery handle, dead or alive. | Wago source |
+| No optimizing tier | `ARCHITECTURE.md:533`: one pass only. `inline.go`: inlining is for small int-only leaves (plus narrow GC numeric and read-region cases). The SSA IR package handles scalars only and is cut off from production. | Wago source |
+
+**Earlier evidence (measured by others; labels kept):**
+- Latest job: 28.58 s.
+- V8 (2026-10-21): default 4.00 s, baseline-only (`--liftoff-only`) 23.96 s, optimizing-only (`--no-liftoff`) 7.22 s.
+- Profile: 23.02 s in generated code; `callWithHostLoop` 5.67 s cumulative; `alloc` 4.11 s; sparse cleanup 1.60 s; `handleEntry.young` 0.58 s; `reserveNativeHandles` 0.42 s.
+- Older trace (before compact headers): 317,075,456 allocations, 146 minor GCs, 1,334,860 handle batches. Only 13.7 M objects (4.3%) were scanned as live.
+
+**Hypotheses (not measured):**
+- Allocation costs Wago much more per object than it costs V8. Some of that cost is Go work that grows with every allocated object, not only with live ones.
+- 25 MB of native code may cause instruction-cache misses. Hardware counters are blocked (EPERM).
+- My estimate: allocation-related cost is 20–30% of the job. This is not a measurement.
+
+## Ranked next steps
+
+**1. Optimize the compiler Wasm ahead of time (new compiler Wasm, no source change).**
+- Run the existing Starshine `speed` profile (`tools/dew optimize`). Use Binaryen `-O3` (the bootstrap lane flags) only as a reference arm.
+- Why first: it is cheap, it uses tools that already exist, and its result decides between steps 2 and 3.
+- Limit: Wago already retargets 15,349 forwarders and inlines 11,886 numeric leaves. So Wago may gain less than V8's baseline tier gains.
+
+**2. Make fewer allocations and casts in Dew output (new compiler Wasm, source change).** These are general rules, with no name, path, or standard-module special cases:
+- Remove the `Option` allocation in each `for` step. Use speed-inventory items 10 and 11: scalar replacement across known calls and loop state, plus private enum carriers for references. Binaryen `heap2local` probably cannot do this, because two different allocations (`Some` and `None`) merge in an `if`.
+- Make zero-field final variants one shared constant, but only if Dew never exposes their identity.
+- Item 12: carry exact type facts so most `eqref` → `ref.cast` steps go away.
+- Fix the quadratic import scans (`semantic_impl_index.dew:1412,1432`; the interners in `semantic_imported_semantics.dew`).
+- The scalar census you have only rules out the adjacent-local case. The main allocation in the hot loop is made in the callee and then matched in the caller.
+
+**3. Make young-object cost depend on survivors, not on all allocations (same pinned Wasm, Wago GC).**
+- Give young handles out by bump from one contiguous window. At each minor GC, give survivors new numbers and reset the whole window.
+- This removes the per-object cleanup loop, the free-list handle pops, most of the 1.33 M Go batch trips, and the scattered handle writes.
+- Proof needed:
+  - Every copy of a reference must sit in an exact root home at each safepoint. No handle number may stay in a callee-saved register across a call.
+  - Globals, tables, card slots, `objectCards`, `checkedHandles`, and native batches must all be rewritten.
+  - References held by the host need stable pinned handles.
+- Start with an audit, plus a stress mode that renumbers all survivors on every minor GC.
+
+I do not rank a Wago optimizing tier yet. Experiment 1 decides if one is needed.
+
+## First experiment: optimized-compiler A/B
+
+- **Arms:**
+  - A: the pinned `compiler.wasm` (`c64fcf…`).
+  - B: A after `tools/dew optimize` (Starshine `speed`).
+  - C: A after `wasm-opt -O3 --shrink-level=1` with the bootstrap feature flags. Record the Binaryen version.
+  - Do not use `--traps-never-happen`, `--ignore-implicit-traps`, or `--closed-world`.
+- **Safety:**
+  - Use the same request (`077b0f…`) and the same frozen host (`44bb8e1bc`).
+  - The output Wasm must be exactly `89af05…`, it must validate, and `main` must return 42.
+  - The cache hash must be `c3a914…`. If it differs, explain why before you continue.
+  - Then run the existing self-host bootstrap lane with the optimized compiler.
+  - Wago code, Wago checks, and root maps do not change.
+- **Memory cap:**
+  - Each optimizer run: at most 30 s and 4 GiB RSS. More than 30 s is a bug, so record it.
+  - Job peak RSS: at most about 714 MB (control median 649,232 KiB plus 10%).
+- **Measurements:**
+  - Wago: 3 serial ABA pairs per arm, with the same CPU pinning, `GOMAXPROCS`, heap, nursery, and fresh caches as before. Record wall, CPU, and RSS.
+  - V8: 3 samples each for default and `--liftoff-only`.
+  - In separate untimed runs: native code bytes (code map), Wago cold native-compile time, and collector `Allocations` / `MinorCollections` from the diagnostic host.
+- **How to decide:**
+  - If Wago gains 10% or more and every pair improves: adopt optimization in the compiler build (Starshine path), then do step 2.
+  - If baseline-only V8 gains a lot but Wago gains little: per-object costs in Wago dominate. Do step 3.
+  - If optimized `--liftoff-only` stays well above 4 s: optimizing ahead of time cannot reach the target alone. Then step 2, or a Wago optimizing tier, is required.
+- **Stop:**
+  - A hash mismatch or a new trap stops that arm. Do one bisect report, then stop.
+  - If both arms move Wago by less than 3%, stop this line and go to step 3.
+
+## The ~7× gap
+
+28.58 s ÷ 4.00 s ≈ 7.1×. If the Go GC cost the full 5.3 s less, generated code would still take about 23 s, about 5.8×. Wago is already near V8's baseline tier (about 1.2×, from separate runs). The gap is mostly optimizing-tier work that nothing in the current pipeline does.
+
+I make no speed claims for any step. Each step needs the measurements above.

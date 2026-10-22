@@ -1,0 +1,58 @@
+{
+  "source_commit": "44bb8e1bc3b2b175b20600f9870d58d4a1219fef",
+  "brief": "Independently recommend the next GC/code-generation steps for the Dew compiler running on Wago. This is research only. Do not implement, edit files, build, test, benchmark, use the network, open/watch PRs, or spawn other agents. Return your report in the final response; parent will save it. Do not consult the other researcher's report.\n\nUser priorities: reach a four-second full compiler job; runtime speed first, then low peak RSS. More native compilation time/memory is acceptable, but compile activities over 30 seconds are bugs. Keep user-facing advice short and concrete. No name/path/standard-module special cases.\n\nInspect current source FIRST: /tmp/wago-gc-scalar-replacement-20261022, clean commit 44bb8e1bc3b2b175b20600f9870d58d4a1219fef, branch dewdrop/gc-large-promotion-sort-20261022. It is a Wago checkout; parent project /home/dev/Projects/dewdrop contains Dew sources and research, NOT these Wago paths. Read the implementation enough to form your own model before earlier reports. Do not modify either checkout; parent project has user edits.\n\nThen read latest evidence:\n- /home/dev/Projects/dewdrop/docs/research/wago-gc-scalar-replacement-2026-10-22.md\n- /home/dev/Projects/dewdrop/docs/research/data/wago-gc-scalar-replacement-2026-10-22/identity.json, reuse-full-summary.json, sort-size-histogram.json, profile-top.log, local-projection-census.json, census.py\n- /home/dev/Projects/dewdrop/docs/research/wago-gc-deferred-implementation-2026-10-22.md\nLarge artifacts live under /tmp/wago-gc-scalar-evidence; compiler.wat is the pinned compiler, and profile-baseline/cpu.pprof and code-map.json precede the final sort change. Treat diagnostic elapsed/RSS as diagnostic, not a production comparison.\n\nCurrent results: four deferred GC issues (#308 stable VA backing; #309 compact/header-free layout; #313 opt-in Immix; #321 optional parallel/concurrent execution) are implemented locally. Qualified default paged result was 33.622 -> 28.985 seconds and RSS 1,138,168 -> 620,524 KiB. Optional Immix/workers remain off by default because screens did not justify enabling them. Latest bounded promotion-sort change increases lazily retained workspace cap 1.25 -> 20 MiB per collector and reuses cached allocation-size keys. Matched final full-job medians 28.933298 -> 28.581888 seconds; all three pairs improve by 0.1274, 0.1281, 0.3514 seconds. Median RSS 648,956 -> 649,232 KiB. It passes full collector/runtime/Wago and fault/padded/workers/race/checked lanes. It is LOCAL ONLY; nothing installed/published.\n\nFresh baseline diagnostic profile: 29.95 sampled CPU seconds, generated code 23.02 (76.86%), dead nursery handle cleanup 1.60 cumulative, promotion sorting 0.62 cumulative. Generated code includes actual program algorithms; do not label its full share removable GC checks.\n\nA narrow census found 2,948 nonempty scalar-only constructors, 201 immediately assigned to locals, two adjacent local reads, zero qualifying adjacent scalar projections. This rejects only that narrow experiment, NOT general escape analysis across helper calls. A four-handle cleanup unroll passed safety tests but regressed in microbenchmarks and was removed.\n\nAlready tried/implemented: bounded readonly reference-read region inlining; per-value check homes and child identity propagation; readonly direct-call summaries, extended for scalar/SIMD/vector-array readers; native-segment dense address cache (rejected for time/memory); loop-keyed frame cache (held, noisy gain, code growth, unknown hits/misses). Earlier notes have details:\n /home/dev/Projects/dewdrop/docs/research/wago-read-regions-2026-10-21.md\n /home/dev/Projects/dewdrop/docs/research/wago-value-checks-2026-10-21.md\n /home/dev/Projects/dewdrop/docs/research/wago-gc-read-call-facts-2026-10-21.md\n /home/dev/Projects/dewdrop/docs/research/wago-gc-read-simd-call-facts-2026-10-21.md\n /home/dev/Projects/dewdrop/docs/research/wago-gc-native-segment-cache-2026-10-21.md\n /home/dev/Projects/dewdrop/docs/research/wago-gc-loop-keyed-value-homes-2026-10-21.md\nDo not recommend reimplementing these as if missing. Older audits and hot-code attribution exist, but predate compact headers.\n\nDeliver: (1) a ranked list of at most three NEXT steps, grounded in current source paths/functions and observed coverage; (2) one concrete first experiment, its safety/proof boundaries, memory cap, deciding measurements, and stop condition; (3) distinguish current evidence from hypotheses and acknowledge the ~7x gap. Consider broader compiler analysis, ABI/representation changes, and source-level algorithm fixes if justified; distinguish changes using the identical pinned Wasm from changes requiring a new compiler Wasm. Identify the highest-leverage remaining limitation instead of another tiny tweak. No claimed speedups without measurements.",
+  "launches": [
+    {
+      "taskId": "node:delegated-task:command%3Amcp%3A83077c11-c0ff-49c9-817d-a8ac6944fe49%3Adelegate-task%3Agc-next-astra-high-20261022-r1",
+      "childThreadId": "thread:delegated-task:command%3Amcp%3A83077c11-c0ff-49c9-817d-a8ac6944fe49%3Adelegate-task%3Agc-next-astra-high-20261022-r1",
+      "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A83077c11-c0ff-49c9-817d-a8ac6944fe49%253Adelegate-task%253Agc-next-astra-high-20261022-r1:ordinal:1",
+      "childNodeId": "node:delegated-task:command%3Amcp%3A83077c11-c0ff-49c9-817d-a8ac6944fe49%3Adelegate-task%3Agc-next-astra-high-20261022-r1",
+      "status": "running",
+      "workState": "working",
+      "hasPendingChildRuns": false,
+      "latestTerminalRunId": null,
+      "latestTerminalStatus": null,
+      "latestTerminalSummary": null,
+      "latestTerminalResultContextTransferId": null,
+      "providerInstanceId": "codex",
+      "model": "gpt-6-astra",
+      "options": [
+        {
+          "id": "reasoningEffort",
+          "value": "high"
+        }
+      ],
+      "summary": null,
+      "resultContextTransferId": null,
+      "hasPendingQuestion": false,
+      "pendingApproval": null,
+      "waitTimedOut": false
+    },
+    {
+      "taskId": "node:delegated-task:command%3Amcp%3A83077c11-c0ff-49c9-817d-a8ac6944fe49%3Adelegate-task%3Agc-next-opus-high-20261022-r1",
+      "childThreadId": "thread:delegated-task:command%3Amcp%3A83077c11-c0ff-49c9-817d-a8ac6944fe49%3Adelegate-task%3Agc-next-opus-high-20261022-r1",
+      "childRunId": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253A83077c11-c0ff-49c9-817d-a8ac6944fe49%253Adelegate-task%253Agc-next-opus-high-20261022-r1:ordinal:1",
+      "childNodeId": "node:delegated-task:command%3Amcp%3A83077c11-c0ff-49c9-817d-a8ac6944fe49%3Adelegate-task%3Agc-next-opus-high-20261022-r1",
+      "status": "running",
+      "workState": "working",
+      "hasPendingChildRuns": false,
+      "latestTerminalRunId": null,
+      "latestTerminalStatus": null,
+      "latestTerminalSummary": null,
+      "latestTerminalResultContextTransferId": null,
+      "providerInstanceId": "claudeAgent",
+      "model": "claude-opus-5-5",
+      "options": [
+        {
+          "id": "effort",
+          "value": "high"
+        }
+      ],
+      "summary": null,
+      "resultContextTransferId": null,
+      "hasPendingQuestion": false,
+      "pendingApproval": null,
+      "waitTimedOut": false
+    }
+  ]
+}
