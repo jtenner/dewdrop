@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "run",
+    "github.com/rhysd/actionlint/cmd/actionlint@v1.7.7",
+    ".github/workflows/riscv64.yml"
+  ],
+  "seconds": 1.9371213400008855,
+  "exit": 0,
+  "user_seconds": 2.279711,
+  "system_seconds": 0.191763,
+  "peak_rss_kib": 200952,
+  "minor_faults": 18618,
+  "major_faults": 4,
+  "voluntary_context_switches": 4605,
+  "involuntary_context_switches": 144
+}

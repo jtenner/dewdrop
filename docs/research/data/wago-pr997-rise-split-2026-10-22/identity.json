@@ -1,0 +1,13 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/997",
+  "cancelled_job": 119677151197,
+  "old_head": "26d272e49f7f36d66034a7afa20b6c472ad06f5c",
+  "head": "d329e9df9f09488f8906dfa3cee7f396574851d0",
+  "worktree": "/tmp/wago-pr997-main-sync-20261022",
+  "branch": "fix/gc-extern-local-roots",
+  "push": "accepted fast-forward",
+  "draft": true,
+  "mergeable": true,
+  "native_ci": "pending, two native job groups; T3 watches",
+  "known_gc_root_defects": "still unresolved; keep draft and unmerged"
+}

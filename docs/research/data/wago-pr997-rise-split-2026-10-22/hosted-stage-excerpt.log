@@ -1,0 +1,60 @@
+﻿2026-10-22T06:33:40.6960615Z Current runner version: '2.337.0'
+2026-10-22T06:33:40.7085579Z Runner name: 'rise-riscv-runner-sljez8ivv'
+2026-10-22T06:33:40.7102929Z Runner group name: 'rise risc-v runners'
+2026-10-22T06:33:40.7124420Z Machine name: 'riscv-runner-33'
+2026-10-22T06:33:40.7186938Z ##[group]GITHUB_TOKEN Permissions
+2026-10-22T06:33:40.7223996Z Contents: read
+2026-10-22T06:33:40.7238063Z Metadata: read
+2026-10-22T06:33:40.7249120Z ##[endgroup]
+2026-10-22T06:33:40.7277211Z Secret source: Actions
+2026-10-22T06:33:40.7295291Z Cache mode: write
+2026-10-22T06:33:40.7308465Z Prepare workflow directory
+2026-10-22T06:33:41.4597031Z Prepare all required actions
+2026-10-22T06:33:41.5431640Z Getting action download info
+2026-10-22T06:33:42.5086824Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-22T06:33:43.5742761Z Download action repository 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-10-22T06:33:45.6644794Z Complete job name: JIT / native Linux RISC-V64
+2026-10-22T06:33:46.5282060Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-10-22T06:34:10.7051257Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-22T06:34:11.4593580Z ##[group]Run set -euo pipefail
+2026-10-22T06:34:29.3292615Z ##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+2026-10-22T06:34:43.7780571Z ##[group]Run set -euo pipefail
+2026-10-22T06:34:43.8700623Z ##[group]Run scripts/ci-riscv64.sh smoke
+2026-10-22T06:34:44.0674119Z go version go1.27.1 linux/riscv64
+2026-10-22T06:36:11.8290904Z ok  	github.com/wago-org/wago/src/core/runtime/riscv64	0.211s
+2026-10-22T06:40:50.1521828Z ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/riscv64	0.156s
+2026-10-22T06:40:55.6450134Z ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/riscv64	0.116s
+2026-10-22T06:40:55.7492005Z ##[group]Run scripts/check-riscv64-cli.sh
+2026-10-22T06:43:40.9475104Z ok  	github.com/wago-org/wago/cli/manager/internal/version	0.052s
+2026-10-22T06:47:36.0716873Z ok  	github.com/wago-org/wago/cli/manager/internal/standalone	226.686s
+2026-10-22T06:47:36.4567020Z ##[group]Run scripts/ci-riscv64.sh supported
+2026-10-22T06:47:36.6194724Z go version go1.27.1 linux/riscv64
+2026-10-22T06:47:44.6353175Z ok  	github.com/wago-org/wago/src/core/encoder/riscv64	0.218s
+2026-10-22T06:47:45.0547038Z ok  	github.com/wago-org/wago/src/core/runtime/riscv64	0.600s
+2026-10-22T06:49:22.2327129Z ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/riscv64	55.123s
+2026-10-22T06:54:40.8780855Z ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/riscv64	66.936s
+2026-10-22T06:54:40.9286445Z ##[group]Run scripts/ci-riscv64.sh public
+2026-10-22T06:54:41.0843807Z go version go1.27.1 linux/riscv64
+2026-10-22T07:12:49.6859397Z ok  	github.com/wago-org/wago/src/wago	545.192s
+2026-10-22T07:13:07.1204417Z ok  	github.com/wago-org/wago/src/wago	5.468s
+2026-10-22T07:21:14.3628452Z ok  	github.com/wago-org/wago/src/wago	2.682s
+2026-10-22T07:21:26.1507815Z ok  	github.com/wago-org/wago/src/wago	0.497s
+2026-10-22T07:21:37.5059483Z ok  	github.com/wago-org/wago/src/wago	0.366s
+2026-10-22T07:22:05.8996655Z ok  	github.com/wago-org/wago/src/wago	17.047s
+2026-10-22T07:22:20.1336351Z ok  	github.com/wago-org/wago/src/wago	3.892s
+2026-10-22T07:40:39.9365498Z ok  	github.com/wago-org/wago/src/wago	525.639s
+2026-10-22T07:40:56.7335514Z ok  	github.com/wago-org/wago/src/wago	4.987s
+2026-10-22T07:48:34.0507234Z ok  	github.com/wago-org/wago/src/wago	2.769s
+2026-10-22T07:48:45.9459695Z ok  	github.com/wago-org/wago/src/wago	0.477s
+2026-10-22T07:48:56.2294905Z ok  	github.com/wago-org/wago/src/wago	0.368s
+2026-10-22T07:49:23.6274781Z ok  	github.com/wago-org/wago/src/wago	16.129s
+2026-10-22T07:49:37.7764263Z ok  	github.com/wago-org/wago/src/wago	3.889s
+2026-10-22T07:49:38.2041055Z ##[group]Run scripts/ci-riscv64.sh guards
+2026-10-22T07:49:38.3477597Z go version go1.27.1 linux/riscv64
+2026-10-22T07:50:01.2938794Z ok  	github.com/wago-org/wago/src/core/runtime	0.024s
+2026-10-22T07:58:44.0298836Z ok  	github.com/wago-org/wago/src/wago	1.932s
+2026-10-22T07:59:05.8159311Z ok  	github.com/wago-org/wago/src/core/runtime	0.024s
+2026-10-22T08:04:01.7754277Z ##[error]The operation was canceled.
+2026-10-22T08:04:04.4489708Z Terminate orphan process: pid (6031) (bash)
+2026-10-22T08:04:04.5843339Z Terminate orphan process: pid (6257) (go)
+2026-10-22T08:04:04.7166703Z Terminate orphan process: pid (6398) (compile)

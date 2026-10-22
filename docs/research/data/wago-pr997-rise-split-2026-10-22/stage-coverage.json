@@ -1,0 +1,30 @@
+{
+  "seconds": 0.004285653005354106,
+  "result": "pass",
+  "commands": [
+    {
+      "run": "scripts/ci-riscv64.sh smoke",
+      "suite": "runtime"
+    },
+    {
+      "run": "scripts/check-riscv64-cli.sh",
+      "suite": "runtime"
+    },
+    {
+      "run": "scripts/ci-riscv64.sh supported",
+      "suite": "runtime"
+    },
+    {
+      "run": "scripts/ci-riscv64.sh public",
+      "suite": "ownership"
+    },
+    {
+      "run": "scripts/ci-riscv64.sh guards",
+      "suite": "runtime"
+    }
+  ],
+  "all_original_commands_preserved_exactly_once": true,
+  "runner_environment_setup_fixture_binding_unchanged": true,
+  "per_job_timeout_minutes": 90,
+  "fail_fast": false
+}

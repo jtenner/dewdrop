@@ -82,3 +82,42 @@ Keep draft status and leave the PR unmerged. T3 continues watching because the
 native RISC-V64 result is pending; no source or CI retry is justified by a
 successful smoke check. The service state is saved in
 [data](data/wago-pr997-main-sync-2026-10-22/required-green-draft-snapshot.json).
+
+
+## Cancelled native RISC-V job: split the serial workload
+
+The [native job](https://github.com/wago-org/wago/actions/runs/39734486778/job/119677151197)
+starts at 06:33:40 UTC and is cancelled at 08:04:01 UTC, approximately the
+configured 90-minute job limit. Smoke, CLI/standalone, compiler/runtime, and
+public ownership/compiler-free steps pass. In the final guard step, ordinary
+Wago thread checks and the next runtime guard checks pass; cancellation then
+kills an active Go compiler. No assertion failure or Go test timeout is shown.
+The elapsed job budget explains the cancellation; this is not evidence that
+the known GC root faults are repaired or a new runtime fault is reproduced.
+
+Commit `d329e9df9f09488f8906dfa3cee7f396574851d0` splits the native workflow into two
+matrix jobs: `runtime` runs smoke, CLI/standalone, compiler/runtime, and
+guards/threads; `ownership` runs the full public/artifact matrix. Every original
+command appears exactly once. Artifact preparation and loading remain in one
+job with their original temporary directory. Both jobs retain the 90-minute
+limit, RISE label, pinned setup/fixtures, GOMAXPROCS=2, compiler serialization,
+and fork permissions. Matrix fail-fast is disabled so a failing group cannot
+cancel its companion. No source tests, test timeouts, or runtime code change.
+
+Actionlint 1.7.7 passes in 1.937 seconds including build, peak RSS 200,952 KiB.
+A 0.004-second coverage check confirms all five commands, group selection,
+unchanged setup/environment/fixture bindings and the unchanged job budget.
+Documentation passes for 85 Markdown files in 0.061 seconds, peak RSS 27,316 KiB.
+The two groups add separate runner setup/cold builds. Actual native duration
+and total cost remain unmeasured; the next hosted runs must qualify the split.
+No old 90-minute run is retried unchanged and no job budget is raised.
+
+The fast-forward push is accepted; the head is open, draft, and mergeable.
+The unused-table and A-to-B-to-A scalar relay root defects remain unresolved.
+Keep draft status and leave the PR unmerged. T3 watches the new native groups.
+[Identity](data/wago-pr997-rise-split-2026-10-22/identity.json),
+[hosted stages](data/wago-pr997-rise-split-2026-10-22/hosted-stage-excerpt.log),
+[workflow diff](data/wago-pr997-rise-split-2026-10-22/fix.patch),
+[workflow validation](data/wago-pr997-rise-split-2026-10-22/actionlint.json), and
+[coverage check](data/wago-pr997-rise-split-2026-10-22/stage-coverage.json)
+retain output, commands, resource use, and validation limits.
