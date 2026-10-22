@@ -1,0 +1,19 @@
+2026-10-22T06:29:03.9671864Z # github.com/wago-org/wago/src/wago [github.com/wago-org/wago/src/wago.test]
+2026-10-22T06:29:03.9803791Z ##[error]src/wago/gc_numeric_leaf_inline_stats_amd64_test.go:23:51: not enough arguments in call to newGCFrameRootPlan
+2026-10-22T06:29:03.9814551Z 	have (*wasm.Module, bool, *string, nil)
+2026-10-22T06:29:03.9841312Z 	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+2026-10-22T06:29:03.9903868Z ##[error]src/wago/gc_numeric_leaf_inline_stats_amd64_test.go:54:52: not enough arguments in call to newGCFrameRootPlan
+2026-10-22T06:29:03.9931212Z 	have (*wasm.Module, bool, *string, nil)
+2026-10-22T06:29:03.9991658Z 	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+2026-10-22T06:29:04.0022479Z ##[error]src/wago/gc_trapping_guard_stats_amd64_test.go:32:52: not enough arguments in call to newGCFrameRootPlan
+2026-10-22T06:29:04.0081462Z 	have (*wasm.Module, bool, *string, nil)
+2026-10-22T06:29:04.0111472Z 	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+2026-10-22T06:29:04.0113669Z ##[error]src/wago/gc_trapping_guard_stats_amd64_test.go:129:51: not enough arguments in call to newGCFrameRootPlan
+2026-10-22T06:29:04.0115737Z 	have (*wasm.Module, bool, *string, nil)
+2026-10-22T06:29:04.0116431Z 	want (*wasm.Module, bool, bool, *string, *wasm.ValidatedModuleAnalysis)
+2026-10-22T06:29:36.1065828Z ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64	21.606s
+2026-10-22T06:29:36.1066742Z ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/arm64	0.119s
+2026-10-22T06:29:36.1069851Z FAIL
+2026-10-22T06:29:36.1353008Z ##[error]Process completed with exit code 1.
+2026-10-22T06:29:36.1541108Z Post job cleanup.
+2026-10-22T06:29:36.2390806Z [command]/usr/bin/git version

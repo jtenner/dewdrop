@@ -1,0 +1,9 @@
+{
+  "job_id": 119672128633,
+  "run_id": 39732958160,
+  "failed_head": "72e684df38cef599be936dbed3229a5a5b85999e",
+  "current_head": "1d9fbd47205e4d1686f868074a1fcd5aebbee01d",
+  "failure": "same four stale newGCFrameRootPlan fixture calls already repaired",
+  "new_source_change_required": false,
+  "old_run_retried": false
+}

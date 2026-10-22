@@ -77,3 +77,12 @@ PR merge was made. Hosted CI for the new head is pending; T3 keeps watching.
 [green tagged tests](data/wago-pr948-lint-2026-10-22/stats-fixtures-green.json), and
 [full lint](data/wago-pr948-lint-2026-10-22/full-lint.json)
 retain exact commands, output, verified tool provenance, and resource use.
+
+
+The later [Linux AMD64 failure](https://github.com/wago-org/wago/actions/runs/39732958160/job/119672128633)
+also tests old head `72e684d` and reports the same four stale fixture calls.
+The current PR head is already `1d9fbd47205e4d1686f868074a1fcd5aebbee01d`.
+No additional source change or retry of the old run is needed. Existing green
+combined stats/register-check and complete lint results validate the fix.
+The Linux failure excerpt and classification are retained in the same evidence
+folder. T3 remains assigned to the new head's CI.
