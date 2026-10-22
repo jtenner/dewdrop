@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=20s",
+    "-exec",
+    "/usr/bin/qemu-aarch64",
+    "-tags=wago_codegenstats",
+    "./src/wago",
+    "-run",
+    "^TestBoundedHostYieldAllowsGCAndCancellationWithOneP$"
+  ],
+  "seconds": 22.322065788001055,
+  "exit": 0,
+  "user_seconds": 34.917177,
+  "system_seconds": 1.046599,
+  "peak_rss_kib": 2374444,
+  "minor_faults": 104841,
+  "major_faults": 8,
+  "voluntary_context_switches": 16353,
+  "involuntary_context_switches": 1681
+}

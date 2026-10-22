@@ -1,0 +1,465 @@
+commit ed3783423aa090a39967847e3d9d1044a5abd975
+Author:     jtenner <tenner.joshua@gmail.com>
+AuthorDate: Thu Oct 22 07:01:08 2026 +0000
+Commit:     jtenner <tenner.joshua@gmail.com>
+CommitDate: Thu Oct 22 07:01:08 2026 +0000
+
+    fix(arm64): yield long live host callback loops to Go
+
+diff --git a/docs/research/pr980-arm64-host-yield-2026-10-22.md b/docs/research/pr980-arm64-host-yield-2026-10-22.md
+new file mode 100644
+index 000000000..4a943d6d3
+--- /dev/null
++++ b/docs/research/pr980-arm64-host-yield-2026-10-22.md
+@@ -0,0 +1,89 @@
++# PR 980: explicit scheduling points for ARM64 live host loops
++
++The failed-job retry still fails the Darwin ARM64 platform job:
++https://github.com/wago-org/wago/actions/runs/39606585738/job/119665056637
++
++This time the typed and Caller forms of
++`TestBoundedHostYieldAllowsGCAndCancellationWithOneP` reach the existing
++three-second GC progress limit. The prior attempt failed the HostCall form.
++The final CI job reports the platform-test failure; it has no distinct compiler
++error. The Darwin AMD64 corpus shard now passes without a source change.
++
++## Cause and change
++
++The live ARM64 bridge owns a NOSPLIT Go assembly frame and jumps through native
++code between callbacks. Bounded guest work between callbacks does not guarantee
++an explicit Go scheduling point: very small callbacks may have no stack check.
++Repeated callbacks can keep the single P busy and delay a requested collection.
++The original ordinary fixture still passes under Linux/QEMU; that does not
++invalidate the repeated native Darwin failure.
++
++A new direct-runtime fixture uses 65,536 callbacks with no stack-growth checks
++and asks a second goroutine to collect. It requires the final callback to see
++that collection completed before the guest returns. With asynchronous
++preemption disabled, all eight live ARM64 owner variants fail on unchanged
++production code. This is a bounded, reproducible failure independent of a
++three-second wall clock limit. Their cancellation variants require an interrupt
++raised during the scheduling point to return to Go without native resumption.
++
++Each live ARM64 owner now keeps a private countdown. After every 1,024
++callbacks it calls Go's `runtime.Gosched`, while native state is parked and the
++owner's Go argument map is active. Callback results are stored before the call;
++control and trap pointers are reloaded afterward. A new cancellation check
++prevents native resumption when another goroutine interrupts during the yield.
++
++The scalar/countdown slot is 48(SP), outside its 24-byte outgoing Go argument
++area and parked words at 32/40(SP). View owners use 80(SP), outside outgoing
++slice/context arguments and parked words at 64/72(SP). Existing 64/96-byte
++frames do not grow. Owner entry always initializes the counter, so short calls
++and nested owners do not share it. Context owners use their distinct trap and
++control argument offsets (40/64 rather than 32/56). No new heap state, public
++ABI, native root metadata, artifact field, or native admission is introduced.
++The common callback path adds a load, subtract, store, and branch. There is no
++Go call on that path until the countdown expires. AMD64 code is unchanged.
++
++## Validation and limits
++
++The new test fails for all eight owner types before the repair. The fixed test,
++including interruption at the yield, passes with register checks and async
++preemption disabled under Linux ARM64 QEMU. Existing recursive Go stack-growth,
++FP preservation, bounded helper, and live admission tests also pass there.
++Ten repeats of the public bounded host tests and general array.len guard,
++collection, codec, invalid-reference, and live-vector tests pass with statistics
++and register checks. Darwin ARM64 runtime and Wago test binaries build, and the
++Mach-O context-owner disassembly shows the correct slow call, reloaded trap and
++control offsets, and cancellation branch. QEMU is correctness evidence, not a
++native Darwin or performance result. No online Darwin device is connected;
++the next hosted platform job must confirm the native behavior.
++
++A broad QEMU runtime run also reports signal-ownership `invalid argument` and
++repeated job-memory pool-cache expectation failures. Unchanged PR head reports
++the same two failing test names under the same emulator and flags. Keep both
++raw outputs; do not label that broad emulated suite green or weaken its checks.
++The focused runtime and host/array checks above are green.
++
++Early invalid attempts are retained: the initial raw fixture omitted its trap
++pointer binding, and the first macro used non-context argument offsets for
++context owners. The fixture and per-owner offsets were corrected before the
++final passing checks. The valid pre-fix regression log is `leaf-callback-arm64-red-r2`.
++
++Go 1.27.1, GOMAXPROCS=2; package concurrency 2 for broad native gates and 1
++for cross-target work. Required local gates pass. Times include builds.
++
++| Check | Wall seconds | Peak RSS KiB |
++| --- | ---: | ---: |
++| Complete ordinary root suite | 151.407 | 3,223,636 |
++| Complete register-check root suite | 135.766 | 3,228,448 |
++| Register-check benchmark module | 30.188 | 896,660 |
++| ARM64 runtime focused checks (10 repeats) | 1.404 | 101,184 |
++| ARM64 public host/array stats checks (10 repeats) | 26.170 | 2,427,668 |
++| Darwin ARM64 runtime test build | 1.231 | 137,740 |
++| Darwin ARM64 Wago stats/check test build | 25.040 | 2,357,004 |
++
++The documentation gate passes for 84 Markdown files. Long test/build activities
++exceed the 30-second target and remain recorded. No native ARM64 timing or
++unchanged-host speed claim is made for this correctness fix. The pinned spec
++corpus was supplied by a temporary shared local Git clone and removed after the
++root suites. No timeout is increased and no test is removed. The original
++three-second public GC/cancellation limit stays intact. Hosted Darwin validation
++is still required after the push; another retry of old failing code is not used.
+diff --git a/src/core/runtime/inline_host_arm64.s b/src/core/runtime/inline_host_arm64.s
+index dd425fdc8..ce9820f23 100644
+--- a/src/core/runtime/inline_host_arm64.s
++++ b/src/core/runtime/inline_host_arm64.s
+@@ -3,10 +3,12 @@
+ #include "textflag.h"
+ #include "funcdata.h"
+ #include "go_asm.h"
++#include "inline_host_yield_arm64.h"
+ 
+ TEXT ·inlineHostEnter(SB), NOSPLIT, $64-80
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+72(FP)
++	INLINE_HOST_YIELD_INIT(48)
+ 	MOVD code+8(FP), R9
+ 	MOVD args+16(FP), R0
+ 	MOVD linMem+24(FP), R1
+@@ -51,6 +53,7 @@ twoResults:
+ 	MOVD R12, const_hcResults(R10)
+ 	MOVD R13, const_hcResults+8(R10)
+ resultDone:
++	INLINE_HOST_YIELD(48, inlineHostEnterYieldDone, abortTrap, 32, 56)
+ 	MOVD $·inlineHostStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 40(RSP), R9
+@@ -151,6 +154,7 @@ TEXT ·inlineHostBridgeAddr(SB), NOSPLIT|NOFRAME, $0-8
+ TEXT ·inlineHostViewEnter(SB), NOSPLIT, $96-80
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+72(FP)
++	INLINE_HOST_YIELD_INIT(80)
+ 	MOVD code+8(FP), R9
+ 	MOVD args+16(FP), R0
+ 	MOVD linMem+24(FP), R1
+@@ -195,6 +199,7 @@ viewResultsCleared:
+ 	MOVWU 0(R9), R11
+ 	CBNZ R11, viewAbortTrap
+ 	MOVD ctrl+56(FP), R10
++	INLINE_HOST_YIELD(80, inlineHostViewEnterYieldDone, viewAbortTrap, 32, 56)
+ 	MOVD $·inlineHostViewStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 72(RSP), R9
+@@ -245,6 +250,7 @@ TEXT ·inlineHostViewBridgeAddr(SB), NOSPLIT|NOFRAME, $0-8
+ TEXT ·inlineHostContextEnter(SB), NOSPLIT, $64-88
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+80(FP)
++	INLINE_HOST_YIELD_INIT(48)
+ 	MOVD code+16(FP), R9
+ 	MOVD args+24(FP), R0
+ 	MOVD linMem+32(FP), R1
+@@ -290,6 +296,7 @@ context_twoResults:
+ 	MOVD R12, const_hcResults(R10)
+ 	MOVD R13, const_hcResults+8(R10)
+ context_resultDone:
++	INLINE_HOST_YIELD(48, inlineHostContextEnterYieldDone, context_abortTrap, 40, 64)
+ 	MOVD $·inlineHostStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 40(RSP), R9
+@@ -310,6 +317,7 @@ context_abortTrap:
+ TEXT ·inlineHostViewContextEnter(SB), NOSPLIT, $96-88
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+80(FP)
++	INLINE_HOST_YIELD_INIT(80)
+ 	MOVD code+16(FP), R9
+ 	MOVD args+24(FP), R0
+ 	MOVD linMem+32(FP), R1
+@@ -355,6 +363,7 @@ context_viewResultsCleared:
+ 	MOVWU 0(R9), R11
+ 	CBNZ R11, context_viewAbortTrap
+ 	MOVD ctrl+64(FP), R10
++	INLINE_HOST_YIELD(80, inlineHostViewContextEnterYieldDone, context_viewAbortTrap, 40, 64)
+ 	MOVD $·inlineHostViewStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 72(RSP), R9
+diff --git a/src/core/runtime/inline_host_integer_arm64.s b/src/core/runtime/inline_host_integer_arm64.s
+index ad4d0d6ef..90dca4c23 100644
+--- a/src/core/runtime/inline_host_integer_arm64.s
++++ b/src/core/runtime/inline_host_integer_arm64.s
+@@ -3,6 +3,7 @@
+ #include "textflag.h"
+ #include "funcdata.h"
+ #include "go_asm.h"
++#include "inline_host_yield_arm64.h"
+ 
+ TEXT ·inlineHostIntegerEnterForeign(SB), NOSPLIT|NOFRAME, $0-0
+ 	SUB $176, R10, R10
+@@ -107,6 +108,7 @@ TEXT ·inlineHostIntegerViewBridgeAddr(SB), NOSPLIT|NOFRAME, $0-8
+ TEXT ·inlineHostIntegerContextEnter(SB), NOSPLIT, $64-88
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+80(FP)
++	INLINE_HOST_YIELD_INIT(48)
+ 	MOVD code+16(FP), R9
+ 	MOVD args+24(FP), R0
+ 	MOVD linMem+32(FP), R1
+@@ -152,6 +154,7 @@ context_twoResults:
+ 	MOVD R12, const_hcResults(R10)
+ 	MOVD R13, const_hcResults+8(R10)
+ context_resultDone:
++	INLINE_HOST_YIELD(48, inlineHostIntegerContextEnterYieldDone, context_abortTrap, 40, 64)
+ 	MOVD $·inlineHostIntegerStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 40(RSP), R9
+@@ -172,6 +175,7 @@ context_abortTrap:
+ TEXT ·inlineHostIntegerViewContextEnter(SB), NOSPLIT, $96-88
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+80(FP)
++	INLINE_HOST_YIELD_INIT(80)
+ 	MOVD code+16(FP), R9
+ 	MOVD args+24(FP), R0
+ 	MOVD linMem+32(FP), R1
+@@ -217,6 +221,7 @@ context_viewResultsCleared:
+ 	MOVWU 0(R9), R11
+ 	CBNZ R11, context_viewAbortTrap
+ 	MOVD ctrl+64(FP), R10
++	INLINE_HOST_YIELD(80, inlineHostIntegerViewContextEnterYieldDone, context_viewAbortTrap, 40, 64)
+ 	MOVD $·inlineHostIntegerViewStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 72(RSP), R9
+@@ -237,6 +242,7 @@ context_viewAbortTrap:
+ TEXT ·inlineHostIntegerI32Enter(SB), NOSPLIT, $64-80
+  NO_LOCAL_POINTERS
+  MOVD ZR, ret+72(FP)
++	INLINE_HOST_YIELD_INIT(48)
+  MOVD code+8(FP), R9
+  MOVD args+16(FP), R0
+  MOVD linMem+24(FP), R1
+@@ -269,6 +275,7 @@ direct_i32_goCallback:
+  MOVD ctrl+56(FP), R10
+  MOVWU R0, R0
+  MOVD R0, const_hcResults(R10)
++	INLINE_HOST_YIELD(48, inlineHostIntegerI32EnterYieldDone, direct_i32_abortTrap, 32, 56)
+  MOVD $·inlineHostIntegerStagedBridge(SB), R9
+  MOVD R9, const_hcTrampoline(R10)
+  MOVD 40(RSP), R9
+diff --git a/src/core/runtime/inline_host_multi_arm64.s b/src/core/runtime/inline_host_multi_arm64.s
+index ec3694ab1..e6edff606 100644
+--- a/src/core/runtime/inline_host_multi_arm64.s
++++ b/src/core/runtime/inline_host_multi_arm64.s
+@@ -3,10 +3,12 @@
+ #include "textflag.h"
+ #include "funcdata.h"
+ #include "go_asm.h"
++#include "inline_host_yield_arm64.h"
+ 
+ TEXT ·inlineHostMultiViewEnter(SB), NOSPLIT, $96-96
+ 	NO_LOCAL_POINTERS
+ 	MOVD ZR, ret+88(FP)
++	INLINE_HOST_YIELD_INIT(80)
+ 	MOVD code+8(FP), R9
+ 	MOVD args+16(FP), R0
+ 	MOVD linMem+24(FP), R1
+@@ -56,6 +58,7 @@ multiViewResultsCleared:
+ 	MOVWU 0(R9), R11
+ 	CBNZ R11, multiViewAbortTrap
+ 	MOVD ctrl+56(FP), R10
++	INLINE_HOST_YIELD(80, inlineHostMultiViewEnterYieldDone, multiViewAbortTrap, 32, 56)
+ 	MOVD $·inlineHostViewStagedBridge(SB), R9
+ 	MOVD R9, const_hcTrampoline(R10)
+ 	MOVD 72(RSP), R9
+diff --git a/src/core/runtime/inline_host_yield_arm64.go b/src/core/runtime/inline_host_yield_arm64.go
+new file mode 100644
+index 000000000..5ebc80ea1
+--- /dev/null
++++ b/src/core/runtime/inline_host_yield_arm64.go
+@@ -0,0 +1,15 @@
++//go:build (linux || darwin) && arm64 && !tinygo
++
++package runtime
++
++import goruntime "runtime"
++
++//lint:ignore U1000 Used by inline_host_yield_arm64.h through go_asm.h.
++const inlineHostYieldInterval = 1024
++
++// The live assembly owner can loop through tiny Go callbacks without reaching
++// a stack-growth check. Yield only after publishing the callback results, while
++// the native continuation is parked and the owner's Go argument map is active.
++//
++//lint:ignore U1000 Called by ARM64 assembly through inline_host_yield_arm64.h.
++func inlineHostYield() { goruntime.Gosched() }
+diff --git a/src/core/runtime/inline_host_yield_arm64.h b/src/core/runtime/inline_host_yield_arm64.h
+new file mode 100644
+index 000000000..b2d6a92e0
+--- /dev/null
++++ b/src/core/runtime/inline_host_yield_arm64.h
+@@ -0,0 +1,22 @@
++// Counter slots are outside outgoing Go arguments and parked native metadata.
++// Each owner initializes its own counter; nested owners cannot reset it.
++#define INLINE_HOST_YIELD_INIT(counter) \
++ MOVD $const_inlineHostYieldInterval, R9; \
++ MOVD R9, counter(RSP)
++
++// Results are already published. A Go call may move the stack and clobber all
++// argument registers. Reload the control pointer, and honor cancellation before
++// restoring native state. The common path adds no call or allocation.
++#define INLINE_HOST_YIELD(counter, done, abort, trapOffset, ctrlOffset) \
++ MOVD counter(RSP), R9; \
++ SUB $1, R9, R9; \
++ MOVD R9, counter(RSP); \
++ CBNZ R9, done; \
++ MOVD $const_inlineHostYieldInterval, R9; \
++ MOVD R9, counter(RSP); \
++ BL ·inlineHostYield(SB); \
++ MOVD trap+trapOffset(FP), R9; \
++ MOVWU 0(R9), R11; \
++ CBNZ R11, abort; \
++ MOVD ctrl+ctrlOffset(FP), R10; \
++done:
+diff --git a/src/core/runtime/inline_host_yield_arm64_test.go b/src/core/runtime/inline_host_yield_arm64_test.go
+new file mode 100644
+index 000000000..93cc2e6a0
+--- /dev/null
++++ b/src/core/runtime/inline_host_yield_arm64_test.go
+@@ -0,0 +1,149 @@
++//go:build (linux || darwin) && arm64 && !tinygo
++
++package runtime
++
++import (
++	"encoding/binary"
++	goruntime "runtime"
++	"sync/atomic"
++	"testing"
++	"unsafe"
++
++	a64 "github.com/wago-org/wago/src/core/encoder/arm64"
++	"github.com/wago-org/wago/src/core/runtime/abi"
++)
++
++var inlineYieldGCComplete atomic.Uint64
++
++// These callbacks deliberately provide no stack-growth check or explicit yield.
++// The live bridge must allow the collector to finish before the guest returns.
++//
++//go:nosplit
++func inlineYieldScalar(uint64, uint64) uint64 { return inlineYieldGCComplete.Load() }
++
++//go:nosplit
++func inlineYieldContext(unsafe.Pointer, uint64, uint64) uint64 { return inlineYieldGCComplete.Load() }
++
++//go:nosplit
++func inlineYieldView(_ []uint64, results []uint64) { results[0] = inlineYieldGCComplete.Load() }
++
++//go:nosplit
++func inlineYieldViewContext(_ unsafe.Pointer, _ []uint64, results []uint64) {
++	results[0] = inlineYieldGCComplete.Load()
++}
++
++//go:nosplit
++func inlineYieldI32(int32) int32 { return int32(inlineYieldGCComplete.Load()) }
++
++func TestInlineHostBridgeAllowsGCWithLeafCallbacks(t *testing.T) {
++	old := goruntime.GOMAXPROCS(1)
++	defer goruntime.GOMAXPROCS(old)
++	engine, err := NewEngine()
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer engine.Close()
++	memory, err := mmapRW(4096)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer munmap(memory)
++	linMem := slicePtr(memory) + 512
++	results, trap := memory[1024:1088], memory[1152:1152+TrapBufferBytes]
++	ctrl := memory[1536 : 1536+ctrlFrameSize]
++	storeOffHeapU64(linMem-offCustomCtx, uint64(slicePtr(ctrl)))
++	storeOffHeapU64(linMem-abi.TrapCellPtrOffset, uint64(slicePtr(trap)))
++	const slots uint32 = 1 | 1<<16
++	var a a64.Asm
++	a.StpPre(a64.X19, a64.LR, a64.SP, -16)
++	a.StpPre(a64.X20, a64.X21, a64.SP, -16)
++	a.MovReg64(a64.X19, a64.X3)
++	a.MovReg64(a64.X26, a64.X1)
++	a.MovImm64(a64.X20, 65536)
++	loop := a.Len()
++	a.Ldur64(a64.X11, a64.X26, -int32(offCustomCtx))
++	a.MovImm64(a64.X9, uint64(slots)<<32)
++	mustEncode(a.Store64(a64.X9, a64.X11, hcImportIdx))
++	mustEncode(a.Load64(a64.X16, a64.X11, hcTrampoline))
++	a.Blr(a64.X16)
++	a.SubImm64(a64.X20, a64.X20, 1)
++	branch := a.Cbnz64(a64.X20)
++	if !a.PatchBranch19(branch, loop) {
++		t.Fatal("callback loop branch is out of range")
++	}
++	a.Ldur64(a64.X11, a64.X26, -int32(offCustomCtx))
++	mustEncode(a.Load64(a64.X9, a64.X11, hcResults))
++	mustEncode(a.Store64(a64.X9, a64.X19, 0))
++	a.LdpPost(a64.X20, a64.X21, a64.SP, 16)
++	a.LdpPost(a64.X19, a64.LR, a64.SP, 16)
++	a.Ret()
++	code, err := mmapExec(a.B)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer munmap(code)
++	for _, kind := range []string{"scalar", "view", "context", "view-context", "integer-context", "integer-view-context", "integer-i32", "multi-view"} {
++		for _, cancel := range []bool{false, true} {
++			name := kind
++			if cancel {
++				name += "/cancel"
++			}
++			t.Run(name, func(t *testing.T) {
++				clear(results)
++				clear(trap)
++				bridge := inlineHostBridgeAddr()
++				switch kind {
++				case "view", "view-context", "multi-view":
++					bridge = inlineHostViewBridgeAddr()
++				case "integer-context", "integer-i32":
++					bridge = inlineHostIntegerBridgeAddr()
++				case "integer-view-context":
++					bridge = inlineHostIntegerViewBridgeAddr()
++				}
++				binary.LittleEndian.PutUint64(ctrl[hcTrampoline:], uint64(bridge))
++				inlineYieldGCComplete.Store(0)
++				collected := make(chan struct{})
++				go func() {
++					goruntime.GC()
++					if cancel {
++						atomic.StoreUint32((*uint32)(unsafe.Pointer(&trap[0])), uint32(TrapInterrupted))
++					}
++					inlineYieldGCComplete.Store(1)
++					close(collected)
++				}()
++				defer func() { <-collected }()
++				var outcome uint64
++				switch kind {
++				case "scalar":
++					outcome = inlineHostEnter(inlineYieldScalar, slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "view":
++					outcome = inlineHostViewEnter(inlineYieldView, slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "context":
++					outcome = inlineHostContextEnter(inlineYieldContext, unsafe.Pointer(&inlineYieldGCComplete), slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "view-context":
++					outcome = inlineHostViewContextEnter(inlineYieldViewContext, unsafe.Pointer(&inlineYieldGCComplete), slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "integer-context":
++					outcome = inlineHostIntegerContextEnter(inlineYieldContext, unsafe.Pointer(&inlineYieldGCComplete), slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "integer-view-context":
++					outcome = inlineHostIntegerViewContextEnter(inlineYieldViewContext, unsafe.Pointer(&inlineYieldGCComplete), slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "integer-i32":
++					outcome = inlineHostIntegerI32Enter(inlineYieldI32, slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), slots)
++				case "multi-view":
++					outcome = inlineHostMultiViewEnter(inlineYieldView, slicePtr(code), 0, linMem, slicePtr(trap), slicePtr(results), engine.stackTop, slicePtr(ctrl), []uint32{slots})
++				}
++				if cancel {
++					if outcome != 2 || TrapCode(loadTrap(trap)) != TrapInterrupted {
++						t.Fatalf("cancelled bridge outcome=%d trap=%d, want interrupted Go return", outcome, loadTrap(trap))
++					}
++					return
++				}
++				if outcome != 0 || loadTrap(trap) != 0 {
++					t.Fatalf("bridge outcome=%d trap=%d", outcome, loadTrap(trap))
++				}
++				if got := binary.LittleEndian.Uint64(results); got != 1 {
++					t.Fatalf("collector progress observed by last callback = %d, want 1 before native return", got)
++				}
++			})
++		}
++	}
++}

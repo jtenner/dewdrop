@@ -1,0 +1,15 @@
+{
+  "pr": "https://github.com/wago-org/wago/pull/980",
+  "head": "ed3783423aa090a39967847e3d9d1044a5abd975",
+  "parent": "a8b72ce7a0775c5d3d4a642357aec9dfbbb72d57",
+  "worktree": "/tmp/wago-pr980-ci-fix",
+  "branch": "dewdrop/pr980-host-gc-ci",
+  "push_accepted": true,
+  "force_pushed": false,
+  "pr_merged": false,
+  "native_darwin_validation": "pending hosted CI",
+  "worktree_clean": true,
+  "github_head": "ed3783423aa090a39967847e3d9d1044a5abd975",
+  "github_mergeable": true,
+  "github_state": "open"
+}

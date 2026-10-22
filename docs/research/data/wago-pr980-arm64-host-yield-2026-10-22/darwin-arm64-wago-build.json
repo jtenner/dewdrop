@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-c",
+    "-p",
+    "1",
+    "-tags=wago_codegenstats,wago_regalloccheck",
+    "-o",
+    "/tmp/wago-pr980-retry-evidence/wago-darwin-arm64.test",
+    "./src/wago"
+  ],
+  "seconds": 25.039624224998988,
+  "exit": 0,
+  "user_seconds": 38.858695,
+  "system_seconds": 1.470366,
+  "peak_rss_kib": 2357004,
+  "minor_faults": 187050,
+  "major_faults": 9,
+  "voluntary_context_switches": 23539,
+  "involuntary_context_switches": 1524
+}

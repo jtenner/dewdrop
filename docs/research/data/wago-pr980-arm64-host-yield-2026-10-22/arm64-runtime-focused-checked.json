@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-count=10",
+    "-tags=wago_regalloccheck,wago_inline_host_experiment",
+    "-exec",
+    "/usr/bin/qemu-aarch64",
+    "./src/core/runtime",
+    "-run",
+    "Test(InlineHostBridge|InlineBoundedBridge|LiveBounded|BoundedHelper)"
+  ],
+  "seconds": 1.403707834004308,
+  "exit": 0,
+  "user_seconds": 1.4793889999999998,
+  "system_seconds": 0.095134,
+  "peak_rss_kib": 101184,
+  "minor_faults": 10365,
+  "major_faults": 4,
+  "voluntary_context_switches": 6676,
+  "involuntary_context_switches": 193
+}

@@ -1,0 +1,138 @@
+traceback: unexpected SPWRITE function github.com/wago-org/wago/src/core/runtime.inlineHostStagedBridge
+fatal error: traceback
+
+runtime stack:
+runtime.throw({0x191495?, 0x17d810?})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:1243 +0x38 fp=0x7f7d72a4c2a0 sp=0x7f7d72a4c270 pc=0x916c8
+runtime.(*unwinder).resolveInternal(0x7f7d72a4c3e8, 0x0?, 0xa9?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/traceback.go:366 +0x308 fp=0x7f7d72a4c320 sp=0x7f7d72a4c2a0 pc=0x7bc48
+runtime.(*unwinder).next(0x7f7d72a4c3e8)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/traceback.go:519 +0x148 fp=0x7f7d72a4c3b0 sp=0x7f7d72a4c320 pc=0x7bdd8
+runtime.(*_panic).nextFrame.func1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:1044 +0xe8 fp=0x7f7d72a4c470 sp=0x7f7d72a4c3b0 pc=0x89c88
+runtime.systemstack(0x7f7d72a3c4b0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:379 +0x68 fp=0x7f7d72a4c480 sp=0x7f7d72a4c470 pc=0x964e8
+
+goroutine 4 gp=0x59640020f00 m=0 mp=0x386180 [running]:
+runtime.systemstack_switch()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:327 +0x8 fp=0x7f7d713ffdb0 sp=0x7f7d713ffda0 pc=0x96468
+runtime.(*_panic).nextFrame(0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:1002 +0x58 fp=0x7f7d713ffdf0 sp=0x7f7d713ffdb0 pc=0x56818
+runtime.(*_panic).start(0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:923 +0x12c fp=0x7f7d713ffe10 sp=0x7f7d713ffdf0 pc=0x5660c
+panic({0x338710?, 0x3792a0?})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:853 +0x110 fp=0x7f7d713ffec0 sp=0x7f7d713ffe10 pc=0x91310
+runtime.panicmem(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:336
+runtime.sigpanic()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/signal_unix.go:931 +0x2dc fp=0x7f7d713fff20 sp=0x7f7d713ffec0 pc=0x933fc
+github.com/wago-org/wago/src/core/runtime.inlineHostStagedBridge()
+	/tmp/wago-pr980-ci-fix/src/core/runtime/inline_host_arm64.s:133 +0x38 fp=0x7f7d713fff30 sp=0x7f7d713fff30 pc=0x17d848
+created by testing.(*T).Run in goroutine 3
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x3b8
+
+goroutine 1 gp=0x596400201e0 m=nil [chan receive]:
+runtime.gopark(0x140137928?, 0xc4874?, 0x8?, 0xb1?, 0x80?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xb8 fp=0x596401378c0 sp=0x596401378a0 pc=0x917d8
+runtime.chanrecv(0x59640130180, 0x596401379c7, 0x1)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:667 +0x470 fp=0x59640137940 sp=0x596401378c0 pc=0x22e90
+runtime.chanrecv1(0x18?, 0x344390?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:509 +0x14 fp=0x59640137970 sp=0x59640137940 pc=0x229e4
+testing.(*T).Run(0x5964014c008, {0x19f25a?, 0x59640137a88?}, 0x35ab10)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2266 +0x3cc fp=0x59640137a50 sp=0x59640137970 pc=0xfca5c
+testing.runTests.func1(0x5964014c008)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2742 +0x38 fp=0x59640137a90 sp=0x59640137a50 pc=0x101a48
+testing.tRunner(0x5964014c008, 0x59640137bb8)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xc4 fp=0x59640137ae0 sp=0x59640137a90 pc=0xfc624
+testing.runTests({0x19648f, 0x18}, {0x19d9a9, 0x29}, 0x5964002c300, {0x381b60, 0x60, 0x60}, {0x5964009ac58?, 0x596401021c0?, ...})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2740 +0x400 fp=0x59640137be0 sp=0x59640137ae0 pc=0xfe500
+testing.(*M).Run(0x5964007e6e0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2600 +0x578 fp=0x59640137e20 sp=0x59640137be0 pc=0xfd548
+main.main()
+	_testmain.go:246 +0x80 fp=0x59640137ea0 sp=0x59640137e20 pc=0x17eb00
+runtime.main()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:302 +0x380 fp=0x59640137fd0 sp=0x59640137ea0 pc=0x5a2d0
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x59640137fd0 sp=0x59640137fd0 pc=0x983f4
+
+goroutine 17 gp=0x596400843c0 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xb8 fp=0x5964005a790 sp=0x5964005a770 pc=0x917d8
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.forcegchelper()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:387 +0xb4 fp=0x5964005a7d0 sp=0x5964005a790 pc=0x5a5b4
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x5964005a7d0 sp=0x5964005a7d0 pc=0x983f4
+created by runtime.init.7 in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:375 +0x24
+
+goroutine 18 gp=0x596400845a0 m=nil [GC sweep wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xb8 fp=0x5964005af70 sp=0x5964005af50 pc=0x917d8
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.bgsweep(0x59640092000)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgcsweep.go:279 +0x9c fp=0x5964005afb0 sp=0x5964005af70 pc=0x4469c
+runtime.gcenable.gowrap1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:214 +0x20 fp=0x5964005afd0 sp=0x5964005afb0 pc=0x88130
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x5964005afd0 sp=0x5964005afd0 pc=0x983f4
+created by runtime.gcenable in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:214 +0x6c
+
+goroutine 19 gp=0x59640084780 m=nil [GC scavenge wait]:
+runtime.gopark(0x59640092000?, 0x1a4358?, 0x1?, 0x0?, 0x59640084780?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xb8 fp=0x5964005b760 sp=0x5964005b740 pc=0x917d8
+runtime.goparkunlock(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:480
+runtime.(*scavengerState).park(0x3852a0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgcscavenge.go:425 +0x5c fp=0x5964005b790 sp=0x5964005b760 pc=0x4230c
+runtime.bgscavenge(0x59640092000)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgcscavenge.go:653 +0x44 fp=0x5964005b7b0 sp=0x5964005b790 pc=0x42814
+runtime.gcenable.gowrap2()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:215 +0x20 fp=0x5964005b7d0 sp=0x5964005b7b0 pc=0x880f0
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x5964005b7d0 sp=0x5964005b7d0 pc=0x983f4
+created by runtime.gcenable in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mgc.go:215 +0xac
+
+goroutine 2 gp=0x59640020b40 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xb8 fp=0x5964005ed80 sp=0x5964005ed60 pc=0x917d8
+runtime.runFinalizers()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mfinal.go:210 +0x100 fp=0x5964005efd0 sp=0x5964005ed80 pc=0x35940
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x5964005efd0 sp=0x5964005efd0 pc=0x983f4
+created by runtime.createfing in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/mfinal.go:172 +0x78
+
+goroutine 3 gp=0x59640020d20 m=nil [chan receive]:
+runtime.gopark(0x14009abd8?, 0xc4874?, 0x8?, 0xb1?, 0x80?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/proc.go:474 +0xb8 fp=0x5964009ab70 sp=0x5964009ab50 pc=0x917d8
+runtime.chanrecv(0x59640130280, 0x5964009ac77, 0x1)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:667 +0x470 fp=0x5964009abf0 sp=0x5964009ab70 pc=0x22e90
+runtime.chanrecv1(0x18?, 0x344390?)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/chan.go:509 +0x14 fp=0x5964009ac20 sp=0x5964009abf0 pc=0x229e4
+testing.(*T).Run(0x5964014c248, {0x1905f1?, 0x1000100000000?}, 0x59640158000)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2266 +0x3cc fp=0x5964009ad00 sp=0x5964009ac20 pc=0xfca5c
+github.com/wago-org/wago/src/core/runtime.TestInlineHostBridgeAllowsGCWithLeafCallbacks(0x5964014c248)
+	/tmp/wago-pr980-ci-fix/src/core/runtime/inline_host_yield_arm64_test.go:84 +0x850 fp=0x5964009af60 sp=0x5964009ad00 pc=0x16aa60
+testing.tRunner(0x5964014c248, 0x35ab10)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xc4 fp=0x5964009afb0 sp=0x5964009af60 pc=0xfc624
+testing.(*T).Run.gowrap1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x20 fp=0x5964009afd0 sp=0x5964009afb0 pc=0x101800
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x5964009afd0 sp=0x5964009afd0 pc=0x983f4
+created by testing.(*T).Run in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x3b8
+
+goroutine 5 gp=0x596400210e0 m=nil [runnable]:
+github.com/wago-org/wago/src/core/runtime.TestInlineHostBridgeAllowsGCWithLeafCallbacks.func1.1()
+	/tmp/wago-pr980-ci-fix/src/core/runtime/inline_host_yield_arm64_test.go:99 fp=0x5964005ffd0 sp=0x5964005ffd0 pc=0x17a170
+runtime.goexit({})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/asm_arm64.s:1039 +0x4 fp=0x5964005ffd0 sp=0x5964005ffd0 pc=0x983f4
+created by github.com/wago-org/wago/src/core/runtime.TestInlineHostBridgeAllowsGCWithLeafCallbacks.func1 in goroutine 4
+	/tmp/wago-pr980-ci-fix/src/core/runtime/inline_host_yield_arm64_test.go:99 +0x370
+FAIL	github.com/wago-org/wago/src/core/runtime	0.072s
+FAIL

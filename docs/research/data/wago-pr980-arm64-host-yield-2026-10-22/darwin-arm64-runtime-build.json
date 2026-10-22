@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-c",
+    "-p",
+    "1",
+    "-o",
+    "/tmp/wago-pr980-retry-evidence/runtime-darwin-arm64.test",
+    "./src/core/runtime"
+  ],
+  "seconds": 1.230791493988363,
+  "exit": 0,
+  "user_seconds": 1.439554,
+  "system_seconds": 0.16169,
+  "peak_rss_kib": 137740,
+  "minor_faults": 17643,
+  "major_faults": 3,
+  "voluntary_context_switches": 2733,
+  "involuntary_context_switches": 114
+}

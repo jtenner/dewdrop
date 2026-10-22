@@ -1,0 +1,20 @@
+--- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks (0.09s)
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/scalar (0.02s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/context (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/view-context (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-context (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-view-context (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/integer-i32 (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+    --- FAIL: TestInlineHostBridgeAllowsGCWithLeafCallbacks/multi-view (0.01s)
+        inline_host_yield_arm64_test.go:126: collector progress observed by last callback = 0, want 1 before native return
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime	0.150s
+FAIL

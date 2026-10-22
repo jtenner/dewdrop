@@ -1,0 +1,12 @@
+{
+  "candidate_failures": [
+    "TestInterruptSignalOwnership",
+    "TestRuntimeMappingBoundaryHelpers"
+  ],
+  "unchanged_head_failures": [
+    "TestInterruptSignalOwnership",
+    "TestRuntimeMappingBoundaryHelpers"
+  ],
+  "same": true,
+  "baseline": "a8b72ce7a0775c5d3d4a642357aec9dfbbb72d57"
+}

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/home/dev/.local/share/mise/installs/go/1.27.1/bin/go",
+    "test",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=25s",
+    "-exec",
+    "/usr/bin/qemu-aarch64",
+    "./src/core/runtime",
+    "-run",
+    "^TestInlineHostBridgeAllowsGCWithLeafCallbacks$"
+  ],
+  "seconds": 0.9434145010018256,
+  "exit": 1,
+  "user_seconds": 1.177594,
+  "system_seconds": 0.134325,
+  "peak_rss_kib": 139848,
+  "minor_faults": 12785,
+  "major_faults": 3,
+  "voluntary_context_switches": 2821,
+  "involuntary_context_switches": 95
+}

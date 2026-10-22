@@ -76,3 +76,47 @@ The request/result and exact job IDs are saved in
 `data/wago-pr980-darwin-host-gc-ci-2026-10-21/final-ci-rerun-2026-10-22.json`.
 No source or timeout limit changed. Native Darwin results remain pending.
 T3 Code continues to watch PR #980 and will wake this thread when results change.
+
+
+## Retry fails again; ARM64 live-loop scheduling fix: 2026-10-22
+
+The [new Darwin ARM64 job](https://github.com/wago-org/wago/actions/runs/39606585738/job/119665056637)
+hits the same three-second GC-progress limit for the typed and Caller variants.
+The prior HostCall failure is therefore not cleared by retry. The
+[aggregate](https://github.com/wago-org/wago/actions/runs/39606585738/job/119666141355)
+reports platform-test failure. The Darwin AMD64 corpus retry passes.
+
+A raw ARM64 regression reproduces GC starvation in all eight live callback
+owners with async preemption disabled: a second goroutine cannot finish
+collection before 65,536 tiny callbacks return. The bridge's NOSPLIT assembly
+loop has no explicit scheduling point, and tiny callbacks need not supply a
+stack-growth check. Commit `ed3783423aa090a39967847e3d9d1044a5abd975` now yields to
+Go after 1,024 callbacks, with results already stored and native state parked.
+It reloads the correct owner-specific trap/control arguments and checks for
+cancellation before resuming. The private countdown uses existing spare Go
+frame space. No native frame, public ABI, root map, or artifact format changes.
+No new heap state is added. AMD64 code is unchanged.
+
+The before/after regression and cancellation cases pass under ARM64 QEMU.
+Ten checked repeats cover all eight owners, FP preservation, recursive Go stack
+growth, bounded helpers, and public host/array-length paths. Darwin ARM64 test
+binaries build and the Mach-O owner disassembly verifies offsets and branches.
+The full normal root gate passes in 151.407 s; the full register-check root gate
+passes in 135.766 s; the checked benchmark module passes in 30.188 s.
+These long activities remain above the 30-second target. Documentation passes.
+The original three-second test limit is unchanged.
+
+A broad emulated runtime run still fails the signal-ownership test and a
+repeated pool-cache expectation. Unchanged PR head has the same failures under
+the same QEMU flags. Both outputs are retained; the broad emulated suite is not
+reported green. Early invalid raw-fixture/argument-offset attempts are also
+retained. The valid before-fix failure is `leaf-callback-arm64-red-r2`.
+
+The fast-forward push to `perf/native-array-len` was accepted. No force push or
+PR merge was made. Native Darwin is not available locally; the hosted result
+for the new head is still required. T3 continues to watch the new CI attempt.
+[Identity and source](data/wago-pr980-arm64-host-yield-2026-10-22/identity.json),
+[reproducible failure](data/wago-pr980-arm64-host-yield-2026-10-22/leaf-callback-arm64-red-r2.log),
+[checked ARM64 result](data/wago-pr980-arm64-host-yield-2026-10-22/arm64-runtime-focused-checked.json),
+and [baseline emulator comparison](data/wago-pr980-arm64-host-yield-2026-10-22/qemu-baseline-comparison.json)
+include the commands, raw logs, resource use, and validation limits.

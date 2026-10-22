@@ -1,0 +1,10 @@
+{
+  "runtime-darwin-arm64.test": {
+    "sha256": "e99ebef355be87a4cb56872e5939a412d21789df9517d0d4cbc65b511059c815",
+    "bytes": 5202418
+  },
+  "wago-darwin-arm64.test": {
+    "sha256": "4c5a71434b4e613d499acb3b0e32a8b68198e33eb3a71137955473b419e67b67",
+    "bytes": 34599314
+  }
+}

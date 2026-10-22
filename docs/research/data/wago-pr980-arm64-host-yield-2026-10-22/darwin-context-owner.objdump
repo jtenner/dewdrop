@@ -1,0 +1,81 @@
+TEXT github.com/wago-org/wago/src/core/runtime.inlineHostContextEnter.abi0(SB) /tmp/wago-pr980-ci-fix/src/core/runtime/inline_host_arm64.s
+  inline_host_arm64.s:250	0x100155af0		f81b0ffe		MOVD.W R30, -80(RSP)								
+  inline_host_arm64.s:250	0x100155af4		f81f83fd		MOVD R29, -8(RSP)								
+  inline_host_arm64.s:250	0x100155af8		d10023fd		SUB $8, RSP, R29								
+  inline_host_arm64.s:252	0x100155afc		f90057ff		MOVD ZR, 168(RSP)								
+  inline_host_arm64.s:253	0x100155b00		b27603e9		ORR $1024, ZR, R9								
+  inline_host_arm64.s:253	0x100155b04		f9001be9		MOVD R9, 48(RSP)								
+  inline_host_arm64.s:254	0x100155b08		f94037e9		MOVD 104(RSP), R9								
+  inline_host_arm64.s:255	0x100155b0c		f9403be0		MOVD 112(RSP), R0								
+  inline_host_arm64.s:256	0x100155b10		f9403fe1		MOVD 120(RSP), R1								
+  inline_host_arm64.s:257	0x100155b14		f94043e2		MOVD 128(RSP), R2								
+  inline_host_arm64.s:258	0x100155b18		f94047e3		MOVD 136(RSP), R3								
+  inline_host_arm64.s:259	0x100155b1c		f9404bea		MOVD 144(RSP), R10								
+  inline_host_arm64.s:260	0x100155b20		100000ac		ADR 20(PC), R12									
+  inline_host_arm64.s:261	0x100155b24		97ffff47		CALL github.com/wago-org/wago/src/core/runtime.inlineHostEnterForeign(SB)	
+  inline_host_arm64.s:262	0x100155b28		f85f83fd		MOVD -8(RSP), R29								
+  inline_host_arm64.s:262	0x100155b2c		f84507fe		MOVD.P 80(RSP), R30								
+  inline_host_arm64.s:262	0x100155b30		d65f03c0		RET										
+  inline_host_arm64.s:264	0x100155b34		f9404fea		MOVD 152(RSP), R10								
+  inline_host_arm64.s:265	0x100155b38		f94013eb		MOVD 32(RSP), R11								
+  inline_host_arm64.s:266	0x100155b3c		eb0a017f		CMP R10, R11									
+  inline_host_arm64.s:267	0x100155b40		540005e1		BNE 47(PC)									
+  inline_host_arm64.s:268	0x100155b44		f9405d4b		MOVD 184(R10), R11								
+  inline_host_arm64.s:269	0x100155b48		b940a3ec		MOVWU 160(RSP), R12								
+  inline_host_arm64.s:270	0x100155b4c		d3607d8c		LSL $32, R12, R12								
+  inline_host_arm64.s:271	0x100155b50		eb0c017f		CMP R12, R11									
+  inline_host_arm64.s:272	0x100155b54		54000541		BNE 42(PC)									
+  inline_host_arm64.s:273	0x100155b58		f94043e9		MOVD 128(RSP), R9								
+  inline_host_arm64.s:274	0x100155b5c		b940012b		MOVWU (R9), R11									
+  inline_host_arm64.s:275	0x100155b60		b500058b		CBNZ R11, 44(PC)								
+  inline_host_arm64.s:276	0x100155b64		f9402ffa		MOVD 88(RSP), R26								
+  inline_host_arm64.s:277	0x100155b68		f9400349		MOVD (R26), R9									
+  inline_host_arm64.s:278	0x100155b6c		f9406141		MOVD 192(R10), R1								
+  inline_host_arm64.s:279	0x100155b70		f9406542		MOVD 200(R10), R2								
+  inline_host_arm64.s:280	0x100155b74		f94033e0		MOVD 96(RSP), R0								
+  inline_host_arm64.s:281	0x100155b78		d63f0120		CALL (R9)									
+  inline_host_arm64.s:282	0x100155b7c		f94043e9		MOVD 128(RSP), R9								
+  inline_host_arm64.s:283	0x100155b80		b940012b		MOVWU (R9), R11									
+  inline_host_arm64.s:284	0x100155b84		b500046b		CBNZ R11, 35(PC)								
+  inline_host_arm64.s:285	0x100155b88		f9404fea		MOVD 152(RSP), R10								
+  inline_host_arm64.s:286	0x100155b8c		b940a3eb		MOVWU 160(RSP), R11								
+  inline_host_arm64.s:287	0x100155b90		d350fd6b		LSR $16, R11, R11								
+  inline_host_arm64.s:288	0x100155b94		b400012b		CBZ R11, 9(PC)									
+  inline_host_arm64.s:289	0x100155b98		f100057f		CMP $1, R11									
+  inline_host_arm64.s:290	0x100155b9c		54000061		BNE 3(PC)									
+  inline_host_arm64.s:291	0x100155ba0		f9016140		MOVD R0, 704(R10)								
+  inline_host_arm64.s:292	0x100155ba4		14000005		JMP 5(PC)									
+  inline_host_arm64.s:294	0x100155ba8		2a0003ec		MOVW R0, R12									
+  inline_host_arm64.s:295	0x100155bac		d360fc0d		LSR $32, R0, R13								
+  inline_host_arm64.s:296	0x100155bb0		f901614c		MOVD R12, 704(R10)								
+  inline_host_arm64.s:297	0x100155bb4		f901654d		MOVD R13, 712(R10)								
+  inline_host_arm64.s:299	0x100155bb8		f9401be9		MOVD 48(RSP), R9								
+  inline_host_arm64.s:299	0x100155bbc		d1000529		SUB $1, R9, R9									
+  inline_host_arm64.s:299	0x100155bc0		f9001be9		MOVD R9, 48(RSP)								
+  inline_host_arm64.s:299	0x100155bc4		b5000109		CBNZ R9, 8(PC)									
+  inline_host_arm64.s:299	0x100155bc8		b27603e9		ORR $1024, ZR, R9								
+  inline_host_arm64.s:299	0x100155bcc		f9001be9		MOVD R9, 48(RSP)								
+  inline_host_arm64.s:299	0x100155bd0		940002fc		CALL github.com/wago-org/wago/src/core/runtime.inlineHostYield.abi0(SB)		
+  inline_host_arm64.s:299	0x100155bd4		f94043e9		MOVD 128(RSP), R9								
+  inline_host_arm64.s:299	0x100155bd8		b940012b		MOVWU (R9), R11									
+  inline_host_arm64.s:299	0x100155bdc		b50001ab		CBNZ R11, 13(PC)								
+  inline_host_arm64.s:299	0x100155be0		f9404fea		MOVD 152(RSP), R10								
+  inline_host_arm64.s:300	0x100155be4		90000009		ADRP 0(PC), R9									
+  inline_host_arm64.s:300	0x100155be8		91238129		ADD $2272, R9, R9								
+  inline_host_arm64.s:301	0x100155bec		f9005949		MOVD R9, 176(R10)								
+  inline_host_arm64.s:302	0x100155bf0		f94017e9		MOVD 40(RSP), R9								
+  inline_host_arm64.s:303	0x100155bf4		f94013eb		MOVD 32(RSP), R11								
+  inline_host_arm64.s:304	0x100155bf8		17ffff26		JMP github.com/wago-org/wago/src/core/runtime.inlineHostResumeForeign(SB)	
+  inline_host_arm64.s:306	0x100155bfc		b24003e9		ORR $1, ZR, R9									
+  inline_host_arm64.s:307	0x100155c00		f90057e9		MOVD R9, 168(RSP)								
+  inline_host_arm64.s:308	0x100155c04		f85f83fd		MOVD -8(RSP), R29								
+  inline_host_arm64.s:308	0x100155c08		f84507fe		MOVD.P 80(RSP), R30								
+  inline_host_arm64.s:308	0x100155c0c		d65f03c0		RET										
+  inline_host_arm64.s:310	0x100155c10		b27f03e9		ORR $2, ZR, R9									
+  inline_host_arm64.s:311	0x100155c14		f90057e9		MOVD R9, 168(RSP)								
+  inline_host_arm64.s:314	0x100155c18		f85f83fd		MOVD -8(RSP), R29								
+  inline_host_arm64.s:314	0x100155c1c		f84507fe		MOVD.P 80(RSP), R30								
+  inline_host_arm64.s:314	0x100155c20		d65f03c0		RET										
+  inline_host_arm64.s:314	0x100155c24		00000000		?										
+  inline_host_arm64.s:314	0x100155c28		00000000		?										
+  inline_host_arm64.s:314	0x100155c2c		00000000		?										
