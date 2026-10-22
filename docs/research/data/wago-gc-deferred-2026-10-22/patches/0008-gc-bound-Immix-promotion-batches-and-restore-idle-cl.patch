@@ -1,0 +1,479 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 03:25:06 +0000
+Subject: [PATCH 08/20] gc: bound Immix promotion batches and restore idle
+ claims
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  17 +++
+ src/core/runtime/gc/native/alloc.go           |  17 ++-
+ src/core/runtime/gc/native/collect.go         |  15 ++-
+ src/core/runtime/gc/native/immix.go           |  52 +++++++--
+ src/core/runtime/gc/native/immix_sweep.go     |   1 +
+ src/core/runtime/gc/native/immix_test.go      | 104 ++++++++++++++++++
+ .../runtime/gc/native/throughput_alloc.go     |  46 ++++++--
+ 7 files changed, 229 insertions(+), 23 deletions(-)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index dc8d52dc2..225ab63cc 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -288,3 +288,20 @@ chain medians are 2.213 vs 1.193 ms; scalar-array 0.713 vs 0.646 ms; sparse scal
+ 0.130 vs 0.038 ms. The default remains paged. This is not evidence for changing
+ production admission. Raw samples and medians are immix-full-cycle-screen.log
+ and immix-full-cycle-summary.json. Selective evacuation is a separate stage.
++
++## Immix promotion bounds and rollback
++
++Equal-size promotion grouping is capped at 1,024 entries for Immix and stops at
++pointer-free class changes. Ordinary objects reserve partial contiguous runs
++within one region. This removes the quadratic rescanning fallback when a whole
++group cannot fit. Existing paged run allocation retains its original admission.
++A 10,000-object mixed-class promotion test validates destinations and ownership.
++
++An empty-region claim journal restores complete idle/advice/epoch metadata after
++failed allocations. It records only claimed empty regions, reuses storage, and
++supports ordered nested transactions. Successful publication commits the journal;
++allocation retries close the failed transaction before any collection. A red/green
++test catches idle-region metadata drift. Partial-run rollback, complete debug
++failure injection and the ordinary collector suite pass. The journal capacity is
++included in Immix metadata accounting. Full object payload publication remains
++after every fallible planning step.
+diff --git a/src/core/runtime/gc/native/alloc.go b/src/core/runtime/gc/native/alloc.go
+index 5ca9968d0..3082a323e 100644
+--- a/src/core/runtime/gc/native/alloc.go
++++ b/src/core/runtime/gc/native/alloc.go
+@@ -29,8 +29,10 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 		}
+ 		e, err := c.throughput.alloc(size, spaceLarge, !d.HasRefs)
+ 		if err != nil {
+-			if isInjectedFailure(err) {
++			if failureInjectionEnabled {
+ 				c.throughput.restoreAllocTransaction(tx)
++			}
++			if isInjectedFailure(err) {
+ 				return Null(), err
+ 			}
+ 			return Null(), fmt.Errorf("gc: collection-disabled heap exhausted: %w", err)
+@@ -40,6 +42,9 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 			c.throughput.restoreAllocTransaction(tx)
+ 			return Null(), err
+ 		}
++		if failureInjectionEnabled {
++			c.throughput.commitAllocTransaction(tx)
++		}
+ 		h := c.newHandle(e)
+ 		r := makeObjRef(h)
+ 		flags := uint32(FlagLarge)
+@@ -83,8 +88,10 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 		}
+ 		e, err = c.throughput.alloc(size, spaceLarge, !d.HasRefs)
+ 		if err != nil {
+-			if isInjectedFailure(err) {
++			if failureInjectionEnabled {
+ 				c.throughput.restoreAllocTransaction(allocationTx)
++			}
++			if isInjectedFailure(err) {
+ 				return Null(), err
+ 			}
+ 			if errors.Is(err, ErrAllocationTooLarge) {
+@@ -104,6 +111,9 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 			}
+ 			e, err = c.throughput.alloc(size, spaceLarge, !d.HasRefs)
+ 			if err != nil {
++				if failureInjectionEnabled {
++					c.throughput.restoreAllocTransaction(allocationTx)
++				}
+ 				return Null(), err
+ 			}
+ 		}
+@@ -153,6 +163,9 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 		}
+ 		return Null(), err
+ 	}
++	if sp != spaceNursery && failureInjectionEnabled {
++		c.throughput.commitAllocTransaction(allocationTx)
++	}
+ 	h := c.newHandle(e)
+ 	if sp == spaceNursery || (sp == spaceLarge && e.young()) {
+ 		c.nurseryHandles = append(c.nurseryHandles, h)
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index d5584bc1e..865b0ae5b 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -467,13 +467,15 @@ func (c *Collector) promoteNursery(captured bool) (copiedBytes, promotedBytes ui
+ 		}
+ 		size := c.handles[plans[i].handle].size
+ 		j := i + 1
+-		for j < len(plans) && plans[j].entry.space == spaceFree && c.handles[plans[j].handle].size == size {
++		for j < len(plans) && plans[j].entry.space == spaceFree && c.handles[plans[j].handle].size == size &&
++			(c.throughput.immix == nil || j-i < 1024 && c.handles[plans[j].handle].class&NativeHandlePointerFreeBit == c.handles[plans[i].handle].class&NativeHandlePointerFreeBit) {
+ 			j++
+ 		}
+-		if run, ok, runErr := c.throughput.tryAllocRun(size, j-i, spaceOld); runErr != nil {
++		if run, ok, runErr := c.throughput.tryAllocRun(size, j-i, spaceOld, c.handles[plans[i].handle].class&NativeHandlePointerFreeBit != 0); runErr != nil {
+ 			rollback(nil)
+ 			return 0, 0, false, runErr
+ 		} else if ok {
++			j = i + run.count
+ 			for k := i; k < j; k++ {
+ 				class := run.class
+ 				if k == j-1 && run.lastAllocSize != run.allocSize {
+@@ -508,6 +510,7 @@ func (c *Collector) promoteNursery(captured bool) (copiedBytes, promotedBytes ui
+ 			return 0, 0, false, err
+ 		}
+ 	}
++	c.throughput.commitAllocTransaction(tx)
+ 	return c.commitPromotionPlans(plans, toSpace, toBump)
+ }
+ 
+@@ -641,13 +644,15 @@ func (c *Collector) promoteMarkedNurseryImmediate() (copiedBytes, promotedBytes
+ 		}
+ 		size := c.handles[plans[i].handle].size
+ 		j := i + 1
+-		for j < len(plans) && plans[j].entry.space == spaceFree && c.handles[plans[j].handle].size == size {
++		for j < len(plans) && plans[j].entry.space == spaceFree && c.handles[plans[j].handle].size == size &&
++			(c.throughput.immix == nil || j-i < 1024 && c.handles[plans[j].handle].class&NativeHandlePointerFreeBit == c.handles[plans[i].handle].class&NativeHandlePointerFreeBit) {
+ 			j++
+ 		}
+-		if run, ok, runErr := c.throughput.tryAllocRun(size, j-i, spaceOld); runErr != nil {
++		if run, ok, runErr := c.throughput.tryAllocRun(size, j-i, spaceOld, c.handles[plans[i].handle].class&NativeHandlePointerFreeBit != 0); runErr != nil {
+ 			rollback(nil)
+ 			return 0, 0, runErr
+ 		} else if ok {
++			j = i + run.count
+ 			for k := i; k < j; k++ {
+ 				class := run.class
+ 				if k == j-1 && run.lastAllocSize != run.allocSize {
+@@ -682,6 +687,7 @@ func (c *Collector) promoteMarkedNurseryImmediate() (copiedBytes, promotedBytes
+ 			return 0, 0, err
+ 		}
+ 	}
++	c.throughput.commitAllocTransaction(tx)
+ 	for _, p := range plans {
+ 		size := c.handles[p.handle].size
+ 		if p.entry.space == spaceLarge {
+@@ -765,6 +771,7 @@ func (c *Collector) promoteHandle(h uint32) error {
+ 		c.throughput.restoreAllocTransaction(tx)
+ 		return err
+ 	}
++	c.throughput.commitAllocTransaction(tx)
+ 	c.promoteHandleTo(h, oldEntry)
+ 	c.removeYoungHandle(h)
+ 	return nil
+diff --git a/src/core/runtime/gc/native/immix.go b/src/core/runtime/gc/native/immix.go
+index 35faebd5e..e56e426da 100644
+--- a/src/core/runtime/gc/native/immix.go
++++ b/src/core/runtime/gc/native/immix.go
+@@ -47,6 +47,19 @@ type immixRegion struct {
+ }
+ 
+ type immixCursor struct{ next, end, block uint32 }
++type immixClaimUndo struct {
++	block  uint32
++	before immixRegion
++}
++
++// Empty-region claims are the only metadata which reverse object frees cannot
++// reconstruct. Journal only those claims, not the complete heap per allocation.
++func (m *immixHeap) saveEmptyClaim(block uint32) {
++	if m.txDepth != 0 && m.regions[block].occupied == 0 {
++		m.undo = append(m.undo, immixClaimUndo{block, m.regions[block]})
++	}
++}
++
+ type immixHeap struct {
+ 	regions        []immixRegion
+ 	cursors        [2]immixCursor
+@@ -58,6 +71,8 @@ type immixHeap struct {
+ 	handleUpdates  uint64
+ 	hasCards       bool
+ 	work           *immixMarkWork
++	txDepth        int
++	undo           []immixClaimUndo
+ }
+ 
+ type ImmixStats struct {
+@@ -73,7 +88,7 @@ func (c *Collector) ImmixStats() ImmixStats {
+ 		return s
+ 	}
+ 	s.Regions = uint32(len(m.regions))
+-	s.MetadataBytes = uint64(cap(m.regions)) * uint64(unsafe.Sizeof(immixRegion{}))
++	s.MetadataBytes = uint64(cap(m.regions))*uint64(unsafe.Sizeof(immixRegion{})) + uint64(cap(m.undo))*uint64(unsafe.Sizeof(immixClaimUndo{}))
+ 	if w := m.work; w != nil {
+ 		s.MarkScratchBytes = uint64(cap(w.heads))*4 + uint64(cap(w.nodes))*uint64(unsafe.Sizeof(immixMarkTask{})) + uint64(cap(w.deferred))*uint64(unsafe.Sizeof(immixArrayTask{})) + uint64(cap(w.active))*8 + uint64(cap(w.seen))*uint64(unsafe.Sizeof(immixMarkWord{}))
+ 	}
+@@ -242,14 +257,9 @@ func (m *immixHeap) release(span throughputFreeSpan) error {
+ 		}
+ 	}
+ 	if m.regions[b].occupied == 0 && m.regions[b].kind != immixLarge {
+-		m.regions[b].kind = immixEmpty
+-		m.regions[b].emptySince = m.epoch
+-		for i := range m.cursors {
+-			if m.cursors[i].end != 0 && m.cursors[i].block == b {
+-				m.cursors[i] = immixCursor{}
+-			}
+-		}
++		m.resetEmptyRegion(b)
+ 	}
++
+ 	return nil
+ }
+ 
+@@ -523,3 +533,29 @@ func (m *immixHeap) noteLargeAge(e handleEntry) {
+ 		m.regions[b].generation = age
+ 	}
+ }
++
++// Return a partial ordinary-block run. Callers cap grouping work even when a
++// large object cannot use this path, so failed runs never cause quadratic scans.
++func (h *throughputHeap) tryAllocImmixRun(size uint32, count int, sp spaceKind, pointerFree bool) (throughputAllocRun, bool, error) {
++	if count < 2 || size == 0 || size > immixLargeThreshold || sp != spaceOld {
++		return throughputAllocRun{}, false, nil
++	}
++	first, err := h.allocImmix(size, sp, pointerFree)
++	if err != nil {
++		return throughputAllocRun{}, false, err
++	}
++	charged := Align16(size)
++	which := 0
++	if pointerFree {
++		which = 1
++	}
++	cursor := &h.immix.cursors[which]
++	actual := min(count, 1+int((cursor.end-cursor.next)/charged))
++	for i := 1; i < actual; i++ {
++		if err = h.immix.record(cursor.next, charged); err != nil {
++			panic("gc: invalid Immix run ownership: " + err.Error())
++		}
++		cursor.next += charged
++	}
++	return throughputAllocRun{count: actual, off: first.off, allocSize: charged, lastAllocSize: charged, class: first.class}, true, nil
++}
+diff --git a/src/core/runtime/gc/native/immix_sweep.go b/src/core/runtime/gc/native/immix_sweep.go
+index ebf0a7566..def25edd9 100644
+--- a/src/core/runtime/gc/native/immix_sweep.go
++++ b/src/core/runtime/gc/native/immix_sweep.go
+@@ -56,6 +56,7 @@ func (h *throughputHeap) sweepImmixEmptyRegions() {
+ }
+ 
+ func (h *throughputHeap) reuseImmixRegion(block uint32) error {
++	h.immix.saveEmptyClaim(block)
+ 	r := &h.immix.regions[block]
+ 	if r.released && h.reservation != nil {
+ 		if err := h.reservation.Reuse(uint64(block)*uint64(immixBlockBytes), uint64(immixBlockBytes)); err != nil {
+diff --git a/src/core/runtime/gc/native/immix_test.go b/src/core/runtime/gc/native/immix_test.go
+index a614e8433..dbd36fc92 100644
+--- a/src/core/runtime/gc/native/immix_test.go
++++ b/src/core/runtime/gc/native/immix_test.go
+@@ -547,3 +547,107 @@ func TestImmixAutomaticPageAdviceWaitsForTwoIdleCycles(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestImmixTransactionRestoresIdleRegionClaim(t *testing.T) {
++	for _, portable := range []bool{false, true} {
++		h := newImmixTestHeap(t, 4*immixBlockBytes, portable)
++		e, err := h.alloc(8, spaceOld, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = h.free(e); err != nil {
++			t.Fatal(err)
++		}
++		h.immix.epoch = 9
++		if _, err = h.adviseIdleImmix(true); err != nil {
++			t.Fatal(err)
++		}
++		before := slices.Clone(h.immix.regions)
++		tx := h.beginAllocTransaction()
++		e, err = h.alloc(8, spaceOld, true)
++		if err != nil {
++			t.Fatal(err)
++		}
++		h.rollbackSuccessfulAlloc(e, tx.bump)
++		h.restoreAllocTransaction(tx)
++		if !slices.Equal(before, h.immix.regions) {
++			t.Fatalf("portable=%v: rollback changed idle/released region metadata", portable)
++		}
++		if err = h.verify([]handleEntry{{}}); err != nil {
++			t.Fatal(err)
++		}
++	}
++}
++
++func TestImmixPartialRunStopsAtRegionAndRestoresClaims(t *testing.T) {
++	h := newImmixTestHeap(t, 2*immixBlockBytes, false)
++	tx := h.beginAllocTransaction()
++	run, ok, err := h.tryAllocRun(8, 10000, spaceOld, true)
++	if err != nil || !ok || run.count != int(immixBlockBytes/16) {
++		t.Fatalf("partial run: %+v %v %v", run, ok, err)
++	}
++	live := []handleEntry{{}}
++	for i := 0; i < run.count; i++ {
++		live = append(live, handleEntry{off: run.off + uint32(i)*run.allocSize, size: 8, space: spaceOld})
++	}
++	if err = h.verify(live); err != nil {
++		t.Fatal(err)
++	}
++	for i := len(live) - 1; i > 0; i-- {
++		h.rollbackSuccessfulAlloc(live[i], tx.bump)
++	}
++	h.restoreAllocTransaction(tx)
++	if len(h.immix.regions) != 0 || h.immix.txDepth != 0 || len(h.immix.undo) != 0 {
++		t.Fatal("partial run rollback kept ownership")
++	}
++	tx = h.beginAllocTransaction()
++	if _, err = h.alloc(16, spaceOld, true); err != nil {
++		t.Fatal(err)
++	}
++	h.commitAllocTransaction(tx)
++	if h.immix.txDepth != 0 || len(h.immix.undo) != 0 {
++		t.Fatal("committed transaction retained undo entries")
++	}
++}
++
++func TestImmixLargePromotionBatchAndMixedClasses(t *testing.T) {
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	scalar, err := NewStructDesc(1, []StorageKind{StorageI64, StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 512 << 10, DisableMovingNursery: true, ThroughputHeapBytes: 2 << 20, ThroughputPageBytes: 4096}, []TypeDesc{node, scalar})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	roots := make(RefSliceRoots, 10000)
++	for i := range roots {
++		roots[i], err = c.NewStructDefault(TypeID(i % 2))
++		if err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err = c.CollectMinor(roots); err != nil {
++		t.Fatal(err)
++	}
++	for i, r := range roots {
++		e := c.handles[handleOf(r)]
++		want := immixReferences
++		if i%2 == 1 {
++			want = immixPointerFree
++		}
++		if e.young() || c.throughput.immix.regions[e.off/immixBlockBytes].kind != want {
++			t.Fatalf("object%d incorrect class/age", i)
++		}
++	}
++	if c.throughput.immix.txDepth != 0 {
++		t.Fatal("promotion left transaction open")
++	}
++	if err = c.Verify(roots); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/throughput_alloc.go b/src/core/runtime/gc/native/throughput_alloc.go
+index 565553f19..77b026850 100644
+--- a/src/core/runtime/gc/native/throughput_alloc.go
++++ b/src/core/runtime/gc/native/throughput_alloc.go
+@@ -42,6 +42,19 @@ type throughputSpanNode struct {
+ 
+ // throughputAllocTransaction records state that bump allocation or backing
+ // growth can mutate. Reused-span allocations are unwound in reverse through
++func (h *throughputHeap) commitAllocTransaction(tx throughputAllocTransaction) {
++	if m := h.immix; m != nil {
++		if tx.immixDepth != m.txDepth {
++			panic("gc: Immix allocation transaction commit order mismatch")
++		}
++		m.txDepth--
++		if m.txDepth == 0 {
++			clear(m.undo)
++			m.undo = m.undo[:0]
++		}
++	}
++}
++
+ // rollbackSuccessfulAlloc; the AVL arena is reusable and does not need a full
+ // metadata snapshot on the successful path.
+ type throughputAllocTransaction struct {
+@@ -50,9 +63,12 @@ type throughputAllocTransaction struct {
+ 	immixRegions int
+ 	immixCursors [2]immixCursor
+ 	immixSearch  [2]uint32
++	immixUndo    int
++	immixDepth   int
+ }
+ 
+ type throughputAllocRun struct {
++	count         int
+ 	off           uint32
+ 	allocSize     uint32
+ 	lastAllocSize uint32
+@@ -222,6 +238,9 @@ func (h *throughputHeap) handleAllocSize(e handleEntry) uint32 {
+ func (h *throughputHeap) beginAllocTransaction() throughputAllocTransaction {
+ 	tx := throughputAllocTransaction{mem: h.mem, bump: h.bump}
+ 	if h.immix != nil {
++		h.immix.txDepth++
++		tx.immixDepth = h.immix.txDepth
++		tx.immixUndo = len(h.immix.undo)
+ 		tx.immixRegions = len(h.immix.regions)
+ 		tx.immixCursors = h.immix.cursors
+ 		tx.immixSearch = h.immix.search
+@@ -234,14 +253,20 @@ func (h *throughputHeap) restoreAllocTransaction(tx throughputAllocTransaction)
+ 		if len(h.immix.regions) < tx.immixRegions {
+ 			panic("gc: Immix transaction lost a region")
+ 		}
++		m := h.immix
++		if tx.immixDepth != m.txDepth {
++			panic("gc: Immix allocation transaction order mismatch")
++		}
++		for i := len(m.undo) - 1; i >= tx.immixUndo; i-- {
++			u := m.undo[i]
++			m.regions[u.block] = u.before
++		}
++		clear(m.undo[tx.immixUndo:])
++		m.undo = m.undo[:tx.immixUndo]
++		m.txDepth--
+ 		h.immix.regions = h.immix.regions[:tx.immixRegions]
+ 		h.immix.cursors = tx.immixCursors
+ 		h.immix.search = tx.immixSearch
+-		for i, c := range h.immix.cursors {
+-			if c.end != 0 {
+-				h.immix.regions[c.block].kind = immixRegionKind(int(immixReferences) + i)
+-			}
+-		}
+ 	}
+ 
+ 	h.mem = tx.mem
+@@ -990,8 +1015,11 @@ func spansOverlap(aOff, aSize, bOff, bSize uint32) bool {
+ // cold growth keeps the existing geometric reservation sequence and failure
+ // injection points, while warmed promotion batches can remove one AVL span or
+ // advance the bump once for the complete equal-sized run.
+-func (h *throughputHeap) tryAllocRun(size uint32, count int, sp spaceKind) (throughputAllocRun, bool, error) {
+-	if h.immix != nil || count < 2 || size > ^uint32(0)-15 {
++func (h *throughputHeap) tryAllocRun(size uint32, count int, sp spaceKind, pointerFree ...bool) (throughputAllocRun, bool, error) {
++	if h.immix != nil {
++		return h.tryAllocImmixRun(size, count, sp, len(pointerFree) != 0 && pointerFree[0])
++	}
++	if count < 2 || size > ^uint32(0)-15 {
+ 		return throughputAllocRun{}, false, nil
+ 	}
+ 	allocSize := Align16(size)
+@@ -1029,7 +1057,7 @@ func (h *throughputHeap) tryAllocRun(size uint32, count int, sp spaceKind) (thro
+ 			lastAllocSize += span.size - consumed
+ 			h.releaseSpanNode(reusable)
+ 		}
+-		return throughputAllocRun{off: span.off, allocSize: allocSize, lastAllocSize: lastAllocSize, class: class}, true, nil
++		return throughputAllocRun{count: count, off: span.off, allocSize: allocSize, lastAllocSize: lastAllocSize, class: class}, true, nil
+ 	}
+ 	if len(h.pendingFree) != 0 {
+ 		return throughputAllocRun{}, false, nil
+@@ -1040,5 +1068,5 @@ func (h *throughputHeap) tryAllocRun(size uint32, count int, sp spaceKind) (thro
+ 		return throughputAllocRun{}, false, nil
+ 	}
+ 	h.bump = uint32(end)
+-	return throughputAllocRun{off: off, allocSize: allocSize, lastAllocSize: allocSize, class: class}, true, nil
++	return throughputAllocRun{count: count, off: off, allocSize: allocSize, lastAllocSize: allocSize, class: class}, true, nil
+ }

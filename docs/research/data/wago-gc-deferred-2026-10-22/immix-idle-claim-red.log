@@ -1,0 +1,5 @@
+--- FAIL: TestImmixTransactionRestoresIdleRegionClaim (0.00s)
+    immix_test.go:563: portable=false: rollback changed idle/released region metadata
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	0.002s
+FAIL

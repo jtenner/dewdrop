@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run=TestThroughputCompactClass",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.168501356005436,
+  "exit": 1,
+  "user_seconds": 3.516928,
+  "system_seconds": 0.127367,
+  "peak_rss_kib": 311824,
+  "minor_faults": 12818,
+  "major_faults": 3
+}

@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run",
+    "TestHandleCapacityBounds",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.3474574249994475,
+  "exit": 0,
+  "user_seconds": 3.740506,
+  "system_seconds": 0.184246,
+  "peak_rss_kib": 330840,
+  "minor_faults": 21907,
+  "major_faults": 5,
+  "voluntary_context_switches": 1742,
+  "involuntary_context_switches": 247
+}

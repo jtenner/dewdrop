@@ -1,0 +1,14 @@
+--- FAIL: TestGCAllocationMix (0.00s)
+    gc_allocation_mix_test.go:41: open ../../tests/fixtures/wasm/gc-allocation-mix.wasm: no such file or directory
+--- FAIL: TestGCReducedBatchHonorsDeadline (0.01s)
+    --- FAIL: TestGCReducedBatchHonorsDeadline/struct (0.01s)
+        gc_batch_cancellation_native_test.go:39: deadline error=create native deadline timer: invalid argument
+    --- FAIL: TestGCReducedBatchHonorsDeadline/cast (0.00s)
+        gc_batch_cancellation_native_test.go:39: deadline error=create native deadline timer: invalid argument
+    --- FAIL: TestGCReducedBatchHonorsDeadline/array (0.00s)
+        gc_batch_cancellation_native_test.go:39: deadline error=create native deadline timer: invalid argument
+    --- FAIL: TestGCReducedBatchHonorsDeadline/fill (0.00s)
+        gc_batch_cancellation_native_test.go:39: deadline error=create native deadline timer: invalid argument
+--- FAIL: TestGCConstExprRootsEarlierElementEntries (0.00s)
+    gc_constexpr_hardening_test.go:171: open testdata/gc_constexpr_element_roots.wasm: no such file or directory
+FAIL

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run=TestImmixUnusedNativeLarge",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.2682934409967856,
+  "exit": 1,
+  "user_seconds": 3.643677,
+  "system_seconds": 0.160929,
+  "peak_rss_kib": 309652,
+  "minor_faults": 14075,
+  "major_faults": 3
+}

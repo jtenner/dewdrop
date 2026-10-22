@@ -1,0 +1,16 @@
+{
+  "command": [
+    "qemu-aarch64",
+    "/tmp/wago-gc-deferred-evidence/arm64-compact-wago.test",
+    "-test.run",
+    "^TestGC",
+    "-test.count=1"
+  ],
+  "seconds": 9.072346913002548,
+  "exit": 1,
+  "user_seconds": 9.33675,
+  "system_seconds": 0.23324899999999998,
+  "peak_rss_kib": 625152,
+  "minor_faults": 28996,
+  "major_faults": 1
+}

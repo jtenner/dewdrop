@@ -1,0 +1,7 @@
+--- FAIL: TestThroughputClassLimitMustBeSupportedSizeClass (0.00s)
+    profile_throughput_test.go:192: unsupported class limit 16 accepted
+--- FAIL: TestCollectMinorPromotionFailureLeavesNurserySurvivorsUnmoved (0.00s)
+    promotion_failure_test.go:101: CollectMinor error = <nil>, want throughput exhaustion
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.713s
+FAIL

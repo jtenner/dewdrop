@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 05:39:17 +0000
+Subject: [PATCH 18/20] gc: retain portable cold card capacity in native views
+
+---
+ docs/research/deferred-gc-implementation-2026-10-22.md | 5 +++++
+ src/core/runtime/gc/native/card_slots.go               | 5 ++++-
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 942fee97f..4c8c558d6 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -488,3 +488,8 @@ shows no clear gain (2.265 ms control versus 2.368 ms background median). Thus
+ background sweep, parallel mark/copy and concurrent marking remain opt-in;
+ explicit measured byte thresholds are required for mark/copy/concurrent work.
+ No default worker mode or four-second compiler result is claimed.
++
++Portable cold-card storage now publishes its full zeroed slice capacity, matching
++the mapped path. The Tiny build exposed needless native-view generation changes
++when a new card used already allocated capacity. Existing slot-reuse assertions
++remain strict; portable and default collector tests check the repaired behavior.
+diff --git a/src/core/runtime/gc/native/card_slots.go b/src/core/runtime/gc/native/card_slots.go
+index 2994349d1..e273308be 100644
+--- a/src/core/runtime/gc/native/card_slots.go
++++ b/src/core/runtime/gc/native/card_slots.go
+@@ -40,7 +40,10 @@ func (c *Collector) ensureCardSlot(h uint32) error {
+ 		b := r.Bytes(capacity * 4)
+ 		c.cardSlots = unsafe.Slice((*uint32)(unsafe.Pointer(&b[0])), int(capacity))
+ 	} else {
+-		c.cardSlots = slices.Grow(c.cardSlots, int(need)-len(c.cardSlots))[:need]
++		c.cardSlots = slices.Grow(c.cardSlots, int(need)-len(c.cardSlots))
++		// Publish the whole zeroed backing, as the mapped path does. Reusing
++		// available capacity must not republish an unchanged native pointer.
++		c.cardSlots = c.cardSlots[:cap(c.cardSlots)]
+ 	}
+ 	c.refreshNativeCards()
+ 	return nil

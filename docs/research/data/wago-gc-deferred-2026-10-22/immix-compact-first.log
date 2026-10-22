@@ -1,0 +1,5 @@
+# github.com/wago-org/wago/src/core/runtime/gc/native [github.com/wago-org/wago/src/core/runtime/gc/native.test]
+src/core/runtime/gc/native/immix_compact.go:186:22: invalid operation: e.remembered != 0 (mismatched types bool and untyped int)
+src/core/runtime/gc/native/immix_compact_test.go:76:45: undefined: StructPayloadOffset
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native [build failed]
+FAIL

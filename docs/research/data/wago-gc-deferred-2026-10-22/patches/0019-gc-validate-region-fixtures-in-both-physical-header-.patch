@@ -1,0 +1,108 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 05:43:10 +0000
+Subject: [PATCH 19/20] gc: validate region fixtures in both physical header
+ layouts
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  | 23 ++++++++++++-------
+ .../runtime/gc/native/immix_compact_test.go   |  2 +-
+ .../gc/native/immix_failure_debug_test.go     |  3 ++-
+ .../gc/native/sweep_background_test.go        |  4 +++-
+ 4 files changed, 21 insertions(+), 11 deletions(-)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 4c8c558d6..2aff8c05d 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -3,8 +3,10 @@
+ Requested issues: 308 (stable backing), 309 (compact headers), 313 (Immix old
+ space), and 321 (parallel/concurrent collection). This series starts from
+ 9d84600f1, the reviewed private GC stack with native SIMD reader summaries.
+-The rejected global cache and unproven loop frame cache are excluded. No public
+-PR, installed runtime, or unrelated checkout is changed.
++The rejected global cache and unproven loop frame cache are excluded. All four
++requested implementations are present. Immix and worker modes remain opt-in after
++measurement. The sections below record the bounded stages and their evidence.
++No public PR, installed runtime, or unrelated checkout is changed.
+ 
+ ## Stable backing: memory owner
+ 
+@@ -55,8 +57,8 @@ portable timings, not application throughput, retained memory, or whole-job RSS.
+ 
+ Raw logs and command/timing JSON are in `/tmp/wago-gc-deferred-evidence` and are
+ mirrored into Dewdrop research evidence when the series is finalized. The
+-remaining native binding, compact layout, region collector and worker stages
+-are still in progress.
++subsequent native binding, compact layout, region collector and worker stages
++are recorded below.
+ 
+ ## Stable backing: native handle bindings
+ 
+@@ -115,11 +117,10 @@ use cold link accessors and retain the same semantic assertions.
+ Complete native collector and wagodebug suites pass (1.70/1.89 s test time).
+ Complete AMD64 backend/runtime/Wago tests pass (53.48 s including build;
+ 5.15/0.42/26.94 s tests). ARM64 ABI, struct execution and native reservation
+-checks pass under QEMU (20.41 s cross-build, 0.192 s execution). Header removal
+-and its two-layout comparison are the next step; this is not yet issue 309's
+-completed representation.
++checks pass under QEMU (20.41 s cross-build, 0.192 s execution). The following stage records header removal
++and its two-layout comparison.
+ 
+-## Compact physical layout (validation in progress)
++## Compact physical layout
+ 
+ The working representation removes struct headers. The hot handle owns the
+ canonical type and logical byte extent. Pointer-free state uses a packed class
+@@ -493,3 +494,9 @@ Portable cold-card storage now publishes its full zeroed slice capacity, matchin
+ the mapped path. The Tiny build exposed needless native-view generation changes
+ when a new card used already allocated capacity. Existing slot-reuse assertions
+ remain strict; portable and default collector tests check the repaired behavior.
++
++The padded-header matrix exposed test assumptions about a 16-byte physical
++struct and an unpadded first vector field. Full-heap fixtures now derive their
++object count from the physical descriptor; vector checks include the declared
++field offset. They still fill the same hard-limit regions and retain all fault,
++retry and alignment assertions. Both physical layouts are checked.
+diff --git a/src/core/runtime/gc/native/immix_compact_test.go b/src/core/runtime/gc/native/immix_compact_test.go
+index a166482a6..00a789427 100644
+--- a/src/core/runtime/gc/native/immix_compact_test.go
++++ b/src/core/runtime/gc/native/immix_compact_test.go
+@@ -217,7 +217,7 @@ func TestImmixMixedVectorCompactionPreservesAlignmentAndCards(t *testing.T) {
+ 		}
+ 		number := uint64(i/2*64 + i%2)
+ 		if i%2 == 0 {
+-			if v.Bits != number || v.BitsHi != number+17 || (c.handles[handleOf(r)].off+PayloadOffset)%16 != 0 {
++			if v.Bits != number || v.BitsHi != number+17 || (c.handles[handleOf(r)].off+PayloadOffset+vector.Fields[0].Offset)%16 != 0 {
+ 				t.Fatal("vector data/alignment changed")
+ 			}
+ 		} else if v.I64() != int64(number) {
+diff --git a/src/core/runtime/gc/native/immix_failure_debug_test.go b/src/core/runtime/gc/native/immix_failure_debug_test.go
+index 269dcd09c..5aaf60241 100644
+--- a/src/core/runtime/gc/native/immix_failure_debug_test.go
++++ b/src/core/runtime/gc/native/immix_failure_debug_test.go
+@@ -97,7 +97,8 @@ func TestImmixEvacuationFailureLeavesSourcesAndHandlesUnchanged(t *testing.T) {
+ 			}
+ 			c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 128 << 10, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096})
+ 			var roots RefSliceRoots
+-			for i := 0; i < 4096; i++ {
++			size := (StructSizeMust(testTypes(t)[0]) + 15) &^ uint32(15)
++			for i := 0; i < int(2*immixBlockBytes/size); i++ {
+ 				r, err := c.NewStructDefault(0)
+ 				if err != nil {
+ 					t.Fatal(err)
+diff --git a/src/core/runtime/gc/native/sweep_background_test.go b/src/core/runtime/gc/native/sweep_background_test.go
+index 5077f13ab..234dc672d 100644
+--- a/src/core/runtime/gc/native/sweep_background_test.go
++++ b/src/core/runtime/gc/native/sweep_background_test.go
+@@ -11,7 +11,9 @@ func newBackgroundSweepFixture(t *testing.T, minimum uint64) (*Collector, RefSli
+ 	t.Helper()
+ 	c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 128 << 10, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096, Execution: &ExecutionOptions{BackgroundSweep: true, Telemetry: true, MinSweepBytes: minimum}})
+ 	var roots RefSliceRoots
+-	for i := 0; i < 4096; i++ {
++	// Fill the same two regions in both physical header layouts.
++	size := (StructSizeMust(testTypes(t)[0]) + 15) &^ uint32(15)
++	for i := 0; i < int(2*immixBlockBytes/size); i++ {
+ 		r, err := c.NewStructDefault(0)
+ 		if err != nil {
+ 			t.Fatal(err)

@@ -1,0 +1,29 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkParallelEvacuation/array1/workers1-16         	       5	   1090125 ns/op	   1005115 copy-plan-ns	   1089586 pause-ns	         0 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers1-16         	       5	   1139063 ns/op	    996651 copy-plan-ns	   1138410 pause-ns	         0 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers1-16         	       5	   1057465 ns/op	    931638 copy-plan-ns	   1056766 pause-ns	         0 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers1-16       	       5	   3419215 ns/op	   3309629 copy-plan-ns	   3417112 pause-ns	         0 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers1-16       	       5	   3406394 ns/op	   3301531 copy-plan-ns	   3403963 pause-ns	         0 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers1-16       	       5	   3434337 ns/op	   3328538 copy-plan-ns	   3432214 pause-ns	         0 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers2-16         	       5	   1161431 ns/op	   1038742 copy-plan-ns	   1160641 pause-ns	    213790 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers2-16         	       5	   1170187 ns/op	   1020681 copy-plan-ns	   1168676 pause-ns	    196349 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers2-16         	       5	   1084352 ns/op	    972962 copy-plan-ns	   1083005 pause-ns	    204322 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers2-16       	       5	   3382110 ns/op	   3265900 copy-plan-ns	   3379954 pause-ns	   2693558 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers2-16       	       5	   3226336 ns/op	   3090037 copy-plan-ns	   3224244 pause-ns	   2034664 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers2-16       	       5	   3292660 ns/op	   3186751 copy-plan-ns	   3290615 pause-ns	   2200222 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers4-16         	       5	   1293794 ns/op	   1172552 copy-plan-ns	   1293136 pause-ns	    255053 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers4-16         	       5	    892798 ns/op	    797857 copy-plan-ns	    892077 pause-ns	    211523 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers4-16         	       5	    891572 ns/op	    799577 copy-plan-ns	    889478 pause-ns	    192386 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers4-16       	       5	   3602984 ns/op	   3502961 copy-plan-ns	   3600990 pause-ns	   4262990 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers4-16       	       5	   3510560 ns/op	   3398257 copy-plan-ns	   3508258 pause-ns	   4340219 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers4-16       	       5	   3631204 ns/op	   3495746 copy-plan-ns	   3628375 pause-ns	   4174439 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers16-16        	       5	   1163487 ns/op	   1036891 copy-plan-ns	   1162647 pause-ns	    270085 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers16-16        	       5	    930918 ns/op	    821512 copy-plan-ns	    930124 pause-ns	    216897 worker-elapsed-ns
+BenchmarkParallelEvacuation/array1/workers16-16        	       5	    915226 ns/op	    816039 copy-plan-ns	    914384 pause-ns	    239790 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers16-16      	       5	   4123275 ns/op	   4016901 copy-plan-ns	   4121262 pause-ns	  19971771 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers16-16      	       5	   4207848 ns/op	   4090512 copy-plan-ns	   4205875 pause-ns	  20036068 worker-elapsed-ns
+BenchmarkParallelEvacuation/array128/workers16-16      	       5	   4323951 ns/op	   4201891 copy-plan-ns	   4321596 pause-ns	  22070903 worker-elapsed-ns
+PASS

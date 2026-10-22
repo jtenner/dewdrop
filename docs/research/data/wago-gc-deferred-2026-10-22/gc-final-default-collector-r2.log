@@ -1,0 +1,3 @@
+ok  	github.com/wago-org/wago/src/core/runtime/gc/native	1.598s
+ok  	github.com/wago-org/wago/src/core/runtime	0.455s
+ok  	github.com/wago-org/wago/internal/virtualmem	0.001s

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run=TestImmixFullSweepMakesEmpty",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.27439975499874,
+  "exit": 1,
+  "user_seconds": 3.640001,
+  "system_seconds": 0.164232,
+  "peak_rss_kib": 305500,
+  "minor_faults": 15906,
+  "major_faults": 5
+}

@@ -1,0 +1,22 @@
+{
+  "base": "9d84600f1",
+  "production_base_differences": [
+    [
+      "src/wago/managed_instances.go",
+      "7accb6b670beb08d10a5e175607b5d94bf029575"
+    ],
+    [
+      "src/wago/reference_store.go",
+      "0d36e40f46f6a918637dc73753b42ef69abd9628"
+    ],
+    [
+      "src/wago/runtime.go",
+      "7702e09c4f78a81b2df7a73c4c780ab9ca52f6e2"
+    ]
+  ],
+  "private_file_hashes": {
+    "src/wago/managed_instances.go": "a9b5c5b1c21424188d2017c599f02d7748e2a846d8d49979542bc4cea4cbdd6a",
+    "src/wago/reference_store.go": "819bcf5b02f2269d65d8a9d9b47940a38111b2a12ecff2574316d219a6249349",
+    "src/wago/runtime.go": "1ae4a269aeb928b8b4fd8cf7f46339fd247a73ca62c91e448dbe0e6537634741"
+  }
+}

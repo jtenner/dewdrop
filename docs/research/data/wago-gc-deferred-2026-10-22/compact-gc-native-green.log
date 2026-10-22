@@ -1,0 +1,5 @@
+--- FAIL: TestGCNativeOldArrayStoreUsesPayloadByteCards (0.00s)
+    gc_old_array_store_amd64_test.go:156: object card count=1, want two byte ranges
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	2.752s
+FAIL

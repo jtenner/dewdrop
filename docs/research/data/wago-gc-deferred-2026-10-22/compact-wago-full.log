@@ -1,0 +1,33 @@
+--- FAIL: TestStagedGCArrayNumericLocalTinyExhaustionAndAllocation (0.00s)
+    gc_array_helper_amd64_test.go:80: tiny exhaustion 0 = <nil>
+--- FAIL: TestStagedGCArrayPackedDataTinyCodecAndAllocation (0.00s)
+    gc_array_packed_data_amd64_test.go:171: packed Tiny exhaustion 0 = <nil>
+--- FAIL: TestDeadGCConstructorsPreserveBoundedAllocation (0.02s)
+    --- FAIL: TestDeadGCConstructorsPreserveBoundedAllocation/nested (0.00s)
+        gc_dead_new_semantics_amd64_test.go:175: enabled = {Results:[1] Error:}, want bounded exhaustion
+    --- FAIL: TestDeadGCConstructorsPreserveBoundedAllocation/nested-struct-ref (0.00s)
+        gc_dead_new_semantics_amd64_test.go:175: enabled = {Results:[1] Error:}, want bounded exhaustion
+    --- FAIL: TestDeadGCConstructorsPreserveBoundedAllocation/nested-array-ref (0.00s)
+        gc_dead_new_semantics_amd64_test.go:175: enabled = {Results:[1] Error:}, want bounded exhaustion
+--- FAIL: TestStagedGCRefTestTableTrapAtomicityAndTinyFailure (0.00s)
+    gc_ref_test_table_amd64_test.go:156: Tiny init error = <nil>, want bounded exhaustion
+--- FAIL: TestStagedGCStructGlobalRootRollbackAndCodecGate (0.00s)
+    gc_struct_globals_amd64_test.go:101: tiny rooted-global instantiation 0 = <nil>, want deterministic second-allocation failure
+--- FAIL: TestStagedGCStructPackedGlobalExecution (0.00s)
+    gc_struct_helper_amd64_test.go:199: packed tiny exhaustion = <nil>, want rooted second-allocation failure
+--- FAIL: TestStagedGCStructBasicNumericActionsAndPublicResultToken (0.00s)
+    gc_struct_helper_amd64_test.go:275: basic Tiny transient allocation = <nil>, want deterministic rooted exhaustion
+--- FAIL: TestStagedGCStructGetAllocationFailureAndCodecGate (0.00s)
+    gc_struct_helper_amd64_test.go:292: tiny exhausted invocation = <nil>, want deterministic allocation failure
+--- FAIL: TestWasmtimeCore3Corpus (0.33s)
+    --- FAIL: TestWasmtimeCore3Corpus/gc/issue-13034 (0.00s)
+        wasmtime_core3_port_test.go:48: fixture child failed: exit status 1
+            WAGO_REGRESSION_FIXTURE_OUTCOME={"protocol":"2","fixture":"gc/issue-13034.wast","nonce":"effbc7032b82cf58424f78c7a4f84ebd","modules_passed":1,"modules_skipped":0,"modules_failed":0,"assertions_passed":0,"assertions_skipped":0,"assertions_failed":1}
+            --- FAIL: TestWasmtimeCore3Corpus (0.00s)
+                spectest_exec_test.go:2384: gc/issue-13034.wast.wast:10 run(): expected trap "allocation size too large": got non-trap error wago: WasmGC struct helper: gc: throughput heap exhausted
+            FAIL
+    wasmtime_core3_port_test.go:59: Wasmtime Core 3 totals = 214 modules, 689 assertions; want 215, 690
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	26.974s
+ok  	github.com/wago-org/wago/src/core/runtime	0.421s
+FAIL

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "wago_guardpage",
+    "./src/core/runtime/gc/native",
+    "./internal/virtualmem"
+  ],
+  "seconds": 3.94281898700865,
+  "exit": 0,
+  "user_seconds": 5.371294,
+  "system_seconds": 0.296244,
+  "peak_rss_kib": 324628,
+  "minor_faults": 65394,
+  "major_faults": 7,
+  "voluntary_context_switches": 6098,
+  "involuntary_context_switches": 337
+}

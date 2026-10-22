@@ -1,0 +1,5 @@
+--- FAIL: TestImmixFullSweepMakesEmptyRegionsImmediateArenas (0.00s)
+    immix_test.go:358: empty regions retain lazy sweep debt: {Regions:1 OccupiedLines:256 LiveLines:0 PointerFreeRegions:0 LargeRegions:0 LiveBytes:0 AllocatedBytes:0 ReleasedPageBytes:0 EvacuatedBytes:0 HandleUpdates:0 MetadataBytes:640} pending2048
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	0.002s
+FAIL

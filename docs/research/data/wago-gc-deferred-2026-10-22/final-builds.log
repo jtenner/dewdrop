@@ -1,0 +1,23 @@
+START gc-final-workers-core
+{"command": ["go", "test", "-count=1", "-tags", "wago_gc_workers wagodebug", "./src/core/runtime/gc/native"], "seconds": 4.368435953001608, "exit": 0, "user_seconds": 5.75425, "system_seconds": 0.308523, "peak_rss_kib": 339312, "minor_faults": 61375, "major_faults": 3, "voluntary_context_switches": 5985, "involuntary_context_switches": 410}
+ok  	github.com/wago-org/wago/src/core/runtime/gc/native	1.913s
+
+START gc-final-guard-core
+{"command": ["go", "test", "-count=1", "-tags", "wago_guardpage", "./src/core/runtime/gc/native", "./internal/virtualmem"], "seconds": 3.94281898700865, "exit": 0, "user_seconds": 5.371294, "system_seconds": 0.296244, "peak_rss_kib": 324628, "minor_faults": 65394, "major_faults": 7, "voluntary_context_switches": 6098, "involuntary_context_switches": 337}
+ok  	github.com/wago-org/wago/src/core/runtime/gc/native	1.642s
+ok  	github.com/wago-org/wago/internal/virtualmem	0.002s
+
+START gc-final-guard-wago
+{"command": ["go", "test", "-count=1", "-tags", "wago_guardpage", "-run", "^TestGC", "./src/wago"], "seconds": 20.3997889989987, "exit": 0, "user_seconds": 34.876572, "system_seconds": 0.929229, "peak_rss_kib": 2657980, "minor_faults": 77234, "major_faults": 5, "voluntary_context_switches": 10370, "involuntary_context_switches": 1501}
+ok  	github.com/wago-org/wago/src/wago	0.399s
+
+START gc-final-host-build-final
+{"command": ["go", "build", "-mod=mod", "-ldflags=-X=main.runtimePatchIdentity=deferred-final-final", "-o", "/tmp/wago-gc-deferred-evidence/final-host", "."], "seconds": 8.002207088997238, "exit": 0, "user_seconds": 14.986825, "system_seconds": 0.723703, "peak_rss_kib": 537956, "minor_faults": 84862, "major_faults": 6, "voluntary_context_switches": 10801, "involuntary_context_switches": 1153}
+
+START gc-final-host-build-workers
+{"command": ["go", "build", "-mod=mod", "-tags", "wago_gc_workers", "-ldflags=-X=main.runtimePatchIdentity=deferred-final-workers", "-o", "/tmp/wago-gc-deferred-evidence/workers-host", "."], "seconds": 7.574898955004755, "exit": 0, "user_seconds": 12.695816, "system_seconds": 0.5453319999999999, "peak_rss_kib": 537484, "minor_faults": 62702, "major_faults": 5, "voluntary_context_switches": 6442, "involuntary_context_switches": 724}
+
+START gc-final-host-build-concurrent
+{"command": ["go", "build", "-mod=mod", "-tags", "wago_gc_workers wago_gc_concurrent", "-ldflags=-X=main.runtimePatchIdentity=deferred-final-concurrent", "-o", "/tmp/wago-gc-deferred-evidence/concurrent-host", "."], "seconds": 7.575281112003722, "exit": 0, "user_seconds": 12.63129, "system_seconds": 0.5733389999999999, "peak_rss_kib": 540232, "minor_faults": 61541, "major_faults": 5, "voluntary_context_switches": 6397, "involuntary_context_switches": 603}
+
+{"control": {"bytes": 17278827, "sha256": "1e078b0e8eac87107733cae327acad8e2186c611917f40896ba869d0db43eff6"}, "final": {"bytes": 17358095, "sha256": "4b435ed25a13a68d335b82ac70e88031b52a8dda4f83238cccd78e899b67d971"}, "workers": {"bytes": 17420239, "sha256": "e06dd83718c5bf73a089310aacfbd13206b298cf48f04c145870c27890522b45"}, "concurrent": {"bytes": 17473291, "sha256": "3bb62d2b28f5a01f9fbeb1cbace519e6d2fab17c3ffd9cbfc0eab14cdbba63d2"}}

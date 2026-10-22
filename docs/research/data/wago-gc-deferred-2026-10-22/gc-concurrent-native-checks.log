@@ -1,0 +1,75 @@
+panic: test timed out after 45s
+	running tests:
+		TestGCConcurrentHostReentryExactFrameRoots (45s)
+
+goroutine 18 [running]:
+testing.(*M).startAlarm.func1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2959 +0x34a
+created by time.goFunc
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/time/sleep.go:182 +0x2d
+
+goroutine 1 [chan receive]:
+testing.(*T).Run(0xedefd330008, {0x16d844d?, 0xedefd3c9aa0?}, 0x23e16c0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2266 +0x4f2
+testing.runTests.func1(0xedefd330008)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2742 +0x37
+testing.tRunner(0xedefd330008, 0xedefd3c9bc8)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+testing.runTests({0x1692930, 0x18}, {0x16b1135, 0x21}, 0xedefd2b0060, {0x241c4d0, 0x964, 0x964}, {0xc2ae827ed4d00c74, 0xa7a3df26e, ...})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2740 +0x510
+testing.(*M).Run(0xedefd318140)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2600 +0x6af
+main.main()
+	_testmain.go:5772 +0x9b
+
+goroutine 12 [chan receive]:
+github.com/wago-org/wago/src/wago.(*invocationGate).lockContext(0xedefd329960, {0x0, 0x0})
+	/tmp/wago-gc-deferred-20261022/src/wago/instance_entry.go:103 +0x2a5
+github.com/wago-org/wago/src/wago.(*Instance).lockInvocationContext(0x0?, {0x0, 0x0}, 0x0)
+	/tmp/wago-gc-deferred-20261022/src/wago/instance_entry.go:297 +0x45
+github.com/wago-org/wago/src/wago.(*Instance).invokeEntry(0xedefd464e08, {0x167795f, 0x9}, {0xedefd3681f0, 0x1, 0x1}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-gc-deferred-20261022/src/wago/api.go:4283 +0x19e
+github.com/wago-org/wago/src/wago.(*Instance).Invoke(0xedefd464e08, {0x167795f, 0x9}, {0xedefd3681f0, 0x1, 0x1})
+	/tmp/wago-gc-deferred-20261022/src/wago/api.go:3893 +0x629
+github.com/wago-org/wago/src/wago.TestGCConcurrentHostReentryExactFrameRoots.func1({0x23cd2e0?, 0xedefd368400?}, {0xedefd3683d8?, 0x100004a47cd?, 0x7f35d8183b68?}, {0x7f361ec7f108?, 0x900?, 0x242dc80?})
+	/tmp/wago-gc-deferred-20261022/src/wago/gc_concurrent_amd64_test.go:152 +0x171
+github.com/wago-org/wago/src/wago.testSetImport.func2({{0xedefd464e08, 0xedefd329900, 0x2, 0x0, 0x4a, 0x0, 0xedefd35bcd0, 0x0}}, {{}, {0xedefd2a04b8, ...}, ...})
+	/tmp/wago-gc-deferred-20261022/src/wago/imports_legacy_test.go:32 +0x123
+github.com/wago-org/wago/src/wago.(*syncHostBinding).callBoundUnchecked(0xedefd300850, {0xedefd464e08, 0xedefd329900, 0x2, 0x0, 0x4a, 0x0, 0xedefd35bcd0, 0x0}, {0xedefd2a04b8, ...}, ...)
+	/tmp/wago-gc-deferred-20261022/src/wago/hostcall.go:1795 +0x57f
+github.com/wago-org/wago/src/wago.dispatchSyncHostScalar(0xedefd464e08, 0xedefd329900, 0xedefd300850, {0xedefd2a04b8, 0x0, 0x40}, {0xedefd2a06b8, 0x0, 0x40}, {{}, ...})
+	/tmp/wago-gc-deferred-20261022/src/wago/hostcall.go:2293 +0x6df
+github.com/wago-org/wago/src/wago.(*Instance).dispatchHostCall(0xedefd464e08, 0x7f361ea17078, 0x0, {0xedefd2a04b8, 0x0, 0x40}, {0xedefd2a06b8, 0x0, 0x40}, {{}, ...})
+	/tmp/wago-gc-deferred-20261022/src/wago/hostcall.go:2419 +0x419
+github.com/wago-org/wago/src/wago.(*Instance).callHostDispatch(0x0?, 0x0?, 0x0?, {0xedefd2a04b8?, 0x4a?, 0x7f361ea17520?}, {0xedefd2a06b8?, 0x0?, 0x0?}, {{}, ...})
+	/tmp/wago-gc-deferred-20261022/src/wago/host_execution.go:525 +0xc5
+github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchActive(0xedefd368fd8, 0xedefd464e08, 0x7f361ea17078, 0x0, {0xedefd2a04b8, 0x0, 0x40}, {0xedefd2a06b8, 0x0, 0x40})
+	/tmp/wago-gc-deferred-20261022/src/wago/host_execution.go:470 +0x8d4
+github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch(0xedefd368fd8, 0xedefd368cb8?, 0x0, {0xedefd2a04b8, 0x0, 0x40}, {0xedefd2a06b8, 0x0, 0x40})
+	/tmp/wago-gc-deferred-20261022/src/wago/host_execution.go:296 +0x299
+github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop(0xedefd2a0488, 0x7f361ea2c360, {0x7f361ea17510, 0x8, 0xedefd340bf0?}, 0x7f361ea18120, {0x7f361ea17520, 0x18, 0x18}, {0x7f361ea17518, ...}, ...)
+	/tmp/wago-gc-deferred-20261022/src/core/runtime/engine.go:595 +0x7fc
+github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostBase(0xedefd2a0488, 0x7f361ea2c360, {0x7f361ea17510, 0x8, 0x8}, 0x7f361ea18120, {0x7f361ea17520, 0x18, 0x18}, {0x7f361ea17518, ...}, ...)
+	/tmp/wago-gc-deferred-20261022/src/core/runtime/engine.go:497 +0x434
+github.com/wago-org/wago/src/core/runtime.(*Engine).CallWithHostBase(...)
+	/tmp/wago-gc-deferred-20261022/src/core/runtime/engine.go:299
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncUnpreparedAdmitted(0xedefd464e08, 0x7f361ea2c360, {0x7f361ea17520, 0x18, 0x18}, {0x0, 0x0}, 0xedefd329980)
+	/tmp/wago-gc-deferred-20261022/src/wago/hostcall.go:2991 +0x18d7
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncAdmitted(0xedefd369378?, 0x44da5e?, {0x7f361ea17520?, 0x0?, 0x100000400000?}, {0x0?, 0x0?}, 0x0?, 0x44da4a?, 0x0, ...)
+	/tmp/wago-gc-deferred-20261022/src/wago/hostcall.go:2645 +0x1bb
+github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext(0xedefd464e08, 0x7f361ea2c360, {0x7f361ea17520, 0x18, 0x18}, {0x0, 0x0})
+	/tmp/wago-gc-deferred-20261022/src/wago/hostcall.go:2625 +0x10f
+github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken(0xedefd464e08, {0x1678c08, 0xa}, {0x0, 0x0, 0x0}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-gc-deferred-20261022/src/wago/api.go:4620 +0x1030
+github.com/wago-org/wago/src/wago.(*Instance).invokeEntry(0xedefd464e08, {0x1678c08, 0xa}, {0x0, 0x0, 0x0}, {{0x0, 0x0}, {0x0, 0x0}}, ...)
+	/tmp/wago-gc-deferred-20261022/src/wago/api.go:4350 +0xb73
+github.com/wago-org/wago/src/wago.(*Instance).Invoke(0xedefd464e08, {0x1678c08, 0xa}, {0x0, 0x0, 0x0})
+	/tmp/wago-gc-deferred-20261022/src/wago/api.go:3893 +0x629
+github.com/wago-org/wago/src/wago.TestGCConcurrentHostReentryExactFrameRoots(0xedefd330b48)
+	/tmp/wago-gc-deferred-20261022/src/wago/gc_concurrent_amd64_test.go:165 +0x5c5
+testing.tRunner(0xedefd330b48, 0x23e16c0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/wago-org/wago/src/wago	45.050s
+FAIL

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-tags",
+    "wago_gc_workers",
+    "-ldflags=-X=main.runtimePatchIdentity=deferred-final-workers",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/workers-host",
+    "."
+  ],
+  "seconds": 7.574898955004755,
+  "exit": 0,
+  "user_seconds": 12.695816,
+  "system_seconds": 0.5453319999999999,
+  "peak_rss_kib": 537484,
+  "minor_faults": 62702,
+  "major_faults": 5,
+  "voluntary_context_switches": 6442,
+  "involuntary_context_switches": 724
+}

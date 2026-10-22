@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 05:48:53 +0000
+Subject: [PATCH 20/20] docs: record final deferred GC qualification and
+ default gates
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  | 30 +++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 2aff8c05d..06f09e2e1 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -500,3 +500,33 @@ struct and an unpadded first vector field. Full-heap fixtures now derive their
+ object count from the physical descriptor; vector checks include the declared
+ field offset. They still fill the same hard-limit regions and retain all fault,
+ retry and alignment assertions. Both physical layouts are checked.
++
++
++## Final qualification
++
++24 selected final checks pass: collector/runtime, complete Wago and AMD64
++backend, both layouts, workers/Tiny exclusion, guard-page product, combined race,
++concurrent native/artifact/register checks, ARM64 GC/physical guards under QEMU,
++and Darwin/Windows/386 cross-builds. QEMU alone excludes the known deadline
++EINVAL test. Darwin/Windows execution and hardware PMU counts remain unavailable.
++The temporary corpus symlink was removed.
++
++Three serial matched cold-cache compiler pairs (CPUs 12/14, GOMAXPROCS=2,
++512-MiB heap, 64-MiB nursery, no transform workers) give median wall time
++33.622 s control versus 28.985 s final, and peak RSS
++1,138,168 versus 620,524 KiB. Time falls 13.8% and
++peak RSS 45.5% for this pinned job. Every Wasm/cache output hash matches,
++validation passes and generated main returns 42. The final product uses the paged
++default with nil execution options; optional collector screens are separate.
++The four-second target is not met. Complete Wago tests take 40.026 s, also above
++the user's 30-second activity target. Neither latency bug is claimed resolved.
++
++Unstripped host bytes: 17,278,827 control; 17,358,095 final (+0.46%);
++17,420,239 worker product; 17,473,291 concurrent product. The frozen matched host
++retains three audited private managed-instance source changes. Current Dewdrop
++Facet host/build edits and the existing ARM64 call change remain intact.
++No active runtime, unrelated checkout or public PR was changed.
++
++The committed Dewdrop research package contains the replayable patch series,
++source/build identities, raw screening and final samples, runners, and validation
++manifest. The Wago implementation is on dewdrop/gc-deferred-20261022.

@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/advice-darwin-arm64.test",
+    "./internal/virtualmem"
+  ],
+  "seconds": 0.2557753230066737,
+  "exit": 0,
+  "user_seconds": 0.239123,
+  "system_seconds": 0.0943,
+  "peak_rss_kib": 111568,
+  "minor_faults": 8385,
+  "major_faults": 11
+}

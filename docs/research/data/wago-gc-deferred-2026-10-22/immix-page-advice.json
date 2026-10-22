@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "./internal/virtualmem"
+  ],
+  "seconds": 0.16012846199737396,
+  "exit": 0,
+  "user_seconds": 0.16680999999999999,
+  "system_seconds": 0.055522999999999996,
+  "peak_rss_kib": 89972,
+  "minor_faults": 7628,
+  "major_faults": 3
+}

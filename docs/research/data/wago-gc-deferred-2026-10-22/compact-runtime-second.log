@@ -1,0 +1,6 @@
+# github.com/wago-org/wago/src/core/runtime/gc/native [github.com/wago-org/wago/src/core/runtime/gc/native.test]
+src/core/runtime/gc/native/ref_desc_ptr_test.go:4:2: "encoding/binary" imported and not used
+src/core/runtime/gc/native/ref_desc_ptr_test.go:29:7: declared and not used: object
+src/core/runtime/gc/native/ref_desc_ptr_test.go:33:42: undefined: ref
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native [build failed]
+FAIL

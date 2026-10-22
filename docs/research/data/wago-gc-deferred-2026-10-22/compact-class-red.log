@@ -1,0 +1,7 @@
+--- FAIL: TestThroughputCompactClassRetainsFullSmallObjectCapacity (0.00s)
+    throughput_compact_class_test.go:15: small-object allocation128 of256: gc: throughput heap exhausted
+--- FAIL: TestThroughputCompactClassReusesSixteenByteRemainder (0.00s)
+    throughput_compact_class_test.go:38: split16 lost capacity: first={off:0 size:32 typeID:0 class:4096 space:2 remembered:false} second={off:80 size:8 typeID:0 class:0 space:2 remembered:false} bump112
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	0.002s
+FAIL

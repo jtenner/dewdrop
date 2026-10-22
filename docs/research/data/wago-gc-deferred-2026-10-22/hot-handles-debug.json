@@ -1,0 +1,11 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags=wagodebug",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 4.182521620998159,
+  "exit_code": 0
+}

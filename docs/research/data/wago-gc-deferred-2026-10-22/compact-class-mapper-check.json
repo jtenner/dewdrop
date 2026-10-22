@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run",
+    "TestThroughput(Class|Compact)|TestCollectMinorPromotionFailure",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.3181544590042904,
+  "exit": 0,
+  "user_seconds": 3.7336650000000002,
+  "system_seconds": 0.14859799999999998,
+  "peak_rss_kib": 299032,
+  "minor_faults": 13048,
+  "major_faults": 3
+}

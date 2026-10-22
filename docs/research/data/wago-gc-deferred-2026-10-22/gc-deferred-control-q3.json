@@ -1,0 +1,57 @@
+{
+  "label": "gc-deferred-control-q3",
+  "command": [
+    "taskset",
+    "-c",
+    "12,14",
+    "/tmp/wago-gc-deferred-evidence/control-host",
+    "run",
+    "-p8",
+    "--core",
+    "3",
+    "--local",
+    "--locked",
+    "--no-input",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+    ".tmp/wago-local-perf-2026-10-20/request.bin"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 33.531741838000016,
+  "user_seconds": 33.713302,
+  "system_seconds": 0.247295,
+  "peak_rss_kib": 1138384,
+  "exit": 0,
+  "timeout": false,
+  "minor_faults": 11291,
+  "major_faults": 0,
+  "voluntary_context_switches": 112688,
+  "involuntary_context_switches": 24302,
+  "load_start": [
+    2.11376953125,
+    1.796875,
+    1.40478515625
+  ],
+  "load_end": [
+    2.068359375,
+    1.802734375,
+    1.41796875
+  ],
+  "gomaxprocs": 2,
+  "host_sha256": "1e078b0e8eac87107733cae327acad8e2186c611917f40896ba869d0db43eff6",
+  "environment": {
+    "WAGO_HOME": "/tmp/wago-gc-deferred-evidence/homes/gc-deferred-control-q3",
+    "DEW_TRANSFORM_WORKERS": "0",
+    "WAGO_AMD64_GC_STRUCT_BATCH": "",
+    "DEW_WAGO_NATIVE_MAP": "",
+    "DEW_WAGO_PROFILE_DIR": ""
+  },
+  "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+  "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+  "validated_main": 42,
+  "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+  "native_cache": "cold"
+}

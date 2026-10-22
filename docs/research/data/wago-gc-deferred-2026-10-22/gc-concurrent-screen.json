@@ -1,0 +1,25 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "12,14",
+    "/tmp/wago-gc-deferred-evidence/gc-concurrent-bench.test",
+    "-test.run",
+    "^$",
+    "-test.bench",
+    "^BenchmarkConcurrentCollection$",
+    "-test.benchtime",
+    "5x",
+    "-test.count",
+    "3"
+  ],
+  "seconds": 1.5422316979966126,
+  "exit": 0,
+  "user_seconds": 1.426936,
+  "system_seconds": 0.182831,
+  "peak_rss_kib": 64368,
+  "minor_faults": 101155,
+  "major_faults": 0,
+  "voluntary_context_switches": 1500,
+  "involuntary_context_switches": 429
+}

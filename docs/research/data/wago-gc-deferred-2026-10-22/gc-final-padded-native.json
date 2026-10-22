@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/tmp/wago-gc-deferred-evidence/final-padded.test",
+    "-test.run=^TestGC",
+    "-test.count=1",
+    "-test.timeout=30s"
+  ],
+  "seconds": 2.4627167059952626,
+  "exit": 0,
+  "user_seconds": 2.1637750000000002,
+  "system_seconds": 0.211054,
+  "peak_rss_kib": 561072,
+  "minor_faults": 41445,
+  "major_faults": 0,
+  "voluntary_context_switches": 6162,
+  "involuntary_context_switches": 136
+}

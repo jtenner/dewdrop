@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-arm64.test",
+    "./src/wago"
+  ],
+  "seconds": 19.84579415000917,
+  "exit": 0,
+  "user_seconds": 34.346308,
+  "system_seconds": 0.902207,
+  "peak_rss_kib": 2515436,
+  "minor_faults": 63639,
+  "major_faults": 63,
+  "voluntary_context_switches": 8873,
+  "involuntary_context_switches": 1269
+}

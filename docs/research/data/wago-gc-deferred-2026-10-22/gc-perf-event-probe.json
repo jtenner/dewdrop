@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/tmp/wago-gc-deferred-evidence/perf-probe"
+  ],
+  "seconds": 0.000857671009725891,
+  "exit": 1,
+  "user_seconds": 0.0,
+  "system_seconds": 0.000542,
+  "peak_rss_kib": 11516,
+  "minor_faults": 63,
+  "major_faults": 0,
+  "voluntary_context_switches": 1,
+  "involuntary_context_switches": 1
+}

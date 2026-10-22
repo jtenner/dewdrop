@@ -1,0 +1,3 @@
+--- FAIL: TestGCConstructorScalarReplacementPreservesBoundedAllocation (0.00s)
+    gc_constructor_forward_arm64_test.go:224: enabled=false error = <nil>; want tiny heap exhaustion
+FAIL

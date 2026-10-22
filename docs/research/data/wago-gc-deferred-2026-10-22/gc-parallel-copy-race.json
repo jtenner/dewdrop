@@ -1,0 +1,20 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-race",
+    "-count=1",
+    "-tags",
+    "wago_gc_workers wagodebug",
+    "-run",
+    "TestParallelCopy",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 7.513852085001417,
+  "exit": 0,
+  "user_seconds": 7.727043,
+  "system_seconds": 0.250979,
+  "peak_rss_kib": 307176,
+  "minor_faults": 53452,
+  "major_faults": 6
+}

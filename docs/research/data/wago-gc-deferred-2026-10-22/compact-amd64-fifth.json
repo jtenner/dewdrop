@@ -1,0 +1,1 @@
+{"command": ["go", "test", "-count=1", "-run=TestGC", "./src/wago"], "seconds": 28.571821418998297, "exit": 1}

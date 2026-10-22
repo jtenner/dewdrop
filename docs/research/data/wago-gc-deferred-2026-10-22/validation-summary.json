@@ -1,0 +1,479 @@
+[
+  {
+    "label": "gc-final-default-collector-r2",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "./src/core/runtime/gc/native",
+      "./src/core/runtime",
+      "./internal/virtualmem"
+    ],
+    "seconds": 3.917944381988491,
+    "exit": 0,
+    "user_seconds": 5.78231,
+    "system_seconds": 0.339147,
+    "peak_rss_kib": 324144,
+    "minor_faults": 64914,
+    "major_faults": 11,
+    "voluntary_context_switches": 11655,
+    "involuntary_context_switches": 265
+  },
+  {
+    "label": "gc-final-combined-collector",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "-tags",
+      "wago_gc_workers wago_gc_concurrent wagodebug",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 2.132138690998545,
+    "exit": 0,
+    "user_seconds": 2.036896,
+    "system_seconds": 0.20743899999999998,
+    "peak_rss_kib": 113972,
+    "minor_faults": 56839,
+    "major_faults": 4,
+    "voluntary_context_switches": 5160,
+    "involuntary_context_switches": 150
+  },
+  {
+    "label": "gc-final-race-after-layout",
+    "command": [
+      "go",
+      "test",
+      "-race",
+      "-count=1",
+      "-tags",
+      "wago_gc_workers wago_gc_concurrent wagodebug",
+      "-run",
+      "TestConcurrent|TestParallel|TestBackground|TestImmixLargeReuseFailure",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 7.985673336996115,
+    "exit": 0,
+    "user_seconds": 8.045885,
+    "system_seconds": 0.29395099999999996,
+    "peak_rss_kib": 314012,
+    "minor_faults": 60788,
+    "major_faults": 6,
+    "voluntary_context_switches": 4506,
+    "involuntary_context_switches": 602
+  },
+  {
+    "label": "gc-final-default-wago-build",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-wago.test",
+      "./src/wago"
+    ],
+    "seconds": 25.636319735989673,
+    "exit": 0,
+    "user_seconds": 44.483951,
+    "system_seconds": 1.042005,
+    "peak_rss_kib": 3531696,
+    "minor_faults": 85969,
+    "major_faults": 7,
+    "voluntary_context_switches": 8822,
+    "involuntary_context_switches": 1633
+  },
+  {
+    "label": "gc-final-default-wago-full",
+    "command": [
+      "/tmp/wago-gc-deferred-evidence/final-wago.test",
+      "-test.count=1",
+      "-test.timeout=60s"
+    ],
+    "seconds": 40.02585908000765,
+    "exit": 0,
+    "user_seconds": 30.177078,
+    "system_seconds": 14.770084,
+    "peak_rss_kib": 681484,
+    "minor_faults": 2929959,
+    "major_faults": 7,
+    "voluntary_context_switches": 286398,
+    "involuntary_context_switches": 14836
+  },
+  {
+    "label": "gc-final-default-backend",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "./src/core/compiler/backend/railshot/amd64"
+    ],
+    "seconds": 11.115432390011847,
+    "exit": 0,
+    "user_seconds": 11.754042,
+    "system_seconds": 3.754874,
+    "peak_rss_kib": 840504,
+    "minor_faults": 665516,
+    "major_faults": 5,
+    "voluntary_context_switches": 25020,
+    "involuntary_context_switches": 950
+  },
+  {
+    "label": "gc-final-padded-core-green",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "-tags",
+      "wago_gc_struct_headers wago_gc_workers wago_gc_concurrent wagodebug",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 4.554811683003209,
+    "exit": 0,
+    "user_seconds": 6.130346,
+    "system_seconds": 0.29309199999999996,
+    "peak_rss_kib": 345588,
+    "minor_faults": 49688,
+    "major_faults": 4,
+    "voluntary_context_switches": 5918,
+    "involuntary_context_switches": 333
+  },
+  {
+    "label": "gc-final-padded-wago-build",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-tags",
+      "wago_gc_struct_headers",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-padded.test",
+      "./src/wago"
+    ],
+    "seconds": 25.925421075007762,
+    "exit": 0,
+    "user_seconds": 44.994405,
+    "system_seconds": 1.000157,
+    "peak_rss_kib": 3494224,
+    "minor_faults": 84360,
+    "major_faults": 7,
+    "voluntary_context_switches": 9275,
+    "involuntary_context_switches": 1195
+  },
+  {
+    "label": "gc-final-padded-native",
+    "command": [
+      "/tmp/wago-gc-deferred-evidence/final-padded.test",
+      "-test.run=^TestGC",
+      "-test.count=1",
+      "-test.timeout=30s"
+    ],
+    "seconds": 2.4627167059952626,
+    "exit": 0,
+    "user_seconds": 2.1637750000000002,
+    "system_seconds": 0.211054,
+    "peak_rss_kib": 561072,
+    "minor_faults": 41445,
+    "major_faults": 0,
+    "voluntary_context_switches": 6162,
+    "involuntary_context_switches": 136
+  },
+  {
+    "label": "gc-final-arm64-build",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-arm64.test",
+      "./src/wago"
+    ],
+    "seconds": 19.84579415000917,
+    "exit": 0,
+    "user_seconds": 34.346308,
+    "system_seconds": 0.902207,
+    "peak_rss_kib": 2515436,
+    "minor_faults": 63639,
+    "major_faults": 63,
+    "voluntary_context_switches": 8873,
+    "involuntary_context_switches": 1269
+  },
+  {
+    "label": "gc-final-arm64-native",
+    "command": [
+      "qemu-aarch64",
+      "/tmp/wago-gc-deferred-evidence/final-arm64.test",
+      "-test.run=^TestGC",
+      "-test.skip=^TestGCReducedBatchHonorsDeadline$",
+      "-test.count=1",
+      "-test.timeout=30s"
+    ],
+    "seconds": 9.055315245001111,
+    "exit": 0,
+    "user_seconds": 9.322201,
+    "system_seconds": 0.215023,
+    "peak_rss_kib": 625324,
+    "minor_faults": 29574,
+    "major_faults": 7,
+    "voluntary_context_switches": 13507,
+    "involuntary_context_switches": 520
+  },
+  {
+    "label": "gc-final-arm64-guards-build",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-arm64-backend.test",
+      "./src/core/compiler/backend/railshot/arm64"
+    ],
+    "seconds": 5.331673487002263,
+    "exit": 0,
+    "user_seconds": 8.923541,
+    "system_seconds": 0.285238,
+    "peak_rss_kib": 715836,
+    "minor_faults": 24997,
+    "major_faults": 7,
+    "voluntary_context_switches": 2417,
+    "involuntary_context_switches": 422
+  },
+  {
+    "label": "gc-final-arm64-guards",
+    "command": [
+      "qemu-aarch64",
+      "/tmp/wago-gc-deferred-evidence/final-arm64-backend.test",
+      "-test.run=TestGCObject",
+      "-test.count=1"
+    ],
+    "seconds": 0.07996945899503771,
+    "exit": 0,
+    "user_seconds": 0.07314799999999999,
+    "system_seconds": 0.009889,
+    "peak_rss_kib": 32480,
+    "minor_faults": 1799,
+    "major_faults": 0,
+    "voluntary_context_switches": 1665,
+    "involuntary_context_switches": 7
+  },
+  {
+    "label": "gc-final-native-concurrent-tests-r4",
+    "command": [
+      "/tmp/wago-gc-deferred-evidence/wago-concurrent-regalloc.test",
+      "-test.run",
+      "^TestGC",
+      "-test.timeout",
+      "30s"
+    ],
+    "seconds": 2.7143279379961314,
+    "exit": 0,
+    "user_seconds": 2.4199289999999998,
+    "system_seconds": 0.226675,
+    "peak_rss_kib": 564008,
+    "minor_faults": 43682,
+    "major_faults": 0,
+    "voluntary_context_switches": 6472,
+    "involuntary_context_switches": 214
+  },
+  {
+    "label": "gc-final-concurrent-artifact-gates",
+    "command": [
+      "/tmp/wago-gc-deferred-evidence/wago-concurrent-regalloc.test",
+      "-test.run=TestCompiledGenericGCArtifactRejectsNativeABIMismatch|TestGCConcurrent",
+      "-test.count=1",
+      "-test.timeout=30s"
+    ],
+    "seconds": 0.022664034986519255,
+    "exit": 0,
+    "user_seconds": 0.023108999999999998,
+    "system_seconds": 0.002209,
+    "peak_rss_kib": 29692,
+    "minor_faults": 1178,
+    "major_faults": 0,
+    "voluntary_context_switches": 267,
+    "involuntary_context_switches": 3
+  },
+  {
+    "label": "gc-final-workers-core",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "-tags",
+      "wago_gc_workers wagodebug",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 4.368435953001608,
+    "exit": 0,
+    "user_seconds": 5.75425,
+    "system_seconds": 0.308523,
+    "peak_rss_kib": 339312,
+    "minor_faults": 61375,
+    "major_faults": 3,
+    "voluntary_context_switches": 5985,
+    "involuntary_context_switches": 410
+  },
+  {
+    "label": "gc-final-minimal-combined",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "-tags",
+      "tinygo wago_gc_workers wago_gc_concurrent",
+      "./src/core/runtime/gc/native",
+      "./internal/virtualmem"
+    ],
+    "seconds": 3.9581160509987967,
+    "exit": 0,
+    "user_seconds": 5.397905,
+    "system_seconds": 0.311542,
+    "peak_rss_kib": 330876,
+    "minor_faults": 78792,
+    "major_faults": 7,
+    "voluntary_context_switches": 6645,
+    "involuntary_context_switches": 222
+  },
+  {
+    "label": "gc-final-guard-core",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "-tags",
+      "wago_guardpage",
+      "./src/core/runtime/gc/native",
+      "./internal/virtualmem"
+    ],
+    "seconds": 3.94281898700865,
+    "exit": 0,
+    "user_seconds": 5.371294,
+    "system_seconds": 0.296244,
+    "peak_rss_kib": 324628,
+    "minor_faults": 65394,
+    "major_faults": 7,
+    "voluntary_context_switches": 6098,
+    "involuntary_context_switches": 337
+  },
+  {
+    "label": "gc-final-guard-wago",
+    "command": [
+      "go",
+      "test",
+      "-count=1",
+      "-tags",
+      "wago_guardpage",
+      "-run",
+      "^TestGC",
+      "./src/wago"
+    ],
+    "seconds": 20.3997889989987,
+    "exit": 0,
+    "user_seconds": 34.876572,
+    "system_seconds": 0.929229,
+    "peak_rss_kib": 2657980,
+    "minor_faults": 77234,
+    "major_faults": 5,
+    "voluntary_context_switches": 10370,
+    "involuntary_context_switches": 1501
+  },
+  {
+    "label": "gc-final-cross-darwin-amd64",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-native-darwin-amd64.test",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 2.3742613709910074,
+    "exit": 0,
+    "user_seconds": 3.970156,
+    "system_seconds": 0.212259,
+    "peak_rss_kib": 322348,
+    "minor_faults": 24656,
+    "major_faults": 11,
+    "voluntary_context_switches": 2533,
+    "involuntary_context_switches": 156
+  },
+  {
+    "label": "gc-final-cross-darwin-arm64",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-native-darwin-arm64.test",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 2.3950028830004157,
+    "exit": 0,
+    "user_seconds": 4.017091,
+    "system_seconds": 0.22042699999999998,
+    "peak_rss_kib": 322160,
+    "minor_faults": 25452,
+    "major_faults": 12,
+    "voluntary_context_switches": 2732,
+    "involuntary_context_switches": 206
+  },
+  {
+    "label": "gc-final-cross-windows-amd64",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-native-windows-amd64.test",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 2.3758470299944747,
+    "exit": 0,
+    "user_seconds": 3.913949,
+    "system_seconds": 0.22836099999999998,
+    "peak_rss_kib": 330772,
+    "minor_faults": 25958,
+    "major_faults": 14,
+    "voluntary_context_switches": 2403,
+    "involuntary_context_switches": 185
+  },
+  {
+    "label": "gc-final-cross-windows-arm64",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-native-windows-arm64.test",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 2.3304069000005256,
+    "exit": 0,
+    "user_seconds": 3.914948,
+    "system_seconds": 0.19763599999999998,
+    "peak_rss_kib": 320320,
+    "minor_faults": 23479,
+    "major_faults": 7,
+    "voluntary_context_switches": 2602,
+    "involuntary_context_switches": 284
+  },
+  {
+    "label": "gc-final-cross-linux-386",
+    "command": [
+      "go",
+      "test",
+      "-c",
+      "-o",
+      "/tmp/wago-gc-deferred-evidence/final-native-linux-386.test",
+      "./src/core/runtime/gc/native"
+    ],
+    "seconds": 6.277064371999586,
+    "exit": 0,
+    "user_seconds": 14.07215,
+    "system_seconds": 1.141572,
+    "peak_rss_kib": 299132,
+    "minor_faults": 149542,
+    "major_faults": 5,
+    "voluntary_context_switches": 27062,
+    "involuntary_context_switches": 1257
+  }
+]

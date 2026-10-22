@@ -1,0 +1,5 @@
+--- FAIL: TestImmixUnusedNativeLargeReservationHasExplicitOwnership (0.00s)
+    immix_test.go:286: unpublished reservation lost ownership: gc: Immix region0 ownership metadata mismatch
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	0.002s
+FAIL

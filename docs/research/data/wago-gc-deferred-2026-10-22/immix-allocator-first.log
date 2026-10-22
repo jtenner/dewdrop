@@ -1,0 +1,9 @@
+--- FAIL: TestCardMetadataFootprint (0.00s)
+    card_driven_test.go:467: Collector size=3232, want 3224
+--- FAIL: TestMajorBlocksFlagUsesExistingPadding (0.00s)
+    major_blocks_coverage_test.go:106: native index changed existing collector offsets
+--- FAIL: TestThroughputFreeSpanFootprint (0.00s)
+    profile_throughput_test.go:598: throughputHeap size = 144, want 136
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.532s
+FAIL

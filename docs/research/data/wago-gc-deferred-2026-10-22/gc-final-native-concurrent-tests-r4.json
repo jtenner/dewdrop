@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/tmp/wago-gc-deferred-evidence/wago-concurrent-regalloc.test",
+    "-test.run",
+    "^TestGC",
+    "-test.timeout",
+    "30s"
+  ],
+  "seconds": 2.7143279379961314,
+  "exit": 0,
+  "user_seconds": 2.4199289999999998,
+  "system_seconds": 0.226675,
+  "peak_rss_kib": 564008,
+  "minor_faults": 43682,
+  "major_faults": 0,
+  "voluntary_context_switches": 6472,
+  "involuntary_context_switches": 214
+}

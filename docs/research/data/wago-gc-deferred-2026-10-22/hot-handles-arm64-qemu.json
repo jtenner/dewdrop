@@ -1,0 +1,11 @@
+{
+  "command": [
+    "qemu-aarch64",
+    "/tmp/wago-gc-deferred-evidence/arm64-hot-handles-wago.test",
+    "-test.run=^(TestGCStructExecutionArm64|TestGCARM64|TestARM64GCNativeABIArtifactAndInstantiationPreflight)",
+    "-test.v"
+  ],
+  "seconds": 0.1915533650026191,
+  "exit_code": 0,
+  "output": "=== RUN   TestARM64GCNativeABIArtifactAndInstantiationPreflight\n--- PASS: TestARM64GCNativeABIArtifactAndInstantiationPreflight (0.06s)\n=== RUN   TestGCStructExecutionArm64\n--- PASS: TestGCStructExecutionArm64 (0.02s)\n=== RUN   TestGCARM64LiveStructDoesNotPrepareUnusedHandles\n--- PASS: TestGCARM64LiveStructDoesNotPrepareUnusedHandles (0.01s)\n=== RUN   TestGCARM64WideArrayDoesNotPrepareUnconsumableState\n--- PASS: TestGCARM64WideArrayDoesNotPrepareUnconsumableState (0.02s)\nPASS\n"
+}

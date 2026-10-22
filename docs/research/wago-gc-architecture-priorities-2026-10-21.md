@@ -191,3 +191,11 @@ stay unchanged, treat that as memory infrastructure rather than a four-second
 speed result. Then test 309's scalar header layout with real allocation-size
 histograms and explicit V128 alignment coverage. No implementation of these
 four issues was made during this review.
+
+
+## Implementation follow-up: 2026-10-22
+
+All four requested designs now have local implementations. The [implementation
+and qualification report](wago-gc-deferred-implementation-2026-10-22.md) records the
+20-commit patch series, checks, optional-mode gates and matched compiler results.
+The earlier sections remain the review made before this implementation.

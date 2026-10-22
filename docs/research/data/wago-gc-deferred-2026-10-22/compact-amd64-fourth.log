@@ -1,0 +1,4 @@
+# github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64
+src/core/compiler/backend/railshot/amd64/gc_card_check.go:13:4: a.Sub64 undefined (type *"github.com/wago-org/wago/src/core/encoder/amd64".Asm has no field or method Sub64)
+FAIL	github.com/wago-org/wago/src/wago [build failed]
+FAIL

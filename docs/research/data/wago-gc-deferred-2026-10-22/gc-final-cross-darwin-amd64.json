@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-native-darwin-amd64.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.3742613709910074,
+  "exit": 0,
+  "user_seconds": 3.970156,
+  "system_seconds": 0.212259,
+  "peak_rss_kib": 322348,
+  "minor_faults": 24656,
+  "major_faults": 11,
+  "voluntary_context_switches": 2533,
+  "involuntary_context_switches": 156
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "qemu-aarch64",
+    "/tmp/wago-gc-deferred-evidence/arm64-compact-backend.test",
+    "-test.run",
+    "TestGCObject",
+    "-test.v"
+  ],
+  "seconds": 0.08499395399121568,
+  "exit": 0,
+  "user_seconds": 0.08148999999999999,
+  "system_seconds": 0.00617,
+  "peak_rss_kib": 32340,
+  "minor_faults": 1833,
+  "major_faults": 0
+}

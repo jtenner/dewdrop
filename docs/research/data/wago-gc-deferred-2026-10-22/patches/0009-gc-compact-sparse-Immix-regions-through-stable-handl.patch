@@ -1,0 +1,768 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 03:31:19 +0000
+Subject: [PATCH 09/20] gc: compact sparse Immix regions through stable handles
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  36 +++
+ src/core/runtime/gc/native/failure.go         |   3 +
+ src/core/runtime/gc/native/immix.go           |   4 +
+ .../runtime/gc/native/immix_bench_test.go     |  39 +++
+ src/core/runtime/gc/native/immix_compact.go   | 202 +++++++++++++++
+ .../runtime/gc/native/immix_compact_test.go   | 233 ++++++++++++++++++
+ .../gc/native/immix_failure_debug_test.go     |  50 ++++
+ src/wago/api.go                               |   3 +
+ src/wago/gc_collect.go                        |  40 ++-
+ src/wago/gc_immix_amd64_test.go               |   2 +-
+ wago.go                                       |   3 +
+ 11 files changed, 604 insertions(+), 11 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/immix_compact.go
+ create mode 100644 src/core/runtime/gc/native/immix_compact_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 225ab63cc..ab425caaf 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -305,3 +305,39 @@ test catches idle-region metadata drift. Partial-run rollback, complete debug
+ failure injection and the ordinary collector suite pass. The journal capacity is
+ included in Immix metadata accounting. Full object payload publication remains
+ after every fallible planning step.
++
++## Immix stage 3: bounded selective evacuation
++
++Collector.CompactOld and Instance.CompactGC select at most eight sparse ordinary
++regions. Ranking uses live bytes, cross-region connections, dirty lines and
++expected reclaimed bytes. Dedicated large regions remain in place. The live-byte
++budget is explicit; zero selects 1 MiB. The first admission is conservative:
++logical bytes at most one quarter of a region and occupied lines at most half.
++This leaves room for 16-byte charges without a full-heap occupancy scratch map.
++
++Selected source bytes use at most 256 KiB of temporary snapshots. The allocator
++packs destinations into those same selected regions, with growth disabled. This
++works at the hard heap limit, with no extra destination region. Metadata plans,
++exact source metadata, cursors and search positions roll back before any payload
++write on every injected planning/destination/commit failure. After all fallible
++steps pass, complete logical payloads copy from snapshots and one stable handle
++entry publishes each object. Guest references never change. Object cards remain
++handle-relative; region card hints are reconstructed conservatively. No raw
++address survives this exclusive-lease operation. The preceding full collection
++is a separate completed operation; only evacuation is all-or-nothing. OS advice
++is a separate explicit call, outside the evacuation transaction.
++
++Native API entry uses the existing invocation, native-execution, domain and
++public-root locks. Borrow checks and exact parked/shared-domain roots match
++CollectGC. Native invocation and saved-artifact tests pass after compaction.
++Tests cover full-heap cyclic graphs, mapped/portable storage, budgets, large-region
++exclusion, old-to-young cards, vectors/alignment, repeated fragmentation and all
++injected failures followed by retry. The complete debug collector suite passes.
++
++Five fixed 20-iteration screening samples pack 256 survivors from four regions
++into one in a median 93.922 us, making 98,304 region bytes empty. Scratch reports
++143,012 bytes. Whole-process peak RSS is 12,864 KiB, including untimed setup.
++Raw data: immix-evac-screen.log/json. Empty-region bytes are not measured RSS.
++Immix remains opt-in: its current tracing screen does not justify replacing the
++faster default collector. All three implementation stages are available for
++continued workload qualification.
+diff --git a/src/core/runtime/gc/native/failure.go b/src/core/runtime/gc/native/failure.go
+index 932db54e6..d36e39b40 100644
+--- a/src/core/runtime/gc/native/failure.go
++++ b/src/core/runtime/gc/native/failure.go
+@@ -11,5 +11,8 @@ const (
+ 	failSlotCardGrowth
+ 	failBackingGrowth
+ 	failThroughputReconciliation
++	failImmixEvacPlan
++	failImmixEvacDestination
++	failImmixEvacCommit
+ 	failImmixPageAdvice
+ )
+diff --git a/src/core/runtime/gc/native/immix.go b/src/core/runtime/gc/native/immix.go
+index e56e426da..99c55c7e5 100644
+--- a/src/core/runtime/gc/native/immix.go
++++ b/src/core/runtime/gc/native/immix.go
+@@ -66,6 +66,7 @@ type immixHeap struct {
+ 	search         [2]uint32
+ 	epoch          uint32
+ 	exclude        []bool
++	compacting     bool
+ 	releasedBytes  uint64
+ 	evacuatedBytes uint64
+ 	handleUpdates  uint64
+@@ -395,6 +396,9 @@ func (m *immixHeap) findEmptyBlocks(count uint32) (uint32, bool) {
+ 	return 0, false
+ }
+ func (h *throughputHeap) growImmixBlocks(count uint32) (uint32, error) {
++	if h.immix.compacting {
++		return 0, ErrHeapExhausted
++	}
+ 	bytes := uint64(count) * uint64(immixBlockBytes)
+ 	if count == 0 || bytes > uint64(^uint32(0)) {
+ 		return 0, ErrAllocationTooLarge
+diff --git a/src/core/runtime/gc/native/immix_bench_test.go b/src/core/runtime/gc/native/immix_bench_test.go
+index a03f8bd5c..167810a72 100644
+--- a/src/core/runtime/gc/native/immix_bench_test.go
++++ b/src/core/runtime/gc/native/immix_bench_test.go
+@@ -92,3 +92,42 @@ func BenchmarkImmixFullCollection(b *testing.B) {
+ 		}
+ 	}
+ }
++
++func BenchmarkImmixSparseEvacuation(b *testing.B) {
++	for iteration := 0; iteration < b.N; iteration++ {
++		b.StopTimer()
++		scalar, err := NewStructDesc(0, []StorageKind{StorageI64})
++		if err != nil {
++			b.Fatal(err)
++		}
++		c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 256 << 10, DisableMovingNursery: true, ThroughputHeapBytes: 4 * immixBlockBytes, ThroughputPageBytes: 4096}, []TypeDesc{scalar})
++		if err != nil {
++			b.Fatal(err)
++		}
++		roots := RefSliceRoots{}
++		for i := 0; i < 8192; i++ {
++			r, err := c.NewStructDefault(0)
++			if err != nil {
++				b.Fatal(err)
++			}
++			if err = c.ForcePromote(r); err != nil {
++				b.Fatal(err)
++			}
++			if i%32 == 0 {
++				roots = append(roots, r)
++			}
++		}
++		if err = c.CollectFull(roots); err != nil {
++			b.Fatal(err)
++		}
++		b.StartTimer()
++		result, err := c.evacuateImmixSparse(0)
++		b.StopTimer()
++		if err != nil {
++			b.Fatal(err)
++		}
++		b.ReportMetric(float64(result.RegionsReleased*immixBlockBytes), "empty-region-B")
++		b.ReportMetric(float64(result.ScratchBytes), "scratch-B")
++		c.Close()
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_compact.go b/src/core/runtime/gc/native/immix_compact.go
+new file mode 100644
+index 000000000..958a0e648
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_compact.go
+@@ -0,0 +1,202 @@
++package gc
++
++import (
++	"errors"
++	"math/bits"
++	"sort"
++	"unsafe"
++)
++
++// CompactionResult counts one bounded selective old-space evacuation. Scratch
++// contains source snapshots and integer/metadata plans, never persistent roots.
++type CompactionResult struct {
++	BytesMoved, HandleUpdates, ScratchBytes uint64
++	RegionsSelected, RegionsReleased        uint32
++}
++type immixCandidate struct {
++	block uint32
++	score uint64
++}
++type immixEvacSource struct {
++	block  uint32
++	before immixRegion
++}
++
++const immixMaxEvacRegions = 8
++
++// CompactOld completes a full collection, then evacuates at most eight sparse
++// ordinary regions and budgetBytes of live payload (zero selects 1 MiB). Live
++// references retain their exact words. The evacuation itself is transactional;
++// the preceding collection has the normal full-collection side effects. Call
++// ReleaseUnusedMemory separately to advise newly empty regions to the OS.
++// The caller must own the same exclusive GC lease as for CollectFull.
++func (c *Collector) CompactOld(roots RootSet, budgetBytes uint64) (CompactionResult, error) {
++	if err := c.errIfClosed(); err != nil {
++		return CompactionResult{}, err
++	}
++	if c.throughput.immix == nil {
++		return CompactionResult{}, errors.New("gc: old compaction requires the Immix allocator")
++	}
++	if err := c.CollectFull(roots); err != nil {
++		return CompactionResult{}, err
++	}
++	defer c.refreshNativeView()
++	result, err := c.evacuateImmixSparse(budgetBytes)
++	if err == nil && c.cfg.VerifyAfterCollect {
++		err = c.Verify(roots)
++	}
++	return result, err
++}
++func (c *Collector) evacuateImmixSparse(budget uint64) (CompactionResult, error) {
++	var result CompactionResult
++	h := &c.throughput
++	m := h.immix
++	if m == nil || m.compacting || m.txDepth != 0 {
++		return result, errors.New("gc: invalid Immix evacuation phase")
++	}
++	if err := h.sweepAllPending(); err != nil {
++		return result, err
++	}
++	if budget == 0 {
++		budget = 1 << 20
++	}
++	candidates := make([]immixCandidate, 0, immixMaxEvacRegions)
++	// Logical bytes can undercount 16-byte charges by at most two at the minimum
++	// eight-byte object size. This conservative admission guarantees half-empty
++	// destination packing without a full-heap auxiliary occupancy array.
++	for b := range m.regions {
++		r := &m.regions[b]
++		if r.kind != immixReferences && r.kind != immixPointerFree || r.epoch != m.epoch || r.liveBytes == 0 || r.liveBytes > immixBlockBytes/4 || r.occupied > uint16(immixLines/2) {
++			continue
++		}
++		var cards uint64
++		for _, word := range r.cards {
++			cards += uint64(bits.OnesCount64(word))
++		}
++		benefit := uint64(immixBlockBytes) - uint64(r.liveBytes)*2
++		score := benefit * 1024 / (1 + uint64(r.liveBytes) + uint64(r.connections)*8 + cards*32)
++		candidate := immixCandidate{uint32(b), score}
++		at := 0
++		for at < len(candidates) && candidates[at].score >= score {
++			at++
++		}
++		if at == cap(candidates) {
++			continue
++		}
++		if len(candidates) < cap(candidates) {
++			candidates = append(candidates, immixCandidate{})
++		}
++		copy(candidates[at+1:], candidates[at:len(candidates)-1])
++		candidates[at] = candidate
++	}
++	sources := make([]immixEvacSource, 0, len(candidates))
++	var selectedBytes uint64
++	for _, candidate := range candidates {
++		r := m.regions[candidate.block]
++		if uint64(r.liveBytes) > budget-selectedBytes {
++			continue
++		}
++		sources = append(sources, immixEvacSource{candidate.block, r})
++		selectedBytes += uint64(r.liveBytes)
++	}
++	if len(sources) == 0 {
++		return result, nil
++	}
++	// Snapshot at most 256 KiB of source bytes. All selected objects can now be
++	// packed into the selected regions themselves, even with no heap headroom.
++	snapshots := make([]byte, len(sources)*int(immixBlockBytes))
++	for i, source := range sources {
++		copy(snapshots[i*int(immixBlockBytes):], h.mem[source.block*immixBlockBytes:(source.block+1)*immixBlockBytes])
++	}
++	selected := func(block uint32) int {
++		for i, s := range sources {
++			if s.block == block {
++				return i
++			}
++		}
++		return -1
++	}
++	plans := make([]plannedPromotion, 0, int(selectedBytes/8))
++	for id, e := range c.handles {
++		if e.space == spaceOld && selected(e.off/immixBlockBytes) >= 0 {
++			plans = append(plans, plannedPromotion{handle: uint32(id), entry: e})
++		}
++	}
++	// Largest first keeps bounded packing efficient; pointer-free classes keep
++	// their separate cursors. Plans retain sources until destination planning.
++	sort.Slice(plans, func(i, j int) bool { return plans[i].entry.size > plans[j].entry.size })
++	if err := injectFailure(c, failImmixEvacPlan); err != nil {
++		return result, err
++	}
++	oldCursors, oldSearch := m.cursors, m.search
++	for _, source := range sources {
++		m.resetEmptyRegion(source.block)
++	}
++	m.exclude = make([]bool, len(m.regions))
++	for b := range m.exclude {
++		m.exclude[b] = selected(uint32(b)) < 0
++	}
++	m.cursors = [2]immixCursor{}
++	m.compacting = true
++	defer func() { m.compacting = false; m.exclude = nil }()
++	tx := h.beginAllocTransaction()
++	dest := make([]handleEntry, len(plans))
++	rollback := func(n int) {
++		for i := n - 1; i >= 0; i-- {
++			h.rollbackSuccessfulAlloc(dest[i], tx.bump)
++		}
++		h.restoreAllocTransaction(tx)
++		for _, source := range sources {
++			m.regions[source.block] = source.before
++		}
++		m.cursors, m.search = oldCursors, oldSearch
++	}
++	for i, p := range plans {
++		entry, err := h.alloc(p.entry.size, spaceOld, p.entry.class&NativeHandlePointerFreeBit != 0)
++		if err != nil {
++			rollback(i)
++			return result, err
++		}
++		dest[i] = entry
++		if err = injectFailure(c, failImmixEvacDestination); err != nil {
++			rollback(i + 1)
++			return result, err
++		}
++	}
++	for range plans {
++		if err := injectFailure(c, failImmixEvacCommit); err != nil {
++			rollback(len(plans))
++			return result, err
++		}
++	}
++	h.commitAllocTransaction(tx)
++	result.ScratchBytes = uint64(len(snapshots)+cap(m.exclude)) + uint64(cap(sources))*uint64(unsafe.Sizeof(immixEvacSource{})) + uint64(cap(candidates))*uint64(unsafe.Sizeof(immixCandidate{})) + uint64(cap(plans))*uint64(unsafe.Sizeof(plannedPromotion{})) + uint64(cap(dest))*uint64(unsafe.Sizeof(handleEntry{}))
++	// Every fallible step has finished. Copy from snapshots, initialize the whole
++	// logical payload, then publish exactly one stable handle entry per object.
++	for i, p := range plans {
++		source := selected(p.entry.off / immixBlockBytes)
++		at := uint32(source)*immixBlockBytes + p.entry.off%immixBlockBytes
++		e := dest[i]
++		copy(h.mem[e.off:e.off+e.size], snapshots[at:at+e.size])
++		e.typeID = p.entry.typeID
++		e.class |= p.entry.class & NativeHandlePointerFreeBit
++		e.remembered = p.entry.remembered
++		c.handles[p.handle] = e
++		m.mark(e)
++		if e.remembered {
++			m.noteCards(e.off, e.off+e.size-1)
++		}
++		result.BytesMoved += uint64(e.size)
++		result.HandleUpdates++
++	}
++	result.RegionsSelected = uint32(len(sources))
++	for _, source := range sources {
++		if m.regions[source.block].occupied == 0 {
++			result.RegionsReleased++
++		}
++	}
++	m.evacuatedBytes += result.BytesMoved
++	m.handleUpdates += result.HandleUpdates
++	c.lastCardBounds = objectCardBounds{}
++	return result, nil
++}
+diff --git a/src/core/runtime/gc/native/immix_compact_test.go b/src/core/runtime/gc/native/immix_compact_test.go
+new file mode 100644
+index 000000000..a166482a6
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_compact_test.go
+@@ -0,0 +1,233 @@
++package gc
++
++import (
++	"encoding/binary"
++	"testing"
++)
++
++func TestImmixSparseCompactionAtHeapLimitPreservesStableGraph(t *testing.T) {
++	for _, portable := range []bool{false, true} {
++		node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++		if err != nil {
++			t.Fatal(err)
++		}
++		c := newTestCollectorWithTypes(t, Config{Allocator: AllocatorImmix, NurseryBytes: 128 << 10, DisableMovingNursery: true, ThroughputHeapBytes: 4 * immixBlockBytes, ThroughputPageBytes: 4096, DisableVirtualBacking: portable}, []TypeDesc{node})
++		refs := make([]Ref, 4*int(immixBlockBytes)/16)
++		for i := range refs {
++			var err error
++			refs[i], err = c.NewStructDefault(0)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err = c.ForcePromote(refs[i]); err != nil {
++				t.Fatal(err)
++			}
++			// Test type 0 contains a reference followed by i32.
++			if err = c.StructSet(refs[i], 1, I32Value(int32(i))); err != nil {
++				t.Fatal(err)
++			}
++		}
++		roots := RefSliceRoots{}
++		for i, r := range refs {
++			if i%32 == 0 {
++				roots = append(roots, r)
++			}
++		}
++		for i, r := range roots {
++			if err := c.StructSet(r, 0, RefValue(roots[(i+1)%len(roots)])); err != nil {
++				t.Fatal(err)
++			}
++		}
++		beforeBump := c.throughput.bump
++		result, err := c.CompactOld(roots, 0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if result.RegionsReleased < 3 || result.BytesMoved == 0 || result.HandleUpdates != uint64(len(roots)) || result.ScratchBytes > 1<<20 {
++			t.Fatalf("portable=%v: compaction result %+v", portable, result)
++		}
++		if c.throughput.bump != beforeBump {
++			t.Fatal("compaction grew a full heap")
++		}
++		for i, r := range roots {
++			value, err := c.StructGet(r, 1)
++			if err != nil || value.I32() != int32(i*32) {
++				t.Fatalf("value%d: %+v %v", i, value, err)
++			}
++			child, err := c.StructGet(r, 0)
++			if err != nil || child.Ref != roots[(i+1)%len(roots)] {
++				t.Fatalf("edge%d changed", i)
++			}
++		}
++		if err = c.Verify(roots); err != nil {
++			t.Fatal(err)
++		}
++		// Reuse compaction-created line space without changing the stable graph.
++		for i := 0; i < 100; i++ {
++			r, err := c.NewStructDefault(0)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err = c.ForcePromote(r); err != nil {
++				t.Fatal(err)
++			}
++		}
++		for i, r := range roots {
++			if binary.LittleEndian.Uint32(c.bytes(r)[PayloadOffset+4:]) != uint32(i*32) {
++				t.Fatal("reuse changed retained payload")
++			}
++		}
++	}
++}
++
++func TestImmixCompactionBudgetAndLargeRegionExclusion(t *testing.T) {
++	c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 128 << 10, ThroughputHeapBytes: 8 * immixBlockBytes, ThroughputPageBytes: 4096})
++	roots := RefSliceRoots{}
++	for i := 0; i < 4096; i++ {
++		r, err := c.NewStructDefault(0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.ForcePromote(r); err != nil {
++			t.Fatal(err)
++		}
++		if i%64 == 0 {
++			roots = append(roots, r)
++		}
++	}
++	large, err := c.NewArrayDefault(2, 20000)
++	if err != nil {
++		t.Fatal(err)
++	}
++	roots = append(roots, large)
++	entry := c.handles[handleOf(large)]
++	if err = c.CollectFull(roots); err != nil {
++		t.Fatal(err)
++	}
++	if got, err := c.evacuateImmixSparse(1); err != nil || got.BytesMoved != 0 {
++		t.Fatalf("tiny budget: %+v %v", got, err)
++	}
++	if got, err := c.evacuateImmixSparse(1024); err != nil || got.BytesMoved > 1024 || got.BytesMoved == 0 {
++		t.Fatalf("bounded budget: %+v %v", got, err)
++	}
++	if c.handles[handleOf(large)] != entry {
++		t.Fatal("large region was relocated")
++	}
++	if err = c.Verify(roots); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestImmixLongFragmentedHeapCompaction(t *testing.T) {
++	for _, portable := range []bool{false, true} {
++		c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 4 << 20, ThroughputHeapBytes: 16 * immixBlockBytes, ThroughputPageBytes: 4096, DisableVirtualBacking: portable})
++		roots := RefSliceRoots{}
++		expected := []int64{}
++		for round := 0; round < 32; round++ {
++			for i := 0; i < 512; i++ {
++				r, err := c.NewStructDefault(0)
++				if err != nil {
++					t.Fatal(err)
++				}
++				value := int64(round*512 + i + 1)
++				if err = c.StructSet(r, 1, I64Value(value)); err != nil {
++					t.Fatal(err)
++				}
++				if err = c.ForcePromote(r); err != nil {
++					t.Fatal(err)
++				}
++				if i%4 == 0 {
++					roots = append(roots, r)
++					expected = append(expected, value)
++				}
++			}
++			retained := roots[:0]
++			values := expected[:0]
++			for i, r := range roots {
++				if i%2 == 0 {
++					retained = append(retained, r)
++					values = append(values, expected[i])
++				}
++			}
++			roots, expected = retained, values
++			if _, err := c.CompactOld(roots, 0); err != nil {
++				t.Fatalf("round%d: %v", round, err)
++			}
++			for i, r := range roots {
++				v, err := c.StructGet(r, 1)
++				if err != nil || v.I64() != expected[i] {
++					t.Fatalf("round%d object%d: %v", round, i, err)
++				}
++			}
++			if err := c.Verify(roots); err != nil {
++				t.Fatal(err)
++			}
++		}
++	}
++}
++
++func TestImmixMixedVectorCompactionPreservesAlignmentAndCards(t *testing.T) {
++	vector, err := NewStructDesc(0, []StorageKind{StorageV128, StorageRefNull})
++	if err != nil {
++		t.Fatal(err)
++	}
++	scalar, err := NewStructDesc(1, []StorageKind{StorageI64})
++	if err != nil {
++		t.Fatal(err)
++	}
++	c := newTestCollectorWithTypes(t, Config{Allocator: AllocatorImmix, NurseryBytes: 1 << 20, ThroughputHeapBytes: 1 << 20, ThroughputPageBytes: 4096}, []TypeDesc{vector, scalar})
++	var roots RefSliceRoots
++	for i := 0; i < 3072; i++ {
++		r, err := c.NewStructDefault(TypeID(i % 2))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if i%2 == 0 {
++			err = c.StructSet(r, 0, V128Value(uint64(i), uint64(i)+17))
++		} else {
++			err = c.StructSet(r, 0, I64Value(int64(i)))
++		}
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.ForcePromote(r); err != nil {
++			t.Fatal(err)
++		}
++		if i%64 < 2 {
++			roots = append(roots, r)
++		}
++	}
++	child, err := c.NewStructDefault(1)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for i := 0; i < len(roots); i += 2 {
++		if err = c.StructSet(roots[i], 1, RefValue(child)); err != nil {
++			t.Fatal(err)
++		}
++	}
++	result, err := c.CompactOld(roots, 0)
++	if err != nil || result.BytesMoved == 0 {
++		t.Fatalf("compaction: %+v %v", result, err)
++	}
++	for i, r := range roots {
++		v, err := c.StructGet(r, 0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		number := uint64(i/2*64 + i%2)
++		if i%2 == 0 {
++			if v.Bits != number || v.BitsHi != number+17 || (c.handles[handleOf(r)].off+PayloadOffset)%16 != 0 {
++				t.Fatal("vector data/alignment changed")
++			}
++		} else if v.I64() != int64(number) {
++			t.Fatal("scalar data changed")
++		}
++	}
++	if err = c.CollectMinor(roots); err != nil {
++		t.Fatal(err)
++	}
++	if err = c.Verify(roots); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_failure_debug_test.go b/src/core/runtime/gc/native/immix_failure_debug_test.go
+index 3f5656d19..93d58d5ad 100644
+--- a/src/core/runtime/gc/native/immix_failure_debug_test.go
++++ b/src/core/runtime/gc/native/immix_failure_debug_test.go
+@@ -88,3 +88,53 @@ func TestImmixPageAdviceFailureIsVisibleAndRetryable(t *testing.T) {
+ 		t.Fatalf("retry: %d %v", bytes, err)
+ 	}
+ }
++
++func TestImmixEvacuationFailureLeavesSourcesAndHandlesUnchanged(t *testing.T) {
++	for _, point := range []failurePoint{failImmixEvacPlan, failImmixEvacDestination, failImmixEvacCommit} {
++		for _, after := range []int{0, 1, 17} {
++			if point == failImmixEvacPlan && after != 0 {
++				continue
++			}
++			c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 128 << 10, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096})
++			var roots RefSliceRoots
++			for i := 0; i < 4096; i++ {
++				r, err := c.NewStructDefault(0)
++				if err != nil {
++					t.Fatal(err)
++				}
++				if err = c.ForcePromote(r); err != nil {
++					t.Fatal(err)
++				}
++				if i%32 == 0 {
++					roots = append(roots, r)
++				}
++			}
++			if err := c.CollectFull(roots); err != nil {
++				t.Fatal(err)
++			}
++			if err := c.throughput.sweepAllPending(); err != nil {
++				t.Fatal(err)
++			}
++			before := snapshotPromotionState(c)
++			regions := slices.Clone(c.throughput.immix.regions)
++			cursors := c.throughput.immix.cursors
++			payload := slices.Clone(c.throughput.mem)
++			cleanup := armFailure(c, point, after)
++			_, err := c.evacuateImmixSparse(0)
++			cleanup()
++			if !errors.Is(err, errInjectedFailure) {
++				t.Fatalf("%d/%d: missing failure: %v", point, after, err)
++			}
++			assertPromotionStateEqual(t, c, before)
++			if !slices.Equal(payload, c.throughput.mem) || !slices.Equal(regions, c.throughput.immix.regions) || cursors != c.throughput.immix.cursors {
++				t.Fatalf("%d/%d: evacuation changed source state", point, after)
++			}
++			if err = c.Verify(roots); err != nil {
++				t.Fatal(err)
++			}
++			if result, err := c.evacuateImmixSparse(0); err != nil || result.RegionsReleased == 0 {
++				t.Fatalf("retry: %+v %v", result, err)
++			}
++		}
++	}
++}
+diff --git a/src/wago/api.go b/src/wago/api.go
+index 634c15dc7..bc57e1c0b 100644
+--- a/src/wago/api.go
++++ b/src/wago/api.go
+@@ -5602,3 +5602,6 @@ func (in *Instance) CodeBase() (base uintptr, entries []int) {
+ 	// (potentially shared) state through the returned slice.
+ 	return in.base, append([]int(nil), in.c.Entry...)
+ }
++
++// GCCompactionResult reports bounded selective old-region compaction.
++type GCCompactionResult = gc.CompactionResult
+diff --git a/src/wago/gc_collect.go b/src/wago/gc_collect.go
+index 6f4a6d773..dd417e5e2 100644
+--- a/src/wago/gc_collect.go
++++ b/src/wago/gc_collect.go
+@@ -3,6 +3,8 @@ package wago
+ import (
+ 	"fmt"
+ 	"sync"
++
++	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
+ )
+ 
+ func gcCollectFrameRoots(in *Instance, public *gcPublicState, frameLayout uint8, allowExternalReturn bool) gcNativeFrameRoots {
+@@ -23,29 +25,44 @@ func gcCollectFrameRoots(in *Instance, public *gcPublicState, frameLayout uint8,
+ // serialized with native execution and collector-domain mutation, and fails with
+ // ErrPermissionDenied while callback-scoped guest storage is borrowed.
+ func (in *Instance) CollectGC() error {
++	_, err := in.runGCCollection(false, 0)
++	return err
++}
++
++// CompactGC collects this instance's exact GC domain and compacts a bounded
++// set of sparse Immix old regions. The budget is live bytes; zero selects the
++// collector default. It uses the same roots, lease and borrow rules as CollectGC.
++// Other allocators return an error. A successful preceding collection remains
++// complete if subsequent evacuation planning fails; evacuation does not publish
++// a partial result on failure.
++func (in *Instance) CompactGC(budgetBytes uint64) (GCCompactionResult, error) {
++	return in.runGCCollection(true, budgetBytes)
++}
++func (in *Instance) runGCCollection(compact bool, budget uint64) (GCCompactionResult, error) {
+ 	if err := in.beginInvocation(); err != nil {
+-		return err
++		return GCCompactionResult{}, err
+ 	}
+ 	defer in.endInvocation()
+ 	if in == nil || in.gc == nil || in.c == nil {
+-		return fmt.Errorf("wago: instance has no live WasmGC collector")
++		return GCCompactionResult{}, fmt.Errorf("wago: instance has no live WasmGC collector")
+ 	}
+ 	if in.guestStorageBorrowed() {
+-		return fmt.Errorf("wago: collection is unavailable while guest storage is borrowed: %w", ErrPermissionDenied)
++		return GCCompactionResult{}, fmt.Errorf("wago: collection is unavailable while guest storage is borrowed: %w", ErrPermissionDenied)
+ 	}
+ 	in.revokePrivateGCEntry()
+-	// Public collection is an independent operation, not a callback-scoped
+-	// re-entry. Use a fresh identity instead of racing the instance's active
+-	// invocation ID; GCHostModule.CollectGC handles lease ownership explicitly.
+ 	invocation := in.lockGCInvocation(newInvocationID())
+ 	defer invocation.unlock()
+-	return in.collectGC()
++	return in.collectGCOperation(compact, budget)
+ }
+ 
+ func (in *Instance) collectGC() error {
++	_, err := in.collectGCOperation(false, 0)
++	return err
++}
++func (in *Instance) collectGCOperation(compact bool, budget uint64) (gc.CompactionResult, error) {
+ 	public := in.existingPublicGCState()
+ 	if public == nil {
+-		return errGenericGCRootState
++		return gc.CompactionResult{}, errGenericGCRootState
+ 	}
+ 	var nativeMu *sync.Mutex
+ 	if in.usesIndependentExecution() {
+@@ -62,9 +79,12 @@ func (in *Instance) collectGC() error {
+ 	public.mu.Lock()
+ 	defer public.mu.Unlock()
+ 	if err := in.prepareGCCollectionRootsLocked(public); err != nil {
+-		return err
++		return gc.CompactionResult{}, err
++	}
++	if compact {
++		return in.gc.CompactOld(&public.frameRoots, budget)
+ 	}
+-	return in.gc.CollectFull(&public.frameRoots)
++	return gc.CompactionResult{}, in.gc.CollectFull(&public.frameRoots)
+ }
+ 
+ // prepareGCCollectionRootsLocked prepares the standard root universe while
+diff --git a/src/wago/gc_immix_amd64_test.go b/src/wago/gc_immix_amd64_test.go
+index 8f3bf57e8..ee6f9fde3 100644
+--- a/src/wago/gc_immix_amd64_test.go
++++ b/src/wago/gc_immix_amd64_test.go
+@@ -23,7 +23,7 @@ func TestGCImmixNativeReadsRootsAndArtifactReload(t *testing.T) {
+ 			if got, err := in.Invoke("roots"); err != nil || len(got) != 1 || got[0] != 1040 {
+ 				t.Fatalf("roots: %v,%v", got, err)
+ 			}
+-			if err = in.CollectGC(); err != nil {
++			if _, err = in.CompactGC(0); err != nil {
+ 				t.Fatal(err)
+ 			}
+ 		}
+diff --git a/wago.go b/wago.go
+index ba199a095..30a3871c8 100644
+--- a/wago.go
++++ b/wago.go
+@@ -576,3 +576,6 @@ func WithPolicy(p Policy) InstantiateOption { return impl.WithPolicy(p) }
+ func WithRuntimeConfig(cfg *RuntimeConfig) RuntimeOption { return impl.WithRuntimeConfig(cfg) }
+ 
+ func WithSynchronousHostCalls() InstantiateOption { return impl.WithSynchronousHostCalls() }
++
++// GCCompactionResult reports bounded selective old-region compaction.
++type GCCompactionResult = impl.GCCompactionResult

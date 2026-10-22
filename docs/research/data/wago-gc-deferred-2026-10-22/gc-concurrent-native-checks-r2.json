@@ -1,0 +1,21 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-timeout",
+    "20s",
+    "-count=1",
+    "-tags",
+    "wago_gc_workers wago_gc_concurrent",
+    "-run",
+    "TestGCConcurrent",
+    "./src/wago"
+  ],
+  "seconds": 22.820863642002223,
+  "exit": 0,
+  "user_seconds": 38.854863,
+  "system_seconds": 0.8377049999999999,
+  "peak_rss_kib": 3479640,
+  "minor_faults": 59650,
+  "major_faults": 5
+}

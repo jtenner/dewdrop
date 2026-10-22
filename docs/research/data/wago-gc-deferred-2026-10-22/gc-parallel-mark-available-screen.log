@@ -1,0 +1,8 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkParallelFullMark/n262144/workers16-16         	       5	  14405141 ns/op	  14841856 max-pause-ns	  14841856 p99-pause-ns	   1300736 parallel-scratch-B	      1778 steals	  118520 B/op	      86 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16         	       5	  13318585 ns/op	  14294748 max-pause-ns	  14294748 p99-pause-ns	   1353600 parallel-scratch-B	      2247 steals	  134081 B/op	      82 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16         	       5	  16437732 ns/op	  17376982 max-pause-ns	  17376982 p99-pause-ns	   1315584 parallel-scratch-B	      1959 steals	  123643 B/op	      81 allocs/op
+PASS

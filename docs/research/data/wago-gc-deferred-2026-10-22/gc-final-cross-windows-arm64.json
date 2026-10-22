@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-native-windows-arm64.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.3304069000005256,
+  "exit": 0,
+  "user_seconds": 3.914948,
+  "system_seconds": 0.19763599999999998,
+  "peak_rss_kib": 320320,
+  "minor_faults": 23479,
+  "major_faults": 7,
+  "voluntary_context_switches": 2602,
+  "involuntary_context_switches": 284
+}

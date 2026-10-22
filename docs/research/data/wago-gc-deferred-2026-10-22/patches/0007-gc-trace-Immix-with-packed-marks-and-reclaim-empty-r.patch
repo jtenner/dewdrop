@@ -1,0 +1,1343 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 03:21:17 +0000
+Subject: [PATCH 07/20] gc: trace Immix with packed marks and reclaim empty
+ regions
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  35 +++
+ internal/virtualmem/advice.go                 |  37 +++
+ internal/virtualmem/advice_darwin.go          |  20 ++
+ internal/virtualmem/advice_linux.go           |   8 +
+ internal/virtualmem/advice_portable.go        |   6 +
+ internal/virtualmem/advice_test.go            |  65 +++++
+ internal/virtualmem/advice_windows.go         |  19 ++
+ src/core/runtime/gc/native/collect.go         |  13 +-
+ src/core/runtime/gc/native/failure.go         |   1 +
+ src/core/runtime/gc/native/immix.go           |  26 +-
+ .../runtime/gc/native/immix_bench_test.go     |  94 +++++++
+ .../gc/native/immix_failure_debug_test.go     |  39 +++
+ src/core/runtime/gc/native/immix_mark.go      | 229 ++++++++++++++++++
+ src/core/runtime/gc/native/immix_scan.go      |  37 +++
+ src/core/runtime/gc/native/immix_sweep.go     | 173 +++++++++++++
+ src/core/runtime/gc/native/immix_test.go      | 216 +++++++++++++++++
+ src/core/runtime/gc/native/mark.go            |  11 +-
+ src/core/runtime/gc/native/scan.go            |  13 +-
+ 18 files changed, 1032 insertions(+), 10 deletions(-)
+ create mode 100644 internal/virtualmem/advice.go
+ create mode 100644 internal/virtualmem/advice_darwin.go
+ create mode 100644 internal/virtualmem/advice_linux.go
+ create mode 100644 internal/virtualmem/advice_portable.go
+ create mode 100644 internal/virtualmem/advice_test.go
+ create mode 100644 internal/virtualmem/advice_windows.go
+ create mode 100644 src/core/runtime/gc/native/immix_bench_test.go
+ create mode 100644 src/core/runtime/gc/native/immix_mark.go
+ create mode 100644 src/core/runtime/gc/native/immix_scan.go
+ create mode 100644 src/core/runtime/gc/native/immix_sweep.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 4dc726a30..dc8d52dc2 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -253,3 +253,38 @@ Native reads, roots, artifact reload and repeated large native reservations pass
+ (25.92 s including build, 0.004 s tests). Region-local tracing, accelerated empty
+ sweep, page advice and selective evacuation are the next stage. No Immix speed
+ claim or default-profile switch is made from these tests.
++
++## Immix stage 2: packed tracing and empty-region sweep
++
++Full tracing now uses packed epoch words and integer work grouped by region.
++Pointer-free leaves do not enter the work queue. Large reference arrays scan
++512 entries at a time, draining children before resuming the array. Work nodes
++use a reusable slab bounded by handle count; minor marking keeps its separate
++existing young marks. Freed identities explicitly clear stale young marks
++before reuse. Default paged tracing has no added per-edge dispatch.
++
++A completed mark resets wholly white regions in one metadata operation and
++removes their exact lazy debt. Partially live regions keep per-object frees.
++Empty regions can return physical pages after two idle full cycles, or through
++ReleaseUnusedMemory. Addresses and read/write access stay valid. Linux uses
++MADV_DONTNEED; Darwin follows Go's MADV_FREE_REUSABLE/FREE_REUSE pair; Windows
++uses MEM_RESET. Page contents are unspecified, and allocation initializes each
++new object before publication. Advice counts are not measured RSS. Typed owners
++remain alive until Close. Portable backing reports no page advice.
++
++Platform contracts: https://go.dev/src/runtime/mem_darwin.go and
++https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc
++(the latter explicitly gives MEM_RESET no zero-fill promise).
++
++Tests cover packed marks, epoch wrap, bounded wide-array work, old identity
++reuse across young cycles, whole-region reuse, neighboring live payloads,
++zero-initialized reallocation, mapped/portable backing and visible/retryable
++page-advice failures. Full collector/debug and virtual-memory tests pass.
++Metadata is 640 bytes per 32 KiB region plus reported mark scratch.
++
++A five-sample, fixed 20-cycle screening comparison on CPUs 12/14, GOMAXPROCS=2,
++shows this first Immix tracer slower than the paged collector: at 65,536 objects,
++chain medians are 2.213 vs 1.193 ms; scalar-array 0.713 vs 0.646 ms; sparse scalar
++0.130 vs 0.038 ms. The default remains paged. This is not evidence for changing
++production admission. Raw samples and medians are immix-full-cycle-screen.log
++and immix-full-cycle-summary.json. Selective evacuation is a separate stage.
+diff --git a/internal/virtualmem/advice.go b/internal/virtualmem/advice.go
+new file mode 100644
+index 000000000..8c1270907
+--- /dev/null
++++ b/internal/virtualmem/advice.go
+@@ -0,0 +1,37 @@
++package virtualmem
++
++import "errors"
++
++// AdviseUnused relinquishes contents of whole, previously committed pages while
++// preserving readable/writable addresses. Contents are unspecified until the
++// caller initializes them again. It does not lower accessible-page accounting.
++// The caller must exclude live objects and concurrent writers from this range.
++// It may operate beside commits in disjoint ranges: reservation headers and
++// page-state words are not changed or read by this operation.
++func (r *Region) AdviseUnused(off, n uint64) error {
++	b, err := r.adviceRange(off, n)
++	if err != nil || len(b) == 0 {
++		return err
++	}
++	return adviseUnused(b)
++}
++
++// Reuse restores platform accounting before allocation reuses advised pages.
++// It neither initializes contents nor makes uncommitted pages accessible.
++func (r *Region) Reuse(off, n uint64) error {
++	b, err := r.adviceRange(off, n)
++	if err != nil || len(b) == 0 {
++		return err
++	}
++	return reusePages(b)
++}
++func (r *Region) adviceRange(off, n uint64) ([]byte, error) {
++	if err := r.bounds(off, n); err != nil {
++		return nil, err
++	}
++	page := PageSize()
++	if off%page != 0 || n%page != 0 {
++		return nil, errors.New("virtual memory: advice must cover whole pages")
++	}
++	return r.mem[off : off+n], nil
++}
+diff --git a/internal/virtualmem/advice_darwin.go b/internal/virtualmem/advice_darwin.go
+new file mode 100644
+index 000000000..78be4f37e
+--- /dev/null
++++ b/internal/virtualmem/advice_darwin.go
+@@ -0,0 +1,20 @@
++//go:build darwin && (amd64 || arm64) && !tinygo
++
++package virtualmem
++
++import (
++	"syscall"
++	"unsafe"
++)
++
++// Match the Go runtime's reusable-page accounting, including its reuse hint.
++// https://go.dev/src/runtime/mem_darwin.go
++func adviseUnused(b []byte) error { return pageAdvice(b, syscall.MADV_FREE_REUSABLE) }
++func reusePages(b []byte) error   { return pageAdvice(b, syscall.MADV_FREE_REUSE) }
++func pageAdvice(b []byte, advice int) error {
++	_, _, err := syscall.Syscall(syscall.SYS_MADVISE, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), uintptr(advice))
++	if err != 0 {
++		return err
++	}
++	return nil
++}
+diff --git a/internal/virtualmem/advice_linux.go b/internal/virtualmem/advice_linux.go
+new file mode 100644
+index 000000000..07a5c8cc6
+--- /dev/null
++++ b/internal/virtualmem/advice_linux.go
+@@ -0,0 +1,8 @@
++//go:build linux && (amd64 || arm64) && !tinygo
++
++package virtualmem
++
++import "syscall"
++
++func adviseUnused(b []byte) error { return syscall.Madvise(b, syscall.MADV_DONTNEED) }
++func reusePages([]byte) error     { return nil }
+diff --git a/internal/virtualmem/advice_portable.go b/internal/virtualmem/advice_portable.go
+new file mode 100644
+index 000000000..7723f9a02
+--- /dev/null
++++ b/internal/virtualmem/advice_portable.go
+@@ -0,0 +1,6 @@
++//go:build (!linux && !darwin && !windows) || (!amd64 && !arm64) || tinygo
++
++package virtualmem
++
++func adviseUnused([]byte) error { return ErrUnsupported }
++func reusePages([]byte) error   { return ErrUnsupported }
+diff --git a/internal/virtualmem/advice_test.go b/internal/virtualmem/advice_test.go
+new file mode 100644
+index 000000000..01a28186b
+--- /dev/null
++++ b/internal/virtualmem/advice_test.go
+@@ -0,0 +1,65 @@
++package virtualmem
++
++import (
++	"errors"
++	"testing"
++	"unsafe"
++)
++
++func TestUnusedPagesRetainAddressAndNeighborData(t *testing.T) {
++	page := PageSize()
++	region, err := Reserve(3 * page)
++	if !Supported {
++		if !errors.Is(err, ErrUnsupported) {
++			t.Fatalf("unsupported reservation: %v", err)
++		}
++		return
++	}
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer region.Close()
++	if err = region.Commit(0, 3*page); err != nil {
++		t.Fatal(err)
++	}
++	data := region.Bytes(3 * page)
++	base := uintptr(unsafe.Pointer(&data[0]))
++	data[0] = 17
++	data[2*page] = 23
++	for i := page; i < 2*page; i++ {
++		data[i] = 42
++	}
++	if err = region.AdviseUnused(page, page); err != nil {
++		t.Fatal(err)
++	}
++	if err = region.Reuse(page, page); err != nil {
++		t.Fatal(err)
++	}
++	if uintptr(unsafe.Pointer(&region.Bytes(3 * page)[0])) != base || data[0] != 17 || data[2*page] != 23 {
++		t.Fatal("page advice changed an address or neighboring live data")
++	}
++	for i := page; i < 2*page; i++ {
++		data[i] = 37
++	}
++	for i := page; i < 2*page; i++ {
++		if data[i] != 37 {
++			t.Fatal("reused page did not retain initialized bytes")
++		}
++	}
++	if region.CommittedBytes() != 3*page {
++		t.Fatal("advice changed accessibility accounting")
++	}
++	for _, operation := range []func(uint64, uint64) error{region.AdviseUnused, region.Reuse} {
++		for _, bad := range [][2]uint64{{1, page}, {page, page + 1}, {3 * page, page}, {^uint64(0), page}} {
++			if err = operation(bad[0], bad[1]); err == nil {
++				t.Fatalf("invalid advice range accepted: %v", bad)
++			}
++		}
++	}
++	if err = region.Close(); err != nil {
++		t.Fatal(err)
++	}
++	if err = region.AdviseUnused(0, page); err == nil {
++		t.Fatal("closed owner accepted advice")
++	}
++}
+diff --git a/internal/virtualmem/advice_windows.go b/internal/virtualmem/advice_windows.go
+new file mode 100644
+index 000000000..b42565998
+--- /dev/null
++++ b/internal/virtualmem/advice_windows.go
+@@ -0,0 +1,19 @@
++//go:build windows && (amd64 || arm64) && !tinygo
++
++package virtualmem
++
++import (
++	"fmt"
++	"unsafe"
++)
++
++// MEM_RESET preserves commitment/access and makes no zero-fill promise. Every
++// new guest object is initialized before publication, independently of advice.
++func adviseUnused(b []byte) error {
++	p, _, err := virtualAlloc.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0x80000, 0x04)
++	if p == 0 {
++		return fmt.Errorf("virtual memory reset: %w", err)
++	}
++	return nil
++}
++func reusePages([]byte) error { return nil }
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 5a2e2332e..d5584bc1e 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -23,10 +23,17 @@ func (c *Collector) CollectFull(roots RootSet) error {
+ 	}
+ 	c.stats.FullCollections++
+ 	c.clearMarks()
+-	c.markRoots(roots)
++	if c.throughput.immix != nil {
++		c.markImmixRoots(roots)
++	} else {
++		c.markRoots(roots)
++	}
+ 	c.sweepAll()
+ 	c.pruneRemembered()
+ 	c.finishFullCardMetadata()
++	if _, err := c.throughput.adviseIdleImmix(false); err != nil {
++		return err
++	}
+ 	if c.cfg.VerifyAfterCollect {
+ 		return c.Verify(roots)
+ 	}
+@@ -139,6 +146,10 @@ func (c *Collector) finishFullCardMetadata() {
+ }
+ 
+ func (c *Collector) sweepAll() {
++	if c.throughput.immix != nil {
++		c.sweepImmixHandles()
++		return
++	}
+ 	// A refilled table uses the original sweep before spending work indexing
+ 	// its young ledger. If that sweep makes it sparse again, retain the dirty
+ 	// ledger until the next indexed sweep (or reset it when disabling the map).
+diff --git a/src/core/runtime/gc/native/failure.go b/src/core/runtime/gc/native/failure.go
+index 65ff92d7c..932db54e6 100644
+--- a/src/core/runtime/gc/native/failure.go
++++ b/src/core/runtime/gc/native/failure.go
+@@ -11,4 +11,5 @@ const (
+ 	failSlotCardGrowth
+ 	failBackingGrowth
+ 	failThroughputReconciliation
++	failImmixPageAdvice
+ )
+diff --git a/src/core/runtime/gc/native/immix.go b/src/core/runtime/gc/native/immix.go
+index b81f9a3fa..35faebd5e 100644
+--- a/src/core/runtime/gc/native/immix.go
++++ b/src/core/runtime/gc/native/immix.go
+@@ -37,6 +37,8 @@ type immixRegion struct {
+ 	blocks      uint32 // extent on its first block only
+ 	epoch       uint32
+ 	liveBytes   uint32
++	connections uint32
++	emptySince  uint32
+ 	occupied    uint16
+ 	kind        immixRegionKind
+ 	released    bool
+@@ -55,12 +57,13 @@ type immixHeap struct {
+ 	evacuatedBytes uint64
+ 	handleUpdates  uint64
+ 	hasCards       bool
++	work           *immixMarkWork
+ }
+ 
+ type ImmixStats struct {
+ 	Regions, OccupiedLines, LiveLines, PointerFreeRegions, LargeRegions         uint32
+ 	LiveBytes, AllocatedBytes, ReleasedPageBytes, EvacuatedBytes, HandleUpdates uint64
+-	MetadataBytes                                                               uint64
++	MetadataBytes, MarkScratchBytes                                             uint64
+ }
+ 
+ func (c *Collector) ImmixStats() ImmixStats {
+@@ -71,6 +74,9 @@ func (c *Collector) ImmixStats() ImmixStats {
+ 	}
+ 	s.Regions = uint32(len(m.regions))
+ 	s.MetadataBytes = uint64(cap(m.regions)) * uint64(unsafe.Sizeof(immixRegion{}))
++	if w := m.work; w != nil {
++		s.MarkScratchBytes = uint64(cap(w.heads))*4 + uint64(cap(w.nodes))*uint64(unsafe.Sizeof(immixMarkTask{})) + uint64(cap(w.deferred))*uint64(unsafe.Sizeof(immixArrayTask{})) + uint64(cap(w.active))*8 + uint64(cap(w.seen))*uint64(unsafe.Sizeof(immixMarkWord{}))
++	}
+ 	s.ReleasedPageBytes = m.releasedBytes
+ 	s.EvacuatedBytes = m.evacuatedBytes
+ 	s.HandleUpdates = m.handleUpdates
+@@ -109,13 +115,17 @@ func (m *immixHeap) hasStart(off uint32) bool {
+ 	unit := (off % immixBlockBytes) / 16
+ 	return m.regions[block].starts[unit/64]&(uint64(1)<<(unit%64)) != 0
+ }
+-func (m *immixHeap) beginMark() {
++func (m *immixHeap) beginMark(handles int) {
++	m.prepareMarkWork(handles)
+ 	m.epoch++
+ 	if m.epoch == 0 {
+ 		for i := range m.regions {
+ 			m.regions[i].epoch = 0
+ 		}
+ 		m.epoch = 1
++		for i := range m.work.seen {
++			m.work.seen[i].epoch = 0
++		}
+ 	}
+ }
+ func (m *immixHeap) mark(e handleEntry) {
+@@ -138,6 +148,7 @@ func (m *immixHeap) mark(e handleEntry) {
+ 			r.epoch = m.epoch
+ 			r.marks = [immixLines / 64]uint64{}
+ 			r.liveBytes = 0
++			r.connections = 0
+ 		}
+ 		limit := min(end, uint64(block+1)*uint64(immixBlockBytes))
+ 		r.liveBytes += uint32(limit - off)
+@@ -227,11 +238,12 @@ func (m *immixHeap) release(span throughputFreeSpan) error {
+ 	if m.regions[b].kind == immixLarge {
+ 		count := m.regions[b].blocks
+ 		for i := b; i < b+count; i++ {
+-			m.regions[i] = immixRegion{}
++			m.resetEmptyRegion(i)
+ 		}
+ 	}
+ 	if m.regions[b].occupied == 0 && m.regions[b].kind != immixLarge {
+ 		m.regions[b].kind = immixEmpty
++		m.regions[b].emptySince = m.epoch
+ 		for i := range m.cursors {
+ 			if m.cursors[i].end != 0 && m.cursors[i].block == b {
+ 				m.cursors[i] = immixCursor{}
+@@ -266,7 +278,6 @@ func (m *immixHeap) findRun(kind immixRegionKind, need uint32) (uint32, uint32,
+ 				end++
+ 			}
+ 			if end-line >= need {
+-				r.kind = kind
+ 				m.search[which] = b
+ 				return b*immixBlockBytes + line*immixLineBytes, b*immixBlockBytes + end*immixLineBytes, true
+ 			}
+@@ -299,6 +310,9 @@ func (h *throughputHeap) allocImmix(size uint32, sp spaceKind, pointerFree bool)
+ 			first = off / immixBlockBytes
+ 		}
+ 		for b := first; b < first+blocks; b++ {
++			if err := h.reuseImmixRegion(b); err != nil {
++				return handleEntry{}, err
++			}
+ 			m.regions[b] = immixRegion{kind: immixLarge, owner: first + 1}
+ 		}
+ 		m.regions[first].blocks = blocks
+@@ -320,6 +334,10 @@ func (h *throughputHeap) allocImmix(size uint32, sp spaceKind, pointerFree bool)
+ 		for {
+ 			off, end, ok := m.findRun(kind, (charged+immixLineBytes-1)/immixLineBytes)
+ 			if ok {
++				if err := h.reuseImmixRegion(off / immixBlockBytes); err != nil {
++					return handleEntry{}, err
++				}
++				m.regions[off/immixBlockBytes].kind = kind
+ 				*cursor = immixCursor{next: off, end: end, block: off / immixBlockBytes}
+ 				break
+ 			}
+diff --git a/src/core/runtime/gc/native/immix_bench_test.go b/src/core/runtime/gc/native/immix_bench_test.go
+new file mode 100644
+index 000000000..a03f8bd5c
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_bench_test.go
+@@ -0,0 +1,94 @@
++package gc
++
++import (
++	"fmt"
++	"testing"
++)
++
++func BenchmarkImmixFullCollection(b *testing.B) {
++	for _, count := range []int{4096, 65536} {
++		for _, shape := range []string{"chain", "scalar-array", "sparse-scalars"} {
++			for _, allocator := range []AllocatorKind{AllocatorPagedSizeClass, AllocatorImmix} {
++				name := fmt.Sprintf("%s/n%d/allocator%d", shape, count, allocator)
++				b.Run(name, func(b *testing.B) {
++					node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++					if err != nil {
++						b.Fatal(err)
++					}
++					scalar, err := NewStructDesc(1, []StorageKind{StorageI64})
++					if err != nil {
++						b.Fatal(err)
++					}
++					array, err := NewArrayDesc(2, StorageRefNull)
++					if err != nil {
++						b.Fatal(err)
++					}
++					c, err := NewCollector(Config{Allocator: allocator, NurseryBytes: 16 << 20, ThroughputHeapBytes: 32 << 20, ThroughputPageBytes: 4096}, []TypeDesc{node, scalar, array})
++					if err != nil {
++						b.Fatal(err)
++					}
++					defer c.Close()
++					refs := make([]Ref, count)
++					var roots RefSliceRoots
++					var scratch InitializerRootScratch
++					for i := range refs {
++						if shape == "chain" {
++							prior := Null()
++							if i != 0 {
++								prior = refs[i-1]
++							}
++							values := [2]Value{RefValue(prior), I32Value(int32(i))}
++							refs[i], err = c.NewStructWithRootScratch(0, values[:], EmptyRoots{}, &scratch)
++						} else {
++							refs[i], err = c.NewStructDefault(1)
++						}
++						if err != nil {
++							b.Fatal(err)
++						}
++						if err = c.ForcePromote(refs[i]); err != nil {
++							b.Fatal(err)
++						}
++					}
++					switch shape {
++					case "chain":
++						roots = RefSliceRoots{refs[len(refs)-1]}
++					case "scalar-array":
++						root, err := c.NewArrayDefault(2, uint32(len(refs)))
++						if err != nil {
++							b.Fatal(err)
++						}
++						for i, r := range refs {
++							if err = c.ArraySet(root, uint32(i), RefValue(r)); err != nil {
++								b.Fatal(err)
++							}
++						}
++						if err = c.ForcePromote(root); err != nil {
++							b.Fatal(err)
++						}
++						roots = RefSliceRoots{root}
++					case "sparse-scalars":
++						for i, r := range refs {
++							if i%100 == 0 {
++								roots = append(roots, r)
++							}
++						}
++					}
++					if err = c.CollectFull(roots); err != nil {
++						b.Fatal(err)
++					}
++					b.ReportAllocs()
++					b.ResetTimer()
++					for i := 0; i < b.N; i++ {
++						if err = c.CollectFull(roots); err != nil {
++							b.Fatal(err)
++						}
++					}
++					b.StopTimer()
++					s := c.ImmixStats()
++					b.ReportMetric(float64(s.MetadataBytes+s.MarkScratchBytes), "region-meta-B")
++					b.ReportMetric(float64(c.Stats().LiveObjects), "live-objects")
++				})
++			}
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_failure_debug_test.go b/src/core/runtime/gc/native/immix_failure_debug_test.go
+index 220c46b65..3f5656d19 100644
+--- a/src/core/runtime/gc/native/immix_failure_debug_test.go
++++ b/src/core/runtime/gc/native/immix_failure_debug_test.go
+@@ -5,6 +5,7 @@ package gc
+ import (
+ 	"errors"
+ 	"fmt"
++	"github.com/wago-org/wago/internal/virtualmem"
+ 	"slices"
+ 	"testing"
+ )
+@@ -49,3 +50,41 @@ func TestImmixPromotionFailureRestoresRegionOwnership(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestImmixPageAdviceFailureIsVisibleAndRetryable(t *testing.T) {
++	c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 4096, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096})
++	if virtualmem.Supported && c.throughput.reservation == nil {
++		t.Fatal("supported build did not reserve stable backing")
++	}
++	ref, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(ref); err != nil {
++		t.Fatal(err)
++	}
++	if err = c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if !virtualmem.Supported {
++		if bytes, err := c.ReleaseUnusedMemory(); err != nil || bytes != 0 {
++			t.Fatalf("portable advice: %d %v", bytes, err)
++		}
++		return
++	}
++	cleanup := armFailure(&c.throughput, failImmixPageAdvice, 0)
++	_, err = c.ReleaseUnusedMemory()
++	cleanup()
++	if !errors.Is(err, errInjectedFailure) {
++		t.Fatalf("page-advice failure hidden: %v", err)
++	}
++	if c.ImmixStats().ReleasedPageBytes != 0 {
++		t.Fatal("failed advice claimed released pages")
++	}
++	if err = c.Verify(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if bytes, err := c.ReleaseUnusedMemory(); err != nil || bytes != uint64(immixBlockBytes) {
++		t.Fatalf("retry: %d %v", bytes, err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_mark.go b/src/core/runtime/gc/native/immix_mark.go
+new file mode 100644
+index 000000000..40c46f111
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_mark.go
+@@ -0,0 +1,229 @@
++package gc
++
++import "math/bits"
++
++const immixNoRegion = ^uint32(0)
++
++type immixMarkWord struct {
++	bits  uint64
++	epoch uint32
++	_     uint32
++}
++
++// Intrusive integer links group work by region without per-object Go pointers.
++// The packed full-mark bitmap is authoritative; the existing young bool marks
++// are retained only for minor evacuation and its failure/rollback protocol.
++type immixMarkTask struct{ handle, next uint32 }
++type immixArrayTask struct{ handle, index uint32 }
++type immixMarkWork struct {
++	heads    []uint32
++	nodes    []immixMarkTask
++	deferred []immixArrayTask
++	free     uint32
++	limit    int
++	active   []uint64
++	seen     []immixMarkWord
++	first    int
++	source   uint32
++}
++
++func (m *immixHeap) prepareMarkWork(handles int) {
++	if m.work == nil {
++		m.work = &immixMarkWork{}
++	}
++	w := m.work
++	heads := len(m.regions) + 1
++	if cap(w.heads) < heads {
++		w.heads = make([]uint32, heads)
++	} else {
++		w.heads = w.heads[:heads]
++		clear(w.heads)
++	}
++	w.nodes = w.nodes[:0]
++	w.deferred = w.deferred[:0]
++	w.free = 0
++	w.limit = handles
++	words := (handles + 63) / 64
++	if len(w.seen) < words {
++		w.seen = append(w.seen, make([]immixMarkWord, words-len(w.seen))...)
++	}
++	active := (heads + 63) / 64
++	if cap(w.active) < active {
++		w.active = make([]uint64, active)
++	} else {
++		w.active = w.active[:active]
++		clear(w.active)
++	}
++	w.first = len(w.active)
++	w.source = immixNoRegion
++}
++func (m *immixHeap) firstMark(h uint32) bool {
++	word := &m.work.seen[h/64]
++	if word.epoch != m.epoch {
++		word.epoch = m.epoch
++		word.bits = 0
++	}
++	bit := uint64(1) << (h % 64)
++	if word.bits&bit != 0 {
++		return false
++	}
++	word.bits |= bit
++	return true
++}
++func (m *immixHeap) marked(h uint32) bool {
++	if m.work == nil || int(h/64) >= len(m.work.seen) {
++		return false
++	}
++	word := m.work.seen[h/64]
++	return word.epoch == m.epoch && word.bits&(uint64(1)<<(h%64)) != 0
++}
++func (m *immixHeap) enqueue(h uint32, e handleEntry) {
++	w := m.work
++	bucket := uint32(len(m.regions))
++	if e.space == spaceOld || e.space == spaceLarge {
++		bucket = e.off / immixBlockBytes
++	}
++	if int(bucket) >= len(w.heads) || int(h) >= w.limit {
++		panic("gc: Immix mark queue exceeds its prepared bounds")
++	}
++	var node uint32
++	if w.free != 0 {
++		node = w.free
++		w.free = w.nodes[node-1].next
++	} else {
++		if len(w.nodes) == w.limit {
++			panic("gc: Immix mark work exceeds the handle bound")
++		}
++		if len(w.nodes) == cap(w.nodes) {
++			capacity := min(w.limit, max(len(w.nodes)+1, cap(w.nodes)+cap(w.nodes)/2+1))
++			next := make([]immixMarkTask, len(w.nodes), capacity)
++			copy(next, w.nodes)
++			w.nodes = next
++		}
++		w.nodes = append(w.nodes, immixMarkTask{})
++		node = uint32(len(w.nodes))
++	}
++	w.nodes[node-1] = immixMarkTask{handle: h, next: w.heads[bucket]}
++	w.heads[bucket] = node
++	word := int(bucket / 64)
++	w.active[word] |= uint64(1) << (bucket % 64)
++	w.first = min(w.first, word)
++}
++func (m *immixHeap) popMark() (uint32, bool) {
++	w := m.work
++	for w.first < len(w.active) && w.active[w.first] == 0 {
++		w.first++
++	}
++	if w.first == len(w.active) {
++		return 0, false
++	}
++	bucket := uint32(w.first*64 + bits.TrailingZeros64(w.active[w.first]))
++	node := w.heads[bucket]
++	if node == 0 {
++		panic("gc: Immix active region has no mark work")
++	}
++	h := w.nodes[node-1].handle
++	w.heads[bucket] = w.nodes[node-1].next
++	w.nodes[node-1] = immixMarkTask{next: w.free}
++	w.free = node
++	if w.heads[bucket] == 0 {
++		w.active[w.first] &^= uint64(1) << (bucket % 64)
++	}
++	w.source = bucket
++	if bucket == uint32(len(m.regions)) {
++		w.source = immixNoRegion
++	}
++	return h, true
++}
++func (m *immixHeap) noteConnection(e handleEntry) {
++	source := m.work.source
++	if source == immixNoRegion || e.space != spaceOld && e.space != spaceLarge || e.off/immixBlockBytes == source {
++		return
++	}
++	r := &m.regions[source]
++	if r.connections != ^uint32(0) {
++		r.connections++
++	}
++}
++func (c *Collector) fullMarked(h uint32) bool {
++	if m := c.throughput.immix; m != nil {
++		return m.marked(h)
++	}
++	return c.mark[h]
++}
++func (c *Collector) drainImmixMarkQueues() {
++	m := c.throughput.immix
++	w := m.work
++	for {
++		h, ok := m.popMark()
++		var cursor objectScanCursor
++		if !ok {
++			if len(w.deferred) == 0 {
++				break
++			}
++			task := w.deferred[len(w.deferred)-1]
++			w.deferred = w.deferred[:len(w.deferred)-1]
++			h = task.handle
++			cursor.index = task.index
++			w.source = immixNoRegion
++			e := c.handles[h]
++			if e.space == spaceOld || e.space == spaceLarge {
++				w.source = e.off / immixBlockBytes
++			}
++		}
++		id := c.handles[h].typeID
++		if int(id) >= len(c.types) {
++			panic("gc: Immix mark work names an invalid canonical type")
++		}
++		d := &c.types[id]
++		if d.Kind != KindArray {
++			c.scanObjectImmixMark(h)
++			continue
++		}
++		budget := objectScanBudget{ObjectRanges: 1, ScanEntries: 512, RefSlots: 512, PayloadBytes: 8192}
++		_, complete := c.scanObjectRefsRange(h, &cursor, budget, objectScanVisitor{mode: objectScanVisitImmixMark})
++		if !complete {
++			w.deferred = append(w.deferred, immixArrayTask{h, cursor.index})
++		}
++	}
++	w.source = immixNoRegion
++}
++
++func (c *Collector) markImmixRef(r Ref) {
++	if !r.IsObj() {
++		return
++	}
++	h := handleOf(r)
++	if h == 0 || int(h) >= len(c.handles) || c.handles[h].space == spaceFree {
++		return
++	}
++	m := c.throughput.immix
++	e := c.handles[h]
++	m.noteConnection(e)
++	if !m.firstMark(h) {
++		return
++	}
++	if e.young() {
++		c.mark[h] = true
++	}
++	if e.space == spaceOld || e.space == spaceLarge {
++		m.mark(e)
++	}
++	if e.class&NativeHandlePointerFreeBit == 0 {
++		m.enqueue(h, e)
++	}
++}
++func (c *Collector) markImmixRoots(roots RootSet) {
++	if direct, ok := roots.(DirectRootRefSet); ok {
++		c.markDirectRoots(direct, rootMarkImmixFull)
++	} else if roots != nil && !rangeRootRefs(roots, func(r Ref) bool { c.markImmixRef(r); return true }) {
++		roots.RangeRoots(func(s RootSlot) bool { c.markImmixRef(s.GetRef()); return true })
++	}
++	for _, r := range c.globalSlots {
++		c.markImmixRef(r)
++	}
++	for _, r := range c.tableSlots {
++		c.markImmixRef(r)
++	}
++	c.drainImmixMarkQueues()
++}
+diff --git a/src/core/runtime/gc/native/immix_scan.go b/src/core/runtime/gc/native/immix_scan.go
+new file mode 100644
+index 000000000..4f78392f5
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_scan.go
+@@ -0,0 +1,37 @@
++package gc
++
++import "encoding/binary"
++
++// Keep this direct sink in step with scanObjectMark. The default product keeps
++// its existing hot loop and the region product keeps its precomputed scan plan.
++func (c *Collector) scanObjectImmixMark(h uint32) {
++	// Keep reference order and filtering in step with scanObjectRefs.
++	// A separate loop lets the compiler inline marking without a callback.
++	r := makeObjRef(h)
++	d, err := c.refDesc(r)
++	if err != nil || !d.HasRefs {
++		return
++	}
++	hdr := c.header(r)
++	b := c.bytes(r)
++	if d.Kind == KindStruct {
++		if nativeCollectorFastPaths && d.firstRef != 0 {
++			for index := uint32(d.firstRef); index != 0; {
++				field := d.Fields[index-1]
++				c.markImmixRef(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+field.Offset:])))
++				index = uint32(field.nextRef)
++			}
++			return
++		}
++		for _, f := range d.Fields {
++			if isCollectorRefKind(f.Kind) {
++				c.markImmixRef(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+f.Offset:])))
++			}
++		}
++	} else if d.ArrayElementsAreRefs() {
++		for i := uint32(0); i < hdr.Aux; i++ {
++			off := d.PayloadOffset() + i*d.ElemSize
++			c.markImmixRef(Ref(binary.LittleEndian.Uint32(b[off:])))
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_sweep.go b/src/core/runtime/gc/native/immix_sweep.go
+new file mode 100644
+index 000000000..ebf0a7566
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_sweep.go
+@@ -0,0 +1,173 @@
++package gc
++
++import (
++	"fmt"
++	"math/bits"
++)
++
++func (m *immixHeap) resetEmptyRegion(block uint32) {
++	m.regions[block] = immixRegion{emptySince: m.epoch}
++	for i := range m.cursors {
++		if m.cursors[i].end != 0 && m.cursors[i].block == block {
++			m.cursors[i] = immixCursor{}
++		}
++	}
++}
++
++// A completed full mark proves completely white regions empty in one metadata
++// reset. Only partially live regions retain per-object lazy sweep debt.
++func (h *throughputHeap) sweepImmixEmptyRegions() {
++	m := h.immix
++	for b := uint32(0); b < uint32(len(m.regions)); {
++		r := &m.regions[b]
++		if r.kind == immixLarge {
++			if r.owner != b+1 {
++				b++
++				continue
++			}
++			count := r.blocks
++			if count == 0 || uint64(b)+uint64(count) > uint64(len(m.regions)) {
++				panic("gc: invalid dedicated Immix region extent")
++			}
++			if r.epoch != m.epoch {
++				for i := b; i < b+count; i++ {
++					m.resetEmptyRegion(i)
++				}
++			}
++			b += count
++			continue
++		}
++		if r.occupied != 0 && r.epoch != m.epoch {
++			m.resetEmptyRegion(b)
++		}
++		b++
++	}
++	out := h.pendingFree[:0]
++	var pending uint64
++	for _, span := range h.pendingFree {
++		if m.hasStart(span.off) {
++			out = append(out, span)
++			pending += uint64(span.size)
++		}
++	}
++	clear(h.pendingFree[len(out):])
++	h.pendingFree = out
++	h.pendingBytes = pending
++}
++
++func (h *throughputHeap) reuseImmixRegion(block uint32) error {
++	r := &h.immix.regions[block]
++	if r.released && h.reservation != nil {
++		if err := h.reservation.Reuse(uint64(block)*uint64(immixBlockBytes), uint64(immixBlockBytes)); err != nil {
++			return fmt.Errorf("gc: reuse Immix region%d: %w", block, err)
++		}
++	}
++	r.released = false
++	return nil
++}
++
++func (h *throughputHeap) adviseIdleImmix(force bool) (uint64, error) {
++	m := h.immix
++	if m == nil || h.reservation == nil {
++		return 0, nil
++	}
++	var total uint64
++	for b := uint32(0); b < uint32(len(m.regions)); {
++		r := &m.regions[b]
++		if r.kind != immixEmpty || r.occupied != 0 || r.released || r.emptySince == 0 || !force && m.epoch-r.emptySince < 2 {
++			b++
++			continue
++		}
++		first := b
++		for b < uint32(len(m.regions)) {
++			r = &m.regions[b]
++			if r.kind != immixEmpty || r.occupied != 0 || r.released || r.emptySince == 0 || !force && m.epoch-r.emptySince < 2 {
++				break
++			}
++			b++
++		}
++		bytes := uint64(b-first) * uint64(immixBlockBytes)
++		if err := injectFailure(h, failImmixPageAdvice); err != nil {
++			return total, err
++		}
++		if err := h.reservation.AdviseUnused(uint64(first)*uint64(immixBlockBytes), bytes); err != nil {
++			return total, fmt.Errorf("gc: advise unused Immix regions%d..%d: %w", first, b, err)
++		}
++		for i := first; i < b; i++ {
++			m.regions[i].released = true
++		}
++		total += bytes
++		m.releasedBytes += bytes
++	}
++	return total, nil
++}
++
++// ReleaseUnusedMemory reconciles existing old sweep debt and advises empty
++// Immix regions to the OS. The returned count is advice, not measured RSS or a
++// decrease in addressable/committed bytes. Portable/non-region heaps return zero.
++// Caller serialization is the same as for collection; live addresses never move.
++func (c *Collector) ReleaseUnusedMemory() (uint64, error) {
++	if err := c.errIfClosed(); err != nil {
++		return 0, err
++	}
++	if c.throughput.immix == nil {
++		return 0, nil
++	}
++	if err := c.throughput.sweepAllPending(); err != nil {
++		return 0, err
++	}
++	return c.throughput.adviseIdleImmix(true)
++}
++
++func (c *Collector) sweepImmixDeadHandle(h uint32) {
++	// Full marking no longer clears the old portion of the minor bool array.
++	// Clear a dead identity before putting it on either Go/native reuse path.
++	c.mark[h] = false
++	e := &c.handles[h]
++	if e.space == spaceOld || e.space == spaceLarge {
++		c.deferThroughputFree(h)
++	} else {
++		c.free(h)
++	}
++}
++func (c *Collector) sweepImmixHandles() {
++	m := c.throughput.immix
++	if nativeCollectorFastPaths && len(c.majorBlocks) != 0 && len(c.freeHandles) >= len(c.handles)/2 {
++		if c.majorYoungDirty {
++			c.noteMajorHandles(c.nurseryHandles)
++			c.majorYoungDirty = false
++		}
++		for word, occupied := range c.majorBlocks {
++			var live uint64
++			for occupied != 0 {
++				bit := uint(bits.TrailingZeros64(occupied))
++				mask := uint64(1) << bit
++				occupied &^= mask
++				start := (word*64 + int(bit)) << majorBlockShift
++				end := min(start+(1<<majorBlockShift), len(c.handles))
++				for h := max(start, 1); h < end; h++ {
++					if c.handles[h].space == spaceFree {
++						continue
++					}
++					if m.marked(uint32(h)) {
++						live |= mask
++					} else {
++						c.sweepImmixDeadHandle(uint32(h))
++					}
++				}
++			}
++			c.majorBlocks[word] = live
++		}
++	} else {
++		for h := uint32(1); int(h) < len(c.handles); h++ {
++			if c.handles[h].space != spaceFree && !m.marked(h) {
++				c.sweepImmixDeadHandle(h)
++			}
++		}
++	}
++	c.compactNurseryHandles()
++	if nativeCollectorFastPaths {
++		c.prepareMajorBlocks()
++	}
++	c.throughput.sweepImmixEmptyRegions()
++}
+diff --git a/src/core/runtime/gc/native/immix_test.go b/src/core/runtime/gc/native/immix_test.go
+index 5b16a9e89..a614e8433 100644
+--- a/src/core/runtime/gc/native/immix_test.go
++++ b/src/core/runtime/gc/native/immix_test.go
+@@ -331,3 +331,219 @@ func TestImmixLineMarkEpochWrapAndBoundedMetadata(t *testing.T) {
+ 		t.Fatalf("stale mark survived epoch: %+v", stats)
+ 	}
+ }
++
++func TestImmixFullSweepMakesEmptyRegionsImmediateArenas(t *testing.T) {
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 64 << 10, ThroughputHeapBytes: immixBlockBytes, ThroughputPageBytes: 4096}, []TypeDesc{node})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	for i := 0; i < int(immixBlockBytes/16); i++ {
++		r, err := c.NewStructDefault(0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.ForcePromote(r); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err = c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if stats := c.ImmixStats(); stats.OccupiedLines != 0 || len(c.throughput.pendingFree) != 0 {
++		t.Fatalf("empty regions retain lazy sweep debt: %+v pending%d", stats, len(c.throughput.pendingFree))
++	}
++	ref, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(ref); err != nil {
++		t.Fatal(err)
++	}
++	if c.entry(ref).off != 0 || c.throughput.bump != immixBlockBytes {
++		t.Fatal("empty region did not immediately become a bump arena")
++	}
++}
++
++func TestImmixPackedFullMarksIgnoreStaleMinorBits(t *testing.T) {
++	c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 4096, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096})
++	ref, err := c.NewStructDefault(1)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(ref); err != nil {
++		t.Fatal(err)
++	}
++	if err = c.CollectFull(RefSliceRoots{ref}); err != nil {
++		t.Fatal(err)
++	}
++	h := handleOf(ref)
++	if !c.fullMarked(h) || c.mark[h] {
++		t.Fatal("full marks did not use the packed epoch product")
++	}
++	c.mark[h] = true // stale legacy/minor state must not retain an old object.
++	if err = c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if c.validObjectRef(ref) {
++		t.Fatal("stale minor bit retained an unrooted old object")
++	}
++	if c.mark[h] {
++		t.Fatal("freed handle retained a minor mark before later reuse")
++	}
++}
++func TestImmixRegionQueuesTraceDenseReferenceArrays(t *testing.T) {
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	array, err := NewArrayDesc(1, StorageRefNull)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 64 << 10, ThroughputHeapBytes: 8 * immixBlockBytes, ThroughputPageBytes: 4096, VerifyAfterCollect: true}, []TypeDesc{node, array})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	children := make([]Ref, 3000)
++	for i := range children {
++		children[i], err = c.NewStructWithRoots(0, []Value{RefValue(Null()), I32Value(int32(i))}, EmptyRoots{})
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.ForcePromote(children[i]); err != nil {
++			t.Fatal(err)
++		}
++	}
++	root, err := c.NewArrayDefault(1, uint32(len(children)))
++	if err != nil {
++		t.Fatal(err)
++	}
++	for i, r := range children {
++		if err = c.ArraySet(root, uint32(i), RefValue(r)); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err = c.ForcePromote(root); err != nil {
++		t.Fatal(err)
++	}
++	if err = c.CollectFull(RefSliceRoots{root}); err != nil {
++		t.Fatal(err)
++	}
++	for i, r := range children {
++		value, err := c.StructGet(r, 1)
++		if err != nil || value.I32() != int32(i) {
++			t.Fatalf("child%d: %+v %v", i, value, err)
++		}
++	}
++	if c.Stats().LiveObjects != 3001 {
++		t.Fatal("dense array traversal lost or invented objects")
++	}
++	if stats := c.ImmixStats(); stats.MarkScratchBytes > uint64(len(c.handles))*8+1024 {
++		t.Fatalf("mark scratch exceeds bounded integer queues: %+v", stats)
++	}
++	if err = c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if c.Stats().LiveObjects != 0 {
++		t.Fatal("old mark epoch retained the previous dense graph")
++	}
++}
++func TestImmixUnusedPageAdvicePreservesLiveNeighborsAndReuse(t *testing.T) {
++	for _, portable := range []bool{false, true} {
++		t.Run(map[bool]string{false: "mapped", true: "portable"}[portable], func(t *testing.T) {
++			node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++			if err != nil {
++				t.Fatal(err)
++			}
++			scalar, err := NewStructDesc(1, []StorageKind{StorageI64})
++			if err != nil {
++				t.Fatal(err)
++			}
++			c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 4096, ThroughputHeapBytes: 4 * immixBlockBytes, ThroughputPageBytes: 4096, DisableVirtualBacking: portable}, []TypeDesc{node, scalar})
++			if err != nil {
++				t.Fatal(err)
++			}
++			defer c.Close()
++			dead, err := c.NewStructWithRoots(0, []Value{RefValue(Null()), I32Value(91)}, EmptyRoots{})
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err = c.ForcePromote(dead); err != nil {
++				t.Fatal(err)
++			}
++			live, err := c.NewStructWithRoots(1, []Value{I64Value(42)}, EmptyRoots{})
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err = c.ForcePromote(live); err != nil {
++				t.Fatal(err)
++			}
++			base := c.NativeView().Spaces[NativeSpaceOld].Base
++			if err = c.CollectFull(RefSliceRoots{live}); err != nil {
++				t.Fatal(err)
++			}
++			advised, err := c.ReleaseUnusedMemory()
++			if err != nil {
++				t.Fatal(err)
++			}
++			if c.throughput.reservation != nil && advised != uint64(immixBlockBytes) {
++				t.Fatalf("advised%d, want one empty region", advised)
++			}
++			if portable && advised != 0 {
++				t.Fatal("portable backing claimed OS page advice")
++			}
++			if c.NativeView().Spaces[NativeSpaceOld].Base != base {
++				t.Fatal("page advice changed the stable heap base")
++			}
++			value, err := c.StructGet(live, 0)
++			if err != nil || value.I64() != 42 {
++				t.Fatalf("neighbor=%+v %v", value, err)
++			}
++			fresh, err := c.NewStructDefault(0)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err = c.ForcePromote(fresh); err != nil {
++				t.Fatal(err)
++			}
++			if c.entry(fresh).off != 0 {
++				t.Fatal("advised region was not reused")
++			}
++			field, err := c.StructGet(fresh, 1)
++			if err != nil || field.I32() != 0 {
++				t.Fatalf("reused default object exposed stale data: %+v %v", field, err)
++			}
++			if err = c.Verify(RefSliceRoots{live, fresh}); err != nil {
++				t.Fatal(err)
++			}
++		})
++	}
++}
++func TestImmixAutomaticPageAdviceWaitsForTwoIdleCycles(t *testing.T) {
++	c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 4096, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096})
++	ref, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(ref); err != nil {
++		t.Fatal(err)
++	}
++	for i := 0; i < 3; i++ {
++		if err = c.CollectFull(EmptyRoots{}); err != nil {
++			t.Fatal(err)
++		}
++		got := c.ImmixStats().ReleasedPageBytes
++		if i < 2 && got != 0 {
++			t.Fatal("newly empty region advised before its idle threshold")
++		}
++		if i == 2 && c.throughput.reservation != nil && got != uint64(immixBlockBytes) {
++			t.Fatalf("idle page advice=%d", got)
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/mark.go b/src/core/runtime/gc/native/mark.go
+index 84790bf33..f25c71ea8 100644
+--- a/src/core/runtime/gc/native/mark.go
++++ b/src/core/runtime/gc/native/mark.go
+@@ -2,7 +2,9 @@ package gc
+ 
+ func (c *Collector) clearMarks() {
+ 	if m := c.throughput.immix; m != nil {
+-		m.beginMark()
++		m.beginMark(len(c.handles))
++		c.clearNurseryMarks()
++		return
+ 	}
+ 	if len(c.mark) < len(c.handles) {
+ 		c.mark = make([]bool, len(c.handles))
+@@ -29,6 +31,7 @@ const (
+ 	rootMarkNursery
+ 	rootMarkTiny
+ 	rootMarkTinyStage
++	rootMarkImmixFull
+ )
+ 
+ // VisitRootRef implements RootRefSink. Collection is synchronous per Collector,
+@@ -38,6 +41,8 @@ func (c *Collector) VisitRootRef(r Ref) bool {
+ 	switch c.rootMarkMode {
+ 	case rootMarkFull:
+ 		c.markRef(r)
++	case rootMarkImmixFull:
++		c.markImmixRef(r)
+ 	case rootMarkNursery:
+ 		c.markNurseryRef(r)
+ 	case rootMarkTiny:
+@@ -207,13 +212,11 @@ func (c *Collector) markRef(r Ref) {
+ 	if h == 0 || int(h) >= len(c.handles) || c.handles[h].space == spaceFree {
+ 		return
+ 	}
++
+ 	if c.mark[h] {
+ 		return
+ 	}
+ 	c.mark[h] = true
+-	if m := c.throughput.immix; m != nil && (c.handles[h].space == spaceOld || c.handles[h].space == spaceLarge) {
+-		m.mark(c.handles[h])
+-	}
+ 	c.markStack = append(c.markStack, h)
+ }
+ func (c *Collector) scanObject(h uint32) {
+diff --git a/src/core/runtime/gc/native/scan.go b/src/core/runtime/gc/native/scan.go
+index 01be92584..295764bf1 100644
+--- a/src/core/runtime/gc/native/scan.go
++++ b/src/core/runtime/gc/native/scan.go
+@@ -16,6 +16,7 @@ type objectScanVisitMode uint8
+ const (
+ 	objectScanVisitFunc objectScanVisitMode = iota
+ 	objectScanVisitTinyMark
++	objectScanVisitImmixMark
+ )
+ 
+ type objectScanVisitor struct {
+@@ -24,7 +25,11 @@ type objectScanVisitor struct {
+ }
+ 
+ func (v objectScanVisitor) visit(c *Collector, ref Ref) {
+-	if v.mode == objectScanVisitTinyMark {
++	if v.mode == objectScanVisitTinyMark || v.mode == objectScanVisitImmixMark {
++		if v.mode == objectScanVisitImmixMark {
++			c.markImmixRef(ref)
++			return
++		}
+ 		c.tinyMarkRef(ref)
+ 		return
+ 	}
+@@ -172,6 +177,12 @@ func (c *Collector) scanObjectRefsRange(h uint32, cursor *objectScanCursor, budg
+ 				c.tinyMarkRef(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 				cursor.index++
+ 			}
++		} else if visitor.mode == objectScanVisitImmixMark {
++			for cursor.index < end {
++				off := uint64(d.PayloadOffset()) + uint64(cursor.index)*uint64(d.ElemSize)
++				c.markImmixRef(Ref(binary.LittleEndian.Uint32(b[off:])))
++				cursor.index++
++			}
+ 		} else {
+ 			for cursor.index < end {
+ 				off := uint64(d.PayloadOffset()) + uint64(cursor.index)*uint64(d.ElemSize)

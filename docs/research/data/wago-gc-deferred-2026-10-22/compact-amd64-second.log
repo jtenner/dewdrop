@@ -1,0 +1,21 @@
+--- FAIL: TestGCGeneralArrayLenNativeGuardFallback (0.00s)
+    --- FAIL: TestGCGeneralArrayLenNativeGuardFallback/short_header (0.00s)
+panic: runtime error: index out of range [3] with length 0 [recovered, repanicked]
+
+goroutine 143 [running]:
+testing.tRunner.func1.2({0x2376f98, 0x17dab1648240})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x232
+testing.tRunner.func1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x329
+panic({0x2376f98?, 0x17dab1648240?})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+encoding/binary.littleEndian.PutUint32(...)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/encoding/binary/binary.go:97
+github.com/wago-org/wago/src/wago.TestGCGeneralArrayLenNativeGuardFallback.func1(0x17dab1674488)
+	/tmp/wago-gc-deferred-20261022/src/wago/gc_array_len_native_test.go:185 +0x6f6
+testing.tRunner(0x17dab1674488, 0x17dab16722d0)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 134
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/wago-org/wago/src/wago	0.060s
+FAIL

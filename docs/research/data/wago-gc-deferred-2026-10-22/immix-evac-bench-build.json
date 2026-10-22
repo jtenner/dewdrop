@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/immix-evac-bench.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.291204049004591,
+  "exit": 0,
+  "user_seconds": 3.812029,
+  "system_seconds": 0.18792999999999999,
+  "peak_rss_kib": 318168,
+  "minor_faults": 21288,
+  "major_faults": 4
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-tags",
+    "wago_gc_struct_headers",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-padded.test",
+    "./src/wago"
+  ],
+  "seconds": 25.925421075007762,
+  "exit": 0,
+  "user_seconds": 44.994405,
+  "system_seconds": 1.000157,
+  "peak_rss_kib": 3494224,
+  "minor_faults": 84360,
+  "major_faults": 7,
+  "voluntary_context_switches": 9275,
+  "involuntary_context_switches": 1195
+}

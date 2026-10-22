@@ -1,0 +1,14 @@
+{
+  "target": "windows/arm64",
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/vm-windows-arm64.test",
+    "./internal/virtualmem"
+  ],
+  "seconds": 4.953238820002298,
+  "exit_code": 0,
+  "output": ""
+}

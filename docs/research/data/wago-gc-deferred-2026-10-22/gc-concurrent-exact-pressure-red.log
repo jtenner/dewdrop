@@ -1,0 +1,5 @@
+--- FAIL: TestConcurrentAllocationPressureRunsExactFullFallback (0.00s)
+    concurrent_test.go:308: floating snapshot root caused a false OOM: gc: throughput heap exhausted
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	0.002s
+FAIL

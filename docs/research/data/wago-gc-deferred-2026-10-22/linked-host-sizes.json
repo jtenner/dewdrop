@@ -1,0 +1,18 @@
+{
+  "control": {
+    "bytes": 17278827,
+    "sha256": "1e078b0e8eac87107733cae327acad8e2186c611917f40896ba869d0db43eff6"
+  },
+  "final": {
+    "bytes": 17358095,
+    "sha256": "4b435ed25a13a68d335b82ac70e88031b52a8dda4f83238cccd78e899b67d971"
+  },
+  "workers": {
+    "bytes": 17420239,
+    "sha256": "e06dd83718c5bf73a089310aacfbd13206b298cf48f04c145870c27890522b45"
+  },
+  "concurrent": {
+    "bytes": 17473291,
+    "sha256": "3bb62d2b28f5a01f9fbeb1cbace519e6d2fab17c3ffd9cbfc0eab14cdbba63d2"
+  }
+}

@@ -1,0 +1,5 @@
+--- FAIL: TestGCNativeOldStructDistantStoresRetainSeparateCards (0.00s)
+    gc_old_struct_store_amd64_test.go:143: gc: shadow verifier found uncarded old-to-nursery edge from handle 1 at payload byte 128
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.003s
+FAIL

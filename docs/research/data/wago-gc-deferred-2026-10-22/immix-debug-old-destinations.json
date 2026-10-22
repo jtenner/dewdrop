@@ -1,0 +1,18 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags=wagodebug",
+    "-run",
+    "TestImmixPromotionFailure",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.256836554995971,
+  "exit": 0,
+  "user_seconds": 3.64269,
+  "system_seconds": 0.17379799999999998,
+  "peak_rss_kib": 309936,
+  "minor_faults": 19806,
+  "major_faults": 3
+}

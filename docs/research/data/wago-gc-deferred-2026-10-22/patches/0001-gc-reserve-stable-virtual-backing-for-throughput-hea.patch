@@ -1,0 +1,982 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 00:21:11 +0000
+Subject: [PATCH 01/20] gc: reserve stable virtual backing for throughput heaps
+ and handles
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  59 ++++++++
+ internal/virtualmem/region.go                 | 125 +++++++++++++++++
+ internal/virtualmem/region_portable.go        |  10 ++
+ internal/virtualmem/region_test.go            |  81 +++++++++++
+ internal/virtualmem/region_unix.go            |  27 ++++
+ internal/virtualmem/region_windows.go         |  46 +++++++
+ src/core/runtime/gc/native/alloc.go           |   7 +
+ .../runtime/gc/native/card_driven_test.go     |   6 +-
+ src/core/runtime/gc/native/collector.go       |  19 ++-
+ .../gc/native/major_blocks_coverage_test.go   |   4 +-
+ src/core/runtime/gc/native/native_alloc.go    |  12 ++
+ src/core/runtime/gc/native/nursery_growth.go  |  11 +-
+ .../native/nursery_live_growth_native_test.go |   2 +-
+ .../gc/native/profile_throughput_test.go      |   4 +-
+ src/core/runtime/gc/native/stable_backing.go  | 123 +++++++++++++++++
+ .../runtime/gc/native/stable_backing_test.go  | 126 ++++++++++++++++++
+ .../runtime/gc/native/throughput_alloc.go     |  42 +++++-
+ 17 files changed, 687 insertions(+), 17 deletions(-)
+ create mode 100644 docs/research/deferred-gc-implementation-2026-10-22.md
+ create mode 100644 internal/virtualmem/region.go
+ create mode 100644 internal/virtualmem/region_portable.go
+ create mode 100644 internal/virtualmem/region_test.go
+ create mode 100644 internal/virtualmem/region_unix.go
+ create mode 100644 internal/virtualmem/region_windows.go
+ create mode 100644 src/core/runtime/gc/native/stable_backing.go
+ create mode 100644 src/core/runtime/gc/native/stable_backing_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+new file mode 100644
+index 000000000..b73aca793
+--- /dev/null
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -0,0 +1,59 @@
++# Deferred GC implementation series
++
++Requested issues: 308 (stable backing), 309 (compact headers), 313 (Immix old
++space), and 321 (parallel/concurrent collection). This series starts from
++9d84600f1, the reviewed private GC stack with native SIMD reader summaries.
++The rejected global cache and unproven loop frame cache are excluded. No public
++PR, installed runtime, or unrelated checkout is changed.
++
++## Stable backing: memory owner
++
++Supported native 64-bit Linux, Darwin and Windows builds reserve bounded virtual
++ranges for Throughput old/large space, nursery/survivors, and handles. Pages are
++made accessible before publishing logical extents. Old growth commits geometric
++prefixes instead of allocating/copying Go slices. Nursery growth can move objects
++within its reservation, but never changes the reservation base. Stable addresses
++do not authorize retaining raw object addresses across collection.
++
++The shared `internal/virtualmem` owner supports checked range arithmetic,
++idempotent explicit Close, lazy commit, and zero-filled whole-page discard.
++Unix discard replaces unused pages with anonymous PROT_NONE pages. Windows uses
++reserve/commit/decommit separately. Portable and TinyGo builds retain Go backing;
++`Config.DisableVirtualBacking` supplies an explicit comparison control.
++
++Handle reservations include the invalid zero identity, worst-case object count,
++and bounded native batches. Production allocation preflights missing identity
++capacity before object allocation. Errors preserve live objects. Checked-handle
++generation retirement is accounted for. Native view addresses are revoked before
++mapped owners are released. MemoryStats reports virtual reservation and committed
++page bytes separately from OS RSS/commit charge. This chapter does not yet alter
++generated loads or claim a whole-compiler win.
++
++The owner adds 16 bytes to throughputHeap and 8 bytes at the collector tail.
++The comparison flag grows Config from 64 to 68 bytes and adds 8 bytes due to
++Collector pointer alignment, so Collector grows by 32 bytes. Exact footprint
++assertions track the new cost. The native object/handle ABI remains version 9.
++
++Tests pass: owner/range/discard/Close, repeated stable handle/old growth, bounded
++identity exhaustion with retained data, portable fallback, complete native GC,
++wagodebug fault injection, and race tests. The race lane takes 26.69 s including
++build (collector 16.37 s). Complete AMD64 backend/runtime/Wago integration takes
++55.19 s including build; tests take 5.26/0.41/28.22 s. The >30 s build lane remains
++above the user's compiler activity target; it is not described as a fast compile.
++
++Owner tests cross-compile for Linux ARM64, Darwin AMD64/ARM64 and Windows
++AMD64/ARM64 (4.89–5.15 s each). These are build checks, not native OS execution.
++Darwin/Windows execution and OS RSS/page-fault observations remain unmeasured.
++
++An initial one-page commit experiment was slightly slower than Go growth and
++is not retained. Geometric commit is retained. A five-sample screening benchmark
++allocates/touches 256 4 KiB objects while growing to 1 MiB, then closes its owner:
++stable median 309,957 ns vs portable 596,172 ns. Stable performs zero backing-copy
++bytes vs 2,547,712 copied bytes; Go allocations are 128 B/2 allocations vs about
++3,908,096 B/14 allocations. This is a backing-growth microbenchmark with variable
++portable timings, not application throughput, retained memory, or whole-job RSS.
++
++Raw logs and command/timing JSON are in `/tmp/wago-gc-deferred-evidence` and are
++mirrored into Dewdrop research evidence when the series is finalized. The
++remaining native binding, compact layout, region collector and worker stages
++are still in progress.
+diff --git a/internal/virtualmem/region.go b/internal/virtualmem/region.go
+new file mode 100644
+index 000000000..d24792e7c
+--- /dev/null
++++ b/internal/virtualmem/region.go
+@@ -0,0 +1,125 @@
++// Package virtualmem owns bounded, stable virtual reservations. It contains no
++// guest references or Go pointers in mapped bytes. Owners must stop all readers
++// before discarding pages or closing a region.
++package virtualmem
++
++import (
++	"errors"
++	"os"
++)
++
++var ErrUnsupported = errors.New("virtual memory: reservations unsupported by this build")
++
++// Region is single-owner. It deliberately has no finalizer: Close is explicit.
++// Page state costs one bit per reserved page and is allocated once.
++type Region struct {
++	mem       []byte
++	pages     []uint64
++	committed uint64
++}
++
++func PageSize() uint64 { return uint64(os.Getpagesize()) }
++
++func Reserve(bytes uint64) (*Region, error) {
++	p := PageSize()
++	if bytes == 0 || bytes > uint64(int(^uint(0)>>1))-p+1 {
++		return nil, errors.New("virtual memory: reservation size overflow")
++	}
++	if !Supported {
++		return nil, ErrUnsupported
++	}
++	n := (bytes + p - 1) &^ (p - 1)
++	b, err := reserve(int(n))
++	if err != nil {
++		return nil, err
++	}
++	return &Region{mem: b, pages: make([]uint64, (n/p+63)/64)}, nil
++}
++
++func (r *Region) ReservedBytes() uint64  { return uint64(len(r.mem)) }
++func (r *Region) CommittedBytes() uint64 { return r.committed }
++
++// Bytes exposes only a caller-validated prefix. Pages in the prefix must have
++// been committed. Slices never confer permission to access discarded pages.
++func (r *Region) Bytes(n uint64) []byte { return r.mem[:n:n] }
++
++func (r *Region) bounds(off, n uint64) error {
++	if len(r.mem) == 0 {
++		return errors.New("virtual memory: region closed")
++	}
++	if off > uint64(len(r.mem)) || n > uint64(len(r.mem))-off {
++		return errors.New("virtual memory: range exceeds reservation")
++	}
++	return nil
++}
++
++// Commit makes each missing page accessible before publishing it to readers.
++// On failure, already committed pages stay valid; the caller publishes no new
++// logical extent until this method succeeds.
++func (r *Region) Commit(off, n uint64) error {
++	if err := r.bounds(off, n); err != nil {
++		return err
++	}
++	if n == 0 {
++		return nil
++	}
++	p := PageSize()
++	first, last := off/p, (off+n+p-1)/p
++	for i := first; i < last; {
++		if r.pages[i/64]&(uint64(1)<<(i%64)) != 0 {
++			i++
++			continue
++		}
++		end := i + 1
++		for end < last && r.pages[end/64]&(uint64(1)<<(end%64)) == 0 {
++			end++
++		}
++		if err := commit(r.mem[i*p : end*p]); err != nil {
++			return err
++		}
++		for ; i < end; i++ {
++			r.pages[i/64] |= uint64(1) << (i % 64)
++			r.committed += p
++		}
++	}
++	return nil
++}
++
++// Discard decommits whole unused pages while retaining their virtual addresses.
++// Later Commit returns zero-filled bytes. No live object may overlap the range.
++func (r *Region) Discard(off, n uint64) error {
++	if err := r.bounds(off, n); err != nil {
++		return err
++	}
++	p := PageSize()
++	if off%p != 0 || n%p != 0 {
++		return errors.New("virtual memory: discard must cover whole pages")
++	}
++	if n == 0 {
++		return nil
++	}
++	if err := discard(r.mem[off : off+n]); err != nil {
++		return err
++	}
++	for i := off / p; i < (off+n)/p; i++ {
++		bit := uint64(1) << (i % 64)
++		if r.pages[i/64]&bit != 0 {
++			r.pages[i/64] &^= bit
++			r.committed -= p
++		}
++	}
++	return nil
++}
++
++func (r *Region) Close() error {
++	if r == nil || len(r.mem) == 0 {
++		return nil
++	}
++	if err := release(r.mem); err != nil {
++		return err
++	}
++	r.mem = nil
++	r.pages = nil
++	r.committed = 0
++	return nil
++}
+diff --git a/internal/virtualmem/region_portable.go b/internal/virtualmem/region_portable.go
+new file mode 100644
+index 000000000..2f1f6d6c0
+--- /dev/null
++++ b/internal/virtualmem/region_portable.go
+@@ -0,0 +1,10 @@
++//go:build (!linux && !darwin && !windows) || (!amd64 && !arm64) || tinygo
++
++package virtualmem
++
++const Supported = false
++
++func reserve(int) ([]byte, error) { return nil, ErrUnsupported }
++func commit([]byte) error         { return ErrUnsupported }
++func discard([]byte) error        { return ErrUnsupported }
++func release([]byte) error        { return ErrUnsupported }
+diff --git a/internal/virtualmem/region_test.go b/internal/virtualmem/region_test.go
+new file mode 100644
+index 000000000..afc9ce69f
+--- /dev/null
++++ b/internal/virtualmem/region_test.go
+@@ -0,0 +1,81 @@
++package virtualmem
++
++import (
++	"testing"
++	"unsafe"
++)
++
++func TestRegionGrowthDiscardAndClose(t *testing.T) {
++	if !Supported {
++		t.Skip("virtual reservations are not supported by this build")
++	}
++	r, err := Reserve(8 * PageSize())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer r.Close()
++	if err := r.Commit(0, PageSize()); err != nil {
++		t.Fatal(err)
++	}
++	b := r.Bytes(PageSize())
++	base := unsafe.Pointer(&b[0])
++	b[0] = 91
++	if err := r.Commit(PageSize(), 2*PageSize()); err != nil {
++		t.Fatal(err)
++	}
++	if got := unsafe.Pointer(&r.Bytes(3 * PageSize())[0]); got != base {
++		t.Fatal("reservation moved")
++	}
++	if b[0] != 91 {
++		t.Fatal("growth lost existing bytes")
++	}
++	if err := r.Commit(8*PageSize(), 1); err == nil {
++		t.Fatal("commit past reservation succeeded")
++	}
++	if err := r.Discard(0, PageSize()); err != nil {
++		t.Fatal(err)
++	}
++	if err := r.Commit(0, PageSize()); err != nil {
++		t.Fatal(err)
++	}
++	if b[0] != 0 {
++		t.Fatal("discarded page did not return zero")
++	}
++	if r.CommittedBytes() != 3*PageSize() {
++		t.Fatalf("committed bytes = %d", r.CommittedBytes())
++	}
++	if err := r.Close(); err != nil {
++		t.Fatal(err)
++	}
++	if err := r.Close(); err != nil {
++		t.Fatal(err)
++	}
++	if err := r.Commit(0, 1); err == nil {
++		t.Fatal("commit after close succeeded")
++	}
++}
++
++func TestRegionRejectsInvalidBounds(t *testing.T) {
++	if _, err := Reserve(0); err == nil {
++		t.Fatal("zero reservation succeeded")
++	}
++	if _, err := Reserve(^uint64(0)); err == nil {
++		t.Fatal("overflow reservation succeeded")
++	}
++	if !Supported {
++		return
++	}
++	r, err := Reserve(PageSize())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer r.Close()
++	for _, off := range []uint64{PageSize() + 1, ^uint64(0)} {
++		if err := r.Commit(off, 1); err == nil {
++			t.Fatalf("commit at %d succeeded", off)
++		}
++	}
++	if err := r.Discard(1, 1); err == nil {
++		t.Fatal("unaligned discard succeeded")
++	}
++}
+diff --git a/internal/virtualmem/region_unix.go b/internal/virtualmem/region_unix.go
+new file mode 100644
+index 000000000..5a422e662
+--- /dev/null
++++ b/internal/virtualmem/region_unix.go
+@@ -0,0 +1,27 @@
++//go:build (linux || darwin) && (amd64 || arm64) && !tinygo
++
++package virtualmem
++
++import (
++	"syscall"
++	"unsafe"
++)
++
++const Supported = true
++
++func reserve(n int) ([]byte, error) {
++	return syscall.Mmap(-1, 0, n, syscall.PROT_NONE, syscall.MAP_ANON|syscall.MAP_PRIVATE)
++}
++func commit(b []byte) error { return syscall.Mprotect(b, syscall.PROT_READ|syscall.PROT_WRITE) }
++func discard(b []byte) error {
++	// Replace only unused pages with a fresh anonymous PROT_NONE mapping. Unlike
++	// Darwin MADV_FREE this guarantees zero fill on the next commit, and releases
++	// physical pages while preserving the original owner and virtual interval.
++	_, _, errno := syscall.Syscall6(syscall.SYS_MMAP, uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)),
++		syscall.PROT_NONE, syscall.MAP_ANON|syscall.MAP_PRIVATE|syscall.MAP_FIXED, ^uintptr(0), 0)
++	if errno != 0 {
++		return errno
++	}
++	return nil
++}
++func release(b []byte) error { return syscall.Munmap(b) }
+diff --git a/internal/virtualmem/region_windows.go b/internal/virtualmem/region_windows.go
+new file mode 100644
+index 000000000..45ee41a2f
+--- /dev/null
++++ b/internal/virtualmem/region_windows.go
+@@ -0,0 +1,46 @@
++//go:build windows && (amd64 || arm64) && !tinygo
++
++package virtualmem
++
++import (
++	"fmt"
++	"syscall"
++	"unsafe"
++)
++
++const Supported = true
++
++var kernel32 = syscall.NewLazyDLL("kernel32.dll")
++var virtualAlloc = kernel32.NewProc("VirtualAlloc")
++var virtualFree = kernel32.NewProc("VirtualFree")
++
++//go:nocheckptr
++func mappedPointer(p uintptr) unsafe.Pointer { return unsafe.Pointer(p) }
++func reserve(n int) ([]byte, error) {
++	p, _, e := virtualAlloc.Call(0, uintptr(n), 0x2000, 0x01)
++	if p == 0 {
++		return nil, fmt.Errorf("virtual memory reserve: %w", e)
++	}
++	return unsafe.Slice((*byte)(mappedPointer(p)), n), nil
++}
++func commit(b []byte) error {
++	p, _, e := virtualAlloc.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0x1000, 0x04)
++	if p == 0 {
++		return fmt.Errorf("virtual memory commit: %w", e)
++	}
++	return nil
++}
++func discard(b []byte) error {
++	ok, _, e := virtualFree.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), 0x4000)
++	if ok == 0 {
++		return fmt.Errorf("virtual memory decommit: %w", e)
++	}
++	return nil
++}
++func release(b []byte) error {
++	ok, _, e := virtualFree.Call(uintptr(unsafe.Pointer(&b[0])), 0, 0x8000)
++	if ok == 0 {
++		return fmt.Errorf("virtual memory release: %w", e)
++	}
++	return nil
++}
+diff --git a/src/core/runtime/gc/native/alloc.go b/src/core/runtime/gc/native/alloc.go
+index df99bf6fb..84aa2e005 100644
+--- a/src/core/runtime/gc/native/alloc.go
++++ b/src/core/runtime/gc/native/alloc.go
+@@ -16,6 +16,9 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 	if err := c.errIfClosed(); err != nil {
+ 		return Null(), err
+ 	}
++	if err := c.preflightHandleCapacity(1); err != nil {
++		return Null(), err
++	}
+ 	if c.cfg.DisableCollection {
+ 		var tx throughputAllocTransaction
+ 		if failureInjectionEnabled {
+@@ -211,6 +214,10 @@ func (c *Collector) newHandle(e handleEntry) uint32 {
+ 		c.noteMajorHandle(h)
+ 		return h
+ 	}
++	if err := c.ensureHandleCapacity(1); err != nil {
++		// Production entry points preflight this operation before allocating.
++		panic("gc: handle publication without committed capacity: " + err.Error())
++	}
+ 	c.handles = append(c.handles, e)
+ 	if c.checkedHandles != nil {
+ 		*c.checkedHandles = append(*c.checkedHandles, 1)
+diff --git a/src/core/runtime/gc/native/card_driven_test.go b/src/core/runtime/gc/native/card_driven_test.go
+index 29e89dd24..509c18efa 100644
+--- a/src/core/runtime/gc/native/card_driven_test.go
++++ b/src/core/runtime/gc/native/card_driven_test.go
+@@ -442,8 +442,8 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	if got := unsafe.Sizeof(objectCard{}); got != 16 {
+ 		t.Fatalf("objectCard size=%d, want 16", got)
+ 	}
+-	if got := unsafe.Sizeof(Config{}); got != 64 {
+-		t.Fatalf("Config size=%d, want 64", got)
++	if got := unsafe.Sizeof(Config{}); got != 68 {
++		t.Fatalf("Config size=%d, want 68", got)
+ 	}
+ 	if got := unsafe.Sizeof(tinyScanCursor{}); got != 8 {
+ 		t.Fatalf("tinyScanCursor size=%d, want 8", got)
+@@ -462,7 +462,7 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	}
+ 	// Bounds, lazy major-block state, and one large-array list-index hint have
+ 	// fixed descriptor costs. Promotion sorting adds one bounded scratch descriptor.
+-	wantCollector := uintptr(1168) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
++	wantCollector := uintptr(1200) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
+ 	if got := unsafe.Sizeof(Collector{}); got != wantCollector {
+ 		t.Fatalf("Collector size=%d, want %d", got, wantCollector)
+ 	}
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index b4d4c1643..5757f1097 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -79,6 +79,9 @@ type Config struct {
+ 	PoisonFreed          bool
+ 	StressBarriers       bool
+ 	DisableMovingNursery bool
++	// DisableVirtualBacking selects growable Go storage for comparison or builds
++	// without mapping support. The default uses bounded stable reservations.
++	DisableVirtualBacking bool
+ 	// DisableCollection keeps every object in the bounded throughput heap and
+ 	// returns an allocation error on exhaustion. It is used by general WasmGC
+ 	// code until native frame roots can be published at every safepoint.
+@@ -174,6 +177,7 @@ type Collector struct {
+ 	// A validated list-position hint; compaction may move or remove the entry.
+ 	nativeLargeArrayNurseryIndex int
+ 	promotionSortScratch         []plannedPromotion // bounded stable counting-sort workspace
++	backing                      *collectorBacking
+ }
+ 
+ const defaultNursery = 64 << 10
+@@ -216,7 +220,7 @@ func NewCollector(config Config, types []TypeDesc) (*Collector, error) {
+ 	nurseryBackingBytes := align(config.NurseryBytes, 16) + 2*config.SurvivorBytes
+ 	c := &Collector{
+ 		cfg: config, types: append([]TypeDesc(nil), types...), objectAlign: objectAlign,
+-		nursery: makeAlignedBytes(nurseryBackingBytes, uintptr(objectAlign)), survivorBytes: config.SurvivorBytes,
++		nursery: initialNurseryBacking(config, nurseryBackingBytes, objectAlign), survivorBytes: config.SurvivorBytes,
+ 		tenuringThreshold: defaultTenuringThreshold, handles: []handleEntry{{}}, cardBytes: defaultThroughputCardBytes,
+ 	}
+ 	for i := range c.types {
+@@ -235,6 +239,10 @@ func NewCollector(config Config, types []TypeDesc) (*Collector, error) {
+ 	if err := c.throughput.Init(config); err != nil {
+ 		return nil, err
+ 	}
++	if err := c.initStableBacking(nurseryBackingBytes); err != nil {
++		c.throughput.Close()
++		return nil, err
++	}
+ 	c.initNativeView()
+ 	return c, nil
+ }
+@@ -247,10 +255,19 @@ func (c *Collector) Close() {
+ 	c.discardNativeLargeArrayAllocation()
+ 	c.stats.LiveObjects = 0
+ 	c.closed = true
++	// Revoke published native addresses before releasing the mapped owners.
++	if c.nativeView != nil {
++		*c.nativeView = NativeCollectorView{Version: NativeABIVersion, HandleStride: NativeHandleStride,
++			RefreshGeneration: c.nativeView.RefreshGeneration + 1}
++	}
+ 	c.nursery = nil
+ 	c.tiny.Close()
+ 	c.throughput.Close()
+ 	c.handles = nil
++	if c.backing != nil {
++		c.backing.close()
++		c.backing = nil
++	}
+ 	c.checkedHandles = nil
+ 	c.freeHandles = nil
+ 	c.nurseryHandles = nil
+diff --git a/src/core/runtime/gc/native/major_blocks_coverage_test.go b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+index 581266053..f645e5870 100644
+--- a/src/core/runtime/gc/native/major_blocks_coverage_test.go
++++ b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+@@ -102,10 +102,10 @@ func TestMajorBlocksReservationWordRevisits(t *testing.T) {
+ 
+ func TestMajorBlocksFlagUsesExistingPadding(t *testing.T) {
+ 	const batchBytes = (512 - nativeStructHandleBatch) * 4
+-	if unsafe.Offsetof(Collector{}.checkedHandles) != 3088-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3104-batchBytes {
++	if unsafe.Offsetof(Collector{}.checkedHandles) != 3112-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3128-batchBytes {
+ 		t.Fatal("native index changed existing collector offsets")
+ 	}
+-	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3128-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3128-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3128-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil)) {
++	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3152-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3152-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3152-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil)) {
+ 		t.Fatal("large-array hint and promotion scratch must follow the existing collector state")
+ 	}
+ 	if unsafe.Offsetof(Collector{}.majorYoungDirty) >= unsafe.Offsetof(Collector{}.checkedHandles) {
+diff --git a/src/core/runtime/gc/native/native_alloc.go b/src/core/runtime/gc/native/native_alloc.go
+index c41a4ec66..414c602b6 100644
+--- a/src/core/runtime/gc/native/native_alloc.go
++++ b/src/core/runtime/gc/native/native_alloc.go
+@@ -78,6 +78,9 @@ func (c *Collector) reserveNativeHandles(batch int) {
+ 	s.HandleBase = 0
+ 	newHandles := batch - min(len(c.freeHandles), batch)
+ 	if newHandles != 0 {
++		if err := c.ensureHandleCapacity(newHandles); err != nil {
++			panic("gc: native handles not preflighted: " + err.Error())
++		}
+ 		c.handles = slices.Grow(c.handles, newHandles)
+ 		c.mark = slices.Grow(c.mark, newHandles)
+ 		c.tinyGC.color = slices.Grow(c.tinyGC.color, newHandles)
+@@ -172,6 +175,9 @@ func (c *Collector) prepareNativeStructAllocation(minObjectBytes uint32, batch i
+ 			batch = nativeStructHandleBatchSize
+ 		}
+ 	}
++	if err := c.preflightHandleCapacity(batch); err != nil {
++		return false
++	}
+ 	c.reserveNativeHandles(batch)
+ 	return true
+ }
+@@ -204,6 +210,9 @@ func (c *Collector) PrepareNativeAllocation(minObjectBytes uint32) bool {
+ 	}
+ 	end := start + chunkBytes
+ 
++	if err := c.preflightHandleCapacity(nativeArrayHandleBatch); err != nil {
++		return false
++	}
+ 	c.reserveNativeHandles(nativeArrayHandleBatch)
+ 	s.ChunkStart = start
+ 	s.ChunkCursor = start
+@@ -259,6 +268,9 @@ func (c *Collector) prepareNativeLargeArrayAllocation(objectBytes uint32) bool {
+ 		return true
+ 	}
+ 	c.discardNativeLargeArrayAllocation()
++	if err := c.preflightHandleCapacity(1); err != nil {
++		return false
++	}
+ 
+ 	var e handleEntry
+ 	rewind := uint32(0)
+diff --git a/src/core/runtime/gc/native/nursery_growth.go b/src/core/runtime/gc/native/nursery_growth.go
+index 33efb2b5e..ee402fcb6 100644
+--- a/src/core/runtime/gc/native/nursery_growth.go
++++ b/src/core/runtime/gc/native/nursery_growth.go
+@@ -77,7 +77,16 @@ func (c *Collector) growDefaultNursery(copiedBytes uint64, youngObjects uint32)
+ 	}
+ 	eden = nextEden
+ 	survivor := min(eden/2, uint32(512<<10))
+-	backing := makeAlignedBytes(eden+2*survivor, uintptr(c.objectAlign))
++	var backing []byte
++	if c.backing != nil {
++		needed := uint64(eden) + 2*uint64(survivor)
++		if err := c.backing.nursery.Commit(0, needed); err != nil {
++			return
++		}
++		backing = c.backing.nursery.Bytes(needed)
++	} else {
++		backing = makeAlignedBytes(eden+2*survivor, uintptr(c.objectAlign))
++	}
+ 	newBase := eden + uint32(c.survivorFrom&1)*survivor
+ 	copy(backing[newBase:newBase+c.survivorBump], c.nursery[oldBase:oldBase+c.survivorBump])
+ 	for _, h := range c.nurseryHandles {
+diff --git a/src/core/runtime/gc/native/nursery_live_growth_native_test.go b/src/core/runtime/gc/native/nursery_live_growth_native_test.go
+index aa64c1bc7..6f7c3e938 100644
+--- a/src/core/runtime/gc/native/nursery_live_growth_native_test.go
++++ b/src/core/runtime/gc/native/nursery_live_growth_native_test.go
+@@ -237,7 +237,7 @@ func TestDefaultNurseryGrowthRelocatesLiveSurvivors(t *testing.T) {
+ 			if c.cfg.NurseryBytes != 2*defaultNursery || c.survivorBump == 0 || c.survivorFrom != from {
+ 				t.Fatalf("grown Eden/live/index = %d/%d/%d", c.cfg.NurseryBytes, c.survivorBump, c.survivorFrom)
+ 			}
+-			if view.Spaces[NativeSpaceNursery].Base == oldBacking || view.Spaces[NativeSpaceNursery].Base != sliceData(c.nursery) || view.NurseryAllocBytes != c.cfg.NurseryBytes {
++			if (c.backing == nil && view.Spaces[NativeSpaceNursery].Base == oldBacking) || (c.backing != nil && view.Spaces[NativeSpaceNursery].Base != oldBacking) || view.Spaces[NativeSpaceNursery].Base != sliceData(c.nursery) || view.NurseryAllocBytes != c.cfg.NurseryBytes {
+ 				t.Fatal("collection did not refresh the native view after live relocation")
+ 			}
+ 			if c.nativeStructAlloc.Count != 0 || !c.inActiveSurvivor(*c.entry(child)) || c.entry(child).off%16 != 0 {
+diff --git a/src/core/runtime/gc/native/profile_throughput_test.go b/src/core/runtime/gc/native/profile_throughput_test.go
+index 8eda1b0db..1a5aea27b 100644
+--- a/src/core/runtime/gc/native/profile_throughput_test.go
++++ b/src/core/runtime/gc/native/profile_throughput_test.go
+@@ -594,8 +594,8 @@ func TestThroughputFreeSpanFootprint(t *testing.T) {
+ 	if got := unsafe.Sizeof(throughputSpanNode{}); got != 28 {
+ 		t.Fatalf("throughputSpanNode size = %d, want 28", got)
+ 	}
+-	if got := unsafe.Sizeof(throughputHeap{}); got != 120 {
+-		t.Fatalf("throughputHeap size = %d, want 120", got)
++	if got := unsafe.Sizeof(throughputHeap{}); got != 136 {
++		t.Fatalf("throughputHeap size = %d, want 136", got)
+ 	}
+ }
+ 
+diff --git a/src/core/runtime/gc/native/stable_backing.go b/src/core/runtime/gc/native/stable_backing.go
+new file mode 100644
+index 000000000..cb39e35b9
+--- /dev/null
++++ b/src/core/runtime/gc/native/stable_backing.go
+@@ -0,0 +1,123 @@
++package gc
++
++import (
++	"fmt"
++	"unsafe"
++
++	"github.com/wago-org/wago/internal/virtualmem"
++)
++
++type collectorBacking struct {
++	nursery, handles *virtualmem.Region
++	handleLimit      uint64
++}
++
++func (b *collectorBacking) close() {
++	for _, r := range []*virtualmem.Region{b.nursery, b.handles} {
++		if err := r.Close(); err != nil {
++			panic("gc: close backing: " + err.Error())
++		}
++	}
++}
++
++func initialNurseryBacking(cfg Config, size, alignment uint32) []byte {
++	if !cfg.DisableVirtualBacking && virtualmem.Supported {
++		return nil
++	}
++	return makeAlignedBytes(size, uintptr(alignment))
++}
++
++func (c *Collector) initStableBacking(initialBytes uint32) error {
++	if c.cfg.DisableVirtualBacking || !virtualmem.Supported {
++		return nil
++	}
++	b := &collectorBacking{}
++	var err error
++	defer func() {
++		if err != nil {
++			b.close()
++		}
++	}()
++	nurseryLimit := uint64(initialBytes)
++	if c.nurseryGrowthLimit != 0 {
++		nurseryLimit = uint64(c.nurseryGrowthLimit) + 2*uint64(min(c.nurseryGrowthLimit/2, uint32(512<<10)))
++	}
++	b.nursery, err = virtualmem.Reserve(nurseryLimit)
++	if err != nil {
++		return fmt.Errorf("gc: reserve nursery: %w", err)
++	}
++	err = b.nursery.Commit(0, uint64(initialBytes))
++	if err != nil {
++		return fmt.Errorf("gc: commit nursery: %w", err)
++	}
++	// Minimum logical object size is eight bytes after compact headers. Include
++	// native reservations and the invalid identity; free identities are reused.
++	b.handleLimit = 1 + (uint64(c.cfg.ThroughputHeapBytes)+nurseryLimit)/8 + 2*nativeStructHandleBatch
++	if b.handleLimit > 1<<31 {
++		b.handleLimit = 1 << 31
++	}
++	b.handles, err = virtualmem.Reserve(b.handleLimit * NativeHandleStride)
++	if err != nil {
++		return fmt.Errorf("gc: reserve handles: %w", err)
++	}
++	err = b.handles.Commit(0, NativeHandleStride)
++	if err != nil {
++		return fmt.Errorf("gc: commit handles: %w", err)
++	}
++	c.backing = b
++	c.nursery = b.nursery.Bytes(uint64(initialBytes))
++	c.handles = unsafe.Slice((*handleEntry)(unsafe.Pointer(&b.handles.Bytes(NativeHandleStride)[0])), 1)
++	return nil
++}
++
++// ensureHandleCapacity runs before allocating object bytes or publishing a
++// native reservation. A commit failure is returned without losing live state.
++func (c *Collector) ensureHandleCapacity(extra int) error {
++	if c.backing == nil || extra <= cap(c.handles)-len(c.handles) {
++		return nil
++	}
++	need := uint64(len(c.handles)) + uint64(extra)
++	if need > c.backing.handleLimit {
++		return fmt.Errorf("gc: bounded handle table exhausted (%d entries)", need)
++	}
++	bytes := need * NativeHandleStride
++	if err := c.backing.handles.Commit(uint64(cap(c.handles))*NativeHandleStride, bytes-uint64(cap(c.handles))*NativeHandleStride); err != nil {
++		return fmt.Errorf("gc: commit handles: %w", err)
++	}
++	capacity := min(c.backing.handles.CommittedBytes()/NativeHandleStride, c.backing.handleLimit)
++	all := c.backing.handles.Bytes(capacity * NativeHandleStride)
++	c.handles = unsafe.Slice((*handleEntry)(unsafe.Pointer(&all[0])), int(capacity))[:len(c.handles)]
++	return nil
++}
++
++// MemoryStats separates reserved virtual address bytes from committed pages.
++// OS RSS and commit charge require platform measurements; these are not RSS.
++type MemoryStats struct {
++	ReservedBytes, CommittedBytes, BackingCopyBytes uint64
++}
++
++func (c *Collector) MemoryStats() MemoryStats {
++	s := MemoryStats{BackingCopyBytes: c.throughput.backingCopyBytes}
++	if c.backing != nil {
++		for _, r := range []*virtualmem.Region{c.backing.nursery, c.backing.handles, c.throughput.reservation} {
++			if r != nil {
++				s.ReservedBytes += r.ReservedBytes()
++				s.CommittedBytes += r.CommittedBytes()
++			}
++		}
++	}
++	return s
++}
++
++func (c *Collector) preflightHandleCapacity(batch int) error {
++	reused := min(batch, len(c.freeHandles))
++	if c.checkedHandles != nil {
++		reused = 0
++		for i := len(c.freeHandles) - 1; i >= 0 && reused < batch; i-- {
++			if (*c.checkedHandles)[c.freeHandles[i]] != ^uint64(0) {
++				reused++
++			}
++		}
++	}
++	return c.ensureHandleCapacity(batch - reused)
++}
+diff --git a/src/core/runtime/gc/native/stable_backing_test.go b/src/core/runtime/gc/native/stable_backing_test.go
+new file mode 100644
+index 000000000..a45a3094c
+--- /dev/null
++++ b/src/core/runtime/gc/native/stable_backing_test.go
+@@ -0,0 +1,126 @@
++package gc
++
++import (
++	"github.com/wago-org/wago/internal/virtualmem"
++	"testing"
++	"unsafe"
++)
++
++func TestStableBackingGrowth(t *testing.T) {
++	if !virtualmem.Supported {
++		t.Skip("no virtual reservation support")
++	}
++	c, err := NewCollector(Config{ThroughputHeapBytes: 2 << 20, ThroughputPageBytes: 4096, DisableCollection: true}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	if c.backing == nil || c.throughput.reservation == nil {
++		t.Fatal("throughput backing is not reserved")
++	}
++	base := sliceData(c.handles)
++	for i := 0; i < 1024; i++ {
++		c.newHandle(handleEntry{})
++	}
++	if sliceData(c.handles) != base {
++		t.Fatal("handle table moved")
++	}
++	var first handleEntry
++	for i := 0; i < 32; i++ {
++		e, err := c.throughput.alloc(4096, spaceLarge)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if i == 0 {
++			first = e
++			c.throughput.bytes(e)[0] = 89
++		}
++	}
++	oldBase := uintptr(unsafe.Pointer(&c.throughput.mem[0]))
++	if _, err := c.throughput.alloc(128<<10, spaceLarge); err != nil {
++		t.Fatal(err)
++	}
++	if uintptr(unsafe.Pointer(&c.throughput.mem[0])) != oldBase {
++		t.Fatal("old space moved")
++	}
++	if c.throughput.bytes(first)[0] != 89 {
++		t.Fatal("growth lost data")
++	}
++	if c.MemoryStats().BackingCopyBytes != 0 {
++		t.Fatal("stable growth copied backing")
++	}
++	v := c.NativeView()
++	c.Close()
++	if v.Handles != 0 || v.HandleCount != 0 || v.Spaces[NativeSpaceOld].Base != 0 {
++		t.Fatal("closed native view retains mappings")
++	}
++}
++
++func TestPortableBackingGrowth(t *testing.T) {
++	c, err := NewCollector(Config{DisableVirtualBacking: true}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	if c.backing != nil || c.throughput.reservation != nil {
++		t.Fatal("portable backing reserved address space")
++	}
++	for i := 0; i < 1024; i++ {
++		c.newHandle(handleEntry{})
++	}
++	if c.NativeView().HandleStride != NativeHandleStride {
++		t.Fatal("portable handle ABI changed")
++	}
++}
++
++func TestBoundedHandleExhaustionPreservesObject(t *testing.T) {
++	if !virtualmem.Supported {
++		t.Skip("no virtual reservation support")
++	}
++	c := newTestCollector(t, Config{})
++	r, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := c.StructSet(r, 0, I32Value(42)); err != nil {
++		t.Fatal(err)
++	}
++	// Exhaust committed identity capacity without exhausting object storage.
++	c.backing.handleLimit = uint64(len(c.handles))
++	c.handles = c.handles[:len(c.handles):len(c.handles)]
++	if _, err := c.NewStructDefault(0); err == nil {
++		t.Fatal("bounded identity exhaustion succeeded")
++	}
++	if got, err := c.StructGet(r, 0); err != nil || got.Bits != 42 {
++		t.Fatalf("live value lost after exhaustion: %+v %v", got, err)
++	}
++}
++
++func BenchmarkBackingGrowth(b *testing.B) {
++	for _, portable := range []bool{false, true} {
++		name := "stable"
++		if portable {
++			name = "portable"
++		}
++		b.Run(name, func(b *testing.B) {
++			b.ReportAllocs()
++			var copied uint64
++			for i := 0; i < b.N; i++ {
++				var h throughputHeap
++				if err := h.Init(Config{ThroughputHeapBytes: 2 << 20, ThroughputPageBytes: 4096, ThroughputClassLimit: 4096, DisableVirtualBacking: portable}); err != nil {
++					b.Fatal(err)
++				}
++				for j := 0; j < 256; j++ {
++					e, err := h.alloc(4096, spaceLarge)
++					if err != nil {
++						b.Fatal(err)
++					}
++					h.bytes(e)[0] = byte(j)
++				}
++				copied += h.backingCopyBytes
++				h.Close()
++			}
++			b.ReportMetric(float64(copied)/float64(b.N), "copied-B/op")
++		})
++	}
++}
+diff --git a/src/core/runtime/gc/native/throughput_alloc.go b/src/core/runtime/gc/native/throughput_alloc.go
+index 25dab0d65..e64621aa6 100644
+--- a/src/core/runtime/gc/native/throughput_alloc.go
++++ b/src/core/runtime/gc/native/throughput_alloc.go
+@@ -4,6 +4,8 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"math/bits"
++
++	"github.com/wago-org/wago/internal/virtualmem"
+ )
+ 
+ var errThroughputHeapExhausted = errors.New("gc: throughput heap exhausted")
+@@ -58,13 +60,15 @@ type throughputHeap struct {
+ 	classLimit uint32
+ 	bump       uint32
+ 
+-	spanRoot     uint32
+-	freeNodeHead uint32
+-	spanNodes    []throughputSpanNode
+-	pendingFree  []throughputFreeSpan
+-	freeBytes    uint64
+-	pendingBytes uint64
+-	spanCount    uint32
++	spanRoot         uint32
++	freeNodeHead     uint32
++	spanNodes        []throughputSpanNode
++	pendingFree      []throughputFreeSpan
++	freeBytes        uint64
++	pendingBytes     uint64
++	spanCount        uint32
++	reservation      *virtualmem.Region
++	backingCopyBytes uint64
+ }
+ 
+ func (h *throughputHeap) Init(cfg Config) error {
+@@ -92,11 +96,24 @@ func (h *throughputHeap) Init(cfg Config) error {
+ 	h.freeBytes = 0
+ 	h.pendingBytes = 0
+ 	h.spanCount = 0
++	if !cfg.DisableVirtualBacking && virtualmem.Supported {
++		var err error
++		h.reservation, err = virtualmem.Reserve(uint64(h.limit))
++		if err != nil {
++			return fmt.Errorf("gc: reserve old backing: %w", err)
++		}
++	}
+ 	return nil
+ }
+ 
+ func (h *throughputHeap) Close() {
+ 	h.mem = nil
++	if h.reservation != nil {
++		if err := h.reservation.Close(); err != nil {
++			panic("gc: close old backing: " + err.Error())
++		}
++		h.reservation = nil
++	}
+ 	h.spanNodes = nil
+ 	h.pendingFree = nil
+ 	h.spanRoot = throughputNoSlot
+@@ -387,8 +404,19 @@ func (h *throughputHeap) growBacking(needed uint64) error {
+ 	if reserve > limit || reserve > uint64(^uint32(0)) || reserve > uint64(int(^uint(0)>>1)) {
+ 		return errors.New("gc: throughput heap reservation too large")
+ 	}
++	if h.reservation != nil {
++		if reserve > uint64(h.limit) {
++			return errThroughputHeapExhausted
++		}
++		if err := h.reservation.Commit(uint64(len(h.mem)), reserve-uint64(len(h.mem))); err != nil {
++			return fmt.Errorf("gc: commit old backing: %w", err)
++		}
++		h.mem = h.reservation.Bytes(reserve)
++		return nil
++	}
+ 	newMem := makeAlignedBytes(uint32(reserve), 16)
+ 	copy(newMem, h.mem)
++	h.backingCopyBytes += uint64(len(h.mem))
+ 	h.mem = newMem
+ 	return nil
+ }

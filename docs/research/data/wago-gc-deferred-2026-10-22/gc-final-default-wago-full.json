@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/tmp/wago-gc-deferred-evidence/final-wago.test",
+    "-test.count=1",
+    "-test.timeout=60s"
+  ],
+  "seconds": 40.02585908000765,
+  "exit": 0,
+  "user_seconds": 30.177078,
+  "system_seconds": 14.770084,
+  "peak_rss_kib": 681484,
+  "minor_faults": 2929959,
+  "major_faults": 7,
+  "voluntary_context_switches": 286398,
+  "involuntary_context_switches": 14836
+}

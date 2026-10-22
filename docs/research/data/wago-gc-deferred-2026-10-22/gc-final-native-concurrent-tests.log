@@ -1,0 +1,4 @@
+--- FAIL: TestGCConcurrentAutomaticNativeRefillSafepoints (0.00s)
+    gc_concurrent_amd64_test.go:256: automatic root round1: [] wasm trap: cast failure
+            at roots (func[14])
+FAIL

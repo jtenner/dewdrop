@@ -1,0 +1,40 @@
+START gc-final-default-wago-build
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-wago.test", "./src/wago"], "seconds": 25.636319735989673, "exit": 0, "user_seconds": 44.483951, "system_seconds": 1.042005, "peak_rss_kib": 3531696, "minor_faults": 85969, "major_faults": 7, "voluntary_context_switches": 8822, "involuntary_context_switches": 1633}
+
+START gc-final-default-wago-full
+{"command": ["/tmp/wago-gc-deferred-evidence/final-wago.test", "-test.count=1", "-test.timeout=60s"], "seconds": 40.02585908000765, "exit": 0, "user_seconds": 30.177078, "system_seconds": 14.770084, "peak_rss_kib": 681484, "minor_faults": 2929959, "major_faults": 7, "voluntary_context_switches": 286398, "involuntary_context_switches": 14836}
+PASS
+
+START gc-final-default-backend
+{"command": ["go", "test", "-count=1", "./src/core/compiler/backend/railshot/amd64"], "seconds": 11.115432390011847, "exit": 0, "user_seconds": 11.754042, "system_seconds": 3.754874, "peak_rss_kib": 840504, "minor_faults": 665516, "major_faults": 5, "voluntary_context_switches": 25020, "involuntary_context_switches": 950}
+ok  	github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64	4.842s
+
+START gc-final-padded-core
+{"command": ["go", "test", "-count=1", "-tags", "wago_gc_struct_headers wago_gc_workers wago_gc_concurrent wagodebug", "./src/core/runtime/gc/native"], "seconds": 4.462591439994867, "exit": 1, "user_seconds": 6.017738, "system_seconds": 0.254498, "peak_rss_kib": 353984, "minor_faults": 56438, "major_faults": 4, "voluntary_context_switches": 5873, "involuntary_context_switches": 214}
+--- FAIL: TestImmixMixedVectorCompactionPreservesAlignmentAndCards (0.00s)
+    immix_compact_test.go:221: vector data/alignment changed
+--- FAIL: TestImmixEvacuationFailureLeavesSourcesAndHandlesUnchanged (0.00s)
+    immix_failure_debug_test.go:106: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepFailureKeepsReclamationDebt (0.00s)
+    sweep_background_debug_test.go:14: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepAllocationFallbackAtHeapLimit (0.00s)
+    sweep_background_test.go:31: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepThresholdAndSingleProcessorRemainWorkerFree (0.00s)
+    sweep_background_test.go:69: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepCloseJoinsBeforeUnmapping (0.00s)
+    sweep_background_test.go:84: gc: throughput heap exhausted
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.915s
+FAIL
+
+Traceback (most recent call last):
+  File "/tmp/wago-deferred-final-matrix.py", line 16, in <module>
+    run('gc-final-padded-core',['go','test','-count=1','-tags','wago_gc_struct_headers wago_gc_workers wago_gc_concurrent wagodebug','./src/core/runtime/gc/native'])
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/wago-deferred-final-matrix.py", line 8, in run
+    subprocess.run(['python3','/tmp/wago-deferred-run.py',label,*map(str,args)],cwd=cwd,env=dict(env,**extra),check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['python3', '/tmp/wago-deferred-run.py', 'gc-final-padded-core', 'go', 'test', '-count=1', '-tags', 'wago_gc_struct_headers wago_gc_workers wago_gc_concurrent wagodebug', './src/core/runtime/gc/native']' returned non-zero exit status 1.

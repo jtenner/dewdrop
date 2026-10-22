@@ -1,0 +1,16 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkBackingGrowth/stable-2         	     384	    308025 ns/op	         0 copied-B/op	     128 B/op	       2 allocs/op
+BenchmarkBackingGrowth/stable-2         	     386	    311693 ns/op	         0 copied-B/op	     128 B/op	       2 allocs/op
+BenchmarkBackingGrowth/stable-2         	     388	    309957 ns/op	         0 copied-B/op	     128 B/op	       2 allocs/op
+BenchmarkBackingGrowth/stable-2         	     382	    309118 ns/op	         0 copied-B/op	     128 B/op	       2 allocs/op
+BenchmarkBackingGrowth/stable-2         	     370	    310197 ns/op	         0 copied-B/op	     128 B/op	       2 allocs/op
+BenchmarkBackingGrowth/portable-2       	     216	    512077 ns/op	   2547712 copied-B/op	 3908120 B/op	      14 allocs/op
+BenchmarkBackingGrowth/portable-2       	     247	    596172 ns/op	   2547712 copied-B/op	 3908097 B/op	      14 allocs/op
+BenchmarkBackingGrowth/portable-2       	     224	    522969 ns/op	   2547712 copied-B/op	 3908096 B/op	      14 allocs/op
+BenchmarkBackingGrowth/portable-2       	     169	    611267 ns/op	   2547712 copied-B/op	 3908096 B/op	      14 allocs/op
+BenchmarkBackingGrowth/portable-2       	     218	    684441 ns/op	   2547712 copied-B/op	 3908096 B/op	      14 allocs/op
+PASS
+ok  	github.com/wago-org/wago/src/core/runtime/gc/native	1.670s

@@ -1,0 +1,89 @@
+{
+  "base": "9d84600f1580a3a68ba46f1e262695d85a661d7c",
+  "head": "7f748b9ed0cb2822a69af4913871ccb0a1aa193f",
+  "branch": "dewdrop/gc-deferred-20261022",
+  "worktree": "/tmp/wago-gc-deferred-20261022",
+  "patches": [
+    {
+      "name": "0001-gc-reserve-stable-virtual-backing-for-throughput-hea.patch",
+      "sha256": "cb57cf5b357f157b5e4c2fbdbec088abe291ac914bc5688e0f4ef6e0a9f54ddb"
+    },
+    {
+      "name": "0002-gc-bind-handle-bases-directly-to-native-instance-vie.patch",
+      "sha256": "d212ed42e2a3e265876221d84b99cfed146e09c015cd7d185f0ff4b364967ef2"
+    },
+    {
+      "name": "0003-gc-keep-canonical-types-in-hot-handles-and-move-card.patch",
+      "sha256": "34de9b95b87a90997efdae4624d4df04673f52c1c4148be0a1a61bb5fb421636"
+    },
+    {
+      "name": "0004-gc-remove-duplicate-object-headers-and-retain-checke.patch",
+      "sha256": "00598bc323ef5afc4fe05edf89b07bb6d78654249a9d9fbe9a878b1ff1710303"
+    },
+    {
+      "name": "0005-gc-retain-compact-objects-and-free-remainders-in-a-1.patch",
+      "sha256": "7e0622f5b48c1eb02d544139a46279bdfd4ff8a816e30c1d74b8319b4d92b37c"
+    },
+    {
+      "name": "0006-gc-add-opt-in-Immix-region-and-free-line-allocation.patch",
+      "sha256": "14a865e70b6691b70a13e48ed9dd097b37ae73c4c0c96d5001d8f3db889cec1f"
+    },
+    {
+      "name": "0007-gc-trace-Immix-with-packed-marks-and-reclaim-empty-r.patch",
+      "sha256": "13a2e28168e49d56e17cf3848cb87edcc9e7e8b06ace41b0637d25d0fc9f48b6"
+    },
+    {
+      "name": "0008-gc-bound-Immix-promotion-batches-and-restore-idle-cl.patch",
+      "sha256": "91053a7adab8d5e2c19e7c2f6542ec7f487ed5e696f4f74835745b1a5c1ba824"
+    },
+    {
+      "name": "0009-gc-compact-sparse-Immix-regions-through-stable-handl.patch",
+      "sha256": "0faeaa12124cb1f61a78e7a30dce7f618cd2f8894950e930c6667386a264e6a5"
+    },
+    {
+      "name": "0010-gc-enforce-compact-handle-bounds-before-portable-gro.patch",
+      "sha256": "d4636d70a68dfb7772d1949064688b349dea9362c552e9bb0924ec0cf5f83850"
+    },
+    {
+      "name": "0011-gc-add-optional-bounded-cycle-telemetry-and-executio.patch",
+      "sha256": "2842be5a829ddcb24adfcf0184996707278b375dacf9dd40b809b4016098194a"
+    },
+    {
+      "name": "0012-gc-sweep-quarantined-Immix-metadata-in-a-bounded-bac.patch",
+      "sha256": "811bf04129b9a4470bb6dadcc4a16dcee7c9014faeeaad211198c89172796954"
+    },
+    {
+      "name": "0013-gc-add-thresholded-parallel-marking-with-bounded-wor.patch",
+      "sha256": "ed27f7ddf24dde6da23e3da764b0fc847534ae36174e964f38a86b1c15bf7df7"
+    },
+    {
+      "name": "0014-gc-copy-planned-survivor-and-old-destinations-in-par.patch",
+      "sha256": "debc9b4c30220e9004b6e7e09497ceab51df6e72664fc5c24904af101591528a"
+    },
+    {
+      "name": "0015-gc-bound-handle-growth-by-platform-slice-capacity.patch",
+      "sha256": "cc5b2f88bb468d80bb9458b504bc97a14c12836fd56a59fa19e2190d22e2aa21"
+    },
+    {
+      "name": "0016-gc-publish-large-region-ownership-after-all-reuse-hi.patch",
+      "sha256": "034474eb31bf6df740f35e0391f4cc87b413b4626a4bbe5c4f4f7e5249b7c7ab"
+    },
+    {
+      "name": "0017-gc-add-bounded-opt-in-concurrent-graph-marking.patch",
+      "sha256": "fe8df04e9393684a4299e9bbf353a6b05e6dece5220564328be23cbd709a57a3"
+    },
+    {
+      "name": "0018-gc-retain-portable-cold-card-capacity-in-native-view.patch",
+      "sha256": "f12afdc1d717c11f66f0982d367c9ec75504b19d49a010201f446003e8a9aed7"
+    },
+    {
+      "name": "0019-gc-validate-region-fixtures-in-both-physical-header-.patch",
+      "sha256": "9adfae820192f9f52ad30b2aa27ae26099610b873932bbe1b9b7f57232598e58"
+    },
+    {
+      "name": "0020-docs-record-final-deferred-GC-qualification-and-defa.patch",
+      "sha256": "a8ef84a6c9a1e526d4bebb3bd9ffa13088020a1d0acbb0be52fb3a28d87af11b"
+    }
+  ],
+  "arm64_user_file_sha256": "33b8f91b38727df8487afc9c7a99d6c59bca0ed5d8be1b927c0ad6fefa2f0818"
+}

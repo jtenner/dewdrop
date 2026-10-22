@@ -1,0 +1,65 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkImmixFullCollection/chain/n4096/allocator0-2         	      20	     73306 ns/op	      4096 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator0-2         	      20	     74365 ns/op	      4096 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator0-2         	      20	     75044 ns/op	      4096 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator0-2         	      20	     90587 ns/op	      4096 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator0-2         	      20	     74642 ns/op	      4096 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator2-2         	      20	    152921 ns/op	      4096 live-objects	      2460 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator2-2         	      20	    136486 ns/op	      4096 live-objects	      2460 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator2-2         	      20	    137885 ns/op	      4096 live-objects	      2460 region-meta-B	      26 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator2-2         	      20	    139633 ns/op	      4096 live-objects	      2460 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n4096/allocator2-2         	      20	    137681 ns/op	      4096 live-objects	      2460 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator0-2  	      20	     39751 ns/op	      4097 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator0-2  	      20	     39890 ns/op	      4097 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator0-2  	      20	     39950 ns/op	      4097 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator0-2  	      20	     39593 ns/op	      4097 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator0-2  	      20	     39099 ns/op	      4097 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator2-2  	      20	     43572 ns/op	      4097 live-objects	      3752 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator2-2  	      20	     43449 ns/op	      4097 live-objects	      3752 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator2-2  	      20	     43771 ns/op	      4097 live-objects	      3752 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator2-2  	      20	     44226 ns/op	      4097 live-objects	      3752 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n4096/allocator2-2  	      20	     44068 ns/op	      4097 live-objects	      3752 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator0-2         	      20	      2482 ns/op	        41.00 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator0-2         	      20	      2351 ns/op	        41.00 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator0-2         	      20	      2392 ns/op	        41.00 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator0-2         	      20	      2386 ns/op	        41.00 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator0-2         	      20	      2377 ns/op	        41.00 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator2-2         	      20	      8013 ns/op	        41.00 live-objects	      2452 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator2-2         	      20	      8015 ns/op	        41.00 live-objects	      2452 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator2-2         	      20	      8332 ns/op	        41.00 live-objects	      2452 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator2-2         	      20	      8678 ns/op	        41.00 live-objects	      2452 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator2-2         	      20	      7963 ns/op	        41.00 live-objects	      2452 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator0-2                 	      20	   1192893 ns/op	     65536 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator0-2                 	      20	   1190880 ns/op	     65536 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator0-2                 	      20	   1209904 ns/op	     65536 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator0-2                 	      20	   1194161 ns/op	     65536 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator0-2                 	      20	   1191454 ns/op	     65536 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator2-2                 	      20	   2231282 ns/op	     65536 live-objects	     44180 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator2-2                 	      20	   2213348 ns/op	     65536 live-objects	     44180 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator2-2                 	      20	   2184720 ns/op	     65536 live-objects	     44180 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator2-2                 	      20	   2226643 ns/op	     65536 live-objects	     44180 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/chain/n65536/allocator2-2                 	      20	   2205873 ns/op	     65536 live-objects	     44180 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator0-2          	      20	    640455 ns/op	     65537 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator0-2          	      20	    644042 ns/op	     65537 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator0-2          	      20	    646384 ns/op	     65537 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator0-2          	      20	    645901 ns/op	     65537 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator0-2          	      20	    646598 ns/op	     65537 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator2-2          	      20	    711078 ns/op	     65537 live-objects	     57664 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator2-2          	      20	    711640 ns/op	     65537 live-objects	     57664 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator2-2          	      20	    713164 ns/op	     65537 live-objects	     57664 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator2-2          	      20	    714318 ns/op	     65537 live-objects	     57664 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/scalar-array/n65536/allocator2-2          	      20	    714152 ns/op	     65537 live-objects	     57664 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator0-2        	      20	     36728 ns/op	       656.0 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator0-2        	      20	     46580 ns/op	       656.0 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator0-2        	      20	     39046 ns/op	       656.0 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator0-2        	      20	     37552 ns/op	       656.0 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator0-2        	      20	     36911 ns/op	       656.0 live-objects	         0 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator2-2        	      20	    131224 ns/op	       656.0 live-objects	     44172 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator2-2        	      20	    127505 ns/op	       656.0 live-objects	     44172 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator2-2        	      20	    128598 ns/op	       656.0 live-objects	     44172 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator2-2        	      20	    130102 ns/op	       656.0 live-objects	     44172 region-meta-B	      24 B/op	       1 allocs/op
+BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator2-2        	      20	    131776 ns/op	       656.0 live-objects	     44172 region-meta-B	      24 B/op	       1 allocs/op
+PASS

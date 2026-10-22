@@ -1,0 +1,16 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "12,14",
+    "go",
+    "test",
+    "-run=^$",
+    "-bench=^BenchmarkBackingGrowth$",
+    "-benchtime=100ms",
+    "-count=5",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 1.9750884590030182,
+  "exit_code": 0
+}

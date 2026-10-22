@@ -1,0 +1,13 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/arm64-bindings-backend.test",
+    "./src/core/compiler/backend/railshot/arm64"
+  ],
+  "seconds": 7.117770161989029,
+  "exit_code": 0,
+  "output": ""
+}

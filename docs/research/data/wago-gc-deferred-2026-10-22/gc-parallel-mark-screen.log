@@ -1,0 +1,23 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkParallelFullMark/n4096/workers1-4         	       5	    193570 ns/op	    211057 max-pause-ns	    211057 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n4096/workers1-4         	       5	    212034 ns/op	    249078 max-pause-ns	    249078 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n4096/workers1-4         	       5	    211800 ns/op	    229631 max-pause-ns	    229631 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-4       	       5	  18255479 ns/op	  24290846 max-pause-ns	  24290846 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-4       	       5	  17163731 ns/op	  22299022 max-pause-ns	  22299022 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-4       	       5	  15694156 ns/op	  20390435 max-pause-ns	  20390435 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n4096/workers2-4         	       5	    235751 ns/op	    271571 max-pause-ns	    271571 p99-pause-ns	     28960 parallel-scratch-B	       267.0 steals	     593 B/op	       9 allocs/op
+BenchmarkParallelFullMark/n4096/workers2-4         	       5	    188406 ns/op	    203192 max-pause-ns	    203192 p99-pause-ns	     26784 parallel-scratch-B	       284.0 steals	     542 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n4096/workers2-4         	       5	    181713 ns/op	    196459 max-pause-ns	    196459 p99-pause-ns	     26784 parallel-scratch-B	       277.0 steals	     344 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-4       	       5	  19827457 ns/op	  22423457 max-pause-ns	  22423457 p99-pause-ns	    908032 parallel-scratch-B	       578.0 steals	   22180 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-4       	       5	  20861850 ns/op	  21803201 max-pause-ns	  21803201 p99-pause-ns	    901120 parallel-scratch-B	       418.0 steals	   14011 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-4       	       5	  21292218 ns/op	  23083698 max-pause-ns	  23083698 p99-pause-ns	    901120 parallel-scratch-B	       368.0 steals	   19464 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n4096/workers4-4         	       5	    219901 ns/op	    260329 max-pause-ns	    260329 p99-pause-ns	     28320 parallel-scratch-B	       171.0 steals	    7630 B/op	      15 allocs/op
+BenchmarkParallelFullMark/n4096/workers4-4         	       5	    322075 ns/op	    348836 max-pause-ns	    348836 p99-pause-ns	     43680 parallel-scratch-B	       190.0 steals	   11976 B/op	      18 allocs/op
+BenchmarkParallelFullMark/n4096/workers4-4         	       5	    348052 ns/op	    368693 max-pause-ns	    368693 p99-pause-ns	     36128 parallel-scratch-B	       219.0 steals	   10833 B/op	      16 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-4       	       5	  27567295 ns/op	  28584116 max-pause-ns	  28584116 p99-pause-ns	   1023232 parallel-scratch-B	       553.0 steals	   59192 B/op	      17 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-4       	       5	  19495594 ns/op	  20160693 max-pause-ns	  20160693 p99-pause-ns	   1022464 parallel-scratch-B	       829.0 steals	   66868 B/op	      16 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-4       	       5	  22002309 ns/op	  23023595 max-pause-ns	  23023595 p99-pause-ns	   1017088 parallel-scratch-B	       565.0 steals	   78270 B/op	      17 allocs/op
+PASS

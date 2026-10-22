@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/advice-windows-arm64.test",
+    "./internal/virtualmem"
+  ],
+  "seconds": 0.2455889229895547,
+  "exit": 0,
+  "user_seconds": 0.224651,
+  "system_seconds": 0.09745999999999999,
+  "peak_rss_kib": 103328,
+  "minor_faults": 8404,
+  "major_faults": 6
+}

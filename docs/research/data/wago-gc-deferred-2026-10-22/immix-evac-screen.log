@@ -1,0 +1,10 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkImmixSparseEvacuation-2   	      20	     93922 ns/op	     98304 empty-region-B	    143012 scratch-B
+BenchmarkImmixSparseEvacuation-2   	      20	     92588 ns/op	     98304 empty-region-B	    143012 scratch-B
+BenchmarkImmixSparseEvacuation-2   	      20	    101705 ns/op	     98304 empty-region-B	    143012 scratch-B
+BenchmarkImmixSparseEvacuation-2   	      20	     94390 ns/op	     98304 empty-region-B	    143012 scratch-B
+BenchmarkImmixSparseEvacuation-2   	      20	     90865 ns/op	     98304 empty-region-B	    143012 scratch-B
+PASS

@@ -1,0 +1,5 @@
+--- FAIL: TestImmixProfileAdmission (0.00s)
+    immix_test.go:10: Immix portable=false: gc: profile throughput requires paged size-class allocator and generational runtime
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	0.002s
+FAIL

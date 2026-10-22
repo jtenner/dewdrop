@@ -1,0 +1,36 @@
+START gc-final-padded-wago-build
+{"command": ["go", "test", "-c", "-tags", "wago_gc_struct_headers", "-o", "/tmp/wago-gc-deferred-evidence/final-padded.test", "./src/wago"], "seconds": 25.925421075007762, "exit": 0, "user_seconds": 44.994405, "system_seconds": 1.000157, "peak_rss_kib": 3494224, "minor_faults": 84360, "major_faults": 7, "voluntary_context_switches": 9275, "involuntary_context_switches": 1195}
+
+START gc-final-padded-native
+{"command": ["/tmp/wago-gc-deferred-evidence/final-padded.test", "-test.run=^TestGC", "-test.count=1", "-test.timeout=30s"], "seconds": 2.4627167059952626, "exit": 0, "user_seconds": 2.1637750000000002, "system_seconds": 0.211054, "peak_rss_kib": 561072, "minor_faults": 41445, "major_faults": 0, "voluntary_context_switches": 6162, "involuntary_context_switches": 136}
+PASS
+
+START gc-final-arm64-build
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-arm64.test", "./src/wago"], "seconds": 19.84579415000917, "exit": 0, "user_seconds": 34.346308, "system_seconds": 0.902207, "peak_rss_kib": 2515436, "minor_faults": 63639, "major_faults": 63, "voluntary_context_switches": 8873, "involuntary_context_switches": 1269}
+
+START gc-final-arm64-native
+{"command": ["qemu-aarch64", "/tmp/wago-gc-deferred-evidence/final-arm64.test", "-test.run=^TestGC", "-test.skip=^TestGCReducedBatchHonorsDeadline$", "-test.count=1", "-test.timeout=30s"], "seconds": 9.055315245001111, "exit": 0, "user_seconds": 9.322201, "system_seconds": 0.215023, "peak_rss_kib": 625324, "minor_faults": 29574, "major_faults": 7, "voluntary_context_switches": 13507, "involuntary_context_switches": 520}
+PASS
+
+START gc-final-arm64-guards-build
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-arm64-backend.test", "./src/core/compiler/backend/railshot/arm64"], "seconds": 5.331673487002263, "exit": 0, "user_seconds": 8.923541, "system_seconds": 0.285238, "peak_rss_kib": 715836, "minor_faults": 24997, "major_faults": 7, "voluntary_context_switches": 2417, "involuntary_context_switches": 422}
+
+START gc-final-arm64-guards
+{"command": ["qemu-aarch64", "/tmp/wago-gc-deferred-evidence/final-arm64-backend.test", "-test.run=TestGCObject", "-test.count=1"], "seconds": 0.07996945899503771, "exit": 0, "user_seconds": 0.07314799999999999, "system_seconds": 0.009889, "peak_rss_kib": 32480, "minor_faults": 1799, "major_faults": 0, "voluntary_context_switches": 1665, "involuntary_context_switches": 7}
+PASS
+
+START gc-final-cross-darwin-amd64
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-native-darwin-amd64.test", "./src/core/runtime/gc/native"], "seconds": 2.3742613709910074, "exit": 0, "user_seconds": 3.970156, "system_seconds": 0.212259, "peak_rss_kib": 322348, "minor_faults": 24656, "major_faults": 11, "voluntary_context_switches": 2533, "involuntary_context_switches": 156}
+
+START gc-final-cross-darwin-arm64
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-native-darwin-arm64.test", "./src/core/runtime/gc/native"], "seconds": 2.3950028830004157, "exit": 0, "user_seconds": 4.017091, "system_seconds": 0.22042699999999998, "peak_rss_kib": 322160, "minor_faults": 25452, "major_faults": 12, "voluntary_context_switches": 2732, "involuntary_context_switches": 206}
+
+START gc-final-cross-windows-amd64
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-native-windows-amd64.test", "./src/core/runtime/gc/native"], "seconds": 2.3758470299944747, "exit": 0, "user_seconds": 3.913949, "system_seconds": 0.22836099999999998, "peak_rss_kib": 330772, "minor_faults": 25958, "major_faults": 14, "voluntary_context_switches": 2403, "involuntary_context_switches": 185}
+
+START gc-final-cross-windows-arm64
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-native-windows-arm64.test", "./src/core/runtime/gc/native"], "seconds": 2.3304069000005256, "exit": 0, "user_seconds": 3.914948, "system_seconds": 0.19763599999999998, "peak_rss_kib": 320320, "minor_faults": 23479, "major_faults": 7, "voluntary_context_switches": 2602, "involuntary_context_switches": 284}
+
+START gc-final-cross-linux-386
+{"command": ["go", "test", "-c", "-o", "/tmp/wago-gc-deferred-evidence/final-native-linux-386.test", "./src/core/runtime/gc/native"], "seconds": 6.277064371999586, "exit": 0, "user_seconds": 14.07215, "system_seconds": 1.141572, "peak_rss_kib": 299132, "minor_faults": 149542, "major_faults": 5, "voluntary_context_switches": 27062, "involuntary_context_switches": 1257}
+

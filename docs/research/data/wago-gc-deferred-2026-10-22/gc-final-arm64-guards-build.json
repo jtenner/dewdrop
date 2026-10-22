@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-arm64-backend.test",
+    "./src/core/compiler/backend/railshot/arm64"
+  ],
+  "seconds": 5.331673487002263,
+  "exit": 0,
+  "user_seconds": 8.923541,
+  "system_seconds": 0.285238,
+  "peak_rss_kib": 715836,
+  "minor_faults": 24997,
+  "major_faults": 7,
+  "voluntary_context_switches": 2417,
+  "involuntary_context_switches": 422
+}

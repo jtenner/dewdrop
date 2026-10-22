@@ -1,0 +1,4 @@
+# github.com/wago-org/wago/src/core/runtime/gc/native [github.com/wago-org/wago/src/core/runtime/gc/native.test]
+src/core/runtime/gc/native/mark_parallel_enabled.go:185:42: undefined: HeaderAuxOffset
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native [build failed]
+FAIL

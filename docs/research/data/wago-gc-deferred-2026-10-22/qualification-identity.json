@@ -1,0 +1,16 @@
+{
+  "base": "9d84600f1580a3a68ba46f1e262695d85a661d7c",
+  "candidate": "fb81101d051eb26b1364603eddf311d2bb293317",
+  "private_fork_files": [
+    "src/wago/managed_instances.go",
+    "src/wago/reference_store.go",
+    "src/wago/runtime.go"
+  ],
+  "combined_patch_sha256": "ab5c89242a3747edf137214776b1fdb7eedcea28492a83e965a9b81d162406c3",
+  "candidate_source": "/tmp/wago-gc-deferred-evidence/final-source",
+  "host_source": "/tmp/wago-gc-deferred-evidence/final-host-source",
+  "note": "Frozen matched host; current Dewdrop Facet host is not replaced. The combined patch hash records the origin snapshot; later test/docs are overlaid and recorded in the manifest.",
+  "snapshot_origin_commit": "c1f9d285315a5fd5e132d60a07712afe8c7feca2",
+  "candidate_overlay": "fb81101d0 contains only test/documentation changes after the origin",
+  "qualified_production_source_manifest": "source-final-manifest.json"
+}

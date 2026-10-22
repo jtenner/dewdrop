@@ -1,0 +1,11 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkBackgroundSweepOverlap/backgroundfalse-2         	       5	   2265455 ns/op	         0 background-elapsed-ns	   1986751 gc-pause-ns	    277722 mutator-ns
+BenchmarkBackgroundSweepOverlap/backgroundfalse-2         	       5	   2262226 ns/op	         0 background-elapsed-ns	   1953392 gc-pause-ns	    307887 mutator-ns
+BenchmarkBackgroundSweepOverlap/backgroundfalse-2         	       5	   2445851 ns/op	         0 background-elapsed-ns	   2136627 gc-pause-ns	    308065 mutator-ns
+BenchmarkBackgroundSweepOverlap/backgroundtrue-2          	       5	   2661515 ns/op	    111604 background-elapsed-ns	   2342745 gc-pause-ns	    317416 mutator-ns
+BenchmarkBackgroundSweepOverlap/backgroundtrue-2          	       5	   2138734 ns/op	    116066 background-elapsed-ns	   1875744 gc-pause-ns	    261806 mutator-ns
+BenchmarkBackgroundSweepOverlap/backgroundtrue-2          	       5	   2367784 ns/op	    108133 background-elapsed-ns	   2062990 gc-pause-ns	    303500 mutator-ns
+PASS

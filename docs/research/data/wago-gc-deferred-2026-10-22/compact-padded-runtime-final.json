@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags=wago_gc_struct_headers",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 3.8786127749917796,
+  "exit": 0,
+  "user_seconds": 5.154512,
+  "system_seconds": 0.256496,
+  "peak_rss_kib": 297280,
+  "minor_faults": 41810,
+  "major_faults": 4
+}

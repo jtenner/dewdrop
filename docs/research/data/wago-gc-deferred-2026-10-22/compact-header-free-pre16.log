@@ -1,0 +1,25 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCompactStructLayout/i32-2         	   10000	        84.43 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-2         	   10000	        89.08 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-2         	   10000	       115.1 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-2         	   10000	        81.93 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-2         	   10000	        82.98 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/two-i64-2     	   10000	        86.72 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        16.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/two-i64-2     	   10000	        81.65 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        16.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/two-i64-2     	   10000	        81.03 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        16.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/two-i64-2     	   10000	        81.03 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        16.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/two-i64-2     	   10000	        83.26 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        16.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/ref-i32-2     	   10000	        89.80 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/ref-i32-2     	   10000	        98.95 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/ref-i32-2     	   10000	        97.92 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/ref-i32-2     	   10000	        94.11 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/ref-i32-2     	   10000	        96.78 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	         8.000 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-v128-2    	   10000	        85.78 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        32.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-v128-2    	   10000	        85.99 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        32.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-v128-2    	   10000	        80.80 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        32.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-v128-2    	   10000	        84.55 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        32.00 logical-B/object	       9 B/op	       0 allocs/op
+BenchmarkCompactStructLayout/i32-v128-2    	   10000	        88.21 ns/op	        32.00 allocated-B/object	   2588672 committed-B	        16.00 hot-B/object	        32.00 logical-B/object	       9 B/op	       0 allocs/op
+PASS

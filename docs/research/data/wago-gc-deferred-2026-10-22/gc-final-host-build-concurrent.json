@@ -1,0 +1,22 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-tags",
+    "wago_gc_workers wago_gc_concurrent",
+    "-ldflags=-X=main.runtimePatchIdentity=deferred-final-concurrent",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/concurrent-host",
+    "."
+  ],
+  "seconds": 7.575281112003722,
+  "exit": 0,
+  "user_seconds": 12.63129,
+  "system_seconds": 0.5733389999999999,
+  "peak_rss_kib": 540232,
+  "minor_faults": 61541,
+  "major_faults": 5,
+  "voluntary_context_switches": 6397,
+  "involuntary_context_switches": 603
+}

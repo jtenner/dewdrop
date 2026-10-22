@@ -1,0 +1,21 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-tags",
+    "wago_gc_workers wago_gc_concurrent wago_regalloccheck",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/wago-concurrent-regalloc.test",
+    "./src/wago"
+  ],
+  "seconds": 22.909198142995592,
+  "exit": 0,
+  "user_seconds": 39.545058,
+  "system_seconds": 0.889015,
+  "peak_rss_kib": 3522588,
+  "minor_faults": 62169,
+  "major_faults": 5,
+  "voluntary_context_switches": 6751,
+  "involuntary_context_switches": 1256
+}

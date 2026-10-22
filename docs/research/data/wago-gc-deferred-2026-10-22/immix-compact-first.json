@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-run",
+    "TestImmixSparseCompaction",
+    "-count=1",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 0.17744631199457217,
+  "exit": 1,
+  "user_seconds": 0.186295,
+  "system_seconds": 0.045351999999999996,
+  "peak_rss_kib": 91560,
+  "minor_faults": 4069,
+  "major_faults": 0
+}

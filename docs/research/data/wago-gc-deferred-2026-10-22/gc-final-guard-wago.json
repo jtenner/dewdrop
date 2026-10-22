@@ -1,0 +1,21 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "wago_guardpage",
+    "-run",
+    "^TestGC",
+    "./src/wago"
+  ],
+  "seconds": 20.3997889989987,
+  "exit": 0,
+  "user_seconds": 34.876572,
+  "system_seconds": 0.929229,
+  "peak_rss_kib": 2657980,
+  "minor_faults": 77234,
+  "major_faults": 5,
+  "voluntary_context_switches": 10370,
+  "involuntary_context_switches": 1501
+}

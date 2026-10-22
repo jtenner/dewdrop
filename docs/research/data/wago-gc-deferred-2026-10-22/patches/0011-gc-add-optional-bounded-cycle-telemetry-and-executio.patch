@@ -1,0 +1,577 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 03:37:58 +0000
+Subject: [PATCH 11/20] gc: add optional bounded cycle telemetry and execution
+ controls
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  18 ++++
+ .../runtime/gc/native/card_driven_test.go     |   6 +-
+ src/core/runtime/gc/native/collect.go         |  26 ++++-
+ src/core/runtime/gc/native/collector.go       |   3 +
+ src/core/runtime/gc/native/config.go          |   3 +
+ src/core/runtime/gc/native/execution.go       |  73 +++++++++++++
+ .../runtime/gc/native/execution_disabled.go   |  16 +++
+ .../runtime/gc/native/execution_enabled.go    | 100 ++++++++++++++++++
+ .../gc/native/execution_product_test.go       |  32 ++++++
+ src/core/runtime/gc/native/execution_test.go  |  38 +++++++
+ src/core/runtime/gc/native/immix.go           |   1 +
+ .../gc/native/major_blocks_coverage_test.go   |   4 +-
+ src/wago/api.go                               |   4 +
+ src/wago/gc_execution_config_test.go          |  19 ++++
+ src/wago/reference_store.go                   |   8 +-
+ wago.go                                       |   4 +
+ 16 files changed, 347 insertions(+), 8 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/execution.go
+ create mode 100644 src/core/runtime/gc/native/execution_disabled.go
+ create mode 100644 src/core/runtime/gc/native/execution_enabled.go
+ create mode 100644 src/core/runtime/gc/native/execution_product_test.go
+ create mode 100644 src/core/runtime/gc/native/execution_test.go
+ create mode 100644 src/wago/gc_execution_config_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 34a34ab08..f1f414771 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -346,3 +346,21 @@ The final handle-bound audit applies compact-reference index limits before both
+ mapped and portable fast returns. Negative growth requests and index overflow
+ produce diagnostic errors without allocating or publishing. Boundary tests cover
+ both backing products.
++
++## Collection execution prerequisite: opt-in cycle records
++
++The wago_gc_workers build product admits GCConfig.Execution for collecting
++Immix heaps. Default/minimal and Tiny products reject it explicitly; nil keeps
++clocks, history and workers off. Options are copied and shared-domain admission
++compares their values. Counts above 128 and incompatible profiles are errors.
++The config gains one optional pointer (+8 collector bytes after alignment); all
++exact size/offset assertions are updated. The optional owner lives in Immix.
++
++Telemetry retains the last 64 full/minor cycles, phase and pause/wall times,
++object/heap counts, failures and worker counts. Snapshot output is copied.
++Reported worker time will be summed elapsed time, not OS CPU time. p99/max use
++the bounded recent pause window. External process/PMU records are still needed
++for CPU, cache misses, synchronization and RSS. The default product compiles out
++instrumentation branches. Normal and worker-product collector suites pass;
++tests cover profile/build admission, zero default history, history wrap, copied
++options and shared-domain value equality. Worker phases land separately below.
+diff --git a/src/core/runtime/gc/native/card_driven_test.go b/src/core/runtime/gc/native/card_driven_test.go
+index 9cfd98c76..f965cca6a 100644
+--- a/src/core/runtime/gc/native/card_driven_test.go
++++ b/src/core/runtime/gc/native/card_driven_test.go
+@@ -442,8 +442,8 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	if got := unsafe.Sizeof(objectCard{}); got != 16 {
+ 		t.Fatalf("objectCard size=%d, want 16", got)
+ 	}
+-	if got := unsafe.Sizeof(Config{}); got != 68 {
+-		t.Fatalf("Config size=%d, want 68", got)
++	if got := unsafe.Sizeof(Config{}); got != 80 {
++		t.Fatalf("Config size=%d, want 80", got)
+ 	}
+ 	if got := unsafe.Sizeof(tinyScanCursor{}); got != 8 {
+ 		t.Fatalf("tinyScanCursor size=%d, want 8", got)
+@@ -462,7 +462,7 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	}
+ 	// Bounds, lazy major-block state, and one large-array list-index hint have
+ 	// fixed descriptor costs. Promotion sorting adds one bounded scratch descriptor.
+-	wantCollector := uintptr(1232) + unsafe.Sizeof((*immixHeap)(nil)) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
++	wantCollector := uintptr(1240) + unsafe.Sizeof((*immixHeap)(nil)) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
+ 	if got := unsafe.Sizeof(Collector{}); got != wantCollector {
+ 		t.Fatalf("Collector size=%d, want %d", got, wantCollector)
+ 	}
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 865b0ae5b..bfea09246 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -5,10 +5,15 @@ import (
+ 	"time"
+ )
+ 
+-func (c *Collector) CollectFull(roots RootSet) error {
++func (c *Collector) CollectFull(roots RootSet) (err error) {
+ 	if err := c.errIfClosed(); err != nil {
+ 		return err
+ 	}
++	var cycle executionCycle
++	if executionProduct {
++		cycle = c.beginExecutionCycle(CollectionFull)
++		defer func() { c.finishExecutionCycle(cycle, err) }()
++	}
+ 	c.discardNativeStructHandles()
+ 	c.discardNativeLargeArrayAllocation()
+ 	defer c.refreshNativeView()
+@@ -28,7 +33,13 @@ func (c *Collector) CollectFull(roots RootSet) error {
+ 	} else {
+ 		c.markRoots(roots)
+ 	}
++	if executionProduct {
++		cycle.markDone()
++	}
+ 	c.sweepAll()
++	if executionProduct {
++		cycle.sweepDone()
++	}
+ 	c.pruneRemembered()
+ 	c.finishFullCardMetadata()
+ 	if _, err := c.throughput.adviseIdleImmix(false); err != nil {
+@@ -40,10 +51,15 @@ func (c *Collector) CollectFull(roots RootSet) error {
+ 	return nil
+ }
+ 
+-func (c *Collector) CollectMinor(roots RootSet) error {
++func (c *Collector) CollectMinor(roots RootSet) (err error) {
+ 	if err := c.errIfClosed(); err != nil {
+ 		return err
+ 	}
++	var cycle executionCycle
++	if executionProduct {
++		cycle = c.beginExecutionCycle(CollectionMinor)
++		defer func() { c.finishExecutionCycle(cycle, err) }()
++	}
+ 	youngObjects := uint32(min(uint64(len(c.nurseryHandles)), uint64(^uint32(0))))
+ 	c.discardNativeStructHandles()
+ 	c.discardNativeLargeArrayAllocation()
+@@ -92,6 +108,9 @@ func (c *Collector) CollectMinor(roots RootSet) error {
+ 			scanned = c.drainNurseryMarkStack()
+ 		}
+ 	}
++	if executionProduct {
++		cycle.markDone()
++	}
+ 	if scanned != 0 {
+ 		var err error
+ 		if capturedPromotion && scanned < uint64(len(c.nurseryHandles)) {
+@@ -110,6 +129,9 @@ func (c *Collector) CollectMinor(roots RootSet) error {
+ 			c.finishMinorEvacuation(scanned)
+ 		}
+ 	}
++	if executionProduct {
++		cycle.copyDone()
++	}
+ 	c.finishMinorCardMetadata()
+ 	pauseNS := uint64(0)
+ 	if !policyStart.IsZero() {
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index e1fc010d3..4ceb3c567 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -38,6 +38,8 @@ const (
+ )
+ 
+ type Config struct {
++	// Execution opts into measured collection workers in the wago_gc_workers product.
++	Execution *ExecutionOptions
+ 	// NurseryBytes fixes Eden capacity when nonzero. On AMD64 the default starts
+ 	// at 64 KiB and can grow to 2 MiB after sustained survival pressure.
+ 	NurseryBytes uint32
+@@ -247,6 +249,7 @@ func NewCollector(config Config, types []TypeDesc) (*Collector, error) {
+ 		c.throughput.Close()
+ 		return nil, err
+ 	}
++	c.initExecution()
+ 	c.initNativeView()
+ 	return c, nil
+ }
+diff --git a/src/core/runtime/gc/native/config.go b/src/core/runtime/gc/native/config.go
+index ac5ea7b1a..2cbf72ad7 100644
+--- a/src/core/runtime/gc/native/config.go
++++ b/src/core/runtime/gc/native/config.go
+@@ -32,6 +32,9 @@ func normalizeConfig(cfg Config) (Config, error) {
+ 	default:
+ 		return cfg, fmt.Errorf("gc: unsupported profile %d", cfg.Profile)
+ 	}
++	if err := normalizeExecution(&cfg); err != nil {
++		return cfg, err
++	}
+ 	if cfg.Profile == ProfileTiny {
+ 		if cfg.SurvivorBytes != 0 || cfg.MinorPauseTargetMicros != 0 {
+ 			return cfg, fmt.Errorf("gc: survivor policy requires the throughput profile")
+diff --git a/src/core/runtime/gc/native/execution.go b/src/core/runtime/gc/native/execution.go
+new file mode 100644
+index 000000000..131d5fff4
+--- /dev/null
++++ b/src/core/runtime/gc/native/execution.go
+@@ -0,0 +1,73 @@
++package gc
++
++import "fmt"
++
++// ExecutionOptions enables optional region-collector machinery. Build with
++// wago_gc_workers; minimal/default and Tiny products reject this configuration.
++// Nil preserves the ordinary worker-free collector and performs no clock reads.
++type ExecutionOptions struct {
++	Telemetry       bool
++	BackgroundSweep bool
++	Workers         uint16
++	MinMarkBytes    uint64
++	MinMarkObjects  uint32
++	MinCopyBytes    uint64
++	MinSweepBytes   uint64
++}
++type CollectionKind uint8
++
++const (
++	CollectionFull CollectionKind = iota + 1
++	CollectionMinor
++	CollectionBackgroundSweep
++)
++
++// CollectionCycle is a bounded diagnostic record. WorkerNS is summed worker
++// elapsed time, not OS CPU time. Use process/thread counters for CPU and PMU data.
++type CollectionCycle struct {
++	Sequence                                                     uint64
++	Kind                                                         CollectionKind
++	Failed                                                       bool
++	Workers                                                      uint16
++	PauseNS, WallNS, MarkNS, SweepNS, CopyNS, RemarkNS, WorkerNS uint64
++	Objects                                                      uint32
++	HeapBytes                                                    uint64
++}
++type CycleTelemetry struct {
++	Cycles                 []CollectionCycle
++	Count                  uint64
++	P99PauseNS, MaxPauseNS uint64
++}
++
++func normalizeExecution(cfg *Config) error {
++	if cfg.Execution == nil {
++		return nil
++	}
++	if !executionProduct {
++		return fmt.Errorf("gc: execution options require the wago_gc_workers product")
++	}
++	if cfg.Profile != ProfileThroughput || cfg.Allocator != AllocatorImmix || cfg.DisableCollection {
++		return fmt.Errorf("gc: execution options require the collecting Immix throughput profile")
++	}
++	options := *cfg.Execution
++	if options.Workers == 0 {
++		options.Workers = 1
++	}
++	if options.Workers > 128 {
++		return fmt.Errorf("gc: worker count %d exceeds 128", options.Workers)
++	}
++	if options.MinMarkBytes == 0 {
++		options.MinMarkBytes = 8 << 20
++	}
++	if options.MinMarkObjects == 0 {
++		options.MinMarkObjects = 65536
++	}
++	if options.MinCopyBytes == 0 {
++		options.MinCopyBytes = 1 << 20
++	}
++	if options.MinSweepBytes == 0 {
++		options.MinSweepBytes = 256 << 10
++	}
++	cfg.Execution = &options
++	return nil
++}
+diff --git a/src/core/runtime/gc/native/execution_disabled.go b/src/core/runtime/gc/native/execution_disabled.go
+new file mode 100644
+index 000000000..4f1ff48f7
+--- /dev/null
++++ b/src/core/runtime/gc/native/execution_disabled.go
+@@ -0,0 +1,16 @@
++//go:build !wago_gc_workers || tinygo
++
++package gc
++
++const executionProduct = false
++
++type collectorExecution struct{}
++type executionCycle struct{}
++
++func (c *Collector) initExecution()                                    {}
++func (c *Collector) beginExecutionCycle(CollectionKind) executionCycle { return executionCycle{} }
++func (c *Collector) finishExecutionCycle(executionCycle, error)        {}
++func (t *executionCycle) markDone()                                    {}
++func (t *executionCycle) sweepDone()                                   {}
++func (t *executionCycle) copyDone()                                    {}
++func (c *Collector) CycleTelemetry() CycleTelemetry                    { return CycleTelemetry{} }
+diff --git a/src/core/runtime/gc/native/execution_enabled.go b/src/core/runtime/gc/native/execution_enabled.go
+new file mode 100644
+index 000000000..5fe0daaff
+--- /dev/null
++++ b/src/core/runtime/gc/native/execution_enabled.go
+@@ -0,0 +1,100 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import (
++	"sort"
++	"time"
++)
++
++const executionProduct = true
++const cycleHistory = 64
++
++type collectorExecution struct {
++	options  ExecutionOptions
++	cycles   [cycleHistory]CollectionCycle
++	sequence uint64
++}
++type executionCycle struct {
++	owner        *collectorExecution
++	start, phase time.Time
++	record       CollectionCycle
++}
++
++func (c *Collector) initExecution() {
++	if c.cfg.Execution != nil {
++		c.throughput.immix.execution = &collectorExecution{options: *c.cfg.Execution}
++	}
++}
++func (c *Collector) beginExecutionCycle(kind CollectionKind) executionCycle {
++	m := c.throughput.immix
++	if m == nil || m.execution == nil {
++		return executionCycle{}
++	}
++	x := m.execution
++	if !x.options.Telemetry {
++		return executionCycle{}
++	}
++	now := time.Now()
++	return executionCycle{owner: x, start: now, phase: now, record: CollectionCycle{Kind: kind, Workers: 1}}
++}
++func (t *executionCycle) markDone() {
++	if t.owner != nil {
++		now := time.Now()
++		t.record.MarkNS = uint64(now.Sub(t.phase))
++		t.phase = now
++	}
++}
++func (t *executionCycle) sweepDone() {
++	if t.owner != nil {
++		now := time.Now()
++		t.record.SweepNS = uint64(now.Sub(t.phase))
++		t.phase = now
++	}
++}
++func (t *executionCycle) copyDone() {
++	if t.owner != nil {
++		now := time.Now()
++		t.record.CopyNS = uint64(now.Sub(t.phase))
++		t.phase = now
++	}
++}
++func (c *Collector) finishExecutionCycle(t executionCycle, err error) {
++	if t.owner == nil {
++		return
++	}
++	t.record.PauseNS = uint64(time.Since(t.start))
++	t.record.WallNS = t.record.PauseNS
++	t.record.Failed = err != nil
++	t.record.Objects = uint32(len(c.handles) - min(len(c.freeHandles)+1, len(c.handles)))
++	t.record.HeapBytes = uint64(c.throughput.bump)
++	t.owner.record(t.record)
++}
++func (x *collectorExecution) record(r CollectionCycle) {
++	x.sequence++
++	r.Sequence = x.sequence
++	x.cycles[(x.sequence-1)%cycleHistory] = r
++}
++func (c *Collector) CycleTelemetry() CycleTelemetry {
++	m := c.throughput.immix
++	if m == nil || m.execution == nil {
++		return CycleTelemetry{}
++	}
++	x := m.execution
++	n := min(x.sequence, uint64(cycleHistory))
++	result := CycleTelemetry{Count: x.sequence, Cycles: make([]CollectionCycle, n)}
++	pauses := make([]uint64, 0, n)
++	for i := range result.Cycles {
++		r := x.cycles[(x.sequence-n+uint64(i))%cycleHistory]
++		result.Cycles[i] = r
++		if r.Kind != CollectionBackgroundSweep {
++			pauses = append(pauses, r.PauseNS)
++		}
++	}
++	sort.Slice(pauses, func(i, j int) bool { return pauses[i] < pauses[j] })
++	if len(pauses) > 0 {
++		result.MaxPauseNS = pauses[len(pauses)-1]
++		result.P99PauseNS = pauses[(len(pauses)*99+99)/100-1]
++	}
++	return result
++}
+diff --git a/src/core/runtime/gc/native/execution_product_test.go b/src/core/runtime/gc/native/execution_product_test.go
+new file mode 100644
+index 000000000..03a6d71e5
+--- /dev/null
++++ b/src/core/runtime/gc/native/execution_product_test.go
+@@ -0,0 +1,32 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import "testing"
++
++func TestCycleTelemetryIsBoundedAndCopiesOptions(t *testing.T) {
++	options := &ExecutionOptions{Telemetry: true, Workers: 1}
++	c := newTestCollector(t, Config{Allocator: AllocatorImmix, Execution: options})
++	options.Telemetry = false
++	for i := 0; i < 80; i++ {
++		if err := c.CollectFull(EmptyRoots{}); err != nil {
++			t.Fatal(err)
++		}
++		if err := c.CollectMinor(EmptyRoots{}); err != nil {
++			t.Fatal(err)
++		}
++	}
++	got := c.CycleTelemetry()
++	if got.Count != 160 || len(got.Cycles) != cycleHistory || got.MaxPauseNS == 0 || got.P99PauseNS > got.MaxPauseNS {
++		t.Fatalf("invalid telemetry: %+v", got)
++	}
++	for i, r := range got.Cycles {
++		if r.Sequence != uint64(97+i) || r.Failed || r.Workers != 1 || r.PauseNS == 0 || r.WallNS < r.PauseNS {
++			t.Fatalf("cycle%d: %+v", i, r)
++		}
++	}
++	got.Cycles[0].Sequence = 0
++	if c.CycleTelemetry().Cycles[0].Sequence == 0 {
++		t.Fatal("history aliases caller output")
++	}
++}
+diff --git a/src/core/runtime/gc/native/execution_test.go b/src/core/runtime/gc/native/execution_test.go
+new file mode 100644
+index 000000000..a0cd7d7a5
+--- /dev/null
++++ b/src/core/runtime/gc/native/execution_test.go
+@@ -0,0 +1,38 @@
++package gc
++
++import "testing"
++
++func TestExecutionProductAdmission(t *testing.T) {
++	options := &ExecutionOptions{Telemetry: true}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, Execution: options}, testTypes(t))
++	if !executionProduct {
++		if err == nil {
++			c.Close()
++			t.Fatal("minimal product accepted execution machinery")
++		}
++		return
++	}
++	if err != nil {
++		t.Fatal(err)
++	}
++	c.Close()
++	for _, cfg := range []Config{
++		{Profile: ProfileTiny, Execution: options},
++		{Execution: options},
++		{Allocator: AllocatorImmix, Execution: &ExecutionOptions{Workers: 129}},
++		{Allocator: AllocatorImmix, Execution: options, DisableCollection: true},
++	} {
++		if err := ValidateConfig(cfg); err == nil {
++			t.Fatalf("invalid execution config accepted: %+v", cfg)
++		}
++	}
++}
++func TestDefaultCollectorHasNoExecutionHistory(t *testing.T) {
++	c := newTestCollector(t, Config{})
++	if err := c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if got := c.CycleTelemetry(); got.Count != 0 || len(got.Cycles) != 0 {
++		t.Fatal("default collector recorded clocks/history")
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix.go b/src/core/runtime/gc/native/immix.go
+index 99c55c7e5..49728d7c9 100644
+--- a/src/core/runtime/gc/native/immix.go
++++ b/src/core/runtime/gc/native/immix.go
+@@ -61,6 +61,7 @@ func (m *immixHeap) saveEmptyClaim(block uint32) {
+ }
+ 
+ type immixHeap struct {
++	execution      *collectorExecution
+ 	regions        []immixRegion
+ 	cursors        [2]immixCursor
+ 	search         [2]uint32
+diff --git a/src/core/runtime/gc/native/major_blocks_coverage_test.go b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+index 23fbe8e7b..755496348 100644
+--- a/src/core/runtime/gc/native/major_blocks_coverage_test.go
++++ b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+@@ -102,10 +102,10 @@ func TestMajorBlocksReservationWordRevisits(t *testing.T) {
+ 
+ func TestMajorBlocksFlagUsesExistingPadding(t *testing.T) {
+ 	const batchBytes = (512 - nativeStructHandleBatch) * 4
+-	if unsafe.Offsetof(Collector{}.checkedHandles) != 3120-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3136-batchBytes {
++	if unsafe.Offsetof(Collector{}.checkedHandles) != 3128-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3144-batchBytes {
+ 		t.Fatal("native index changed existing collector offsets")
+ 	}
+-	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3160-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3160-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3160-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil))+unsafe.Sizeof([]uint32(nil)) {
++	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3168-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3168-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3168-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil))+unsafe.Sizeof([]uint32(nil)) {
+ 		t.Fatal("large-array hint and promotion scratch must follow the existing collector state")
+ 	}
+ 	if unsafe.Offsetof(Collector{}.majorYoungDirty) >= unsafe.Offsetof(Collector{}.checkedHandles) {
+diff --git a/src/wago/api.go b/src/wago/api.go
+index bc57e1c0b..66b7a446d 100644
+--- a/src/wago/api.go
++++ b/src/wago/api.go
+@@ -5605,3 +5605,7 @@ func (in *Instance) CodeBase() (base uintptr, entries []int) {
+ 
+ // GCCompactionResult reports bounded selective old-region compaction.
+ type GCCompactionResult = gc.CompactionResult
++
++// GCExecutionOptions enables opt-in collection workers in the worker product.
++type GCExecutionOptions = gc.ExecutionOptions
++type GCCycleTelemetry = gc.CycleTelemetry
+diff --git a/src/wago/gc_execution_config_test.go b/src/wago/gc_execution_config_test.go
+new file mode 100644
+index 000000000..3b4ad76ca
+--- /dev/null
++++ b/src/wago/gc_execution_config_test.go
+@@ -0,0 +1,19 @@
++package wago
++
++import "testing"
++
++func TestSharedGCExecutionConfigUsesValueEquality(t *testing.T) {
++	a := GCConfig{Execution: &GCExecutionOptions{Telemetry: true, Workers: 2}}
++	b := GCConfig{Execution: &GCExecutionOptions{Telemetry: true, Workers: 2}}
++	if !equalGCConfigs(a, b) {
++		t.Fatal("equivalent execution options rejected")
++	}
++	b.Execution.Workers = 4
++	if equalGCConfigs(a, b) {
++		t.Fatal("different execution options accepted")
++	}
++	b.Execution = nil
++	if equalGCConfigs(a, b) {
++		t.Fatal("missing options accepted")
++	}
++}
+diff --git a/src/wago/reference_store.go b/src/wago/reference_store.go
+index 70109e616..8c93c2997 100644
+--- a/src/wago/reference_store.go
++++ b/src/wago/reference_store.go
+@@ -1640,10 +1640,16 @@ func (s *referenceStore) releaseUnclaimedGCCollector(collector *gc.Collector) {
+ }
+ 
+ func equalGCConfigs(a, b gc.Config) bool {
+-	return a == b
++	left, right := a.Execution, b.Execution
++	a.Execution, b.Execution = nil, nil
++	return a == b && (left == nil && right == nil || left != nil && right != nil && *left == *right)
+ }
+ 
+ func (s *referenceStore) acquireGCCollector(ctx context.Context, config gc.Config, c *Compiled, preferred *gc.Collector) (*gc.Collector, *gcTypeMapping, error) {
++	if config.Execution != nil {
++		snapshot := *config.Execution
++		config.Execution = &snapshot
++	}
+ 	if s == nil || s.private {
+ 		return nil, nil, fmt.Errorf("wago: shared WasmGC ownership requires an explicit Runtime")
+ 	}
+diff --git a/wago.go b/wago.go
+index 30a3871c8..55f96cc43 100644
+--- a/wago.go
++++ b/wago.go
+@@ -579,3 +579,7 @@ func WithSynchronousHostCalls() InstantiateOption { return impl.WithSynchronousH
+ 
+ // GCCompactionResult reports bounded selective old-region compaction.
+ type GCCompactionResult = impl.GCCompactionResult
++
++// GCExecutionOptions enables opt-in collection workers in the worker product.
++type GCExecutionOptions = impl.GCExecutionOptions
++type GCCycleTelemetry = impl.GCCycleTelemetry

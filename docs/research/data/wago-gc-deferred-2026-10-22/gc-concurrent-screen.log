@@ -1,0 +1,17 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkConcurrentCollection/n4096/concurrentfalse-2         	       5	    504670 ns/op	    194866 max-pause-ns	    316444 mutator-ns	    194866 p99-pause-ns	    187420 pause-ns	         0 remark-ns	         0 snapshot-B	         0 worker-elapsed-ns	   20483 B/op	      10 allocs/op
+BenchmarkConcurrentCollection/n4096/concurrentfalse-2         	       5	    505694 ns/op	    195908 max-pause-ns	    318723 mutator-ns	    195908 p99-pause-ns	    186025 pause-ns	         0 remark-ns	         0 snapshot-B	         0 worker-elapsed-ns	   20483 B/op	      10 allocs/op
+BenchmarkConcurrentCollection/n4096/concurrentfalse-2         	       5	    517334 ns/op	    208672 max-pause-ns	    320149 mutator-ns	    208672 p99-pause-ns	    196403 pause-ns	         0 remark-ns	         0 snapshot-B	         0 worker-elapsed-ns	   20483 B/op	      10 allocs/op
+BenchmarkConcurrentCollection/n4096/concurrenttrue-2          	       5	    549723 ns/op	    292439 max-pause-ns	    319763 mutator-ns	    292439 p99-pause-ns	    226852 pause-ns	     39109 remark-ns	    102276 snapshot-B	     54807 worker-elapsed-ns	  291736 B/op	      34 allocs/op
+BenchmarkConcurrentCollection/n4096/concurrenttrue-2          	       5	    531585 ns/op	    216807 max-pause-ns	    319821 mutator-ns	    216807 p99-pause-ns	    209135 pause-ns	     41193 remark-ns	    102276 snapshot-B	     56732 worker-elapsed-ns	  291787 B/op	      34 allocs/op
+BenchmarkConcurrentCollection/n4096/concurrenttrue-2          	       5	    643752 ns/op	    378250 max-pause-ns	    360644 mutator-ns	    378250 p99-pause-ns	    278587 pause-ns	     46884 remark-ns	    102276 snapshot-B	     48233 worker-elapsed-ns	  291640 B/op	      33 allocs/op
+BenchmarkConcurrentCollection/n262144/concurrentfalse-2       	       5	  17722017 ns/op	  20193770 max-pause-ns	    322674 mutator-ns	  20193770 p99-pause-ns	  17391011 pause-ns	         0 remark-ns	         0 snapshot-B	         0 worker-elapsed-ns	 1076305 B/op	      12 allocs/op
+BenchmarkConcurrentCollection/n262144/concurrentfalse-2       	       5	  16325272 ns/op	  18547868 max-pause-ns	    322448 mutator-ns	  18547868 p99-pause-ns	  15994212 pause-ns	         0 remark-ns	         0 snapshot-B	         0 worker-elapsed-ns	 1076305 B/op	      12 allocs/op
+BenchmarkConcurrentCollection/n262144/concurrentfalse-2       	       5	  16395390 ns/op	  18098013 max-pause-ns	    322057 mutator-ns	  18098013 p99-pause-ns	  16064392 pause-ns	         0 remark-ns	         0 snapshot-B	         0 worker-elapsed-ns	 1076305 B/op	      12 allocs/op
+BenchmarkConcurrentCollection/n262144/concurrenttrue-2        	       5	  21173894 ns/op	  23466229 max-pause-ns	    322650 mutator-ns	  23466229 p99-pause-ns	  20839103 pause-ns	   5392822 remark-ns	   8437936 snapshot-B	   3094125 worker-elapsed-ns	23128563 B/op	      44 allocs/op
+BenchmarkConcurrentCollection/n262144/concurrenttrue-2        	       5	  23683036 ns/op	  27656451 max-pause-ns	    323930 mutator-ns	  27656451 p99-pause-ns	  23340447 pause-ns	   5501260 remark-ns	   8437936 snapshot-B	   3097348 worker-elapsed-ns	23128598 B/op	      44 allocs/op
+BenchmarkConcurrentCollection/n262144/concurrenttrue-2        	       5	  23957786 ns/op	  31614999 max-pause-ns	    323823 mutator-ns	  31614999 p99-pause-ns	  23619333 pause-ns	   6273783 remark-ns	   8437936 snapshot-B	   4029513 worker-elapsed-ns	23128531 B/op	      44 allocs/op
+PASS

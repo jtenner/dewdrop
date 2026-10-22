@@ -1,0 +1,140 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 05:16:54 +0000
+Subject: [PATCH 16/20] gc: publish large region ownership after all reuse
+ hints succeed
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  9 ++++
+ src/core/runtime/gc/native/failure.go         |  1 +
+ src/core/runtime/gc/native/immix.go           | 16 +++++++
+ .../gc/native/immix_failure_debug_test.go     | 42 +++++++++++++++++++
+ src/core/runtime/gc/native/immix_sweep.go     |  3 ++
+ 5 files changed, 71 insertions(+)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index f0610e0a9..740b46a9e 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -452,3 +452,12 @@ The portable capacity bound also respects the platform's maximum slice length.
+ Boundary tests use the platform integer maximum, so they compile on 32-bit
+ products without an overflowing constant. This is a compile/bounds check, not a
+ claim of native execution support on those targets.
++
++A later region-reuse audit found a real failure-path bug: a multi-region large
++allocation published its first region owner before the remaining OS reuse hints
++succeeded. A failure on the second hint stranded part of the bounded heap. The
++red test exhausted the heap on retry. Reuse now completes every fallible hint
++before publishing any large-region owner. Verification also rejects invalid
++large-owner extents. Injection, ownership and retry checks pass. Logical free
++regions remain reusable even if an earlier successful OS hint changed physical
++page accounting; no live payload or identity has been published at this point.
+diff --git a/src/core/runtime/gc/native/failure.go b/src/core/runtime/gc/native/failure.go
+index 198e3ff68..924aebec6 100644
+--- a/src/core/runtime/gc/native/failure.go
++++ b/src/core/runtime/gc/native/failure.go
+@@ -15,5 +15,6 @@ const (
+ 	failImmixEvacPlan
+ 	failImmixEvacDestination
+ 	failImmixEvacCommit
++	failImmixReuse
+ 	failImmixPageAdvice
+ )
+diff --git a/src/core/runtime/gc/native/immix.go b/src/core/runtime/gc/native/immix.go
+index 6b3c3c070..10c88b7c2 100644
+--- a/src/core/runtime/gc/native/immix.go
++++ b/src/core/runtime/gc/native/immix.go
+@@ -337,6 +337,10 @@ func (h *throughputHeap) allocImmix(size uint32, sp spaceKind, pointerFree bool)
+ 			if err := h.reuseImmixRegion(b); err != nil {
+ 				return handleEntry{}, err
+ 			}
++		}
++		// Finish every fallible OS reuse hint before publishing any large-region
++		// ownership. A later hint failure must leave the entire extent reusable.
++		for b := first; b < first+blocks; b++ {
+ 			m.regions[b] = immixRegion{kind: immixLarge, owner: first + 1}
+ 		}
+ 		m.regions[first].blocks = blocks
+@@ -495,6 +499,18 @@ func (h *throughputHeap) verifyImmix(handles []handleEntry, reserved []handleEnt
+ 	}
+ 	for i := range m.regions {
+ 		r := &m.regions[i]
++		if r.kind == immixLarge {
++			if r.owner == 0 || int(r.owner) > len(m.regions) {
++				return fmt.Errorf("gc: Immix region%d has invalid large owner", i)
++			}
++			first := r.owner - 1
++			owner := &m.regions[first]
++			if owner.kind != immixLarge || owner.owner != r.owner || owner.blocks == 0 || uint64(first)+uint64(owner.blocks) > uint64(len(m.regions)) || uint32(i) < first || uint32(i)-first >= owner.blocks || uint32(i) != first && r.blocks != 0 || r.occupied == 0 || r.released {
++				return fmt.Errorf("gc: Immix region%d has invalid large extent", i)
++			}
++		} else if r.owner != 0 || r.blocks != 0 || r.kind == immixEmpty && r.occupied != 0 {
++			return fmt.Errorf("gc: Immix region%d has inconsistent ownership kind", i)
++		}
+ 		if r.counts != counts[i] || r.starts != starts[i] {
+ 			return fmt.Errorf("gc: Immix region%d ownership metadata mismatch", i)
+ 		}
+diff --git a/src/core/runtime/gc/native/immix_failure_debug_test.go b/src/core/runtime/gc/native/immix_failure_debug_test.go
+index 93d58d5ad..269dcd09c 100644
+--- a/src/core/runtime/gc/native/immix_failure_debug_test.go
++++ b/src/core/runtime/gc/native/immix_failure_debug_test.go
+@@ -138,3 +138,45 @@ func TestImmixEvacuationFailureLeavesSourcesAndHandlesUnchanged(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestImmixLargeReuseFailureDoesNotPublishPartialRegionOwnership(t *testing.T) {
++	h := newImmixTestHeap(t, 4*immixBlockBytes, false)
++	e, err := h.alloc(70000, spaceLarge)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = h.free(e); err != nil {
++		t.Fatal(err)
++	}
++	if _, err = h.adviseIdleImmix(true); err != nil {
++		t.Fatal(err)
++	}
++	if !virtualmem.Supported {
++		if h.reservation != nil {
++			t.Fatal("portable target unexpectedly mapped storage")
++		}
++		return
++	}
++	if h.reservation == nil {
++		t.Fatal("supported target has no reservation")
++	}
++	cleanup := armFailure(h, failImmixReuse, 1)
++	_, err = h.alloc(70000, spaceLarge)
++	cleanup()
++	if !errors.Is(err, errInjectedFailure) {
++		t.Fatalf("reuse failure hidden: %v", err)
++	}
++	if err = h.verify([]handleEntry{{}}); err != nil {
++		t.Fatalf("failed reuse published ownership: %v", err)
++	}
++	e, err = h.alloc(70000, spaceLarge)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if e.off != 0 || h.bump != 3*immixBlockBytes {
++		t.Fatal("retry lost existing empty regions")
++	}
++	if err = h.verify([]handleEntry{{}, e}); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_sweep.go b/src/core/runtime/gc/native/immix_sweep.go
+index def25edd9..1dd6167bd 100644
+--- a/src/core/runtime/gc/native/immix_sweep.go
++++ b/src/core/runtime/gc/native/immix_sweep.go
+@@ -59,6 +59,9 @@ func (h *throughputHeap) reuseImmixRegion(block uint32) error {
+ 	h.immix.saveEmptyClaim(block)
+ 	r := &h.immix.regions[block]
+ 	if r.released && h.reservation != nil {
++		if err := injectFailure(h, failImmixReuse); err != nil {
++			return err
++		}
+ 		if err := h.reservation.Reuse(uint64(block)*uint64(immixBlockBytes), uint64(immixBlockBytes)); err != nil {
+ 			return fmt.Errorf("gc: reuse Immix region%d: %w", block, err)
+ 		}

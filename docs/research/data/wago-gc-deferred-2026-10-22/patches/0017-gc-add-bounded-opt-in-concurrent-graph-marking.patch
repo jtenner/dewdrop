@@ -1,0 +1,2549 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 05:38:46 +0000
+Subject: [PATCH 17/20] gc: add bounded opt-in concurrent graph marking
+
+---
+ .../concurrent-marking-design-2026-10-22.md   | 109 +++
+ .../deferred-gc-implementation-2026-10-22.md  |  27 +
+ .../railshot/amd64/gc_concurrent_barrier.go   |  46 ++
+ .../backend/railshot/amd64/gc_direct.go       |  10 +-
+ src/core/runtime/gc/native/alloc.go           |   5 +
+ src/core/runtime/gc/native/barrier.go         |  12 +
+ src/core/runtime/gc/native/collect.go         |  21 +-
+ src/core/runtime/gc/native/collector.go       |   3 +
+ src/core/runtime/gc/native/concurrent.go      |  23 +
+ .../gc/native/concurrent_bench_test.go        |  61 ++
+ .../runtime/gc/native/concurrent_disabled.go  |  22 +
+ .../runtime/gc/native/concurrent_enabled.go   | 680 ++++++++++++++++++
+ src/core/runtime/gc/native/concurrent_test.go | 382 ++++++++++
+ src/core/runtime/gc/native/execution.go       |  52 +-
+ .../runtime/gc/native/execution_bench_test.go |  61 ++
+ .../runtime/gc/native/execution_enabled.go    |  28 +-
+ .../gc/native/mark_parallel_enabled.go        |   2 +-
+ .../runtime/gc/native/mark_parallel_test.go   |   5 +-
+ src/core/runtime/gc/native/native_view.go     | 121 ++--
+ .../runtime/gc/native/native_view_test.go     |   8 +-
+ src/core/runtime/gc/native/storage.go         |   3 +
+ src/wago/api.go                               |  26 +
+ src/wago/gc_collect.go                        |  93 ++-
+ src/wago/gc_concurrent_amd64_test.go          | 273 +++++++
+ src/wago/instantiate.go                       |   4 +
+ wago.go                                       |  24 +
+ 26 files changed, 2011 insertions(+), 90 deletions(-)
+ create mode 100644 docs/research/concurrent-marking-design-2026-10-22.md
+ create mode 100644 src/core/compiler/backend/railshot/amd64/gc_concurrent_barrier.go
+ create mode 100644 src/core/runtime/gc/native/concurrent.go
+ create mode 100644 src/core/runtime/gc/native/concurrent_bench_test.go
+ create mode 100644 src/core/runtime/gc/native/concurrent_disabled.go
+ create mode 100644 src/core/runtime/gc/native/concurrent_enabled.go
+ create mode 100644 src/core/runtime/gc/native/concurrent_test.go
+ create mode 100644 src/wago/gc_concurrent_amd64_test.go
+
+diff --git a/docs/research/concurrent-marking-design-2026-10-22.md b/docs/research/concurrent-marking-design-2026-10-22.md
+new file mode 100644
+index 000000000..c6ae0c37b
+--- /dev/null
++++ b/docs/research/concurrent-marking-design-2026-10-22.md
+@@ -0,0 +1,109 @@
++# Bounded concurrent marking: implemented first product
++
++Status: implemented and checked in the deferred-GC series. Parallel mark/copy
++and concurrent marking still require explicit workload thresholds. The default
++collector creates no workers. This product overlaps immutable graph marking with
++mutation; final publication, sweep and all relocation remain stopped.
++
++Use a separate `wago_gc_concurrent` + `wago_gc_workers` AMD64 product. Tiny,
++non-AMD64 and default builds reject concurrent options and compile native/Go
++barrier branches out. Initial admission requires collecting Immix, a moving
++nursery, no custom instruction module at the instance API, and explicit measured
++heap/object thresholds. Default concurrent threshold remains off unless qualified.
++
++At an existing exclusive native/GC lease boundary, cancel unused native batches,
++join pending metadata sweep, capture exact standard roots and a complete immutable
++integer object graph. Offsets index stable handle IDs; edges are uint32 IDs. The
++root IDs occupy a prefix in the edge slab. Keep packed initial-alive and live bits.
++The worker reads this graph only, never current payloads, handles, descriptors,
++cards, region metadata or mappings. Bound total snapshot capacity (including
++bitmaps/offsets/queues) explicitly. Declining a snapshot or remark budget must be
++visible in status/telemetry; never perform a partial sweep.
++
++This is a snapshot-at-start proof plus an incremental-update barrier:
++- Initial exact root reachability is retained from the immutable start graph.
++  Removing/replacing edges cannot lose their former descendants.
++- Track any mutated initial parent in a dirty bitmap, including young parents and
++  old-to-old writes. Go scalar reference stores use the central storeValue hook;
++  bulk writes hook PostBulkWriteBarrier/fill/copy. Deferred stores must be covered.
++  ArrayFillNoBarrier currently permits only null/i31, which cannot insert a GC edge.
++- Native struct/array reference store leaves must dirty the validated parent at
++  their shared successful-store join (including the nursery early branch). R8 is
++  collector view, R9 parent handle entry, R11 payload base, RSI extent/byte index,
++  RDI child. RAX/RCX/RDX/R10 are scratch at that join. The card checker consumes R9, so preserve the original compact parent on the
++  stack and recover its full validated handle index from that saved word.
++  Bounds-check its bitmap word, then OR its bit. These writes need
++  no atomics: the domain permits one mutator; the graph worker never reads dirty
++  bits. Never add a load barrier or Go call to native read paths.
++- A native-view active flag occupies old padding offset212; appended dirty pointer
++  and count need exact ABI/layout guards and typed owners. Concurrent products
++  require a distinct native ABI gate (base12/13 +2), rejecting old artifacts before
++  code without barriers can run. Default append-only prefix remains compatible.
++- New objects are black. With no young collection during an active cycle, the
++  nursery-handle prefix at start stays fixed: native unused-batch cancellation
++  removes only new suffix entries. Scan every live born handle in the tail during
++  remark. Moving-nursery admission makes large births young too. ForcePromote must
++  cancel/join the concurrent cycle first, because it can remove ledger entries.
++  Dead native allocation charges publish no identities. Synchronous full collection
++  cancels the snapshot and traces exact current roots, so floating snapshot garbage
++  cannot cause a false heap-exhaustion result. Minor collection finishes bounded
++  remark first, or aborts it before its ordinary fallback. These paths run before
++  any free/reuse. Thus initial live
++  IDs cannot alias a new object while the snapshot exists.
++- At a final lease boundary, join graph work, cancel unused native reservations,
++  enumerate current exact roots, scan born objects and every dirty initial parent,
++  then trace newly reached IDs through the immutable graph. Scanning all dirty
++  parents is conservative, even if the parent was initially white. Births scan
++  current fields; dirty parents cover later insertions. Current roots cover native
++  frame-local changes. Stable references stay unchanged; only complete liveness
++  may publish to existing packed mark/line state and sweep.
++- Count roots, dirty words/parents, born handles/reference slots, queued snapshot
++  edges and other remark work against an explicit work budget. On overflow, abort
++  without sweep, expose the reason, disable barriers and retain all objects. A
++  synchronous pressure collection may then run its ordinary correct full path.
++  This bounds remark work, not OS scheduling latency; report measured p99/max.
++
++Lifecycle: worker owns typed integer arrays until joined. Close joins before
++unmapping. Start/finish use the same exact-root/native/domain locks as CollectGC.
++Nested host reentry and helper collection must finish through these paths. Root
++borrow/custom unsafe payload writers require exclusion or explicit cancellation.
++GC numeric-only raw array APIs are harmless. Audit all GC payload write paths;
++reference bulk native paths must stay helper-bound or gain the same dirty hook.
++
++Implemented checks include: SATB deletion, old-to-old/young-parent insertion, birth reference
++fields, all Go/bulk/deferred and native write leaves, array bounds/trap order,
++changing roots and host reentry, shared collectors, helper minor/full, abort/finish
++retry, ForcePromote cancellation, close, snapshot/remark budgets, artifact reload,
++ABI rejection, race tests, minimal/Tiny exclusion, and CPU/pause/RSS/throughput
++measurement with the feature off/on. No speed gain is assumed.
++
++
++Snapshot storage uses two-pass exact CSR allocation, including zero reference
++slots, packed alive/live/pending/dirty bits and type-count workspace. Both byte
++capacity and decode work are bounded. Mostly-null arrays and duplicate roots
++cannot evade the CPU bound. Growth during remark counts the temporary old and
++new bitmaps against the memory limit. The worker observes immutable integer
++storage only; channel join publishes its results before mutator-owned remark.
++
++`AutoConcurrent` is an optional paced controller at existing exact allocation
++and minor-collection safepoints. It requires `ConcurrentMark`; neither enables a
++zero byte threshold. At least 64 allocations separate start attempts. Single-
++processor execution declines automatic work. Expected snapshot/remark resource
++declines remain visible in counters/status and preserve the ordinary allocation
++path. Invariant failures remain errors. Manual start/finish remains available.
++
++The native tests cover both original and reloaded artifacts, young and promoted
++parents, distant struct cards, array leaves, host reentry, shared collector roots,
++and automatic native allocation refill. Core tests cover cancellation, deletion,
++insertion, births, bulk/deferred stores, budgets, close, exact pressure fallback
++and race instrumentation. The full validation manifest is recorded separately.
++
++Five ten-cycle screens on CPUs 12/14, GOMAXPROCS=2, compare a Go graph mutator.
++At 262,144 nodes the median cycle wall time falls from 16.423 to 15.176 ms;
++measured pause falls from 16.094 to 14.825 ms. Snapshot storage is 6,422,608 bytes
++and allocation about 6.51 MB/cycle. At 4,096 nodes the candidate is slightly slower.
++Whole mixed-run peak RSS is 50,036 KiB. These are screening data, not a Wasm
++compiler result. No default concurrent threshold is justified by this screen.
++Linux perf_event_open denied hardware counters with errno 1; elapsed worker
++measurements are not CPU measurements. Process CPU and context switches are saved
++by the external runner.
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 740b46a9e..942fee97f 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -461,3 +461,30 @@ before publishing any large-region owner. Verification also rejects invalid
+ large-owner extents. Injection, ownership and retry checks pass. Logical free
+ regions remain reusable even if an earlier successful OS hint changed physical
+ page accounting; no live payload or identity has been published at this point.
++
++
++## Execution phase 4: bounded concurrent graph marking
++
++The separate AMD64 `wago_gc_workers,wago_gc_concurrent` product adds an immutable
++integer graph snapshot, insertion barriers, black births and bounded exact-root
++remark. The graph worker never touches mutable heap/collector metadata. Native
++reference stores preserve their parent key before card-check scratch reuse.
++Default and Tiny builds compile these barriers out. The append-only view is now
++232 bytes; default ABI remains 12 (padded 13), while concurrent ABI is 14 (padded
++15), so old barrier-free artifacts cannot enter the concurrent product.
++
++`StartConcurrentGC`, `FinishConcurrentGC`, `GCConcurrentStatus` and copied bounded
++`GCCycleTelemetry` use the existing exact-root/domain/native lease. Optional
++`AutoConcurrent` advances cycles at allocation/minor safepoints with paced starts.
++Moving nursery and collecting Immix are required; custom instructions and borrowed
++storage are excluded. Memory/decode/remark limits decline visibly without partial
++sweep. A synchronous full collection cancels the snapshot and traces current
++roots, preventing floating snapshot garbage from causing false heap exhaustion.
++
++The proof, lifecycle, configuration and measured screen are in
++concurrent-marking-design-2026-10-22.md. The large graph screen improves about 8%;
++the small graph does not improve. A separate background overlap screen also
++shows no clear gain (2.265 ms control versus 2.368 ms background median). Thus
++background sweep, parallel mark/copy and concurrent marking remain opt-in;
++explicit measured byte thresholds are required for mark/copy/concurrent work.
++No default worker mode or four-second compiler result is claimed.
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_concurrent_barrier.go b/src/core/compiler/backend/railshot/amd64/gc_concurrent_barrier.go
+new file mode 100644
+index 000000000..9e7af4db1
+--- /dev/null
++++ b/src/core/compiler/backend/railshot/amd64/gc_concurrent_barrier.go
+@@ -0,0 +1,46 @@
++//go:build amd64
++
++package amd64
++
++import gc "github.com/wago-org/wago/src/core/runtime/gc/native"
++
++// At the successful reference-store join R8 names the collector view, a saved compact parent at [RSP] and R11 its object.
++// Preserve R8/R9/R11/RSI/RDI. R9 may have been consumed by the card check. These
++// leaves may clobber RAX/RCX/RDX/R10. One domain has one mutator; graph workers
++// never read dirty words. This whole sequence is absent in non-concurrent code.
++func (f *fn) emitNativeConcurrentDirtyParent() {
++	if !gc.ConcurrentProductSupported {
++		return
++	}
++	a := f.a
++	a.Load32(RAX, R8, gc.NativeViewConcurrentActiveOffset)
++	a.TestSelf(RAX, false)
++	inactive := a.JccPlaceholder(condE)
++	// The immutable start graph already retains deleted edges. Only insertion
++	// of an object child needs an incremental-update dirty bit.
++	a.TestSelf(RDI, false)
++	childNull := a.JccPlaceholder(condE)
++	a.MovRegReg32(RAX, RDI)
++	a.AluRI(4, RAX, 1, false)
++	a.TestSelf(RAX, false)
++	childI31 := a.JccPlaceholder(condNE)
++	a.Load32(RAX, RSP, 0)
++	a.ShiftImm(5, RAX, 1, false) // validated compact parent -> handle index
++	a.MovReg64(RCX, RAX)
++	a.ShiftImm(5, RAX, 6, true) // bitmap word
++	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewConcurrentDirtyWordCountOffset, false)
++	bornOutsideSnapshot := a.JccPlaceholder(condAE)
++	a.Load64(R10, R8, gc.NativeViewConcurrentDirtyBitsOffset)
++	a.AluRI(4, RCX, 63, false)
++	a.MovImm32(RDX, 1)
++	a.ShiftCL(4, RDX, true)
++	a.ImulRI(RAX, 8, true)
++	a.Add64(R10, RAX)
++	a.Load64(RAX, R10, 0)
++	a.AluRR(0x09, RAX, RDX, true)
++	a.Store64(R10, 0, RAX)
++	a.PatchRel32(childNull, a.Len())
++	a.PatchRel32(childI31, a.Len())
++	a.PatchRel32(inactive, a.Len())
++	a.PatchRel32(bornOutsideSnapshot, a.Len())
++}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_direct.go b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+index 8f06b6eab..e772eed02 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_direct.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+@@ -2693,6 +2693,9 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 			a.Push(R9 + Reg(i))
+ 		}
+ 	}
++	if gc.ConcurrentProductSupported {
++		a.Push(RAX)
++	} // exact parent identity across card-check clobbers
+ 	a.MovRegReg32(RDI, RSI) // compact child
+ 	a.MovRegReg32(RSI, RCX) // required parent extent
+ 	var fallback [32]int
+@@ -2793,6 +2796,7 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	a.PatchRel32(childI31, a.Len())
+ 	a.PatchRel32(childNotYoung, a.Len())
+ 	a.PatchRel32(parentIsYoung, a.Len())
++	f.emitNativeConcurrentDirtyParent()
+ 	a.Add64(R11, RSI)
+ 	a.Store32(R11, -4, RDI)
+ 	a.MovImm32(RCX, 1)
+@@ -2804,6 +2808,9 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	}
+ 	a.MovImm32(RCX, 0)
+ 	a.PatchRel32(done, a.Len())
++	if gc.ConcurrentProductSupported {
++		a.Pop(R10)
++	}
+ 	for i := len(preserve) - 1; i >= 0; i-- {
+ 		if preserve[i] {
+ 			a.Pop(R9 + Reg(i))
+@@ -2811,7 +2818,7 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	}
+ 	a.MovReg64(RAX, RCX)
+ 	a.Ret()
+-	f.emitNativeGCRestoreTrapTails(traps, preserve, false)
++	f.emitNativeGCRestoreTrapTails(traps, preserve, gc.ConcurrentProductSupported)
+ }
+ 
+ // emitNativeCardSafeArrayRefSetStub extends nursery stores to Throughput
+@@ -2956,6 +2963,7 @@ func (f *fn) emitNativeCardSafeArrayRefSetStub() {
+ 
+ 	store := a.Len()
+ 	a.PatchRel32(parentNursery, store)
++	f.emitNativeConcurrentDirtyParent()
+ 	a.StoreIdx(R11, RSI, RDI, int32(gc.ArrayPayloadOffset(4)), 4)
+ 	a.MovImm32(RAX, 1)
+ 	done := a.JmpPlaceholder()
+diff --git a/src/core/runtime/gc/native/alloc.go b/src/core/runtime/gc/native/alloc.go
+index 3082a323e..447f7b7c6 100644
+--- a/src/core/runtime/gc/native/alloc.go
++++ b/src/core/runtime/gc/native/alloc.go
+@@ -16,6 +16,11 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 	if err := c.errIfClosed(); err != nil {
+ 		return Null(), err
+ 	}
++	if ConcurrentProductSupported && roots != nil {
++		if err := c.advanceConcurrentAllocation(roots); err != nil {
++			return Null(), err
++		}
++	}
+ 	if err := c.preflightHandleCapacity(1); err != nil {
+ 		return Null(), err
+ 	}
+diff --git a/src/core/runtime/gc/native/barrier.go b/src/core/runtime/gc/native/barrier.go
+index 64c54455d..05c82cf59 100644
+--- a/src/core/runtime/gc/native/barrier.go
++++ b/src/core/runtime/gc/native/barrier.go
+@@ -42,6 +42,9 @@ func (c *Collector) WriteBarrierObject(parent Ref, child Ref) {
+ 		c.tinyWriteBarrierObject(parent, child)
+ 		return
+ 	}
++	if ConcurrentProductSupported {
++		c.concurrentDirtyParent(parent)
++	}
+ 	h := handleOf(parent)
+ 	e := &c.handles[h]
+ 	if (e.space != spaceOld && e.space != spaceLarge) || e.young() {
+@@ -145,6 +148,9 @@ func (c *Collector) WriteBarrierSlot(kind SlotKind, index uint32, child Ref) {
+ 	}
+ }
+ func (c *Collector) CardMarkArray(array Ref, elementIndex uint32) {
++	if ConcurrentProductSupported {
++		c.concurrentDirtyParent(array)
++	}
+ 	if c.cfg.Profile == ProfileTiny || !array.IsObj() || !c.validObjectRef(array) {
+ 		return
+ 	}
+@@ -177,6 +183,9 @@ func (c *Collector) BulkWriteBarrier(dst Ref, start, length uint32) {
+ // write. Callers must invoke it only after the destination range contains the
+ // new refs so the remembered-set scan can observe old/large-to-nursery edges.
+ func (c *Collector) PostBulkWriteBarrier(dst Ref, start, length uint32) {
++	if ConcurrentProductSupported && length != 0 {
++		c.concurrentDirtyParent(dst)
++	}
+ 	if !dst.IsObj() || !c.validObjectRef(dst) || length == 0 {
+ 		return
+ 	}
+@@ -611,6 +620,9 @@ func (c *Collector) ForcePromote(r Ref) error {
+ 	if c.cfg.Profile == ProfileTiny {
+ 		return nil
+ 	}
++	if ConcurrentProductSupported && c.entry(r).young() {
++		c.abortConcurrent("explicit promotion changed the birth ledger")
++	}
+ 	h := handleOf(r)
+ 	if err := c.promoteHandle(h); err != nil {
+ 		if c.nativeView.Spaces[NativeSpaceOld].Bytes != uint32(len(c.throughput.mem)) {
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index b287b102a..91a0d778b 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -9,6 +9,12 @@ func (c *Collector) CollectFull(roots RootSet) (err error) {
+ 	if err := c.errIfClosed(); err != nil {
+ 		return err
+ 	}
++	if ConcurrentProductSupported && c.concurrentActive() {
++		// An exact full collection (including pressure fallback) must not retain
++		// snapshot floating garbage and report a false bounded-heap exhaustion.
++		c.abortConcurrent("synchronous full collection requested")
++	}
++
+ 	var cycle executionCycle
+ 	if executionProduct {
+ 		cycle = c.beginExecutionCycle(CollectionFull)
+@@ -68,6 +74,12 @@ func (c *Collector) CollectMinor(roots RootSet) (err error) {
+ 	if err := c.errIfClosed(); err != nil {
+ 		return err
+ 	}
++	if ConcurrentProductSupported && c.concurrentActive() {
++		if _, finishErr := c.FinishConcurrent(roots); finishErr != nil && !errors.Is(finishErr, ErrConcurrentRemarkBudget) {
++			return finishErr
++		}
++	}
++
+ 	var cycle executionCycle
+ 	if executionProduct {
+ 		cycle = c.beginExecutionCycle(CollectionMinor)
+@@ -173,7 +185,14 @@ func (c *Collector) CollectMinor(roots RootSet) (err error) {
+ 		}
+ 	}
+ 	if c.cfg.VerifyAfterCollect {
+-		return c.Verify(roots)
++		if err := c.Verify(roots); err != nil {
++			return err
++		}
++	}
++	if ConcurrentProductSupported {
++		if err := c.advanceConcurrentAllocation(roots); err != nil {
++			return err
++		}
+ 	}
+ 	return nil
+ }
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index a9d4046bb..60bf41cc0 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -258,6 +258,9 @@ func NewCollector(config Config, types []TypeDesc) (*Collector, error) {
+ // errCollectorClosed. It is idempotent; Stats remains safe for post-close
+ // counters, while unchecked root-slot reads return null after slots are released.
+ func (c *Collector) Close() {
++	if ConcurrentProductSupported {
++		c.abortConcurrent("collector closed")
++	}
+ 	if executionProduct {
+ 		if _, err := c.throughput.finishBackgroundSweep(true); err != nil {
+ 			panic("gc: close background sweep: " + err.Error())
+diff --git a/src/core/runtime/gc/native/concurrent.go b/src/core/runtime/gc/native/concurrent.go
+new file mode 100644
+index 000000000..14cf3d892
+--- /dev/null
++++ b/src/core/runtime/gc/native/concurrent.go
+@@ -0,0 +1,23 @@
++package gc
++
++import "errors"
++
++var ErrConcurrentSnapshotBudget = errors.New("gc: concurrent snapshot exceeds its memory budget")
++var ErrConcurrentRemarkBudget = errors.New("gc: concurrent remark exceeds its work budget; no concurrent sweep was published")
++
++type ConcurrentPhase uint8
++
++const (
++	ConcurrentIdle ConcurrentPhase = iota
++	ConcurrentSnapshot
++	ConcurrentMark
++	ConcurrentRemark
++	ConcurrentComplete
++	ConcurrentAborted
++)
++
++type ConcurrentStatus struct {
++	Phase                                   ConcurrentPhase
++	SnapshotBytes, ScannedEdges, RemarkWork uint64
++	Reason                                  string
++}
+diff --git a/src/core/runtime/gc/native/concurrent_bench_test.go b/src/core/runtime/gc/native/concurrent_bench_test.go
+new file mode 100644
+index 000000000..9f140142e
+--- /dev/null
++++ b/src/core/runtime/gc/native/concurrent_bench_test.go
+@@ -0,0 +1,61 @@
++//go:build wago_gc_concurrent && wago_gc_workers && amd64 && !tinygo
++
++package gc
++
++import (
++	"fmt"
++	"testing"
++	"time"
++)
++
++var concurrentBenchmarkSink uint64
++
++func BenchmarkConcurrentCollection(b *testing.B) {
++	for _, count := range []int{4096, 262144} {
++		for _, enabled := range []bool{false, true} {
++			b.Run(fmt.Sprintf("n%d/concurrent%v", count, enabled), func(b *testing.B) {
++				options := ExecutionOptions{Workers: 1, Telemetry: true, ConcurrentMark: enabled, MinConcurrentBytes: 1, MinConcurrentObjects: 1, MaxSnapshotBytes: 16 << 20, RemarkBudget: 16 << 20}
++				c, roots := newExecutionGraphFixture(b, count, options, true)
++				var mutatorNS, pauseNS, remarkNS, workerNS uint64
++				b.ReportAllocs()
++				b.ResetTimer()
++				for i := 0; i < b.N; i++ {
++					if enabled {
++						if started, err := c.StartConcurrent(roots); err != nil || !started {
++							b.Fatalf("start: %v %v", started, err)
++						}
++					}
++					before := time.Now()
++					// Fixed Go mutator work gives graph marking a real overlap window.
++					value := uint64(i + 1)
++					for step := 0; step < 500000; step++ {
++						value = (value << 7) ^ (value >> 3) ^ uint64(step)
++					}
++					concurrentBenchmarkSink = value
++					mutatorNS += uint64(time.Since(before))
++					if enabled {
++						if done, err := c.FinishConcurrent(roots); err != nil || !done {
++							b.Fatalf("finish: %v %v", done, err)
++						}
++					} else if err := c.CollectFull(roots); err != nil {
++						b.Fatal(err)
++					}
++					cycles := c.CycleTelemetry().Cycles
++					r := cycles[len(cycles)-1]
++					pauseNS += r.PauseNS
++					remarkNS += r.RemarkNS
++					workerNS += r.WorkerNS
++				}
++				b.StopTimer()
++				b.ReportMetric(float64(mutatorNS)/float64(b.N), "mutator-ns")
++				b.ReportMetric(float64(pauseNS)/float64(b.N), "pause-ns")
++				b.ReportMetric(float64(remarkNS)/float64(b.N), "remark-ns")
++				b.ReportMetric(float64(workerNS)/float64(b.N), "worker-elapsed-ns")
++				b.ReportMetric(float64(c.ConcurrentStatus().SnapshotBytes), "snapshot-B")
++				history := c.CycleTelemetry()
++				b.ReportMetric(float64(history.P99PauseNS), "p99-pause-ns")
++				b.ReportMetric(float64(history.MaxPauseNS), "max-pause-ns")
++			})
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/concurrent_disabled.go b/src/core/runtime/gc/native/concurrent_disabled.go
+new file mode 100644
+index 000000000..826f89883
+--- /dev/null
++++ b/src/core/runtime/gc/native/concurrent_disabled.go
+@@ -0,0 +1,22 @@
++//go:build !wago_gc_concurrent || !wago_gc_workers || !amd64 || tinygo
++
++package gc
++
++import "errors"
++
++const ConcurrentProductSupported = false
++const concurrentABIDelta uint32 = 0
++
++type concurrentCycle struct{}
++
++func (c *Collector) StartConcurrent(RootSet) (bool, error) {
++	return false, errors.New("gc: concurrent marking requires the AMD64 wago_gc_workers,wago_gc_concurrent product")
++}
++func (c *Collector) FinishConcurrent(RootSet) (bool, error) { return false, c.errIfClosed() }
++func (c *Collector) ConcurrentStatus() ConcurrentStatus     { return ConcurrentStatus{} }
++func (c *Collector) concurrentActive() bool                 { return false }
++func (c *Collector) concurrentDirtyParent(Ref)              {}
++func (c *Collector) abortConcurrent(string)                 {}
++func (c *Collector) refreshConcurrentView()                 {}
++
++func (c *Collector) advanceConcurrentAllocation(RootSet) error { return nil }
+diff --git a/src/core/runtime/gc/native/concurrent_enabled.go b/src/core/runtime/gc/native/concurrent_enabled.go
+new file mode 100644
+index 000000000..997ca5a6c
+--- /dev/null
++++ b/src/core/runtime/gc/native/concurrent_enabled.go
+@@ -0,0 +1,680 @@
++//go:build wago_gc_concurrent && wago_gc_workers && amd64 && !tinygo
++
++package gc
++
++import (
++	"encoding/binary"
++	"errors"
++	"fmt"
++	"math/bits"
++	"runtime"
++	"sync/atomic"
++	"time"
++)
++
++const ConcurrentProductSupported = true
++const concurrentABIDelta uint32 = 2
++
++type concurrentCycle struct {
++	offsets, edges                      []uint32
++	typeCounts                          []uint32
++	alive, live, pending, dirty         []uint64
++	rootCount, nurseryPrefix            int
++	first                               int
++	done                                chan struct{}
++	stop                                atomic.Bool
++	scanned                             atomic.Uint64
++	elapsed, snapshotPause, remarkPause uint64
++	started                             time.Time
++	bytes, remarkWork                   uint64
++}
++
++func bitSet(bits []uint64, h uint32) bool {
++	return int(h/64) < len(bits) && bits[h/64]&(uint64(1)<<(h%64)) != 0
++}
++func (c *Collector) concurrentActive() bool {
++	return c.throughput.immix != nil && c.throughput.immix.execution != nil && c.throughput.immix.execution.concurrent != nil
++}
++func (c *Collector) ConcurrentStatus() ConcurrentStatus {
++	if c.throughput.immix == nil || c.throughput.immix.execution == nil {
++		return ConcurrentStatus{}
++	}
++	x := c.throughput.immix.execution
++	if s := x.concurrent; s != nil {
++		return ConcurrentStatus{Phase: ConcurrentMark, SnapshotBytes: s.bytes, ScannedEdges: s.scanned.Load()}
++	}
++	return x.concurrentStatus
++}
++func (c *Collector) refreshConcurrentView() {
++	v := c.nativeView
++	if v == nil {
++		return
++	}
++	v.ConcurrentActive = 0
++	v.ConcurrentDirtyBits = 0
++	v.ConcurrentDirtyWordCount = 0
++	if c.concurrentActive() {
++		s := c.throughput.immix.execution.concurrent
++		v.ConcurrentDirtyBits = sliceData(s.dirty)
++		v.ConcurrentDirtyWordCount = uint32(len(s.dirty))
++		v.ConcurrentActive = 1
++	}
++}
++func (c *Collector) concurrentDirtyParent(ref Ref) {
++	if !c.concurrentActive() || !ref.IsObj() {
++		return
++	}
++	s := c.throughput.immix.execution.concurrent
++	h := handleOf(ref)
++	if int(h/64) < len(s.dirty) {
++		s.dirty[h/64] |= uint64(1) << (h % 64)
++	}
++}
++
++type concurrentRootCapture struct {
++	collector       *Collector
++	snapshot        *concurrentCycle
++	err             error
++	work, workLimit uint64
++	at, end         int
++	countOnly       bool
++}
++
++func (sink *concurrentRootCapture) step(n uint64) bool {
++	if sink.err != nil {
++		return false
++	}
++	if n > sink.workLimit-sink.work {
++		sink.err = ErrConcurrentSnapshotBudget
++		return false
++	}
++	sink.work += n
++	return true
++}
++func (sink *concurrentRootCapture) VisitRootRef(ref Ref) bool {
++	if !sink.step(1) {
++		return false
++	}
++	if !sink.collector.validObjectRef(ref) {
++		return true
++	}
++	if sink.at >= sink.end {
++		if sink.countOnly {
++			sink.err = ErrConcurrentSnapshotBudget
++		} else {
++			sink.err = errors.New("gc: concurrent root universe changed while stopped")
++		}
++		return false
++	}
++	if !sink.countOnly {
++		sink.snapshot.edges[sink.at] = handleOf(ref)
++	}
++	sink.at++
++	return true
++}
++func (c *Collector) captureConcurrentRoots(roots RootSet, sink *concurrentRootCapture) {
++	if direct, ok := roots.(DirectRootRefSet); ok {
++		direct.RangeRootRefs(sink)
++	} else if roots != nil {
++		roots.RangeRoots(func(slot RootSlot) bool { return sink.VisitRootRef(slot.GetRef()) })
++	}
++	for _, ref := range c.globalSlots {
++		if !sink.VisitRootRef(ref) {
++			break
++		}
++	}
++	for _, ref := range c.tableSlots {
++		if !sink.VisitRootRef(ref) {
++			break
++		}
++	}
++}
++func (c *Collector) StartConcurrent(roots RootSet) (bool, error) {
++	if err := c.errIfClosed(); err != nil {
++		return false, err
++	}
++	m := c.throughput.immix
++	if m == nil || m.execution == nil || !m.execution.options.ConcurrentMark {
++		return false, errors.New("gc: concurrent marking was not configured")
++	}
++	x := m.execution
++	if x.concurrent != nil {
++		return false, errors.New("gc: concurrent marking is already active")
++	}
++	options := x.options
++	objects := len(c.handles) - min(len(c.freeHandles)+1, len(c.handles))
++	if uint64(c.throughput.bump)+uint64(c.nurseryBump)+uint64(c.survivorBump) < options.MinConcurrentBytes || objects < int(options.MinConcurrentObjects) {
++		return false, nil
++	}
++	start := time.Now()
++	if _, err := c.throughput.finishBackgroundSweep(true); err != nil {
++		return false, err
++	}
++	c.discardNativeStructHandles()
++	c.discardNativeLargeArrayAllocation()
++	decline := func(err error) (bool, error) {
++		x.concurrentSnapshotDeclines++
++		x.concurrentStatus = ConcurrentStatus{Phase: ConcurrentAborted, Reason: err.Error()}
++		return false, err
++	}
++	n := len(c.handles)
++	words := (n + 63) / 64
++	base := uint64(n+1)*4 + uint64(words)*32 + uint64(len(c.types))*4
++	if base > options.MaxSnapshotBytes {
++		return decline(ErrConcurrentSnapshotBudget)
++	}
++	s := &concurrentCycle{offsets: make([]uint32, n+1), alive: make([]uint64, words), live: make([]uint64, words), pending: make([]uint64, words), dirty: make([]uint64, words), first: words, done: make(chan struct{}), started: start, nurseryPrefix: len(c.nurseryHandles)}
++	// Count exact CSR capacity first. This avoids geometric edge buffers and
++	// their transient garbage exceeding the configured memory bound.
++	maximum := int((options.MaxSnapshotBytes - base) / 4)
++	sink := concurrentRootCapture{collector: c, snapshot: s, workLimit: options.MaxSnapshotBytes / 4, countOnly: true, end: maximum}
++	c.captureConcurrentRoots(roots, &sink)
++	if sink.err != nil {
++		return decline(sink.err)
++	}
++	s.rootCount = sink.at
++	total := s.rootCount
++	typeCounts := make([]uint32, len(c.types)) // count+1; zero means uncomputed
++	var allocated uint64
++	for h, e := range c.handles {
++		if !sink.step(1) {
++			break
++		}
++		s.offsets[h] = uint32(total)
++		if h == 0 || e.space == spaceFree {
++			continue
++		}
++		if int(e.typeID) >= len(c.types) {
++			sink.err = fmt.Errorf("gc: concurrent snapshot handle%d has an invalid canonical type", h)
++			break
++		}
++		d := &c.types[e.typeID]
++		if (e.class&NativeHandlePointerFreeBit != 0) == d.HasRefs {
++			sink.err = fmt.Errorf("gc: concurrent snapshot handle%d pointer-free classification mismatch", h)
++			break
++		}
++		desc, b, err := c.refDescPtrBytes(makeObjRef(uint32(h)))
++		if err != nil {
++			sink.err = err
++			break
++		}
++		allocated += uint64(e.size)
++		s.alive[h/64] |= uint64(1) << uint(h%64)
++		if !d.HasRefs {
++			continue
++		}
++		var refs uint32
++		if desc.Kind == KindStruct {
++			if uint64(PayloadOffset)+uint64(desc.Size) > uint64(len(b)) {
++				sink.err = errors.New("gc: concurrent snapshot struct extent invalid")
++				break
++			}
++			cached := typeCounts[e.typeID]
++			if cached == 0 {
++				for _, field := range desc.Fields {
++					if !sink.step(1) {
++						break
++					}
++					if isCollectorRefKind(field.Kind) {
++						refs++
++					}
++				}
++				typeCounts[e.typeID] = refs + 1
++			} else {
++				refs = cached - 1
++			}
++		} else if desc.ArrayElementsAreRefs() {
++			refs = binary.LittleEndian.Uint32(b[:4])
++			if uint64(desc.PayloadOffset())+uint64(refs)*uint64(desc.ElemSize) > uint64(len(b)) {
++				sink.err = errors.New("gc: concurrent snapshot array extent invalid")
++				break
++			}
++		}
++		if uint64(refs) > uint64(maximum-total) {
++			sink.err = ErrConcurrentSnapshotBudget
++			break
++		}
++		total += int(refs)
++	}
++	s.offsets[n] = uint32(total)
++	if sink.err != nil {
++		return decline(sink.err)
++	}
++	if allocated < options.MinConcurrentBytes {
++		return false, nil
++	}
++	// A stable, unique live-young prefix proves every later birth is in the tail.
++	for _, h := range c.nurseryHandles {
++		if !sink.step(1) {
++			break
++		}
++		if h == 0 || int(h) >= len(c.handles) || !c.handles[h].young() || bitSet(s.pending, h) {
++			sink.err = errors.New("gc: concurrent start has an invalid or duplicate young ledger entry")
++			break
++		}
++		s.pending[h/64] |= uint64(1) << (h % 64)
++	}
++	clear(s.pending)
++	if !sink.step(uint64(n)) {
++		return decline(sink.err)
++	}
++	s.edges = make([]uint32, total)
++	sink.countOnly = false
++	sink.at = 0
++	sink.end = s.rootCount
++	c.captureConcurrentRoots(roots, &sink)
++	if sink.at != s.rootCount && sink.err == nil {
++		sink.err = errors.New("gc: concurrent root universe changed while stopped")
++	}
++	for h := 1; h < n && sink.err == nil; h++ {
++		if c.handles[h].space == spaceFree || c.handles[h].class&NativeHandlePointerFreeBit != 0 {
++			continue
++		}
++		sink.at = int(s.offsets[h])
++		sink.end = int(s.offsets[h+1])
++		sink.captureObject(uint32(h))
++		if sink.at != sink.end && sink.err == nil {
++			sink.err = errors.New("gc: concurrent object scan extent changed while stopped")
++		}
++	}
++	if sink.err != nil {
++		return decline(sink.err)
++	}
++	// Retain the count workspace until completion, so accounting includes it.
++	s.typeCounts = typeCounts
++	s.bytes = base + uint64(cap(s.edges))*4
++	s.snapshotPause = uint64(time.Since(start))
++	x.concurrent = s
++	x.concurrentStatus = ConcurrentStatus{Phase: ConcurrentMark, SnapshotBytes: s.bytes}
++	x.concurrentStarts++
++	x.nextConcurrentStart = c.stats.Allocations + max(uint64(options.MinConcurrentObjects), uint64(64))
++	if x.nextConcurrentStart < c.stats.Allocations {
++		x.nextConcurrentStart = ^uint64(0)
++	}
++	c.refreshConcurrentView()
++	go s.run()
++	return true, nil
++}
++func (s *concurrentCycle) shade(h uint32) {
++	if h == 0 {
++		return
++	}
++	if int(h/64) >= len(s.live) {
++		return
++	}
++	mask := uint64(1) << (h % 64)
++	if s.live[h/64]&mask != 0 {
++		return
++	}
++	s.live[h/64] |= mask
++	if int(h)+1 < len(s.offsets) && bitSet(s.alive, h) && s.offsets[h] < s.offsets[h+1] {
++		s.pending[h/64] |= mask
++		s.first = min(s.first, int(h/64))
++	}
++}
++func (s *concurrentCycle) pop() (uint32, bool) {
++	for s.first < len(s.pending) && s.pending[s.first] == 0 {
++		s.first++
++	}
++	if s.first == len(s.pending) {
++		return 0, false
++	}
++	bit := uint(bits.TrailingZeros64(s.pending[s.first]))
++	h := uint32(s.first*64) + uint32(bit)
++	s.pending[s.first] &^= uint64(1) << bit
++	return h, true
++}
++func (s *concurrentCycle) run() {
++	start := time.Now()
++	defer func() { s.elapsed = uint64(time.Since(start)); close(s.done) }()
++	for i, h := range s.edges[:s.rootCount] {
++		if i%512 == 0 && s.stop.Load() {
++			return
++		}
++		s.shade(h)
++	}
++	for {
++		if s.stop.Load() {
++			return
++		}
++		h, ok := s.pop()
++		if !ok {
++			return
++		}
++		from, to := s.offsets[h], s.offsets[h+1]
++		for at := from; at < to; at++ {
++			if at%512 == 0 && s.stop.Load() {
++				return
++			}
++			s.shade(s.edges[at])
++		}
++		s.scanned.Add(uint64(to - from))
++	}
++}
++func (c *Collector) abortConcurrent(reason string) {
++	if !c.concurrentActive() {
++		return
++	}
++	x := c.throughput.immix.execution
++	s := x.concurrent
++	s.stop.Store(true)
++	<-s.done
++	x.concurrent = nil
++	x.concurrentAborts++
++	x.concurrentStatus = ConcurrentStatus{Phase: ConcurrentAborted, SnapshotBytes: s.bytes, ScannedEdges: s.scanned.Load(), RemarkWork: s.remarkWork, Reason: reason}
++	c.refreshConcurrentView()
++	if x.options.Telemetry {
++		x.record(CollectionCycle{Kind: CollectionConcurrent, Failed: true, Workers: 1, PauseNS: s.snapshotPause + s.remarkPause, WallNS: uint64(time.Since(s.started)), WorkerNS: s.elapsed})
++	}
++}
++
++type concurrentRemark struct {
++	collector *Collector
++	snapshot  *concurrentCycle
++	left      uint64
++	err       error
++}
++
++func (r *concurrentRemark) consume(n uint64) bool {
++	if r.err != nil {
++		return false
++	}
++	if n > r.left {
++		r.err = ErrConcurrentRemarkBudget
++		return false
++	}
++	r.left -= n
++	r.snapshot.remarkWork += n
++	return true
++}
++func (r *concurrentRemark) VisitRootRef(ref Ref) bool {
++	if !r.consume(1) {
++		return false
++	}
++	if r.collector.validObjectRef(ref) {
++		r.snapshot.shade(handleOf(ref))
++	}
++	return true
++}
++func (r *concurrentRemark) scanCurrent(h uint32) {
++	if !r.consume(1) {
++		return
++	}
++	c := r.collector
++	d, b, err := c.refDescPtrBytes(makeObjRef(h))
++	if err != nil {
++		r.err = err
++		return
++	}
++	if !d.HasRefs {
++		return
++	}
++	if d.Kind == KindStruct {
++		if uint64(PayloadOffset)+uint64(d.Size) > uint64(len(b)) {
++			r.err = errors.New("gc: concurrent remark struct extent invalid")
++			return
++		}
++		for _, field := range d.Fields {
++			if !r.consume(1) {
++				return
++			}
++			if isCollectorRefKind(field.Kind) {
++				if !r.VisitRootRef(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+field.Offset:]))) {
++					return
++				}
++			}
++		}
++	} else if d.ArrayElementsAreRefs() {
++		length := binary.LittleEndian.Uint32(b[:4])
++		if uint64(d.PayloadOffset())+uint64(length)*uint64(d.ElemSize) > uint64(len(b)) {
++			r.err = errors.New("gc: concurrent remark array extent invalid")
++			return
++		}
++		for i := uint32(0); i < length; i++ {
++			if !r.VisitRootRef(Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+i*d.ElemSize:]))) {
++				return
++			}
++		}
++	}
++}
++func (c *Collector) FinishConcurrent(roots RootSet) (bool, error) {
++	if err := c.errIfClosed(); err != nil {
++		return false, err
++	}
++	if !c.concurrentActive() {
++		return false, nil
++	}
++	start := time.Now()
++	x := c.throughput.immix.execution
++	s := x.concurrent
++	<-s.done
++	c.discardNativeStructHandles()
++	c.discardNativeLargeArrayAllocation()
++	budget := x.options.RemarkBudget
++	remark := concurrentRemark{collector: c, snapshot: s, left: budget}
++	words := (len(c.handles) + 63) / 64
++	if len(s.live) < words {
++		if uint64(words)*8+s.bytes > x.options.MaxSnapshotBytes {
++			remark.err = ErrConcurrentRemarkBudget
++		} else {
++			previous := len(s.live)
++			next := make([]uint64, words)
++			copy(next, s.live)
++			s.live = next
++			s.bytes += uint64(words-previous) * 8
++		}
++	}
++
++	if direct, ok := roots.(DirectRootRefSet); ok {
++		direct.RangeRootRefs(&remark)
++	} else if roots != nil {
++		roots.RangeRoots(func(slot RootSlot) bool { return remark.VisitRootRef(slot.GetRef()) })
++	}
++	for _, ref := range c.globalSlots {
++		if !remark.VisitRootRef(ref) {
++			break
++		}
++	}
++	for _, ref := range c.tableSlots {
++		if !remark.VisitRootRef(ref) {
++			break
++		}
++	}
++	if s.nurseryPrefix > len(c.nurseryHandles) {
++		remark.err = errors.New("gc: concurrent birth ledger prefix changed")
++	}
++	if remark.err == nil {
++		for _, h := range c.nurseryHandles[s.nurseryPrefix:] {
++			if !remark.consume(1) {
++				break
++			}
++			if h != 0 && int(h) < len(c.handles) && c.handles[h].space != spaceFree {
++				s.shade(h)
++				remark.scanCurrent(h)
++				if remark.err != nil {
++					break
++				}
++			}
++		}
++	}
++	for word, dirty := range s.dirty {
++		if !remark.consume(1) {
++			break
++		}
++		for dirty != 0 {
++			bit := uint(bits.TrailingZeros64(dirty))
++			dirty &^= uint64(1) << bit
++			h := uint32(word*64) + uint32(bit)
++			if bitSet(s.alive, h) && int(h) < len(c.handles) && c.handles[h].space != spaceFree {
++				remark.scanCurrent(h)
++				if remark.err != nil {
++					break
++				}
++			}
++		}
++	}
++	for remark.err == nil {
++		h, ok := s.pop()
++		if !ok {
++			break
++		}
++		for _, child := range s.edges[s.offsets[h]:s.offsets[h+1]] {
++			if !remark.consume(1) {
++				break
++			}
++			s.shade(child)
++		}
++	}
++	// Publication and synchronous sweep also consume bounded per-handle/region/card work.
++	if remark.err == nil {
++		remark.consume(4*uint64(len(c.handles)) + uint64(immixLines)*uint64(len(c.throughput.immix.regions)) + 4*uint64(len(c.remembered)+len(c.objectCards)+len(c.slotCards)))
++	}
++	if remark.err != nil {
++		s.remarkPause = uint64(time.Since(start))
++		x.concurrentRemarkDeclines++
++		c.abortConcurrent(remark.err.Error())
++		return false, remark.err
++	}
++	// The graph worker has joined and the complete bounded remark succeeded.
++	// Mutator remains stopped while packed mark/line state and sweep publish.
++	x.concurrent = nil
++	c.refreshConcurrentView()
++	c.stats.FullCollections++
++	c.clearMarks()
++	m := c.throughput.immix
++	for h := uint32(1); int(h) < len(c.handles); h++ {
++		if c.handles[h].space == spaceFree || !bitSet(s.live, h) {
++			continue
++		}
++		m.firstMark(h)
++		e := c.handles[h]
++		if e.young() {
++			c.mark[h] = true
++		}
++		if e.space == spaceOld || e.space == spaceLarge {
++			m.mark(e)
++		}
++	}
++	c.sweepAll()
++	c.pruneConcurrentRemembered()
++	c.finishFullCardMetadata()
++	_, err := c.throughput.adviseIdleImmix(false)
++	c.refreshNativeView()
++	x.concurrentCompletes++
++	x.concurrentStatus = ConcurrentStatus{Phase: ConcurrentComplete, SnapshotBytes: s.bytes, ScannedEdges: s.scanned.Load(), RemarkWork: s.remarkWork}
++	if x.options.Telemetry {
++		x.record(CollectionCycle{Kind: CollectionConcurrent, Failed: err != nil, Workers: 1, PauseNS: s.snapshotPause + uint64(time.Since(start)), WallNS: uint64(time.Since(s.started)), RemarkNS: uint64(time.Since(start)), WorkerNS: s.elapsed, Objects: uint32(len(c.handles) - min(len(c.freeHandles)+1, len(c.handles))), HeapBytes: uint64(c.throughput.bump)})
++	}
++	if err == nil && c.cfg.VerifyAfterCollect {
++		err = c.Verify(roots)
++	}
++	return true, err
++}
++
++// Scan slots, including nulls, against the snapshot decode-work cap. A mostly
++// null huge array must not evade the CPU bound merely because it adds no edges.
++func (sink *concurrentRootCapture) captureObject(h uint32) {
++	c := sink.collector
++	d, b, err := c.refDescPtrBytes(makeObjRef(h))
++	if err != nil {
++		sink.err = err
++		return
++	}
++	if !d.HasRefs {
++		return
++	}
++	if d.Kind == KindStruct {
++		if d.firstRef != 0 {
++			for index := uint32(d.firstRef); index != 0; {
++				field := d.Fields[index-1]
++				if !sink.captureChild(h, Ref(binary.LittleEndian.Uint32(b[PayloadOffset+field.Offset:]))) {
++					return
++				}
++				index = uint32(field.nextRef)
++			}
++		} else {
++			for _, field := range d.Fields {
++				if !sink.step(1) {
++					return
++				}
++				if isCollectorRefKind(field.Kind) {
++					if !sink.captureChild(h, Ref(binary.LittleEndian.Uint32(b[PayloadOffset+field.Offset:]))) {
++						return
++					}
++				}
++			}
++		}
++	} else if d.ArrayElementsAreRefs() {
++		length := binary.LittleEndian.Uint32(b[:4])
++		for i := uint32(0); i < length; i++ {
++			if !sink.captureChild(h, Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+i*d.ElemSize:]))) {
++				return
++			}
++		}
++	}
++}
++func (sink *concurrentRootCapture) captureChild(parent uint32, child Ref) bool {
++	if !sink.step(1) {
++		return false
++	}
++	if sink.at >= sink.end {
++		sink.err = errors.New("gc: concurrent object scan exceeds its planned edges")
++		return false
++	}
++	if child.IsObj() {
++		if !sink.collector.validObjectRef(child) {
++			sink.err = fmt.Errorf("gc: concurrent snapshot handle%d has an invalid child", parent)
++			return false
++		}
++		sink.snapshot.edges[sink.at] = handleOf(child)
++	}
++	sink.at++
++	return true
++}
++func (c *Collector) pruneConcurrentRemembered() {
++	out := c.remembered[:0]
++	for _, h := range c.remembered {
++		if h != 0 && int(h) < len(c.handles) && c.handles[h].remembered && !c.handles[h].young() && (c.handles[h].space == spaceOld || c.handles[h].space == spaceLarge) {
++			out = append(out, h)
++		}
++	}
++	clear(c.remembered[len(out):])
++	c.remembered = out
++}
++
++// These calls already own the standard exact-root safepoint. Expected resource
++// admission declines stay visible in status/counters and preserve normal GC
++// fallback; invariant/worker errors remain allocation errors.
++func (c *Collector) advanceConcurrentAllocation(roots RootSet) error {
++	if roots == nil || c.throughput.immix == nil || c.throughput.immix.execution == nil {
++		return nil
++	}
++	x := c.throughput.immix.execution
++	if !x.options.AutoConcurrent || runtime.GOMAXPROCS(0) < 2 {
++		return nil
++	}
++	if s := x.concurrent; s != nil {
++		select {
++		case <-s.done:
++			_, err := c.FinishConcurrent(roots)
++			if errors.Is(err, ErrConcurrentRemarkBudget) {
++				return nil
++			}
++			return err
++		default:
++			return nil
++		}
++	}
++	if c.stats.Allocations < x.nextConcurrentStart {
++		return nil
++	}
++	x.nextConcurrentStart = c.stats.Allocations + max(uint64(x.options.MinConcurrentObjects), uint64(64))
++	if x.nextConcurrentStart < c.stats.Allocations {
++		x.nextConcurrentStart = ^uint64(0)
++	}
++	_, err := c.StartConcurrent(roots)
++	if errors.Is(err, ErrConcurrentSnapshotBudget) {
++		return nil
++	}
++	return err
++}
+diff --git a/src/core/runtime/gc/native/concurrent_test.go b/src/core/runtime/gc/native/concurrent_test.go
+new file mode 100644
+index 000000000..31744e6af
+--- /dev/null
++++ b/src/core/runtime/gc/native/concurrent_test.go
+@@ -0,0 +1,382 @@
++//go:build wago_gc_concurrent && wago_gc_workers && amd64 && !tinygo
++
++package gc
++
++import (
++	"errors"
++	"runtime"
++	"testing"
++)
++
++func newConcurrentTestCollector(t testing.TB, remark uint64) *Collector {
++	t.Helper()
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI64})
++	if err != nil {
++		t.Fatal(err)
++	}
++	array, err := NewArrayDesc(1, StorageRefNull)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 1 << 20, SurvivorBytes: 512 << 10, ThroughputHeapBytes: 4 << 20, ThroughputPageBytes: 4096, Execution: &ExecutionOptions{ConcurrentMark: true, Telemetry: true, MinConcurrentBytes: 1, MinConcurrentObjects: 1, MaxSnapshotBytes: 8 << 20, RemarkBudget: remark}}, []TypeDesc{node, array})
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(c.Close)
++	return c
++}
++func concurrentNode(t testing.TB, c *Collector, value int64, old bool) Ref {
++	t.Helper()
++	r, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.StructSet(r, 1, I64Value(value)); err != nil {
++		t.Fatal(err)
++	}
++	if old {
++		if err = c.ForcePromote(r); err != nil {
++			t.Fatal(err)
++		}
++	}
++	return r
++}
++func concurrentSet(t testing.TB, c *Collector, parent, child Ref) {
++	t.Helper()
++	if err := c.StructSet(parent, 0, RefValue(child)); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestConcurrentSnapshotDeletionInsertionBirthsAndChangingRoots(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	parent := concurrentNode(t, c, 1, true)
++	deleted := concurrentNode(t, c, 2, true)
++	white := concurrentNode(t, c, 3, true)
++	descendant := concurrentNode(t, c, 4, true)
++	changingRoot := concurrentNode(t, c, 5, true)
++	dead := concurrentNode(t, c, 6, true)
++	youngParent := concurrentNode(t, c, 7, false)
++	concurrentSet(t, c, parent, deleted)
++	concurrentSet(t, c, white, descendant)
++	roots := RefSliceRoots{parent, youngParent}
++	if started, err := c.StartConcurrent(roots); err != nil || !started {
++		t.Fatalf("start: %v %v", started, err)
++	}
++	if c.nativeView.ConcurrentActive != 1 || c.nativeView.ConcurrentDirtyBits == 0 {
++		t.Fatal("native barrier state not published")
++	}
++	concurrentSet(t, c, parent, Null())
++	concurrentSet(t, c, youngParent, white)
++	born := concurrentNode(t, c, 8, false)
++	concurrentSet(t, c, born, changingRoot)
++	// Born objects are black even if not in the final exact root set.
++	roots = append(roots, changingRoot)
++	c.throughput.immix.epoch = ^uint32(0)
++	if completed, err := c.FinishConcurrent(roots); err != nil || !completed {
++		t.Fatalf("finish: %v %v", completed, err)
++	}
++	for _, r := range []Ref{parent, deleted, white, descendant, changingRoot, youngParent, born} {
++		if !c.validObjectRef(r) {
++			t.Fatalf("lost live/floating identity %d", r)
++		}
++	}
++	if c.validObjectRef(dead) {
++		t.Fatal("initial unreachable object was retained")
++	}
++	if c.nativeView.ConcurrentActive != 0 || c.nativeView.ConcurrentDirtyBits != 0 || c.ConcurrentStatus().Phase != ConcurrentComplete {
++		t.Fatal("completed cycle left a native barrier active")
++	}
++	if err := c.Verify(roots); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.CollectFull(roots); err != nil {
++		t.Fatal(err)
++	}
++	if c.validObjectRef(deleted) {
++		t.Fatal("a later exact collection retained snapshot floating garbage")
++	}
++}
++func TestConcurrentBulkAndDeferredWrites(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	a, err := c.NewArrayDefault(1, 64)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(a); err != nil {
++		t.Fatal(err)
++	}
++	white := concurrentNode(t, c, 17, true)
++	source, err := c.NewArrayDefault(1, 64)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ArrayFill(source, 0, RefValue(white), 64); err != nil {
++		t.Fatal(err)
++	}
++	if started, err := c.StartConcurrent(RefSliceRoots{a}); err != nil || !started {
++		t.Fatalf("start: %v %v", started, err)
++	}
++	if err = c.ArraySetDeferredBarrier(a, 0, RefValue(white)); err != nil {
++		t.Fatal(err)
++	}
++	c.PostBulkWriteBarrier(a, 0, 1)
++	if err = c.ArrayCopy(a, 1, source, 1, 32); err != nil {
++		t.Fatal(err)
++	}
++	born, err := c.NewArrayDefault(1, 20000)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ArrayFill(born, 0, RefValue(white), 20000); err != nil {
++		t.Fatal(err)
++	}
++	if done, err := c.FinishConcurrent(RefSliceRoots{a}); err != nil || !done {
++		t.Fatalf("finish: %v %v", done, err)
++	}
++	if !c.validObjectRef(white) || !c.validObjectRef(born) {
++		t.Fatal("bulk/birth edge was lost")
++	}
++	if err = c.CollectMinor(RefSliceRoots{a, born}); err != nil {
++		t.Fatal(err)
++	}
++	if err = c.Verify(RefSliceRoots{a, born}); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestConcurrentBudgetAbortNeverSweepsPartialMarks(t *testing.T) {
++	c := newConcurrentTestCollector(t, 32)
++	roots := make(RefSliceRoots, 128)
++	for i := range roots {
++		roots[i] = concurrentNode(t, c, int64(i), false)
++	}
++	if started, err := c.StartConcurrent(roots); err != nil || !started {
++		t.Fatalf("start: %v %v", started, err)
++	}
++	if done, err := c.FinishConcurrent(roots); done || !errors.Is(err, ErrConcurrentRemarkBudget) {
++		t.Fatalf("budget failure hidden: %v %v", done, err)
++	}
++	for _, r := range roots {
++		if !c.validObjectRef(r) {
++			t.Fatal("aborted remark reclaimed an identity")
++		}
++	}
++	if c.ConcurrentStatus().Phase != ConcurrentAborted || c.ConcurrentStatus().Reason == "" || c.nativeView.ConcurrentActive != 0 {
++		t.Fatal("abort not visible/disabled")
++	}
++	if err := c.CollectFull(roots); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.Verify(roots); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestConcurrentSnapshotMemoryBudgetIsVisible(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	for i := 0; i < 1024; i++ {
++		concurrentNode(t, c, int64(i), false)
++	}
++	c.throughput.immix.execution.options.MaxSnapshotBytes = 4096
++	if started, err := c.StartConcurrent(EmptyRoots{}); started || !errors.Is(err, ErrConcurrentSnapshotBudget) {
++		t.Fatalf("memory budget hidden: %v %v", started, err)
++	}
++	if c.concurrentActive() || c.CycleTelemetry().ConcurrentSnapshotDeclines != 1 {
++		t.Fatal("declined snapshot started work")
++	}
++	if err := c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestConcurrentYoungCollectionAndExplicitPromotionHandshake(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	root := concurrentNode(t, c, 13, false)
++	if started, err := c.StartConcurrent(RefSliceRoots{root}); err != nil || !started {
++		t.Fatal(started, err)
++	}
++	if err := c.CollectMinor(RefSliceRoots{root}); err != nil {
++		t.Fatal(err)
++	}
++	if c.concurrentActive() || !c.validObjectRef(root) || c.Stats().FullCollections != 1 {
++		t.Fatal("young collection skipped concurrent handshake")
++	}
++	if started, err := c.StartConcurrent(RefSliceRoots{root}); err != nil || !started {
++		t.Fatal(started, err)
++	}
++	if err := c.ForcePromote(root); err != nil {
++		t.Fatal(err)
++	}
++	if c.concurrentActive() || c.ConcurrentStatus().Phase != ConcurrentAborted || !c.validObjectRef(root) {
++		t.Fatal("explicit promotion did not cancel before changing birth ledger")
++	}
++}
++func TestConcurrentCloseJoinsGraphWorker(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	root := concurrentNode(t, c, 1, false)
++	if started, err := c.StartConcurrent(RefSliceRoots{root}); err != nil || !started {
++		t.Fatal(started, err)
++	}
++	cycle := c.throughput.immix.execution.concurrent
++	c.Close()
++	select {
++	case <-cycle.done:
++	default:
++		t.Fatal("close did not join")
++	}
++	if c.nativeView.ConcurrentActive != 0 || c.nativeView.ConcurrentDirtyBits != 0 {
++		t.Fatal("close left native bitmap address live")
++	}
++}
++
++func TestConcurrentMostlyNullArrayCannotEvadeSnapshotWorkLimit(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	array, err := c.NewArrayDefault(1, 100000)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c.throughput.immix.execution.options.MaxSnapshotBytes = 4096
++	if started, err := c.StartConcurrent(RefSliceRoots{array}); started || !errors.Is(err, ErrConcurrentSnapshotBudget) {
++		t.Fatalf("null-array decode budget hidden: %v %v", started, err)
++	}
++	if _, err = c.ArrayLen(array); err != nil {
++		t.Fatal("declined capture changed the array")
++	}
++}
++func TestConcurrentMutatorWritesDoNotRaceGraphWorker(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	roots := make(RefSliceRoots, 4096)
++	for i := range roots {
++		roots[i] = concurrentNode(t, c, int64(i), false)
++	}
++	for i, r := range roots {
++		concurrentSet(t, c, r, roots[(i+1)%len(roots)])
++	}
++	if started, err := c.StartConcurrent(roots[:1]); err != nil || !started {
++		t.Fatal(started, err)
++	}
++	for i, r := range roots {
++		concurrentSet(t, c, r, roots[(i+17)%len(roots)])
++		if i%32 == 0 {
++			born := concurrentNode(t, c, int64(i), false)
++			concurrentSet(t, c, born, r)
++		}
++	}
++	if done, err := c.FinishConcurrent(roots[:1]); err != nil || !done {
++		t.Fatal(done, err)
++	}
++	if err := c.Verify(roots[:1]); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestConcurrentThresholdDefaultsKeepWorkerOff(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	root := concurrentNode(t, c, 1, false)
++	c.throughput.immix.execution.options.MinConcurrentBytes = ^uint64(0)
++	if started, err := c.StartConcurrent(RefSliceRoots{root}); err != nil || started || c.concurrentActive() {
++		t.Fatalf("disabled threshold admitted: %v %v", started, err)
++	}
++}
++
++func TestConcurrentDuplicateRootMemoryBudgetIsVisible(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	root := concurrentNode(t, c, 1, false)
++	roots := make(RefSliceRoots, 2000)
++	for i := range roots {
++		roots[i] = root
++	}
++	c.throughput.immix.execution.options.MaxSnapshotBytes = 4096
++	if started, err := c.StartConcurrent(roots); started || !errors.Is(err, ErrConcurrentSnapshotBudget) {
++		t.Fatalf("root memory bound hidden: %v %v", started, err)
++	}
++}
++
++func TestConcurrentAllocationPressureRunsExactFullFallback(t *testing.T) {
++	c := newConcurrentTestCollector(t, 1<<20)
++	// Limit old space to the two regions occupied by this single old array.
++	c.throughput.limit = 2 * immixBlockBytes
++	old, err := c.NewArrayDefault(1, 16000)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(old); err != nil {
++		t.Fatal(err)
++	}
++	if started, err := c.StartConcurrent(RefSliceRoots{old}); err != nil || !started {
++		t.Fatal(started, err)
++	}
++	// The old root is now dead. Snapshot floating garbage must not cause an OOM
++	// after a synchronous pressure collection with the current exact empty roots.
++	replacement, err := c.NewArrayDefaultWithRoots(1, 16000, EmptyRoots{})
++	if err != nil {
++		t.Fatalf("floating snapshot root caused a false OOM: %v", err)
++	}
++	if length, err := c.ArrayLen(replacement); err != nil || length != 16000 {
++		t.Fatal(length, err)
++	}
++	if c.concurrentActive() {
++		t.Fatal("synchronous pressure left concurrent marking active")
++	}
++	if err = c.Verify(RefSliceRoots{replacement}); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestConcurrentAutomaticSafepointsAndVisibleDeclines(t *testing.T) {
++	previous := runtime.GOMAXPROCS(2)
++	defer runtime.GOMAXPROCS(previous)
++	c := newConcurrentTestCollector(t, 1<<20)
++	x := c.throughput.immix.execution
++	x.options.AutoConcurrent = true
++	root := concurrentNode(t, c, 1, false)
++	roots := RefSliceRoots{root}
++	for i := 0; i < 200; i++ {
++		if _, err := c.NewStructDefaultWithRoots(0, roots); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if got := c.CycleTelemetry(); got.ConcurrentStarts == 0 {
++		t.Fatal("automatic allocation safepoint never started")
++	}
++	if c.concurrentActive() {
++		if _, err := c.FinishConcurrent(roots); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err := c.Verify(roots); err != nil {
++		t.Fatal(err)
++	}
++	c = newConcurrentTestCollector(t, 1<<20)
++	roots = nil
++	for i := 0; i < 1024; i++ {
++		roots = append(roots, concurrentNode(t, c, int64(i), false))
++	}
++	x = c.throughput.immix.execution
++	x.options.AutoConcurrent = true
++	x.options.MaxSnapshotBytes = 4096
++	if _, err := c.NewStructDefaultWithRoots(0, roots); err != nil {
++		t.Fatalf("resource admission broke normal allocation: %v", err)
++	}
++	if c.CycleTelemetry().ConcurrentSnapshotDeclines == 0 || c.ConcurrentStatus().Reason == "" {
++		t.Fatal("automatic admission failure was hidden")
++	}
++}
++func TestConcurrentAutomaticMinorBoundaryAndSingleProcessorAdmission(t *testing.T) {
++	previous := runtime.GOMAXPROCS(2)
++	defer runtime.GOMAXPROCS(previous)
++	c := newConcurrentTestCollector(t, 1<<20)
++	root := concurrentNode(t, c, 1, false)
++	c.throughput.immix.execution.options.AutoConcurrent = true
++	if err := c.CollectMinor(RefSliceRoots{root}); err != nil {
++		t.Fatal(err)
++	}
++	if c.CycleTelemetry().ConcurrentStarts != 1 {
++		t.Fatal("native refill minor safepoint did not start marking")
++	}
++	c.abortConcurrent("test boundary complete")
++	runtime.GOMAXPROCS(1)
++	c.throughput.immix.execution.nextConcurrentStart = 0
++	if _, err := c.NewStructDefaultWithRoots(0, RefSliceRoots{root}); err != nil {
++		t.Fatal(err)
++	}
++	if c.concurrentActive() {
++		t.Fatal("automatic marking started without a spare processor")
++	}
++}
+diff --git a/src/core/runtime/gc/native/execution.go b/src/core/runtime/gc/native/execution.go
+index 517718a1f..a51ac37f6 100644
+--- a/src/core/runtime/gc/native/execution.go
++++ b/src/core/runtime/gc/native/execution.go
+@@ -6,9 +6,16 @@ import "fmt"
+ // wago_gc_workers; minimal/default and Tiny products reject this configuration.
+ // Nil preserves the ordinary worker-free collector and performs no clock reads.
+ type ExecutionOptions struct {
+-	Telemetry       bool
+-	BackgroundSweep bool
+-	Workers         uint16
++	// AutoConcurrent advances configured marking at exact allocation/minor safepoints.
++	AutoConcurrent       bool
++	ConcurrentMark       bool
++	MinConcurrentBytes   uint64
++	MinConcurrentObjects uint32
++	MaxSnapshotBytes     uint64
++	RemarkBudget         uint64
++	Telemetry            bool
++	BackgroundSweep      bool
++	Workers              uint16
+ 	// MinMarkBytes must be set from workload evidence. Zero disables parallel mark.
+ 	MinMarkBytes   uint64
+ 	MinMarkObjects uint32
+@@ -21,6 +28,7 @@ type CollectionKind uint8
+ const (
+ 	CollectionFull CollectionKind = iota + 1
+ 	CollectionMinor
++	CollectionConcurrent
+ 	CollectionBackgroundSweep
+ )
+ 
+@@ -36,12 +44,13 @@ type CollectionCycle struct {
+ 	HeapBytes                                                    uint64
+ }
+ type CycleTelemetry struct {
+-	ParallelCopyCycles, CopyWorkerNS                                                    uint64
+-	ParallelMarkCycles, QueueSteals, QueueTransfers, MarkWorkerNS, ParallelScratchBytes uint64
+-	BackgroundTasks, BackgroundSweptBytes, AssistWaitNS                                 uint64
+-	Cycles                                                                              []CollectionCycle
+-	Count                                                                               uint64
+-	P99PauseNS, MaxPauseNS                                                              uint64
++	ConcurrentStarts, ConcurrentCompletes, ConcurrentAborts, ConcurrentSnapshotDeclines, ConcurrentRemarkDeclines uint64
++	ParallelCopyCycles, CopyWorkerNS                                                                              uint64
++	ParallelMarkCycles, QueueSteals, QueueTransfers, MarkWorkerNS, ParallelScratchBytes                           uint64
++	BackgroundTasks, BackgroundSweptBytes, AssistWaitNS                                                           uint64
++	Cycles                                                                                                        []CollectionCycle
++	Count                                                                                                         uint64
++	P99PauseNS, MaxPauseNS                                                                                        uint64
+ }
+ 
+ func normalizeExecution(cfg *Config) error {
+@@ -55,6 +64,31 @@ func normalizeExecution(cfg *Config) error {
+ 		return fmt.Errorf("gc: execution options require the collecting Immix throughput profile")
+ 	}
+ 	options := *cfg.Execution
++	if options.AutoConcurrent && !options.ConcurrentMark {
++		return fmt.Errorf("gc: automatic concurrent marking requires ConcurrentMark")
++	}
++
++	if options.ConcurrentMark {
++		if !ConcurrentProductSupported || cfg.DisableMovingNursery {
++			return fmt.Errorf("gc: concurrent marking requires the AMD64 concurrent worker product and a moving nursery")
++		}
++		if options.MinConcurrentBytes == 0 {
++			options.MinConcurrentBytes = ^uint64(0)
++		}
++		if options.MinConcurrentObjects == 0 {
++			options.MinConcurrentObjects = 65536
++		}
++		if options.MaxSnapshotBytes == 0 {
++			options.MaxSnapshotBytes = 8 << 20
++		}
++		if options.MaxSnapshotBytes < 4096 || options.MaxSnapshotBytes > 64<<20 {
++			return fmt.Errorf("gc: concurrent snapshot budget must be 4 KiB..64 MiB")
++		}
++		if options.RemarkBudget == 0 {
++			options.RemarkBudget = 65536
++		}
++	}
++
+ 	if options.Workers == 0 {
+ 		options.Workers = 1
+ 	}
+diff --git a/src/core/runtime/gc/native/execution_bench_test.go b/src/core/runtime/gc/native/execution_bench_test.go
+index 0966ccd2e..e69cf23d3 100644
+--- a/src/core/runtime/gc/native/execution_bench_test.go
++++ b/src/core/runtime/gc/native/execution_bench_test.go
+@@ -6,6 +6,7 @@ import (
+ 	"fmt"
+ 	"runtime"
+ 	"testing"
++	"time"
+ )
+ 
+ func BenchmarkParallelFullMark(b *testing.B) {
+@@ -98,3 +99,63 @@ func BenchmarkParallelEvacuation(b *testing.B) {
+ 		}
+ 	}
+ }
++
++func BenchmarkBackgroundSweepOverlap(b *testing.B) {
++	for _, enabled := range []bool{false, true} {
++		b.Run(fmt.Sprintf("background%v", enabled), func(b *testing.B) {
++			var totalPause, mutatorNS, backgroundNS uint64
++			for iteration := 0; iteration < b.N; iteration++ {
++				b.StopTimer()
++				scalar, err := NewStructDesc(0, []StorageKind{StorageI64})
++				if err != nil {
++					b.Fatal(err)
++				}
++				c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 1 << 20, DisableMovingNursery: true, ThroughputHeapBytes: 4 << 20, ThroughputPageBytes: 4096, Execution: &ExecutionOptions{Workers: 1, Telemetry: true, BackgroundSweep: enabled, MinSweepBytes: 256 << 10}}, []TypeDesc{scalar})
++				if err != nil {
++					b.Fatal(err)
++				}
++				var roots RefSliceRoots
++				for i := 0; i < 32768; i++ {
++					r, err := c.NewStructDefault(0)
++					if err != nil {
++						b.Fatal(err)
++					}
++					if err = c.ForcePromote(r); err != nil {
++						b.Fatal(err)
++					}
++					if i%16 < 8 {
++						roots = append(roots, r)
++					}
++				}
++				b.StartTimer()
++				if err = c.CollectFull(roots); err != nil {
++					b.Fatal(err)
++				}
++				before := time.Now()
++				for i := 0; i < 8192; i++ {
++					r, err := c.NewStructDefault(0)
++					if err != nil {
++						b.Fatal(err)
++					}
++					roots = append(roots, r)
++				}
++				mutatorNS += uint64(time.Since(before))
++				if err = c.CollectMinor(roots); err != nil {
++					b.Fatal(err)
++				}
++				b.StopTimer()
++				for _, record := range c.CycleTelemetry().Cycles {
++					if record.Kind == CollectionBackgroundSweep {
++						backgroundNS += record.WorkerNS
++					} else {
++						totalPause += record.PauseNS
++					}
++				}
++				c.Close()
++			}
++			b.ReportMetric(float64(totalPause)/float64(b.N), "gc-pause-ns")
++			b.ReportMetric(float64(mutatorNS)/float64(b.N), "mutator-ns")
++			b.ReportMetric(float64(backgroundNS)/float64(b.N), "background-elapsed-ns")
++		})
++	}
++}
+diff --git a/src/core/runtime/gc/native/execution_enabled.go b/src/core/runtime/gc/native/execution_enabled.go
+index 6083b18a3..a6cac1d23 100644
+--- a/src/core/runtime/gc/native/execution_enabled.go
++++ b/src/core/runtime/gc/native/execution_enabled.go
+@@ -11,17 +11,21 @@ const executionProduct = true
+ const cycleHistory = 64
+ 
+ type collectorExecution struct {
+-	copyChunks                                                                          []parallelCopyChunk
+-	parallelCopyCycles, copyWorkerNS                                                    uint64
+-	lastCopyWorkers                                                                     uint16
+-	markPool                                                                            *parallelMarkPool
+-	parallelMarkCycles, queueSteals, queueTransfers, markWorkerNS, parallelScratchBytes uint64
+-	sweep                                                                               *backgroundSweep
+-	busy                                                                                []uint64
+-	backgroundTasks, backgroundSweptBytes, assistWaitNS                                 uint64
+-	options                                                                             ExecutionOptions
+-	cycles                                                                              [cycleHistory]CollectionCycle
+-	sequence                                                                            uint64
++	nextConcurrentStart                                                                                           uint64
++	concurrent                                                                                                    *concurrentCycle
++	concurrentStatus                                                                                              ConcurrentStatus
++	concurrentStarts, concurrentCompletes, concurrentAborts, concurrentSnapshotDeclines, concurrentRemarkDeclines uint64
++	copyChunks                                                                                                    []parallelCopyChunk
++	parallelCopyCycles, copyWorkerNS                                                                              uint64
++	lastCopyWorkers                                                                                               uint16
++	markPool                                                                                                      *parallelMarkPool
++	parallelMarkCycles, queueSteals, queueTransfers, markWorkerNS, parallelScratchBytes                           uint64
++	sweep                                                                                                         *backgroundSweep
++	busy                                                                                                          []uint64
++	backgroundTasks, backgroundSweptBytes, assistWaitNS                                                           uint64
++	options                                                                                                       ExecutionOptions
++	cycles                                                                                                        [cycleHistory]CollectionCycle
++	sequence                                                                                                      uint64
+ }
+ type executionCycle struct {
+ 	workerStartNS uint64
+@@ -92,7 +96,7 @@ func (c *Collector) CycleTelemetry() CycleTelemetry {
+ 	}
+ 	x := m.execution
+ 	n := min(x.sequence, uint64(cycleHistory))
+-	result := CycleTelemetry{Count: x.sequence, Cycles: make([]CollectionCycle, n), ParallelCopyCycles: x.parallelCopyCycles, CopyWorkerNS: x.copyWorkerNS, ParallelMarkCycles: x.parallelMarkCycles, QueueSteals: x.queueSteals, QueueTransfers: x.queueTransfers, MarkWorkerNS: x.markWorkerNS, ParallelScratchBytes: x.parallelScratchBytes, BackgroundTasks: x.backgroundTasks, BackgroundSweptBytes: x.backgroundSweptBytes, AssistWaitNS: x.assistWaitNS}
++	result := CycleTelemetry{Count: x.sequence, ConcurrentStarts: x.concurrentStarts, ConcurrentCompletes: x.concurrentCompletes, ConcurrentAborts: x.concurrentAborts, ConcurrentSnapshotDeclines: x.concurrentSnapshotDeclines, ConcurrentRemarkDeclines: x.concurrentRemarkDeclines, Cycles: make([]CollectionCycle, n), ParallelCopyCycles: x.parallelCopyCycles, CopyWorkerNS: x.copyWorkerNS, ParallelMarkCycles: x.parallelMarkCycles, QueueSteals: x.queueSteals, QueueTransfers: x.queueTransfers, MarkWorkerNS: x.markWorkerNS, ParallelScratchBytes: x.parallelScratchBytes, BackgroundTasks: x.backgroundTasks, BackgroundSweptBytes: x.backgroundSweptBytes, AssistWaitNS: x.assistWaitNS}
+ 	pauses := make([]uint64, 0, n)
+ 	for i := range result.Cycles {
+ 		r := x.cycles[(x.sequence-n+uint64(i))%cycleHistory]
+diff --git a/src/core/runtime/gc/native/mark_parallel_enabled.go b/src/core/runtime/gc/native/mark_parallel_enabled.go
+index 55471bd1b..bb79d3ef3 100644
+--- a/src/core/runtime/gc/native/mark_parallel_enabled.go
++++ b/src/core/runtime/gc/native/mark_parallel_enabled.go
+@@ -231,7 +231,7 @@ func (c *Collector) parallelMarkRoots(roots RootSet) int {
+ 	options := x.options
+ 	workers := min(int(options.Workers), runtime.GOMAXPROCS(0))
+ 	objects := len(c.handles) - min(len(c.freeHandles)+1, len(c.handles))
+-	if workers < 2 || objects < int(options.MinMarkObjects) || uint64(c.throughput.bump)+uint64(c.nurseryBump) < options.MinMarkBytes {
++	if workers < 2 || objects < int(options.MinMarkObjects) || uint64(c.throughput.bump)+uint64(c.nurseryBump)+uint64(c.survivorBump) < options.MinMarkBytes {
+ 		return 0
+ 	}
+ 	var allocated uint64
+diff --git a/src/core/runtime/gc/native/mark_parallel_test.go b/src/core/runtime/gc/native/mark_parallel_test.go
+index f02c2d632..4449e185a 100644
+--- a/src/core/runtime/gc/native/mark_parallel_test.go
++++ b/src/core/runtime/gc/native/mark_parallel_test.go
+@@ -9,6 +9,9 @@ import (
+ )
+ 
+ func newParallelMarkFixture(t testing.TB, count int, workers uint16) (*Collector, RefSliceRoots) {
++	return newExecutionGraphFixture(t, count, ExecutionOptions{Workers: workers, Telemetry: true, MinMarkObjects: 1, MinMarkBytes: 1}, false)
++}
++func newExecutionGraphFixture(t testing.TB, count int, options ExecutionOptions, moving bool) (*Collector, RefSliceRoots) {
+ 	t.Helper()
+ 	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageRefNull, StorageRefNull, StorageRefNull, StorageI64})
+ 	if err != nil {
+@@ -22,7 +25,7 @@ func newParallelMarkFixture(t testing.TB, count int, workers uint16) (*Collector
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: uint32(count)*40 + 1<<20, DisableMovingNursery: true, ThroughputHeapBytes: 128 << 20, ThroughputPageBytes: 4096, Execution: &ExecutionOptions{Workers: workers, Telemetry: true, MinMarkObjects: 1, MinMarkBytes: 1}}, []TypeDesc{node, array, scalar})
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: uint32(count)*40 + 1<<20, DisableMovingNursery: !moving, ThroughputHeapBytes: 128 << 20, ThroughputPageBytes: 4096, Execution: &options}, []TypeDesc{node, array, scalar})
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/src/core/runtime/gc/native/native_view.go b/src/core/runtime/gc/native/native_view.go
+index 63461d971..e8c27937f 100644
+--- a/src/core/runtime/gc/native/native_view.go
++++ b/src/core/runtime/gc/native/native_view.go
+@@ -11,8 +11,10 @@ import (
+ // each native instance view, removing one dependent collector-view load. Stable
+ // mappings keep it fixed; portable Go growth updates live instance bindings.
+ // Generated operations still reload mutable counts/extents and callers must
+-// serialize native execution with collector mutation.
+-const NativeABIVersion uint32 = compactLayoutABI
++// serialize native execution with collector mutation. The optional concurrent
++// product adds two to the selected layout version so artifacts without native
++// insertion barriers cannot run while concurrent marking is enabled.
++const NativeABIVersion uint32 = compactLayoutABI + concurrentABIDelta
+ 
+ // SubtypeEncoding is an optional extension in the existing ABI padding word.
+ // Encoding zero is legacy and must use the Go abstract-array cast fallback.
+@@ -73,58 +75,64 @@ type NativeSpaceView struct {
+ // All fields use naturally aligned fixed-width words so their offsets are the
+ // same on amd64 and arm64. Keep offset constants below in sync.
+ type NativeCollectorView struct {
+-	Version               uint32
+-	HandleStride          uint32
+-	Handles               uintptr
+-	HandleCount           uint32
+-	SubtypeEncoding       uint32
+-	Spaces                [NativeSpaceCount]NativeSpaceView
+-	RefreshGeneration     uint64
+-	ObjectCards           uintptr
+-	ObjectCardCount       uint32
+-	NurseryAllocBytes     uint32
+-	StructAllocState      uintptr
+-	StructAllocEpoch      uintptr
+-	NurseryBump           uintptr
+-	AllocationCount       uintptr
+-	NurseryObjectMaxBytes uint32
+-	SubtypeIntervalCount  uint32
+-	SubtypeIntervals      uintptr
+-	DeadNurseryCycle      uint64
+-	LargeArrayAllocState  uintptr
+-	LargeArrayAllocEpoch  uintptr
+-	ObjectCardSlots       uintptr
+-	ObjectCardSlotCount   uint32
+-	_                     uint32
++	Version                  uint32
++	HandleStride             uint32
++	Handles                  uintptr
++	HandleCount              uint32
++	SubtypeEncoding          uint32
++	Spaces                   [NativeSpaceCount]NativeSpaceView
++	RefreshGeneration        uint64
++	ObjectCards              uintptr
++	ObjectCardCount          uint32
++	NurseryAllocBytes        uint32
++	StructAllocState         uintptr
++	StructAllocEpoch         uintptr
++	NurseryBump              uintptr
++	AllocationCount          uintptr
++	NurseryObjectMaxBytes    uint32
++	SubtypeIntervalCount     uint32
++	SubtypeIntervals         uintptr
++	DeadNurseryCycle         uint64
++	LargeArrayAllocState     uintptr
++	LargeArrayAllocEpoch     uintptr
++	ObjectCardSlots          uintptr
++	ObjectCardSlotCount      uint32
++	ConcurrentActive         uint32
++	ConcurrentDirtyBits      uintptr
++	ConcurrentDirtyWordCount uint32
++	_                        uint32
+ }
+ 
+ const (
+-	NativeViewVersionOffset               = 0
+-	NativeViewHandleStrideOffset          = 4
+-	NativeViewHandlesOffset               = 8
+-	NativeViewHandleCountOffset           = 16
+-	NativeViewSubtypeEncodingOffset       = 20
+-	NativeViewSpacesOffset                = 24
+-	NativeViewSpaceStride                 = 16
+-	NativeSpaceBaseOffset                 = 0
+-	NativeSpaceBytesOffset                = 8
+-	NativeViewRefreshGenerationOffset     = 104
+-	NativeViewObjectCardsOffset           = 112
+-	NativeViewObjectCardCountOffset       = 120
+-	NativeViewNurseryAllocBytesOffset     = 124
+-	NativeViewStructAllocStateOffset      = 128
+-	NativeViewStructAllocEpochOffset      = 136
+-	NativeViewNurseryBumpOffset           = 144
+-	NativeViewAllocationCountOffset       = 152
+-	NativeViewNurseryObjectMaxBytesOffset = 160
+-	NativeViewSubtypeIntervalCountOffset  = 164
+-	NativeViewSubtypeIntervalsOffset      = 168
+-	NativeViewDeadNurseryCycleOffset      = 176
+-	NativeViewLargeArrayAllocStateOffset  = 184
+-	NativeViewLargeArrayAllocEpochOffset  = 192
+-	NativeViewObjectCardSlotsOffset       = 200
+-	NativeViewObjectCardSlotCountOffset   = 208
+-	NativeCollectorViewSize               = 216
++	NativeViewVersionOffset                  = 0
++	NativeViewHandleStrideOffset             = 4
++	NativeViewHandlesOffset                  = 8
++	NativeViewHandleCountOffset              = 16
++	NativeViewSubtypeEncodingOffset          = 20
++	NativeViewSpacesOffset                   = 24
++	NativeViewSpaceStride                    = 16
++	NativeSpaceBaseOffset                    = 0
++	NativeSpaceBytesOffset                   = 8
++	NativeViewRefreshGenerationOffset        = 104
++	NativeViewObjectCardsOffset              = 112
++	NativeViewObjectCardCountOffset          = 120
++	NativeViewNurseryAllocBytesOffset        = 124
++	NativeViewStructAllocStateOffset         = 128
++	NativeViewStructAllocEpochOffset         = 136
++	NativeViewNurseryBumpOffset              = 144
++	NativeViewAllocationCountOffset          = 152
++	NativeViewNurseryObjectMaxBytesOffset    = 160
++	NativeViewSubtypeIntervalCountOffset     = 164
++	NativeViewSubtypeIntervalsOffset         = 168
++	NativeViewDeadNurseryCycleOffset         = 176
++	NativeViewLargeArrayAllocStateOffset     = 184
++	NativeViewLargeArrayAllocEpochOffset     = 192
++	NativeViewObjectCardSlotsOffset          = 200
++	NativeViewObjectCardSlotCountOffset      = 208
++	NativeViewConcurrentActiveOffset         = 212
++	NativeViewConcurrentDirtyBitsOffset      = 216
++	NativeViewConcurrentDirtyWordCountOffset = 224
++	NativeCollectorViewSize                  = 232
+ )
+ 
+ // NativeInstanceView adds the immutable module-local to canonical-domain type
+@@ -248,7 +256,10 @@ func ValidateNativeABI() error {
+ 	if unsafe.Offsetof(view.LargeArrayAllocState) != NativeViewLargeArrayAllocStateOffset ||
+ 		unsafe.Offsetof(view.LargeArrayAllocEpoch) != NativeViewLargeArrayAllocEpochOffset ||
+ 		unsafe.Offsetof(view.ObjectCardSlots) != NativeViewObjectCardSlotsOffset ||
+-		unsafe.Offsetof(view.ObjectCardSlotCount) != NativeViewObjectCardSlotCountOffset {
++		unsafe.Offsetof(view.ObjectCardSlotCount) != NativeViewObjectCardSlotCountOffset ||
++		unsafe.Offsetof(view.ConcurrentActive) != NativeViewConcurrentActiveOffset ||
++		unsafe.Offsetof(view.ConcurrentDirtyBits) != NativeViewConcurrentDirtyBitsOffset ||
++		unsafe.Offsetof(view.ConcurrentDirtyWordCount) != NativeViewConcurrentDirtyWordCountOffset {
+ 		return fmt.Errorf("gc: native large-array allocation ABI layout mismatch")
+ 	}
+ 	var instance NativeInstanceView
+@@ -334,6 +345,9 @@ func (c *Collector) refreshNativeView() {
+ 	v.ObjectCardCount = uint32(len(c.objectCards))
+ 	v.ObjectCardSlots = sliceData(c.cardSlots)
+ 	v.ObjectCardSlotCount = uint32(len(c.cardSlots))
++	if ConcurrentProductSupported {
++		c.refreshConcurrentView()
++	}
+ 	v.SubtypeIntervals = sliceData(c.subtypeIntervals)
+ 	v.SubtypeIntervalCount = uint32(len(c.subtypeIntervals))
+ 	if c.closed {
+@@ -370,6 +384,9 @@ func (c *Collector) refreshNativeCards() {
+ 	v.ObjectCardCount = uint32(len(c.objectCards))
+ 	v.ObjectCardSlots = sliceData(c.cardSlots)
+ 	v.ObjectCardSlotCount = uint32(len(c.cardSlots))
++	if ConcurrentProductSupported {
++		c.refreshConcurrentView()
++	}
+ 	v.RefreshGeneration++
+ }
+ 
+diff --git a/src/core/runtime/gc/native/native_view_test.go b/src/core/runtime/gc/native/native_view_test.go
+index ff117d5d4..8faa7c4d9 100644
+--- a/src/core/runtime/gc/native/native_view_test.go
++++ b/src/core/runtime/gc/native/native_view_test.go
+@@ -6,8 +6,8 @@ import (
+ )
+ 
+ func TestNativeCollectorViewLayoutAndRefresh(t *testing.T) {
+-	if NativeABIVersion != compactLayoutABI {
+-		t.Fatalf("native collector ABI version = %d, want compact layout version", NativeABIVersion)
++	if NativeABIVersion != compactLayoutABI+concurrentABIDelta {
++		t.Fatalf("native collector ABI version = %d, want selected product layout version", NativeABIVersion)
+ 	}
+ 	if got := unsafe.Sizeof(handleEntry{}); got != NativeHandleStride {
+ 		t.Fatalf("handle entry size = %d, want %d", got, NativeHandleStride)
+@@ -210,8 +210,8 @@ func TestNativeSubtypeKindEncodingUsesExistingPadding(t *testing.T) {
+ 	if got := unsafe.Offsetof(view.SubtypeEncoding); got != 20 {
+ 		t.Fatalf("encoding offset=%d, want reserved offset 20", got)
+ 	}
+-	if got := unsafe.Sizeof(*view); got != 216 {
+-		t.Fatalf("collector view grew to %d bytes, want 216", got)
++	if got := unsafe.Sizeof(*view); got != 232 {
++		t.Fatalf("collector view grew to %d bytes, want 232", got)
+ 	}
+ 	instance := NewNativeInstanceView(c, []TypeID{0})
+ 	if view.SubtypeEncoding != NativeSubtypeEncodingKindBit {
+diff --git a/src/core/runtime/gc/native/storage.go b/src/core/runtime/gc/native/storage.go
+index 382c82eb6..fbe1cf1ee 100644
+--- a/src/core/runtime/gc/native/storage.go
++++ b/src/core/runtime/gc/native/storage.go
+@@ -61,6 +61,9 @@ func (c *Collector) storeValue(r Ref, d TypeDesc, off uint64, k StorageKind, v V
+ 		binary.LittleEndian.PutUint64(b[off+8:], v.BitsHi)
+ 	case StorageRef, StorageRefNull:
+ 		binary.LittleEndian.PutUint32(b[off:], uint32(v.Ref))
++		if ConcurrentProductSupported && v.Ref.IsObj() {
++			c.concurrentDirtyParent(r)
++		}
+ 	default:
+ 		return errors.New("gc: bad kind")
+ 	}
+diff --git a/src/wago/api.go b/src/wago/api.go
+index 66b7a446d..7f132e54d 100644
+--- a/src/wago/api.go
++++ b/src/wago/api.go
+@@ -5609,3 +5609,29 @@ type GCCompactionResult = gc.CompactionResult
+ // GCExecutionOptions enables opt-in collection workers in the worker product.
+ type GCExecutionOptions = gc.ExecutionOptions
+ type GCCycleTelemetry = gc.CycleTelemetry
++
++// GCConcurrentStatus describes the last optional concurrent cycle.
++type GCConcurrentStatus = gc.ConcurrentStatus
++
++// GCCollectionKind and GCConcurrentPhase identify diagnostic collection states.
++type GCCollectionKind = gc.CollectionKind
++type GCConcurrentPhase = gc.ConcurrentPhase
++
++const (
++	GCCollectionFull            = gc.CollectionFull
++	GCCollectionMinor           = gc.CollectionMinor
++	GCCollectionConcurrent      = gc.CollectionConcurrent
++	GCCollectionBackgroundSweep = gc.CollectionBackgroundSweep
++	GCConcurrentIdle            = gc.ConcurrentIdle
++	GCConcurrentSnapshot        = gc.ConcurrentSnapshot
++	GCConcurrentMark            = gc.ConcurrentMark
++	GCConcurrentRemark          = gc.ConcurrentRemark
++	GCConcurrentComplete        = gc.ConcurrentComplete
++	GCConcurrentAborted         = gc.ConcurrentAborted
++)
++
++var ErrGCConcurrentSnapshotBudget = gc.ErrConcurrentSnapshotBudget
++var ErrGCConcurrentRemarkBudget = gc.ErrConcurrentRemarkBudget
++
++// GCConcurrentSupported reports the selected build product capability.
++const GCConcurrentSupported = gc.ConcurrentProductSupported
+diff --git a/src/wago/gc_collect.go b/src/wago/gc_collect.go
+index dd417e5e2..963ea92fe 100644
+--- a/src/wago/gc_collect.go
++++ b/src/wago/gc_collect.go
+@@ -38,21 +38,72 @@ func (in *Instance) CollectGC() error {
+ func (in *Instance) CompactGC(budgetBytes uint64) (GCCompactionResult, error) {
+ 	return in.runGCCollection(true, budgetBytes)
+ }
++
++type gcAction uint8
++
++const (
++	gcActionFull gcAction = iota
++	gcActionCompact
++	gcActionConcurrentStart
++	gcActionConcurrentFinish
++	gcActionTelemetry
++	gcActionConcurrentStatus
++)
++
++type gcActionResult struct {
++	compaction GCCompactionResult
++	telemetry  GCCycleTelemetry
++	status     GCConcurrentStatus
++	done       bool
++}
++
++// StartConcurrentGC captures the exact GC domain at a native/Go handshake and
++// starts optional immutable-graph marking. False means the configured threshold
++// was not reached. Memory-budget and configuration failures are returned.
++func (in *Instance) StartConcurrentGC() (bool, error) {
++	result, err := in.runGCAction(gcActionConcurrentStart, 0)
++	return result.done, err
++}
++
++// FinishConcurrentGC joins graph work and performs a bounded exact-root remark.
++// A budget error aborts without sweeping. CollectGC can then run synchronously.
++func (in *Instance) FinishConcurrentGC() (bool, error) {
++	result, err := in.runGCAction(gcActionConcurrentFinish, 0)
++	return result.done, err
++}
++
++// GCCycleTelemetry returns a copied, bounded history under the GC domain lease.
++func (in *Instance) GCCycleTelemetry() (GCCycleTelemetry, error) {
++	result, err := in.runGCAction(gcActionTelemetry, 0)
++	return result.telemetry, err
++}
++func (in *Instance) GCConcurrentStatus() (GCConcurrentStatus, error) {
++	result, err := in.runGCAction(gcActionConcurrentStatus, 0)
++	return result.status, err
++}
+ func (in *Instance) runGCCollection(compact bool, budget uint64) (GCCompactionResult, error) {
++	operation := gcActionFull
++	if compact {
++		operation = gcActionCompact
++	}
++	result, err := in.runGCAction(operation, budget)
++	return result.compaction, err
++}
++func (in *Instance) runGCAction(operation gcAction, budget uint64) (gcActionResult, error) {
+ 	if err := in.beginInvocation(); err != nil {
+-		return GCCompactionResult{}, err
++		return gcActionResult{}, err
+ 	}
+ 	defer in.endInvocation()
+ 	if in == nil || in.gc == nil || in.c == nil {
+-		return GCCompactionResult{}, fmt.Errorf("wago: instance has no live WasmGC collector")
++		return gcActionResult{}, fmt.Errorf("wago: instance has no live WasmGC collector")
+ 	}
+ 	if in.guestStorageBorrowed() {
+-		return GCCompactionResult{}, fmt.Errorf("wago: collection is unavailable while guest storage is borrowed: %w", ErrPermissionDenied)
++		return gcActionResult{}, fmt.Errorf("wago: collection is unavailable while guest storage is borrowed: %w", ErrPermissionDenied)
+ 	}
+ 	in.revokePrivateGCEntry()
+ 	invocation := in.lockGCInvocation(newInvocationID())
+ 	defer invocation.unlock()
+-	return in.collectGCOperation(compact, budget)
++	return in.collectGCAction(operation, budget)
+ }
+ 
+ func (in *Instance) collectGC() error {
+@@ -60,9 +111,17 @@ func (in *Instance) collectGC() error {
+ 	return err
+ }
+ func (in *Instance) collectGCOperation(compact bool, budget uint64) (gc.CompactionResult, error) {
++	operation := gcActionFull
++	if compact {
++		operation = gcActionCompact
++	}
++	result, err := in.collectGCAction(operation, budget)
++	return result.compaction, err
++}
++func (in *Instance) collectGCAction(operation gcAction, budget uint64) (gcActionResult, error) {
+ 	public := in.existingPublicGCState()
+ 	if public == nil {
+-		return gc.CompactionResult{}, errGenericGCRootState
++		return gcActionResult{}, errGenericGCRootState
+ 	}
+ 	var nativeMu *sync.Mutex
+ 	if in.usesIndependentExecution() {
+@@ -79,12 +138,28 @@ func (in *Instance) collectGCOperation(compact bool, budget uint64) (gc.Compacti
+ 	public.mu.Lock()
+ 	defer public.mu.Unlock()
+ 	if err := in.prepareGCCollectionRootsLocked(public); err != nil {
+-		return gc.CompactionResult{}, err
++		return gcActionResult{}, err
+ 	}
+-	if compact {
+-		return in.gc.CompactOld(&public.frameRoots, budget)
++	switch operation {
++	case gcActionCompact:
++		result, err := in.gc.CompactOld(&public.frameRoots, budget)
++		return gcActionResult{compaction: result}, err
++	case gcActionConcurrentStart:
++		if len(in.c.customInstructions) != 0 {
++			return gcActionResult{}, fmt.Errorf("wago: concurrent GC is unavailable for custom instruction modules")
++		}
++		started, err := in.gc.StartConcurrent(&public.frameRoots)
++		return gcActionResult{done: started}, err
++	case gcActionConcurrentFinish:
++		done, err := in.gc.FinishConcurrent(&public.frameRoots)
++		return gcActionResult{done: done}, err
++	case gcActionTelemetry:
++		return gcActionResult{telemetry: in.gc.CycleTelemetry()}, nil
++	case gcActionConcurrentStatus:
++		return gcActionResult{status: in.gc.ConcurrentStatus()}, nil
++	default:
++		return gcActionResult{}, in.gc.CollectFull(&public.frameRoots)
+ 	}
+-	return gc.CompactionResult{}, in.gc.CollectFull(&public.frameRoots)
+ }
+ 
+ // prepareGCCollectionRootsLocked prepares the standard root universe while
+diff --git a/src/wago/gc_concurrent_amd64_test.go b/src/wago/gc_concurrent_amd64_test.go
+new file mode 100644
+index 000000000..7c710d80f
+--- /dev/null
++++ b/src/wago/gc_concurrent_amd64_test.go
+@@ -0,0 +1,273 @@
++//go:build linux && amd64 && wago_gc_workers && wago_gc_concurrent && !tinygo && !wago_guardpage
++
++package wago
++
++import (
++	"context"
++	"fmt"
++	"testing"
++	"unsafe"
++
++	"github.com/wago-org/wago/src/core/compiler/wasm"
++	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
++	"github.com/wago-org/wago/tests/support/wasmtest"
++)
++
++func gcConcurrentNativeModule() []byte {
++	fields := make([][]byte, 40)
++	for i := range fields {
++		fields[i] = []byte{0x6d, 1}
++	}
++	parent := append([]byte{0x5f}, wasmtest.Vec(fields...)...)
++	types := [][]byte{{0x5f, 1, 0x7f, 1}, parent, {0x5e, 0x6d, 1}, wasmtest.FuncType(nil, nil), wasmtest.FuncType([]wasm.ValType{wasm.I32}, nil)}
++	imp := append(append(wasmtest.Name("env"), wasmtest.Name("step")...), 0, 3)
++	globals := [][]byte{{0x63, 1, 1, 0xd0, 1, 0x0b}, {0x63, 2, 1, 0xd0, 2, 0x0b}, {0x63, 0, 1, 0xd0, 0, 0x0b}}
++	bodies := [][]byte{
++		wasmtest.Code([]byte{0xfb, 1, 1, 0x24, 0, 0x41, 0x80, 4, 0xfb, 7, 2, 0x24, 1, 0x41, 42, 0xfb, 0, 0, 0x24, 2, 0x0b}),
++		wasmtest.Code([]byte{0x23, 0, 0x23, 2, 0xfb, 5, 1, 0, 0x0b}),
++		wasmtest.Code([]byte{0x23, 0, 0x23, 2, 0xfb, 5, 1, 32, 0x0b}),
++		wasmtest.Code([]byte{0x23, 1, 0x20, 0, 0x23, 2, 0xfb, 0x0e, 2, 0x0b}),
++		wasmtest.Code([]byte{0x23, 0, 0x23, 0, 0xfb, 5, 1, 0, 0x0b}),
++		wasmtest.Code([]byte{0x20, 0, 0xfb, 0, 0, 0x24, 2, 0x0b}),
++		wasmtest.Code([]byte{0x23, 0, 0xd0, 1, 0x24, 0, 0x10, 0, 0xfb, 2, 1, 0, 0xd1, 0x1a, 0x0b}),
++	}
++	functionTypes := [][]byte{{3}, {3}, {3}, {4}, {3}, {4}, {3}}
++	names := []string{"init", "struct_store", "struct_distant", "array_store", "struct_self", "new_child", "host_round"}
++	exports := make([][]byte, len(names))
++	for i, name := range names {
++		exports[i] = wasmtest.ExportEntry(name, 0, uint32(i+1))
++	}
++	return wasmtest.Module(wasmtest.Section(1, wasmtest.Vec(types...)), wasmtest.Section(2, wasmtest.Vec(imp)), wasmtest.Section(3, wasmtest.Vec(functionTypes...)), wasmtest.Section(6, wasmtest.Vec(globals...)), wasmtest.Section(7, wasmtest.Vec(exports...)), wasmtest.Section(10, wasmtest.Vec(bodies...)))
++}
++func concurrentNativeConfig() GCConfig {
++	return GCConfig{Allocator: GCAllocatorImmix, NurseryBytes: 1 << 20, SurvivorBytes: 512 << 10, ThroughputHeapBytes: 4 << 20, ThroughputPageBytes: 4096, VerifyAfterCollect: true, Execution: &GCExecutionOptions{ConcurrentMark: true, Telemetry: true, MinConcurrentBytes: 1, MinConcurrentObjects: 1, RemarkBudget: 1 << 20}}
++}
++func concurrentNativeGlobal(in *Instance, index int) gc.Ref {
++	return gc.Ref(uint32(readGlobalObject(in.globalCells[index], in.c.Globals[index].Type)))
++}
++func clearConcurrentParentBit(t *testing.T, in *Instance, parent gc.Ref) func() {
++	t.Helper()
++	view := in.gc.NativeView()
++	h := uint32(parent) >> 1
++	if view.ConcurrentActive != 1 || h/64 >= view.ConcurrentDirtyWordCount {
++		t.Fatal("native parent is outside its active dirty bitmap")
++	}
++	words := unsafe.Slice((*uint64)(offHeapPtr(view.ConcurrentDirtyBits)), int(view.ConcurrentDirtyWordCount))
++	mask := uint64(1) << (h % 64)
++	words[h/64] &^= mask
++	return func() {
++		t.Helper()
++		if words[h/64]&mask == 0 {
++			t.Fatalf("native store did not dirty parent handle%d", h)
++		}
++	}
++}
++func TestGCConcurrentNativeStoreBarriersAndArtifactReload(t *testing.T) {
++	compiled, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3), gcConcurrentNativeModule())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer compiled.Close()
++	loaded := publicArtifactRoundTrip(t, compiled)
++	defer loaded.Close()
++	for _, artifact := range []*Compiled{compiled, loaded} {
++		for _, old := range []bool{false, true} {
++			in, err := Instantiate(artifact, InstantiateOptions{GC: concurrentNativeConfig(), Imports: testImports("env.step", slotHostFunc(func(HostModule, []uint64, []uint64) {}))})
++			if err != nil {
++				t.Fatal(err)
++			}
++			if _, err = in.Invoke("init"); err != nil {
++				t.Fatal(err)
++			}
++			parent, array := concurrentNativeGlobal(in, 0), concurrentNativeGlobal(in, 1)
++			if old {
++				if err = in.gc.ForcePromote(parent); err != nil {
++					t.Fatal(err)
++				}
++				if err = in.gc.ForcePromote(array); err != nil {
++					t.Fatal(err)
++				}
++			}
++			if started, err := in.StartConcurrentGC(); err != nil || !started {
++				t.Fatalf("start: %v %v", started, err)
++			}
++			for _, test := range []struct {
++				name string
++				ref  gc.Ref
++				args []uint64
++			}{{"struct_self", parent, nil}, {"struct_store", parent, nil}, {"struct_distant", parent, nil}, {"array_store", array, []uint64{0}}, {"array_store", array, []uint64{40}}} {
++				// First old-to-young access can create cards in Go. The second must
++				// independently dirty the parent on the covered native leaf path.
++				if _, err = in.Invoke(test.name, test.args...); err != nil {
++					t.Fatal(err)
++				}
++				assertDirty := clearConcurrentParentBit(t, in, test.ref)
++				if _, err = in.Invoke(test.name, test.args...); err != nil {
++					t.Fatal(err)
++				}
++				assertDirty()
++			}
++			if _, err = in.Invoke("new_child", 73); err != nil {
++				t.Fatal(err)
++			}
++			if _, err = in.Invoke("struct_store"); err != nil {
++				t.Fatal(err)
++			}
++			if _, err = in.Invoke("array_store", 0); err != nil {
++				t.Fatal(err)
++			}
++			if done, err := in.FinishConcurrentGC(); err != nil || !done {
++				t.Fatalf("finish: %v %v", done, err)
++			}
++			child, err := in.gc.StructGet(parent, 0)
++			if err != nil {
++				t.Fatal(err)
++			}
++			value, err := in.gc.StructGet(child.Ref, 0)
++			if err != nil || value.I32() != 73 {
++				t.Fatalf("stored child: %+v %v", value, err)
++			}
++			if err = in.CollectGC(); err != nil {
++				t.Fatal(err)
++			}
++			if history, err := in.GCCycleTelemetry(); err != nil || history.ConcurrentCompletes != 1 {
++				t.Fatalf("history: %+v %v", history, err)
++			}
++			in.Close()
++		}
++	}
++}
++func TestGCConcurrentHostReentryExactFrameRoots(t *testing.T) {
++	compiled, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3), gcConcurrentNativeModule())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer compiled.Close()
++	var owner *Instance
++	called := false
++	var callbackErr error
++	callback := slotHostFunc(func(caller HostModule, _ []uint64, _ []uint64) {
++		called = true
++		if started, err := owner.StartConcurrentGC(); err != nil || !started {
++			callbackErr = fmt.Errorf("host start: %v %v", started, err)
++			return
++		}
++		if _, err := owner.InvokeFromHost(context.Background(), caller, "new_child", 91); err != nil {
++			callbackErr = err
++		}
++	})
++	owner, err = Instantiate(compiled, InstantiateOptions{GC: concurrentNativeConfig(), Imports: testImports("env.step", callback)})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer owner.Close()
++	if _, err = owner.Invoke("init"); err != nil {
++		t.Fatal(err)
++	}
++	parent := concurrentNativeGlobal(owner, 0)
++	if _, err = owner.Invoke("host_round"); err != nil {
++		t.Fatal(err)
++	}
++	if !called {
++		t.Fatal("host handshake not called")
++	}
++	if callbackErr != nil {
++		t.Fatal(callbackErr)
++	}
++	if done, err := owner.FinishConcurrentGC(); err != nil || !done {
++		t.Fatalf("finish: %v %v", done, err)
++	}
++	if _, err = owner.gc.StructGet(parent, 0); err != nil {
++		t.Fatalf("parked frame root was lost: %v", err)
++	}
++	if err = owner.CollectGC(); err != nil {
++		t.Fatal(err)
++	}
++	if _, err = owner.gc.StructGet(parent, 0); err == nil {
++		t.Fatal("later collection retained released frame root")
++	}
++}
++func TestGCConcurrentSharedDomainRoots(t *testing.T) {
++	rt := NewRuntime(WithRuntimeConfig(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3)))
++	defer rt.Close()
++	module, err := rt.Compile(gcConcurrentNativeModule())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer module.Close()
++	imports := testImports("env.step", slotHostFunc(func(HostModule, []uint64, []uint64) {}))
++	first, err := rt.Instantiate(context.Background(), module, WithGC(concurrentNativeConfig()), WithImports(imports))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer first.Close()
++	second, err := rt.Instantiate(context.Background(), module, WithGC(concurrentNativeConfig()), WithImports(imports))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer second.Close()
++	if first.gc != second.gc {
++		t.Fatal("fixture did not share a collector")
++	}
++	for _, in := range []*Instance{first, second} {
++		if _, err = in.Invoke("init"); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if started, err := first.StartConcurrentGC(); err != nil || !started {
++		t.Fatal(started, err)
++	}
++	for _, in := range []*Instance{first, second} {
++		if _, err = in.Invoke("struct_store"); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if done, err := second.FinishConcurrentGC(); err != nil || !done {
++		t.Fatal(done, err)
++	}
++	for _, in := range []*Instance{first, second} {
++		parent := concurrentNativeGlobal(in, 0)
++		child, err := in.gc.StructGet(parent, 0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if value, err := in.gc.StructGet(child.Ref, 0); err != nil || value.I32() != 42 {
++			t.Fatal(value, err)
++		}
++	}
++}
++
++func TestGCConcurrentAutomaticNativeRefillSafepoints(t *testing.T) {
++	compiled := gcReadRegionsCompiled(t)
++	cfg := concurrentNativeConfig()
++	cfg.NurseryBytes = 256
++	cfg.SurvivorBytes = 128
++	cfg.Execution.AutoConcurrent = true
++	in, err := Instantiate(compiled, InstantiateOptions{GC: cfg})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer in.Close()
++	if _, err = in.Invoke("init"); err != nil {
++		t.Fatal(err)
++	}
++	for round := 0; round < 32; round++ {
++		// roots deliberately clears its reference global; restore the fixture.
++		if _, err = in.Invoke("init"); err != nil {
++			t.Fatal(err)
++		}
++		if got, err := in.Invoke("roots"); err != nil || len(got) != 1 || got[0] != 1040 {
++			t.Fatalf("automatic root round%d: %v %v", round, got, err)
++		}
++		if got, err := in.Invoke("loop", 8192); err != nil || len(got) != 1 || got[0] != 57344 {
++			t.Fatalf("automatic read round%d: %v %v", round, got, err)
++		}
++	}
++	if _, err = in.FinishConcurrentGC(); err != nil {
++		t.Fatal(err)
++	}
++	history, err := in.GCCycleTelemetry()
++	if err != nil || history.ConcurrentStarts == 0 {
++		t.Fatalf("automatic native marking not exercised: %+v %v", history, err)
++	}
++}
+diff --git a/src/wago/instantiate.go b/src/wago/instantiate.go
+index d6574773b..19439f5e8 100644
+--- a/src/wago/instantiate.go
++++ b/src/wago/instantiate.go
+@@ -278,6 +278,10 @@ func (b *instanceBuilder) prepareCollector() error {
+ 		return nil
+ 	}
+ 	gcConfig := b.opts.GC
++	if gcConfig.Execution != nil && gcConfig.Execution.ConcurrentMark && len(b.c.customInstructions) != 0 {
++		return fmt.Errorf("wago: concurrent GC is unavailable for custom instruction modules")
++	}
++
+ 	if b.c.usesGenericGCExecution() && b.c.genericGCFrameRoots() == nil {
+ 		// Generic products outside the validated native root-map slice still do
+ 		// not publish every native reference at allocating helper safepoints. Keep
+diff --git a/wago.go b/wago.go
+index 55f96cc43..b7a886eae 100644
+--- a/wago.go
++++ b/wago.go
+@@ -583,3 +583,27 @@ type GCCompactionResult = impl.GCCompactionResult
+ // GCExecutionOptions enables opt-in collection workers in the worker product.
+ type GCExecutionOptions = impl.GCExecutionOptions
+ type GCCycleTelemetry = impl.GCCycleTelemetry
++
++// GCConcurrentStatus describes the last optional concurrent cycle.
++type GCConcurrentStatus = impl.GCConcurrentStatus
++
++type GCCollectionKind = impl.GCCollectionKind
++type GCConcurrentPhase = impl.GCConcurrentPhase
++
++const (
++	GCCollectionFull            = impl.GCCollectionFull
++	GCCollectionMinor           = impl.GCCollectionMinor
++	GCCollectionConcurrent      = impl.GCCollectionConcurrent
++	GCCollectionBackgroundSweep = impl.GCCollectionBackgroundSweep
++	GCConcurrentIdle            = impl.GCConcurrentIdle
++	GCConcurrentSnapshot        = impl.GCConcurrentSnapshot
++	GCConcurrentMark            = impl.GCConcurrentMark
++	GCConcurrentRemark          = impl.GCConcurrentRemark
++	GCConcurrentComplete        = impl.GCConcurrentComplete
++	GCConcurrentAborted         = impl.GCConcurrentAborted
++)
++
++var ErrGCConcurrentSnapshotBudget = impl.ErrGCConcurrentSnapshotBudget
++var ErrGCConcurrentRemarkBudget = impl.ErrGCConcurrentRemarkBudget
++
++const GCConcurrentSupported = impl.GCConcurrentSupported

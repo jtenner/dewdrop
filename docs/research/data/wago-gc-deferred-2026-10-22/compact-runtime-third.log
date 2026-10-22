@@ -1,0 +1,8 @@
+--- FAIL: TestMajorBlocksNativeReservations (0.00s)
+    major_blocks_test.go:175: gc: object size mismatch
+--- FAIL: TestDefaultNurseryGrowsForRollingLiveGraph (0.79s)
+    --- FAIL: TestDefaultNurseryGrowsForRollingLiveGraph/replace_root=true (0.44s)
+        nursery_growth_test.go:57: rolling graph nursery = 1048576/524288/2097152, want 2 MiB Eden/512 KiB survivor/3 MiB backing
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.920s
+FAIL

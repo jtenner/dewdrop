@@ -1,0 +1,3878 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 01:45:33 +0000
+Subject: [PATCH 04/20] gc: remove duplicate object headers and retain checked
+ native extents
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  63 ++++
+ .../railshot/amd64/gc_abstract_array_len.go   |   6 +-
+ .../backend/railshot/amd64/gc_array.go        |   4 +-
+ .../backend/railshot/amd64/gc_array_copy.go   |  22 +-
+ .../railshot/amd64/gc_array_copy_dynamic.go   |  18 +-
+ .../backend/railshot/amd64/gc_array_extent.go |  20 ++
+ .../backend/railshot/amd64/gc_array_fill.go   |  18 +-
+ .../railshot/amd64/gc_array_fill_dynamic.go   |  14 +-
+ .../backend/railshot/amd64/gc_card_check.go   |  42 +++
+ .../railshot/amd64/gc_cast_array_get.go       |  13 +-
+ .../backend/railshot/amd64/gc_direct.go       | 283 ++++++++----------
+ .../railshot/amd64/gc_induction_emit.go       |   2 +-
+ .../backend/railshot/arm64/gc_array_alloc.go  |  16 +-
+ .../backend/railshot/arm64/gc_array_direct.go |  11 +-
+ .../railshot/arm64/gc_array_forward.go        |   2 +-
+ .../backend/railshot/arm64/gc_array_len.go    |   2 +-
+ .../railshot/arm64/gc_array_reduction.go      |   2 +-
+ .../backend/railshot/arm64/gc_branch_cast.go  |   3 +-
+ .../backend/railshot/arm64/gc_object_stub.go  |   5 -
+ .../arm64/gc_object_stub_arm64_test.go        |   7 +-
+ src/core/runtime/gc/native/alloc.go           |  49 ++-
+ src/core/runtime/gc/native/array_bulk_test.go |   8 +-
+ src/core/runtime/gc/native/array_data.go      |   4 +-
+ src/core/runtime/gc/native/array_data_test.go |   4 +-
+ src/core/runtime/gc/native/barrier.go         |  10 +-
+ .../runtime/gc/native/card_driven_test.go     |   6 +-
+ .../gc/native/card_failure_debug_test.go      |   2 +-
+ .../runtime/gc/native/card_malformed_test.go  |   2 +-
+ src/core/runtime/gc/native/cards.go           |  10 +-
+ src/core/runtime/gc/native/collect.go         |   7 +-
+ .../gc/native/compact_layout_bench_test.go    |  50 ++++
+ .../runtime/gc/native/compact_layout_test.go  |  66 ++++
+ src/core/runtime/gc/native/desc.go            |  14 +-
+ .../runtime/gc/native/desc_layout_test.go     |  10 +-
+ src/core/runtime/gc/native/heap_test.go       |   4 +-
+ src/core/runtime/gc/native/host_view.go       |   4 +-
+ src/core/runtime/gc/native/layout.go          |  36 ++-
+ .../gc/native/major_blocks_coverage_test.go   |  10 +-
+ .../runtime/gc/native/major_blocks_test.go    |  10 +-
+ src/core/runtime/gc/native/mark.go            |   4 +-
+ src/core/runtime/gc/native/native_view.go     |   3 +-
+ .../runtime/gc/native/native_view_test.go     |   4 +-
+ .../runtime/gc/native/nursery_growth_test.go  |   4 +-
+ src/core/runtime/gc/native/object_access.go   |  32 +-
+ .../runtime/gc/native/ref_desc_ptr_test.go    |   5 +-
+ src/core/runtime/gc/native/scan.go            |   8 +-
+ src/core/runtime/gc/native/scan_mark.go       |   4 +-
+ .../runtime/gc/native/shadow_trace_test.go    |   6 +-
+ .../gc/native/sparse_card_transition_test.go  |   2 +-
+ .../runtime/gc/native/struct_header_free.go   |   6 +
+ .../runtime/gc/native/struct_header_padded.go |   8 +
+ .../native/struct_layout_validation_test.go   |   7 +-
+ src/core/runtime/gc/native/survivor.go        |   7 +-
+ src/core/runtime/gc/native/survivor_test.go   |   2 +-
+ .../runtime/gc/native/throughput_alloc.go     |   5 +-
+ src/core/runtime/gc/native/tiny_scan_test.go  |   6 +-
+ src/core/runtime/gc/native/tiny_test.go       |  14 +-
+ src/core/runtime/gc/native/validate.go        |   4 +-
+ src/core/runtime/gc/native/verify.go          |  23 +-
+ src/wago/gc_array_copy_native_amd64_test.go   |   9 +-
+ src/wago/gc_array_direct_arm64_test.go        |   2 +-
+ src/wago/gc_array_helper.go                   |   2 +-
+ src/wago/gc_array_helper_amd64_test.go        |   2 +-
+ src/wago/gc_array_len_native_test.go          |  17 +-
+ src/wago/gc_array_packed_data_amd64_test.go   |   2 +-
+ src/wago/gc_constructor_forward_amd64_test.go |   7 +
+ src/wago/gc_constructor_forward_arm64_test.go |   5 +
+ .../gc_constructor_if_pressure_amd64_test.go  |   7 +-
+ src/wago/gc_dead_group_amd64_test.go          |   4 +-
+ src/wago/gc_dead_group_native_amd64_test.go   |   6 +-
+ src/wago/gc_dead_new_semantics_amd64_test.go  |   8 +-
+ src/wago/gc_dynamic_copy_amd64_test.go        |   7 +-
+ src/wago/gc_dynamic_fill_amd64_test.go        |   6 +-
+ .../gc_final_cast_array_get_amd64_test.go     |   7 +-
+ src/wago/gc_leaf_trap_pins_amd64_test.go      |   9 +-
+ src/wago/gc_native_fill_amd64_test.go         |   8 +-
+ .../gc_native_open_struct_alloc_amd64_test.go |   4 +-
+ .../gc_native_open_struct_get_amd64_test.go   |  12 +-
+ src/wago/gc_old_array_store_amd64_test.go     |  51 ++++
+ .../gc_old_space_descriptor_amd64_test.go     |   4 +-
+ src/wago/gc_old_struct_store_amd64_test.go    |  52 ++++
+ src/wago/gc_read_regions_amd64_test.go        |  11 +-
+ src/wago/gc_ref_test_table_amd64_test.go      |   2 +-
+ src/wago/gc_resolver_arithmetic_amd64_test.go |   7 +-
+ .../gc_resolver_cached_read_amd64_test.go     |   7 +-
+ src/wago/gc_space_byte_amd64_test.go          |   4 +-
+ .../gc_struct_get_packed_guard_native_test.go |  21 +-
+ src/wago/gc_struct_get_scalar_native_test.go  |  20 +-
+ src/wago/gc_struct_globals_amd64_test.go      |   2 +-
+ src/wago/gc_struct_helper_amd64_test.go       |  12 +-
+ src/wago/gc_struct_set_packed_native_test.go  |  23 +-
+ src/wago/gc_struct_set_scalar_native_test.go  |  23 +-
+ src/wago/gc_test_field_amd64_test.go          |  16 +-
+ src/wago/gc_trapping_guard_amd64_test.go      |   9 +-
+ src/wago/gc_value_checks_amd64_test.go        |   8 +-
+ 95 files changed, 914 insertions(+), 495 deletions(-)
+ create mode 100644 src/core/compiler/backend/railshot/amd64/gc_array_extent.go
+ create mode 100644 src/core/compiler/backend/railshot/amd64/gc_card_check.go
+ create mode 100644 src/core/runtime/gc/native/compact_layout_bench_test.go
+ create mode 100644 src/core/runtime/gc/native/compact_layout_test.go
+ create mode 100644 src/core/runtime/gc/native/struct_header_free.go
+ create mode 100644 src/core/runtime/gc/native/struct_header_padded.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 2ee022949..00e476e81 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -118,3 +118,66 @@ Complete AMD64 backend/runtime/Wago tests pass (53.48 s including build;
+ checks pass under QEMU (20.41 s cross-build, 0.192 s execution). Header removal
+ and its two-layout comparison are the next step; this is not yet issue 309's
+ completed representation.
++
++## Compact physical layout (validation in progress)
++
++The working representation removes struct headers. The hot handle owns the
++canonical type and logical byte extent. Pointer-free state uses a packed class
++bit; old/large state derives from the space/generation metadata. Arrays keep an
++eight-byte length/reserved prefix. V128 arrays align their payload to 16 bytes.
++All physical sizes retain checked uint32 arithmetic and eight-byte rounding.
++Empty structs keep an eight-byte minimum allocation.
++
++`wago_gc_struct_headers` selects the comparison layout with an eight-byte struct
++prefix; it does not duplicate canonical type/size fields. ABI 12 identifies the
++header-free layout and ABI 13 the comparison layout. Artifacts cannot silently
++cross either boundary. Stable compact references retain their identity across
++movement and do not gain pointer semantics.
++
++Native readers load type/extent from the hot handle. Array operations retain the
++validated extent in an unrooted numeric frame home, including both operands of
++copy, so a forged array length cannot authorize a physical out-of-bounds access.
++Common resolver subtype checks cannot overwrite that retained limit. Per-value
++check facts remain distinct from these temporary extent homes. Every bulk store
++still finishes source/destination bounds checks before its first mutation.
++
++The migration exposed a pre-existing native struct remembered-store gap:
++remembered membership was treated as whole-object card coverage. Struct stores
++now require an owned, bounded cold card covering all four field bytes, or use
++the checked Go barrier. A regression with fields 0 and 32 fails under the old
++fast path: the shadow verifier reports an uncarded edge at payload byte 128.
++
++The array path already converted RSI to a byte offset before its card lookup.
++An initial concern about element/byte confusion was therefore not a production
++bug. It now shares the owned-card checker without another shift. A regression
++at element 40 explicitly inspects that the authoritative head covers bytes
++160..163; adjacent cards may coalesce, so node count is not the invariant.
++Full validation and timing remain in progress.
++
++Compact layout validation now passes: full default AMD64 Wago tests
++(27.42 s including build, 26.86 s tests) and runtime package tests (0.42 s), AMD64 backend tests
++(11.29 s including build, 4.87 s tests), full normal/debug collector suites
++(3.88/3.95 s including build), and native GC tests with register assertions
++(29.63 s including build, 2.71 s tests). Both normal and eight-byte-prefix
++collector products pass all runtime tests. The comparison product's native GC
++suite passes too (26.04 s including build, 2.79 s tests). Byte-sensitive Tiny budgets retain their allocation failure cases. Compiler test linking peaks near 3.5 GiB; that existing
++large test product is not a low-RSS application result.
++
++ARM64 cross-build takes 19.94 s. Its GC tests pass under QEMU in 9.09 s,
++including scalar/packed/vector access, exact frame roots, reentry, foreign
++instances, allocation, artifacts and relocation. Deadline-timer tests are
++explicitly excluded because QEMU rejects creation with EINVAL; this is not a
++native ARM64 OS validation result. Backend physical/far-call/relocation guard
++tests pass under QEMU in 0.085 s.
++
++A fixed 250,000-allocation-plus-promotion microbenchmark compares header-free
++and eight-byte-prefix products on CPUs 12/14, GOMAXPROCS=2, five samples each.
++The hot handle remains 16 bytes in both. Before the smaller old-space class,
++small objects still consume a 32-byte allocation in both products. Header-free
++logical size is 8 vs 16 bytes for i32/ref+i32 and 16 vs 24 bytes for two i64s.
++Runtime medians are close/noisy and do not establish a speed win; raw timings
++are in compact-pre16-summary.json. The next allocator change must remove that
++32-byte floor before this representation can reduce small old-space charges.
++Throughput array heap-limit failures now produce the guest allocation trap;
++checked Tiny failure diagnostics remain visible. This matters for the pinned
++Wasmtime overflow fixture after the physical header becomes smaller.
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_abstract_array_len.go b/src/core/compiler/backend/railshot/amd64/gc_abstract_array_len.go
+index 6c65a9dfc..0002b3d18 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_abstract_array_len.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_abstract_array_len.go
+@@ -120,9 +120,7 @@ func emitModuleGCAbstractArrayCastLen(a *x64.Asm) {
+ 	a.AluRI(cmpDigit, RCX, int32(gc.HeaderSize), false)
+ 	fail(condB)
+ 	a.Add64(R11, RAX)
+-	a.AluRM(cmpRMcode, RCX, R11, 4, false)
+-	fail(condNE)
+-	a.Load32(RAX, R11, 0)
++	a.Load32(RAX, R9, gc.NativeHandleTypeIDOffset)
+ 	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewSubtypeIntervalCountOffset, false)
+ 	fail(condAE)
+ 	a.Load64(R10, R8, gc.NativeViewSubtypeIntervalsOffset)
+@@ -133,7 +131,7 @@ func emitModuleGCAbstractArrayCastLen(a *x64.Asm) {
+ 	a.AluRI(4, RAX, int32(gc.NativeSubtypeArrayKindBit), false)
+ 	a.TestSelf(RAX, false)
+ 	fail(condE)
+-	a.Load32(RAX, R11, 8)
++	a.Load32(RAX, R11, 0)
+ 	a.MovImm32(RDX, 1)
+ 	done := a.JmpPlaceholder()
+ 	failure := a.Len()
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_array.go b/src/core/compiler/backend/railshot/amd64/gc_array.go
+index 700ad564a..3af90c5fc 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_array.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_array.go
+@@ -181,7 +181,7 @@ func (f *fn) emitGCArray(sub uint32, r *wasm.Reader) error {
+ 		result := wasm.RefVal(wasm.Ref(false, wasm.IndexedHeap(wasm.TypeIdx{Index: typeIndex}), false))
+ 		helper := uint32(gcArrayAllocFixed)
+ 		if layout, native := nativeGCArrayLayout(f.opt(optGCNativeAlloc), f.m, typeIndex); native {
+-			bytes := uint64(gc.PayloadOffset) + uint64(count)*uint64(layout.elemSize)
++			bytes := uint64(gc.ArrayPayloadOffset(layout.elemSize)) + uint64(count)*uint64(layout.elemSize)
+ 			bytes = (bytes + 7) &^ 7
+ 			if bytes <= uint64(gc.NativeArrayAllocMaxBytes) {
+ 				f.nativeArrayAlloc = gcArrayAllocStubSite{typeIndex: typeIndex, count: count, mode: gcArrayNativeFixed}
+@@ -450,7 +450,7 @@ func nativeGCStaticArraySize(f *fn, layout nativeGCArrayAllocLayout) (length uin
+ 		return 0, 0, false
+ 	}
+ 	length = uint32(value.st.cval)
+-	objectBytes = uint64(gc.PayloadOffset) + uint64(length)*uint64(layout.elemSize)
++	objectBytes = uint64(gc.ArrayPayloadOffset(layout.elemSize)) + uint64(length)*uint64(layout.elemSize)
+ 	objectBytes = (objectBytes + 7) &^ 7
+ 	return length, objectBytes, objectBytes <= uint64(^uint32(0))
+ }
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_array_copy.go b/src/core/compiler/backend/railshot/amd64/gc_array_copy.go
+index 696f44b49..3132e950f 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_array_copy.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_array_copy.go
+@@ -24,8 +24,8 @@ func (f *fn) emitDirectGCArrayCopy(dstType, srcType uint32) bool {
+ 	}
+ 	f.flush()
+ 	oldFloor := f.spillFloor
+-	savedDst := f.allocSpillSlots(1)
+-	f.spillFloor = savedDst + 1
++	savedDst := f.allocSpillSlots(3)
++	f.spillFloor = savedDst + 3
+ 	f.popValue() // constant count
+ 	srcIndexValue := f.popValue()
+ 	srcValue := f.popValue()
+@@ -34,12 +34,10 @@ func (f *fn) emitDirectGCArrayCopy(dstType, srcType uint32) bool {
+ 
+ 	// Resolve both typed objects before range checks, matching helper trap order.
+ 	// The copy-only resolver also proves that ObjHeader.Size fits the handle.
+-	dst := f.emitSharedCheckedGCObjectPinned(dstValue, dstType, gc.PayloadOffset, gcSharedStubResolveBoundedObject)
+-	f.stats.addGCHandleResolution()
++	dst, _ := f.emitCheckedGCArrayObject(dstValue, dstType, savedDst+1)
+ 	f.a.Store64(RSP, f.spillOff(savedDst), dst)
+ 	f.pinned = f.pinned.remove(dst)
+-	src := f.emitSharedCheckedGCObjectPinned(srcValue, srcType, gc.PayloadOffset, gcSharedStubResolveBoundedObject)
+-	f.stats.addGCHandleResolution()
++	src, _ := f.emitCheckedGCArrayObject(srcValue, srcType, savedDst+2)
+ 	dst = f.allocReg(maskOf(src))
+ 	f.a.Load64(dst, RSP, f.spillOff(savedDst))
+ 	f.pinned = f.pinned.add(dst)
+@@ -60,21 +58,21 @@ func (f *fn) emitDirectGCArrayCopy(dstType, srcType uint32) bool {
+ 			// The zero-extended i32 index plus the small count cannot overflow 64 bits.
+ 			// Keep the exclusive end for both logical and physical bounds.
+ 			f.a.AluRI(0, pair[1], int32(count), true)
+-			f.a.Load32(tmp, pair[0], 8)
++			f.a.Load32(tmp, pair[0], 0)
+ 			f.a.Cmp64(pair[1], tmp)
+ 			f.trapIf(condA, trapBuiltin)
+ 		} else {
+-			f.a.Load32(tmp, pair[0], 8)
++			f.a.Load32(tmp, pair[0], 0)
+ 			f.a.Cmp32(pair[1], tmp)
+ 			f.trapIf(rangeTrap, trapBuiltin)
+ 		}
+ 	}
+ 	if count != 0 {
+-		required := int32(gc.PayloadOffset) + int32(count)*int32(dstScalar.size)
++		required := int32(gc.ArrayPayloadOffset(uint32(dstScalar.size))) + int32(count)*int32(dstScalar.size)
+ 		if count >= 2 {
+-			required = int32(gc.PayloadOffset)
++			required = int32(gc.ArrayPayloadOffset(uint32(dstScalar.size)))
+ 		}
+-		for _, pair := range [2][2]Reg{{dst, dstIndex}, {src, srcIndex}} {
++		for which, pair := range [2][2]Reg{{dst, dstIndex}, {src, srcIndex}} {
+ 			switch dstScalar.size {
+ 			case 2:
+ 				f.a.ShiftImm(4, pair[1], 1, true)
+@@ -82,7 +80,7 @@ func (f *fn) emitDirectGCArrayCopy(dstType, srcType uint32) bool {
+ 				f.a.ImulRI(pair[1], int32(dstScalar.size), true)
+ 			}
+ 			f.a.AluRI(0, pair[1], required, true)
+-			f.a.Load32(tmp, pair[0], 4)
++			f.a.LoadRsp32(tmp, f.spillOff(savedDst+1+which))
+ 			f.a.Cmp64(pair[1], tmp)
+ 			f.trapIf(condA, trapCastFailure)
+ 		}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_array_copy_dynamic.go b/src/core/compiler/backend/railshot/amd64/gc_array_copy_dynamic.go
+index 22f4abdaf..474b0c302 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_array_copy_dynamic.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_array_copy_dynamic.go
+@@ -29,8 +29,8 @@ func (f *fn) emitDynamicGCArrayCopy(dstType, srcType uint32) bool {
+ 	// registers, including RSI, and leaves R9-R11 untouched.
+ 	f.flush()
+ 	oldFloor := f.spillFloor
+-	savedDst := f.allocSpillSlots(1)
+-	f.spillFloor = savedDst + 1
++	savedDst := f.allocSpillSlots(3)
++	f.spillFloor = savedDst + 3
+ 	count := f.popValue()
+ 	srcIndex := f.popValue()
+ 	srcValue := f.popValue()
+@@ -40,12 +40,10 @@ func (f *fn) emitDynamicGCArrayCopy(dstType, srcType uint32) bool {
+ 
+ 	// Preserve destination/source resolution and trap order. The bounded
+ 	// resolver checks that the header fits in its handle's physical extent.
+-	dst := f.emitSharedCheckedGCObjectPinned(dstValue, dstType, gc.PayloadOffset, gcSharedStubResolveBoundedObject)
+-	f.stats.addGCHandleResolution()
++	dst, _ := f.emitCheckedGCArrayObject(dstValue, dstType, savedDst+1)
+ 	f.a.Store64(RSP, f.spillOff(savedDst), dst)
+ 	f.pinned = f.pinned.remove(dst)
+-	src := f.emitSharedCheckedGCObjectPinned(srcValue, srcType, gc.PayloadOffset, gcSharedStubResolveBoundedObject)
+-	f.stats.addGCHandleResolution()
++	src, _ := f.emitCheckedGCArrayObject(srcValue, srcType, savedDst+2)
+ 	// Both resolvers return RAX. Spill vector storage before any conditional
+ 	// exit, and keep the existing fixed-scratch contract (R9 remains untouched).
+ 	var vec [4]Reg
+@@ -61,16 +59,16 @@ func (f *fn) emitDynamicGCArrayCopy(dstType, srcType uint32) bool {
+ 	for _, pair := range [2][2]Reg{{R8, RDI}, {src, RSI}} {
+ 		// The sum of two zero-extended i32 values cannot overflow 64 bits.
+ 		f.a.Add64(pair[1], RCX)
+-		f.a.Load32(RDX, pair[0], 8)
++		f.a.Load32(RDX, pair[0], 0)
+ 		f.a.Cmp64(pair[1], RDX)
+ 		f.trapIf(condA, trapBuiltin)
+ 	}
+ 	f.a.TestSelf(RCX, false)
+ 	zero := f.a.JccPlaceholder(condE)
+-	for _, pair := range [2][2]Reg{{R8, RDI}, {src, RSI}} {
++	for which, pair := range [2][2]Reg{{R8, RDI}, {src, RSI}} {
+ 		f.a.ImulRI(pair[1], int32(dstScalar.size), true)
+-		f.a.AluRI(0, pair[1], int32(gc.PayloadOffset), true)
+-		f.a.Load32(RDX, pair[0], 4)
++		f.a.AluRI(0, pair[1], int32(gc.ArrayPayloadOffset(uint32(dstScalar.size))), true)
++		f.a.LoadRsp32(RDX, f.spillOff(savedDst+1+which))
+ 		f.a.Cmp64(pair[1], RDX)
+ 		f.trapIf(condA, trapCastFailure)
+ 		f.a.Add64(pair[1], pair[0])
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_array_extent.go b/src/core/compiler/backend/railshot/amd64/gc_array_extent.go
+new file mode 100644
+index 000000000..1d5586a95
+--- /dev/null
++++ b/src/core/compiler/backend/railshot/amd64/gc_array_extent.go
+@@ -0,0 +1,20 @@
++//go:build amd64
++
++package amd64
++
++import gc "github.com/wago-org/wago/src/core/runtime/gc/native"
++
++// Array extents belong to hot handles, not duplicate heap headers. Capture the
++// validated extent before register allocation can reuse the leaf's RDI scratch.
++// The private numeric home survives other native leaf calls and is not a root.
++func (f *fn) emitCheckedGCArrayObject(object *elem, typ uint32, extentHome int) (Reg, func()) {
++	f.stats.addGCHandleResolution()
++	f.gcPureIfEndPC = 0
++	f.invalidateGCResolvedObject()
++	if gcSharedStubsEnabled {
++		obj := f.emitSharedCheckedGCObjectPinned(object, typ, gc.HeaderSize, gcSharedStubResolveBoundedObject)
++		f.a.StoreRsp32(f.spillOff(extentHome), RDI)
++		return obj, func() { f.pinned = f.pinned.remove(obj) }
++	}
++	return f.emitCheckedGCObject(object, typ, gc.HeaderSize, f.spillOff(extentHome))
++}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_array_fill.go b/src/core/compiler/backend/railshot/amd64/gc_array_fill.go
+index 0533ccefd..e70e004d0 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_array_fill.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_array_fill.go
+@@ -22,26 +22,24 @@ func (f *fn) emitDirectGCArrayFill(typeIndex uint32) bool {
+ 	if !directGCArrayFillCount(count, scalar.size) {
+ 		return false
+ 	}
+-	valueRoot := baseOfValentBlock(countRoot).prev
+-	indexRoot := baseOfValentBlock(valueRoot).prev
+-	local, hasLocal := gcLocalProvenance(baseOfValentBlock(indexRoot).prev)
+ 	f.flush()
+ 	oldFloor := f.spillFloor
+-	f.spillFloor = f.curSpillSlot()
++	extentHome := f.allocSpillSlots(1)
++	f.spillFloor = extentHome + 1
+ 	f.popValue() // constant count
+ 	value := f.popValue()
+ 	indexValue := f.popValue()
+ 	object := f.popValue()
+ 	bytes := count * uint32(scalar.size)
+-	required := uint32(gc.PayloadOffset) + bytes
+-	obj, done := f.emitDirectGCObject(object, typeIndex, uint32(gc.PayloadOffset), local, hasLocal)
++	required := uint32(gc.ArrayPayloadOffset(uint32(scalar.size))) + bytes
++	obj, done := f.emitCheckedGCArrayObject(object, typeIndex, extentHome)
+ 	index := f.materialize(indexValue)
+ 	f.a.MovRegReg32(index, index)
+ 	f.pinned = f.pinned.add(index)
+ 	tmp := f.allocReg(maskOf(obj, index))
+ 	f.pinned = f.pinned.add(tmp)
+ 	// Subtract before comparing so an i32 index/count sum cannot wrap.
+-	f.a.Load32(tmp, obj, 8)
++	f.a.Load32(tmp, obj, 0)
+ 	f.a.AluRI(cmpDigit, tmp, int32(count), false)
+ 	f.trapIf(condB, trapBuiltin)
+ 	f.a.AluRI(5, tmp, int32(count), false)
+@@ -51,7 +49,7 @@ func (f *fn) emitDirectGCArrayFill(typeIndex uint32) bool {
+ 		f.a.ImulRI(index, int32(scalar.size), true)
+ 		// Prove the complete physical range before writing. Check the header
+ 		// minimum explicitly: the inline resolver checks the handle extent.
+-		f.a.Load32(tmp, obj, 4)
++		f.a.LoadRsp32(tmp, f.spillOff(extentHome))
+ 		f.a.AluRI(cmpDigit, tmp, int32(required), false)
+ 		f.trapIf(condB, trapCastFailure)
+ 		f.a.AluRI(5, tmp, int32(required), true)
+@@ -64,13 +62,13 @@ func (f *fn) emitDirectGCArrayFill(typeIndex uint32) bool {
+ 		if scalar.typ.isFloat() {
+ 			x := f.materializeF(value)
+ 			for i := uint32(0); i < count; i++ {
+-				f.a.FStoreIdx(obj, index, x, int32(gc.PayloadOffset+i*uint32(scalar.size)), scalar.typ == mtF64)
++				f.a.FStoreIdx(obj, index, x, int32(gc.ArrayPayloadOffset(uint32(scalar.size))+i*uint32(scalar.size)), scalar.typ == mtF64)
+ 			}
+ 			f.releaseF(x)
+ 		} else {
+ 			r := f.materialize(value)
+ 			for i := uint32(0); i < count; i++ {
+-				f.a.StoreIdx(obj, index, r, int32(gc.PayloadOffset+i*uint32(scalar.size)), scalar.size)
++				f.a.StoreIdx(obj, index, r, int32(gc.ArrayPayloadOffset(uint32(scalar.size))+i*uint32(scalar.size)), scalar.size)
+ 			}
+ 			f.release(r)
+ 		}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_array_fill_dynamic.go b/src/core/compiler/backend/railshot/amd64/gc_array_fill_dynamic.go
+index db88f91b1..e2cabf1be 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_array_fill_dynamic.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_array_fill_dynamic.go
+@@ -13,14 +13,14 @@ func (f *fn) emitDynamicGCArrayFill(typeIndex uint32) bool {
+ 	}
+ 	f.flush()
+ 	oldFloor := f.spillFloor
+-	f.spillFloor = f.curSpillSlot()
++	extentHome := f.allocSpillSlots(1)
++	f.spillFloor = extentHome + 1
+ 	count := f.popValue()
+ 	value := f.popValue()
+ 	index := f.popValue()
+ 	object := f.popValue()
+ 	countSlot, valueSlot, indexSlot := count.st.slotIndex(), value.st.slotIndex(), index.st.slotIndex()
+-	obj := f.emitSharedCheckedGCObjectPinned(object, typeIndex, gc.PayloadOffset, gcSharedStubResolveBoundedObject)
+-	f.stats.addGCHandleResolution()
++	obj, _ := f.emitCheckedGCArrayObject(object, typeIndex, extentHome)
+ 	f.a.MovReg64(R8, obj)
+ 	f.pinned = f.pinned.remove(obj)
+ 	vec := f.allocFReg(0) // any spill must occur before the zero-count branch
+@@ -29,19 +29,19 @@ func (f *fn) emitDynamicGCArrayFill(typeIndex uint32) bool {
+ 	// The sum of two zero-extended i32 values fits in 64 bits.
+ 	f.a.MovReg64(RDX, RDI)
+ 	f.a.Add64(RDX, RCX)
+-	f.a.Load32(RAX, R8, 8)
++	f.a.Load32(RAX, R8, 0)
+ 	f.a.Cmp64(RDX, RAX)
+ 	f.trapIf(condA, trapBuiltin)
+ 	f.a.TestSelf(RCX, false)
+ 	zero := f.a.JccPlaceholder(condE)
+ 	f.a.ImulRI(RDX, int32(scalar.size), true)
+-	f.a.AluRI(0, RDX, int32(gc.PayloadOffset), true)
+-	f.a.Load32(RAX, R8, 4)
++	f.a.AluRI(0, RDX, int32(gc.ArrayPayloadOffset(uint32(scalar.size))), true)
++	f.a.LoadRsp32(RAX, f.spillOff(extentHome))
+ 	f.a.Cmp64(RDX, RAX)
+ 	f.trapIf(condA, trapCastFailure)
+ 	f.a.ImulRI(RDI, int32(scalar.size), true)
+ 	f.a.Add64(RDI, R8)
+-	f.a.AluRI(0, RDI, int32(gc.PayloadOffset), true)
++	f.a.AluRI(0, RDI, int32(gc.ArrayPayloadOffset(uint32(scalar.size))), true)
+ 	f.a.ImulRI(RCX, int32(scalar.size), true)
+ 	// Read raw scalar bits, including floating-point NaNs, from canonical slots.
+ 	f.a.Load64(RAX, RSP, f.spillOff(valueSlot))
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_card_check.go b/src/core/compiler/backend/railshot/amd64/gc_card_check.go
+new file mode 100644
+index 000000000..7c809a7d1
+--- /dev/null
++++ b/src/core/compiler/backend/railshot/amd64/gc_card_check.go
+@@ -0,0 +1,42 @@
++//go:build amd64
++
++package amd64
++
++import gc "github.com/wago-org/wago/src/core/runtime/gc/native"
++
++// emitNativeExistingObjectCard accepts only an owned, bounded card covering
++// [ECX,EDX] in payload bytes. R8 is the collector and R9 the parent's hot record.
++// It consumes R9 and clobbers RAX/R10. All misses use the checked Go barrier.
++func (f *fn) emitNativeExistingObjectCard(miss func(int)) {
++	a := f.a
++	a.Load64(RAX, R8, gc.NativeViewHandlesOffset)
++	a.AluRR(0x29, R9, RAX, true)
++	a.ShiftImm(5, R9, 4, true)
++	a.AluRM(cmpRMcode, R9, R8, gc.NativeViewObjectCardSlotCountOffset, false)
++	miss(a.JccPlaceholder(condAE))
++	a.Load64(R10, R8, gc.NativeViewObjectCardSlotsOffset)
++	a.TestSelf(R10, true)
++	miss(a.JccPlaceholder(condE))
++	a.MovRegReg32(RAX, R9)
++	a.ShiftImm(4, RAX, 2, true)
++	a.LoadIdx(RAX, R10, RAX, 0, 4, false, false)
++	a.TestSelf(RAX, false)
++	miss(a.JccPlaceholder(condE))
++	a.AluRI(5, RAX, 1, false)
++	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewObjectCardCountOffset, false)
++	miss(a.JccPlaceholder(condAE))
++	a.Load64(R10, R8, gc.NativeViewObjectCardsOffset)
++	a.TestSelf(R10, true)
++	miss(a.JccPlaceholder(condE))
++	a.ImulRI(RAX, gc.NativeObjectCardStride, true)
++	a.Add64(R10, RAX)
++	a.Load32(RAX, R10, gc.NativeObjectCardHandleOffset)
++	a.Cmp32(RAX, R9)
++	miss(a.JccPlaceholder(condNE))
++	a.Load32(RAX, R10, gc.NativeObjectCardStartOffset)
++	a.Cmp32(RCX, RAX)
++	miss(a.JccPlaceholder(condB))
++	a.Load32(RAX, R10, gc.NativeObjectCardEndOffset)
++	a.Cmp32(RDX, RAX)
++	miss(a.JccPlaceholder(condA))
++}
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_cast_array_get.go b/src/core/compiler/backend/railshot/amd64/gc_cast_array_get.go
+index 908caba9f..400157d23 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_cast_array_get.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_cast_array_get.go
+@@ -223,26 +223,23 @@ func (f *fn) emitNativeFinalCastArrayGetStub(width int) {
+ 	a.Load32(RCX, R9, gc.NativeHandleSizeOffset)
+ 	a.Cmp32(RCX, R8)
+ 	castFailure(condA)
+-	a.AluRI(cmpDigit, RCX, int32(gc.PayloadOffset), false)
++	a.AluRI(cmpDigit, RCX, int32(gc.ArrayPayloadOffset(uint32(width))), false)
+ 	castFailure(condB)
+ 
+ 	a.Add64(R11, RAX)
+-	a.Load32(RCX, R11, 0)
++	a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset)
+ 	a.Cmp32(RCX, RDX)
+ 	castFailure(condNE)
+-	a.Load32(R10, R11, 8)
++	a.Load32(R10, R11, 0)
+ 	a.Cmp32(RSI, R10)
+ 	boundsFailures = append(boundsFailures, a.JccPlaceholder(condAE))
+ 	a.ImulRI(RSI, int32(width), true)
+-	a.Load32(R10, R11, 4)
+ 	a.MovReg64(R8, RSI)
+-	a.AluRI(0, R8, int32(gc.PayloadOffset)+int32(width), true)
++	a.AluRI(0, R8, int32(gc.ArrayPayloadOffset(uint32(width)))+int32(width), true)
+ 	a.Load32(RDX, R9, gc.NativeHandleSizeOffset)
+ 	a.Cmp64(R8, RDX)
+ 	castFailure(condA)
+-	a.Cmp64(R8, R10)
+-	castFailure(condA)
+-	a.LeaDisp(RAX, R11, int32(gc.PayloadOffset))
++	a.LeaDisp(RAX, R11, int32(gc.ArrayPayloadOffset(uint32(width))))
+ 	a.Add64(RAX, RSI)
+ 	for i := len(preserve) - 1; i >= 0; i-- {
+ 		if preserve[i] {
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_direct.go b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+index 3e3a4b716..8f06b6eab 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_direct.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+@@ -100,10 +100,10 @@ func nativeGCStructAllocLayout(m *wasm.Module, typeIndex uint32) (fields []nativ
+ 	pointerFree = true
+ 	for _, field := range st.Comp.Fields {
+ 		align, size, valid := nativeGCStorageLayout(m, typeIndex, field.Storage())
+-		if !valid || field.Storage().Packed() || align == 0 || off > math.MaxUint32-(align-1) {
++		if !valid || field.Storage().Packed() || align == 0 || off > math.MaxUint32-gc.PayloadOffset-(align-1) {
+ 			return nil, 0, 0, false, false
+ 		}
+-		off = (off + align - 1) &^ (align - 1)
++		off = (gc.PayloadOffset+off+align-1)&^(align-1) - gc.PayloadOffset
+ 		entry := nativeGCStructAllocField{offset: off, size: size, slot: slot}
+ 		if field.Storage().Val().Kind() == wasm.ValRef {
+ 			heap := field.Storage().Val().Ref().Heap()
+@@ -152,14 +152,14 @@ func nativeGCStructAllocLayout(m *wasm.Module, typeIndex uint32) (fields []nativ
+ 			return nil, 0, 0, false, false
+ 		}
+ 	}
+-	if off > math.MaxUint32-(maxAlign-1) {
++	if off > math.MaxUint32-gc.PayloadOffset-(maxAlign-1) {
+ 		return nil, 0, 0, false, false
+ 	}
+-	payload := (off + maxAlign - 1) &^ (maxAlign - 1)
++	payload := (gc.PayloadOffset+off+maxAlign-1)&^(maxAlign-1) - gc.PayloadOffset
+ 	if payload > math.MaxUint32-gc.PayloadOffset-7 {
+ 		return nil, 0, 0, false, false
+ 	}
+-	objectSize = (payload + gc.PayloadOffset + 7) &^ 7
++	objectSize = max(uint32(8), (payload+gc.PayloadOffset+7)&^7)
+ 	if objectSize > gc.NativeAllocationChunkBytes {
+ 		return nil, 0, 0, false, false
+ 	}
+@@ -325,10 +325,10 @@ func nativeGCStructFieldLayout(m *wasm.Module, typeIndex, fieldIndex uint32) (pa
+ 	var off uint32
+ 	for i, field := range st.Comp.Fields {
+ 		align, fieldSize, valid := nativeGCStorageLayout(m, typeIndex, field.Storage())
+-		if !valid || align == 0 || off > math.MaxUint32-(align-1) {
++		if !valid || align == 0 || off > math.MaxUint32-gc.PayloadOffset-(align-1) {
+ 			return 0, 0, false, false
+ 		}
+-		off = (off + align - 1) &^ (align - 1)
++		off = (gc.PayloadOffset+off+align-1)&^(align-1) - gc.PayloadOffset
+ 		if uint32(i) == fieldIndex {
+ 			return off, fieldSize, st.Final, true
+ 		}
+@@ -352,10 +352,10 @@ func directGCStructLayout(m *wasm.Module, typeIndex, fieldIndex uint32) (payload
+ 	var off uint32
+ 	for i, field := range st.Comp.Fields {
+ 		align, size, valid := nativeGCStorageLayout(m, typeIndex, field.Storage())
+-		if !valid || align == 0 || off > math.MaxUint32-(align-1) {
++		if !valid || align == 0 || off > math.MaxUint32-gc.PayloadOffset-(align-1) {
+ 			return 0, directGCScalar{}, false, false
+ 		}
+-		off = (off + align - 1) &^ (align - 1)
++		off = (gc.PayloadOffset+off+align-1)&^(align-1) - gc.PayloadOffset
+ 		if uint32(i) == fieldIndex {
+ 			if uint64(gc.PayloadOffset)+uint64(off)+uint64(scalar.size) > math.MaxInt32 {
+ 				return 0, directGCScalar{}, false, false
+@@ -430,7 +430,7 @@ func countGCSharedStubBodies(offsets [gcSharedStubMax]int) int {
+ // emitModuleGCResolveObjectStub implements the AMD64 noncollecting GC leaf ABI:
+ //
+ //	RAX compact object ref, EDX static module-local type, ECX required bytes
+-//	RAX resolved object header on success, EDX zero on success or trap code
++//	RAX resolved object on success, EDI authoritative extent, EDX status
+ //	clobbers RAX,RCX,RDX,RDI,R8 and flags; preserves R9-R11 explicitly
+ //	no Go transition, allocation, collection, root publication, or safepoint
+ //
+@@ -492,20 +492,16 @@ func emitModuleGCResolveObjectStub(a *x64.Asm, subtype, bounded, arrayOperand bo
+ 	castFailures = append(castFailures, a.JccPlaceholder(condA))
+ 	a.Cmp32(RCX, RDI)
+ 	castFailures = append(castFailures, a.JccPlaceholder(condB))
++	a.MovRegReg32(RDI, RCX) // return authoritative handle extent
+ 
+ 	a.Add64(R11, RAX)
+-	if bounded {
+-		a.Load32(R8, R11, 4)
+-		a.Cmp32(R8, RCX)
+-		castFailures = append(castFailures, a.JccPlaceholder(condA))
+-	}
+ 	if !arrayOperand {
+-		a.Load32(RCX, R11, 0)
++		a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset)
+ 		a.Cmp32(RCX, RDX)
+ 		if subtype {
+ 			exact := a.JccPlaceholder(condE)
+ 			// Validated struct subtypes preserve declared field layouts. Array
+-			// subtypes preserve the header length at offset 8.
++			// subtypes preserve the array length at offset 0.
+ 			// The existing packed intervals store pre in the high dword, post in the low.
+ 			a.Load64(R8, RBX, -int32(abi.GCNativeViewPtrOffset))
+ 			a.Load64(R8, R8, gc.NativeInstanceViewCollectorOffset)
+@@ -533,12 +529,9 @@ func emitModuleGCResolveObjectStub(a *x64.Asm, subtype, bounded, arrayOperand bo
+ 			castFailures = append(castFailures, a.JccPlaceholder(condNE))
+ 		}
+ 	}
+-	a.Load32(RCX, R11, 4)
+-	a.Cmp32(RCX, RDI)
+-	castFailures = append(castFailures, a.JccPlaceholder(condB))
+ 	a.MovReg64(RAX, R11)
+ 	if arrayOperand {
+-		a.Load32(RAX, RAX, 8)
++		a.Load32(RAX, RAX, 0)
+ 		a.Load64(R8, RBX, -offCustomCtx)
+ 		a.Store64(R8, hcResults, RAX)
+ 	}
+@@ -677,7 +670,7 @@ func (f *fn) emitSharedCheckedGCObjectPinned(object *elem, localType, requiredBy
+ // versioned collector view and proves exact canonical type plus object bounds.
+ // The caller must have raised spillFloor so consumed operand slots cannot be
+ // reused. Returned obj is pinned scratch and must be released with done.
+-func (f *fn) emitCheckedGCObject(object *elem, localType, requiredBytes uint32) (obj Reg, done func()) {
++func (f *fn) emitCheckedGCObject(object *elem, localType, requiredBytes uint32, extentHome ...int32) (obj Reg, done func()) {
+ 	ref := f.materialize(object)
+ 	f.pinned = f.pinned.add(ref)
+ 	f.a.TestSelf(ref, false)
+@@ -742,11 +735,17 @@ func (f *fn) emitCheckedGCObject(object *elem, localType, requiredBytes uint32)
+ 	f.trapIf(condA, trapCastFailure)
+ 	f.a.AluRI(cmpDigit, ref, int32(requiredBytes), false)
+ 	f.trapIf(condB, trapCastFailure)
++	if len(extentHome) > 1 {
++		panic("amd64: multiple homes for one GC object extent")
++	}
++	if len(extentHome) == 1 {
++		f.a.StoreRsp32(extentHome[0], ref)
++	}
+ 
+ 	f.a.Load64(view, RSP, f.spillOff(domainSlot+1))
++	f.a.Load32(ref, tmp, gc.NativeHandleTypeIDOffset)
+ 	f.a.Load32(tmp, tmp, gc.NativeHandleOffsetOffset)
+ 	f.a.Add64(view, tmp) // view = object header
+-	f.a.Load32(ref, view, 0)
+ 	f.a.LoadRsp32(tmp, f.spillOff(domainSlot))
+ 	f.a.Cmp32(ref, tmp)
+ 	f.trapIf(condNE, trapCastFailure)
+@@ -1250,7 +1249,7 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 		} else {
+ 			a.MovImm32(countReg, int32(site.count))
+ 		}
+-		maxLength := uint32((uint64(math.MaxUint32) - uint64(gc.PayloadOffset) - 7) / uint64(layout.elemSize))
++		maxLength := uint32((uint64(math.MaxUint32) - uint64(gc.ArrayPayloadOffset(layout.elemSize)) - 7) / uint64(layout.elemSize))
+ 		a.AluRI(cmpDigit, countReg, int32(maxLength), false)
+ 		addFallback(a.JccPlaceholder(condA))
+ 		a.MovRegReg32(sizeReg, countReg)
+@@ -1264,7 +1263,7 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 		case 16:
+ 			a.ShiftImm(4, sizeReg, 4, false)
+ 		}
+-		a.AluRI(0, sizeReg, int32(gc.PayloadOffset+7), false)
++		a.AluRI(0, sizeReg, int32(gc.ArrayPayloadOffset(layout.elemSize)+7), false)
+ 		a.AluRI(4, sizeReg, -8, false)
+ 		a.Load32(RAX, R8, gc.NativeViewNurseryObjectMaxBytesOffset)
+ 		a.TestSelf(RAX, false)
+@@ -1490,42 +1489,33 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 	a.Load64(RAX, RBX, -int32(abi.GCNativeViewPtrOffset))
+ 	a.Load64(RAX, RAX, gc.NativeInstanceViewLocalTypesOffset)
+ 	a.Load32(RAX, RAX, int32(site.typeIndex*4))
+-	a.Store32(R11, 0, RAX)
+-	a.Store32(R11, 4, sizeReg)
+-	a.Store32(R11, 8, countReg)
++	a.Store32(R9, gc.NativeHandleTypeIDOffset, RAX)
++	a.Store32(R11, 0, countReg)
++	a.StoreImm32Mem(R11, 4, 0)
+ 	flags := int32(0)
+ 	if layout.pointerFree {
+-		flags = int32(gc.FlagPointerFree)
++		flags = int32(gc.NativeHandlePointerFreeBit)
+ 	}
+ 	if dynamicLarge || largeState {
+-		a.AluRI(cmpDigit, RDX, int32(gc.NativeSpaceLarge), false)
+-		largeFlags := a.JccPlaceholder(condE)
+-		a.StoreImm32Mem(R11, 12, flags)
+-		flagsReady := a.JmpPlaceholder()
+-		a.PatchRel32(largeFlags, a.Len())
+-		a.StoreImm32Mem(R11, 12, flags|int32(gc.FlagLarge))
+-		a.PatchRel32(flagsReady, a.Len())
+ 		if dynamicLarge {
+ 			a.AluRI(cmpDigit, RDI, 1, false)
+ 			smallMetadata := a.JccPlaceholder(condNE)
+ 			a.Load32(countReg, R10, gc.NativeStructAllocChunkBumpOffset)
+ 			metadataReady := a.JmpPlaceholder()
+ 			a.PatchRel32(smallMetadata, a.Len())
+-			a.MovImm32(countReg, int32(gc.NativeSpaceNursery)<<16)
++			a.MovImm32(countReg, int32(gc.NativeSpaceNursery)<<16|flags)
+ 			a.PatchRel32(metadataReady, a.Len())
+ 		} else {
+ 			a.Load32(countReg, R10, gc.NativeStructAllocChunkBumpOffset)
+ 		}
+-	} else {
+-		a.StoreImm32Mem(R11, 12, flags)
+ 	}
+ 
+ 	switch site.mode {
+ 	case gcArrayNativeDefault:
+ 		a.MovReg64(RDI, R11)
+-		a.LeaDisp(RDI, RDI, int32(gc.PayloadOffset))
++		a.LeaDisp(RDI, RDI, int32(gc.ArrayPayloadOffset(layout.elemSize)))
+ 		a.MovRegReg32(RCX, sizeReg)
+-		a.AluRI(5, RCX, int32(gc.PayloadOffset), false)
++		a.AluRI(5, RCX, int32(gc.ArrayPayloadOffset(layout.elemSize)), false)
+ 		a.TestSelf(RCX, false)
+ 		zeroDone := a.JccPlaceholder(condE)
+ 		a.AluRI(cmpDigit, RCX, 256, false)
+@@ -1552,12 +1542,12 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 			a.FLoadDisp(0, controlReg, hcArgs, false)
+ 			a.Pshufd(0, 0, 0)
+ 			for offset := int32(0); offset < 64; offset += 16 {
+-				a.MovdquStoreDisp(R11, int32(gc.PayloadOffset)+offset, 0)
++				a.MovdquStoreDisp(R11, int32(gc.ArrayPayloadOffset(layout.elemSize))+offset, 0)
+ 			}
+ 			break
+ 		}
+ 		a.MovReg64(RDI, R11)
+-		a.LeaDisp(RDI, RDI, int32(gc.PayloadOffset))
++		a.LeaDisp(RDI, RDI, int32(gc.ArrayPayloadOffset(layout.elemSize)))
+ 		a.MovRegReg32(RCX, countReg)
+ 		if layout.elemSize != 4 {
+ 			a.XorSelf32(RDX)
+@@ -1588,7 +1578,7 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 		a.XorSelf32(RDX)
+ 		for i := uint32(0); i < site.count; i++ {
+ 			src := hcArgs + int32(i*layout.valueSlots*8)
+-			dst := int32(gc.PayloadOffset + i*layout.elemSize)
++			dst := int32(gc.ArrayPayloadOffset(layout.elemSize) + i*layout.elemSize)
+ 			switch layout.elemSize {
+ 			case 1, 2:
+ 				a.Load32(RAX, controlReg, src)
+@@ -1610,8 +1600,6 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 
+ 	a.Store32(R9, gc.NativeHandleOffsetOffset, R15)
+ 	a.Store32(R9, gc.NativeHandleSizeOffset, sizeReg)
+-	a.Load32(RAX, R11, 0)
+-	a.Store32(R9, gc.NativeHandleTypeIDOffset, RAX)
+ 	a.MovRegReg32(RAX, R15)
+ 	a.AluRR(0x01, RAX, sizeReg, false)
+ 	if site.mode != gcArrayNativeDefault {
+@@ -1630,9 +1618,12 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 		a.Store32(R10, gc.NativeStructAllocChunkCursorOffset, RAX)
+ 	}
+ 	if site.mode == gcArrayNativeDefault && (site.dynamic || site.large) {
++		if flags != 0 {
++			a.AluRI(1, countReg, flags, false)
++		}
+ 		a.Store32(R9, gc.NativeHandleMetadataOffset, countReg)
+ 	} else {
+-		a.StoreImm32Mem(R9, gc.NativeHandleMetadataOffset, int32(gc.NativeSpaceNursery)<<16)
++		a.StoreImm32Mem(R9, gc.NativeHandleMetadataOffset, int32(gc.NativeSpaceNursery)<<16|flags)
+ 	}
+ 	a.Load32(RDX, R10, gc.NativeStructAllocCursorOffset)
+ 	a.AluRI(0, RDX, 1, false)
+@@ -1884,16 +1875,16 @@ func (f *fn) emitNativeStructAlloc(typeIndex uint32, dead, inline bool, argSlot,
+ 			a.Cmp32(RCX, RDX)
+ 			addFallback(a.JccPlaceholder(condAE))
+ 			a.Sub32(RDX, RCX)
++			a.Load64(RAX, RAX, int32(gc.NativeViewSpacesOffset+gc.NativeSpaceBaseOffset))
++			a.TestSelf(RAX, true)
++			addFallback(a.JccPlaceholder(condE))
++			a.Load32(RAX, R10, gc.NativeHandleTypeIDOffset)
+ 			a.Load32(R10, R10, gc.NativeHandleSizeOffset)
+ 			a.Cmp32(R10, RDX)
+ 			addFallback(a.JccPlaceholder(condA))
+ 			a.AluRI(cmpDigit, R10, int32(gc.HeaderSize), false)
+ 			addFallback(a.JccPlaceholder(condB))
+-			a.Load64(RAX, RAX, int32(gc.NativeViewSpacesOffset+gc.NativeSpaceBaseOffset))
+-			a.TestSelf(RAX, true)
+-			addFallback(a.JccPlaceholder(condE))
+-			a.Add64(RAX, RCX)
+-			a.Load32(RAX, RAX, 0)
++
+ 			a.Load64(RDX, RBX, -int32(abi.GCNativeViewPtrOffset))
+ 			a.Load64(RDX, RDX, gc.NativeInstanceViewLocalTypesOffset)
+ 			a.Load32(RDX, RDX, int32(typedTargets[i]*4))
+@@ -1942,14 +1933,15 @@ func (f *fn) emitNativeStructAlloc(typeIndex uint32, dead, inline bool, argSlot,
+ 	a.Load64(RAX, RBX, -int32(abi.GCNativeViewPtrOffset))
+ 	a.Load64(RAX, RAX, gc.NativeInstanceViewLocalTypesOffset)
+ 	a.Load32(RAX, RAX, int32(typeIndex*4))
+-	a.Store32(R11, 0, RAX)
+-	a.StoreImm32Mem(R11, 4, int32(objectSize))
+-	a.StoreImm32Mem(R11, 8, 0)
++	a.Store32(R9, gc.NativeHandleTypeIDOffset, RAX)
++	if gc.PayloadOffset != 0 {
++		a.XorSelf32(RAX)
++		a.Store64(R11, 0, RAX)
++	}
+ 	flags := int32(0)
+ 	if pointerFree {
+-		flags = int32(gc.FlagPointerFree)
++		flags = int32(gc.NativeHandlePointerFreeBit)
+ 	}
+-	a.StoreImm32Mem(R11, 12, flags)
+ 	if !dead {
+ 		for _, field := range fields {
+ 			disp := int32(gc.PayloadOffset + field.Offset)
+@@ -1972,13 +1964,11 @@ func (f *fn) emitNativeStructAlloc(typeIndex uint32, dead, inline bool, argSlot,
+ 	}
+ 	a.Store32(R9, gc.NativeHandleOffsetOffset, RCX)
+ 	a.StoreImm32Mem(R9, gc.NativeHandleSizeOffset, int32(objectSize))
+-	a.Load32(RAX, R11, 0)
+-	a.Store32(R9, gc.NativeHandleTypeIDOffset, RAX)
+ 	a.Load64(RAX, R8, gc.NativeViewNurseryBumpOffset)
+ 	a.MovRegReg32(R10, RCX)
+ 	a.AluRI(0, R10, int32(objectSize), false)
+ 	a.Store32(RAX, 0, R10)
+-	a.StoreImm32Mem(R9, gc.NativeHandleMetadataOffset, int32(gc.NativeSpaceNursery)<<16)
++	a.StoreImm32Mem(R9, gc.NativeHandleMetadataOffset, int32(gc.NativeSpaceNursery)<<16|flags)
+ 	a.AluRI(0, RDX, 1, false)
+ 	a.Load64(R10, R8, gc.NativeViewStructAllocStateOffset)
+ 	a.Store32(R10, gc.NativeStructAllocCursorOffset, RDX)
+@@ -2261,10 +2251,10 @@ func (f *fn) emitNativeFinalCastArrayLenStub() {
+ 
+ 	// Exact final type equality proves the object is the statically known array.
+ 	a.Add64(R11, RAX)
+-	a.Load32(RCX, R11, 0)
++	a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset)
+ 	a.Cmp32(RCX, RDX)
+ 	trapIf(condNE, trapCastFailure)
+-	a.Load32(RAX, R11, 8)
++	a.Load32(RAX, R11, 0)
+ 	for i := len(preserve) - 1; i >= 0; i-- {
+ 		if preserve[i] {
+ 			a.Pop(R9 + Reg(i))
+@@ -2373,14 +2363,21 @@ func (f *fn) emitNativeDefinedTypeCheckStub(test, field bool, returnLimit ...boo
+ 	a.Load32(RCX, R9, gc.NativeHandleSizeOffset)
+ 	a.Cmp32(RCX, R8)
+ 	castFailure(condA)
+-	a.AluRI(cmpDigit, RCX, int32(gc.HeaderSize), false)
+-	castFailure(condB)
++	if !field {
++		a.AluRI(cmpDigit, RCX, int32(gc.HeaderSize), false)
++		castFailure(condB)
++	}
+ 
+ 	if field {
+ 		a.MovRegReg32(RDI, RCX)
+ 	} // retain validated handle extent
+ 	a.Add64(R11, RAX)
+-	a.Load32(RCX, R11, 0) // actual canonical type ID
++	a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset) // actual canonical type ID
++	if field {
++		a.MovRegReg32(R10, RCX)
++		a.ShiftImm(4, R10, 32, true)
++		a.AluRR(0x09, RDI, R10, true)
++	}
+ 
+ 	// Canonical identity proves every defined cast/test, including ordinary
+ 	// casts to final types. Only unequal identities need the cold interval table.
+@@ -2425,16 +2422,14 @@ func (f *fn) emitNativeDefinedTypeCheckStub(test, field bool, returnLimit ...boo
+ 		if field {
+ 			// A malformed subtype interval can report true for unequal final
+ 			// identities. The original following final cast still rejects it.
+-			a.Load32(RAX, R11, 0)
++			a.MovReg64(RAX, RDI)
++			a.ShiftImm(5, RAX, 32, true)
+ 			a.Cmp32(RAX, RDX)
+ 			castFailure(condNE)
+ 			a.Cmp32(RDI, RSI)
+ 			castFailure(condB)
+-			a.Load32(RAX, R11, 4)
+-			a.Cmp32(RAX, RSI)
+-			castFailure(condB)
+ 			if limit {
+-				emitGCValueLimit(f, RDI, RAX, RCX)
++				a.MovRegReg32(RCX, RDI)
+ 			}
+ 			a.MovReg64(RDX, R11)
+ 		}
+@@ -2534,26 +2529,23 @@ func (f *fn) emitNativeFinalArrayRefGetStub() {
+ 	a.Load32(RCX, R9, gc.NativeHandleSizeOffset)
+ 	a.Cmp32(RCX, R8)
+ 	trapIf(condA, trapCastFailure)
+-	a.AluRI(cmpDigit, RCX, int32(gc.PayloadOffset), false)
++	a.AluRI(cmpDigit, RCX, int32(gc.ArrayPayloadOffset(4)), false)
+ 	trapIf(condB, trapCastFailure)
+ 
+ 	a.Add64(R11, RAX)
+-	a.Load32(RCX, R11, 0)
++	a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset)
+ 	a.Cmp32(RCX, RDX)
+ 	trapIf(condNE, trapCastFailure)
+-	a.Load32(R10, R11, 8)
++	a.Load32(R10, R11, 0)
+ 	a.Cmp32(RSI, R10)
+ 	trapIf(condAE, trapBuiltin)
+ 	a.ImulRI(RSI, 4, true)
+-	a.Load32(R10, R11, 4)
+ 	a.MovReg64(R8, RSI)
+-	a.AluRI(0, R8, int32(gc.PayloadOffset)+4, true)
++	a.AluRI(0, R8, int32(gc.ArrayPayloadOffset(4))+4, true)
+ 	a.Load32(RDX, R9, gc.NativeHandleSizeOffset)
+ 	a.Cmp64(R8, RDX)
+ 	trapIf(condA, trapCastFailure)
+-	a.Cmp64(R8, R10)
+-	trapIf(condA, trapCastFailure)
+-	a.LoadIdx(RAX, R11, RSI, int32(gc.PayloadOffset), 4, false, false)
++	a.LoadIdx(RAX, R11, RSI, int32(gc.ArrayPayloadOffset(4)), 4, false, false)
+ 	for i := len(preserve) - 1; i >= 0; i-- {
+ 		if preserve[i] {
+ 			a.Pop(R9 + Reg(i))
+@@ -2640,14 +2632,11 @@ func (f *fn) emitNativeFinalCastStructRefResolverStub(returnLimit ...bool) {
+ 	}
+ 
+ 	a.Add64(R11, RAX)
+-	a.Load32(RCX, R11, 0)
++	a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset)
+ 	a.Cmp32(RCX, RDX)
+ 	castFailure(condNE)
+-	a.Load32(RCX, R11, 4)
+-	a.Cmp32(RCX, RDI)
+-	castFailure(condB)
+ 	if limit {
+-		emitGCValueLimit(f, RSI, RCX, RDX)
++		a.MovRegReg32(RDX, RSI)
+ 	}
+ 	a.MovReg64(RSI, R11)
+ 	for i := len(preserve) - 1; i >= 0; i-- {
+@@ -2686,7 +2675,6 @@ func (f *fn) emitNativeFinalCastStructRefResolverStub(returnLimit ...bool) {
+ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	a := f.a
+ 	var traps []gcNativeLeafTrap
+-	trapIf := func(cond Cond, code uint32) { traps = append(traps, gcNativeLeafTrap{a.JccPlaceholder(cond), code}) }
+ 	var preserve [3]bool
+ 	for _, local := range f.pinnedLocals {
+ 		if reg := f.locals[local].reg; reg >= R9 && reg <= R11 {
+@@ -2707,7 +2695,7 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	}
+ 	a.MovRegReg32(RDI, RSI) // compact child
+ 	a.MovRegReg32(RSI, RCX) // required parent extent
+-	var fallback [16]int
++	var fallback [32]int
+ 	nfallback := 0
+ 	addFallback := func(site int) { fallback[nfallback], nfallback = site, nfallback+1 }
+ 
+@@ -2753,13 +2741,10 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	a.Cmp32(RAX, RCX)
+ 	addFallback(a.JccPlaceholder(condA))
+ 	a.Cmp32(RAX, RSI)
+-	addFallback(a.JccPlaceholder(condB))
+-	a.Load32(RCX, R11, 0)
++	traps = append(traps, gcNativeLeafTrap{a.JccPlaceholder(condB), trapCastFailure})
++	a.Load32(RCX, R9, gc.NativeHandleTypeIDOffset)
+ 	a.Cmp32(RCX, RDX)
+ 	addFallback(a.JccPlaceholder(condNE))
+-	a.Load32(RCX, R11, 4)
+-	a.Cmp32(RCX, RSI)
+-	trapIf(condB, trapCastFailure)
+ 	// Retain the parent-space byte through object validation, then use it as the
+ 	// host-first generational barrier. Nursery initialization avoids resolving
+ 	// the trusted compact child and old-to-young stores avoid reloading space.
+@@ -2787,7 +2772,7 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	a.TestSelf(RAX, false)
+ 	addFallback(a.JccPlaceholder(condE))
+ 	// Old/large parents may bypass the Go barrier when the child is not young,
+-	// or when the parent is already conservatively remembered.
++	// or when an existing card covers the complete field.
+ 	a.AluRI(cmpDigit, RAX, int32(gc.NativeSpaceNursery), false)
+ 	childIsNursery := a.JccPlaceholder(condE)
+ 	a.AluRI(cmpDigit, RAX, int32(gc.NativeSpaceLarge), false)
+@@ -2798,6 +2783,12 @@ func (f *fn) emitNativeBarrierSafeStructRefSetStub() {
+ 	a.ShiftImm(5, RAX, 24, false)
+ 	a.TestSelf(RAX, false)
+ 	addFallback(a.JccPlaceholder(condE))
++	// Remembered membership alone does not cover a different struct card.
++	a.MovRegReg32(RCX, RSI)
++	a.AluRI(5, RCX, int32(gc.PayloadOffset)+4, false)
++	a.MovRegReg32(RDX, RCX)
++	a.AluRI(0, RDX, 3, false)
++	f.emitNativeExistingObjectCard(addFallback)
+ 	a.PatchRel32(childValid, a.Len())
+ 	a.PatchRel32(childI31, a.Len())
+ 	a.PatchRel32(childNotYoung, a.Len())
+@@ -2853,7 +2844,7 @@ func (f *fn) emitNativeCardSafeArrayRefSetStub() {
+ 	a.Push(RAX)             // compact parent for object-card identity validation
+ 	a.MovRegReg32(RDI, RSI) // compact child
+ 	a.MovRegReg32(RSI, RCX) // array index
+-	var fallback [24]int
++	var fallback [32]int
+ 	nfallback := 0
+ 	addFallback := func(site int) { fallback[nfallback], nfallback = site, nfallback+1 }
+ 
+@@ -2895,25 +2886,20 @@ func (f *fn) emitNativeCardSafeArrayRefSetStub() {
+ 	a.Load32(RCX, R9, gc.NativeHandleSizeOffset)
+ 	a.Cmp32(RCX, R10)
+ 	addFallback(a.JccPlaceholder(condA))
+-	a.AluRI(cmpDigit, RCX, int32(gc.PayloadOffset), false)
++	a.AluRI(cmpDigit, RCX, int32(gc.ArrayPayloadOffset(4)), false)
+ 	addFallback(a.JccPlaceholder(condB))
+ 	a.Add64(R11, RAX)
+-	a.Load32(R10, R11, 0)
++	a.Load32(R10, R9, gc.NativeHandleTypeIDOffset)
+ 	a.Cmp32(R10, RDX)
+ 	addFallback(a.JccPlaceholder(condNE))
+-	a.Load32(R10, R11, 8)
++	a.Load32(R10, R11, 0)
+ 	a.Cmp32(RSI, R10)
+ 	trapIf(condAE, trapBuiltin)
+ 	a.ImulRI(RSI, 4, true)
+ 	a.MovReg64(R10, RSI)
+-	a.AluRI(0, R10, int32(gc.PayloadOffset)+4, true)
+-	a.Cmp64(R10, RCX)
+-	trapIf(condA, trapCastFailure)
+-	a.Load32(RCX, R11, 4)
++	a.AluRI(0, R10, int32(gc.ArrayPayloadOffset(4))+4, true)
+ 	a.Cmp64(R10, RCX)
+ 	trapIf(condA, trapCastFailure)
+-	a.MovRegReg32(RCX, RSI)
+-	a.ShiftImm(5, RCX, 2, false) // restore the logical array index for card metadata
+ 	// Like V8's host-first write barrier, reject the generational case from the
+ 	// parent alone. Compact children are trusted JIT values, and a nursery parent
+ 	// cannot create an old-to-young edge, so avoid resolving the child handle.
+@@ -2963,40 +2949,14 @@ func (f *fn) emitNativeCardSafeArrayRefSetStub() {
+ 	// valid fixed-card range covering this payload byte. A store in another card
+ 	// falls back so Go can append or coalesce linked metadata without relocating it
+ 	// under native code.
+-	a.Load32(RAX, RSP, 0)
+-	a.ShiftImm(5, RAX, 1, false)
+-	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewObjectCardSlotCountOffset, false)
+-	addFallback(a.JccPlaceholder(condAE))
+-	a.Load64(R10, R8, gc.NativeViewObjectCardSlotsOffset)
+-	a.TestSelf(R10, true)
+-	addFallback(a.JccPlaceholder(condE))
+-	a.ShiftImm(4, RAX, 2, true)
+-	a.LoadIdx(RAX, R10, RAX, 0, 4, false, false)
+-	a.TestSelf(RAX, false)
+-	addFallback(a.JccPlaceholder(condE))
+-	a.AluRI(5, RAX, 1, false)
+-	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewObjectCardCountOffset, false)
+-	addFallback(a.JccPlaceholder(condAE))
+-	a.Load64(R10, R8, gc.NativeViewObjectCardsOffset)
+-	a.TestSelf(R10, true)
+-	addFallback(a.JccPlaceholder(condE))
+-	a.ImulRI(RAX, gc.NativeObjectCardStride, true)
+-	a.Add64(R10, RAX)
+-	a.Load32(RAX, R10, gc.NativeObjectCardHandleOffset)
+-	a.Load32(RDX, RSP, 0)
+-	a.ShiftImm(5, RDX, 1, false)
+-	a.Cmp32(RAX, RDX)
+-	addFallback(a.JccPlaceholder(condNE))
+-	a.Load32(RAX, R10, gc.NativeObjectCardStartOffset)
+-	a.Cmp32(RSI, RAX)
+-	addFallback(a.JccPlaceholder(condB))
+-	a.Load32(RAX, R10, gc.NativeObjectCardEndOffset)
+-	a.Cmp32(RSI, RAX)
+-	addFallback(a.JccPlaceholder(condA))
++	a.MovRegReg32(RCX, RSI)
++	a.MovReg64(RDX, RCX)
++	a.AluRI(0, RDX, 3, true)
++	f.emitNativeExistingObjectCard(addFallback)
+ 
+ 	store := a.Len()
+ 	a.PatchRel32(parentNursery, store)
+-	a.StoreIdx(R11, RSI, RDI, int32(gc.PayloadOffset), 4)
++	a.StoreIdx(R11, RSI, RDI, int32(gc.ArrayPayloadOffset(4)), 4)
+ 	a.MovImm32(RAX, 1)
+ 	done := a.JmpPlaceholder()
+ 
+@@ -3130,7 +3090,7 @@ func (f *fn) emitDirectGCArrayLen(typeIndex uint32) bool {
+ 	object := f.popValue()
+ 	obj, done := f.emitDirectGCObjectWithStub(object, typeIndex, gc.HeaderSize, local, hasLocal, kind, false)
+ 	result := f.allocReg(maskOf(obj))
+-	f.a.Load32(result, obj, 8)
++	f.a.Load32(result, obj, 0)
+ 	done()
+ 	f.spillFloor = oldFloor
+ 	f.pushReg(result, mtI32)
+@@ -3142,21 +3102,23 @@ func (f *fn) emitDirectGCArrayGet(typeIndex uint32, helper uint32, knownIndex, k
+ 	if !ok || !final {
+ 		return false
+ 	}
+-	indexRoot := f.s.back()
+-	local, hasLocal := gcLocalProvenance(baseOfValentBlock(indexRoot).prev)
+ 	f.flush()
+ 	oldFloor := f.spillFloor
+-	f.spillFloor = f.curSpillSlot()
++	extentHome := f.allocSpillSlots(1)
++	f.spillFloor = extentHome + 1
+ 	indexValue := f.popValue()
+ 	object := f.popValue()
+-	constantOffset := uint64(gc.PayloadOffset) + uint64(knownIndex)*uint64(scalar.size)
++	constantOffset := uint64(gc.ArrayPayloadOffset(uint32(scalar.size))) + uint64(knownIndex)*uint64(scalar.size)
+ 	constantExtent := constantOffset + uint64(scalar.size)
+ 	if logicalBoundsProven && constantExtent <= math.MaxInt32 {
+-		obj, done := f.emitDirectGCObject(object, typeIndex, uint32(constantExtent), local, hasLocal)
++		obj, done := f.emitCheckedGCArrayObject(object, typeIndex, extentHome)
+ 		tmp := f.allocReg(maskOf(obj))
+-		f.a.Load32(tmp, obj, 8)
++		f.a.Load32(tmp, obj, 0)
+ 		f.a.AluRI(cmpDigit, tmp, int32(knownLength), false)
+ 		f.trapIf(condNE, trapCastFailure)
++		f.a.LoadRsp32(tmp, f.spillOff(extentHome))
++		f.a.AluRI(cmpDigit, tmp, int32(constantExtent), false)
++		f.trapIf(condB, trapCastFailure)
+ 		f.release(tmp)
+ 		disp := int32(constantOffset)
+ 		f.stats.peep("gc-array-known-bounds")
+@@ -3185,13 +3147,13 @@ func (f *fn) emitDirectGCArrayGet(typeIndex uint32, helper uint32, knownIndex, k
+ 		return true
+ 	}
+ 
+-	obj, done := f.emitDirectGCObject(object, typeIndex, gc.PayloadOffset, local, hasLocal)
++	obj, done := f.emitCheckedGCArrayObject(object, typeIndex, extentHome)
+ 	index := f.materialize(indexValue)
+ 	f.a.MovRegReg32(index, index) // Wasm i32 indexes ignore dirty host-result high bits.
+ 	f.pinned = f.pinned.add(index)
+ 	tmp := f.allocReg(maskOf(obj, index))
+ 	f.pinned = f.pinned.add(tmp)
+-	f.a.Load32(tmp, obj, 8) // ObjHeader.Aux array length
++	f.a.Load32(tmp, obj, 0) // ObjHeader.Aux array length
+ 	if logicalBoundsProven {
+ 		f.a.AluRI(cmpDigit, tmp, int32(knownLength), false)
+ 		f.trapIf(condNE, trapCastFailure)
+@@ -3203,16 +3165,16 @@ func (f *fn) emitDirectGCArrayGet(typeIndex uint32, helper uint32, knownIndex, k
+ 	f.a.ImulRI(index, int32(scalar.size), true)
+ 	// Defend against corrupted Aux metadata as well as the logical index check:
+ 	// payload offset + scaled index + element width must fit the object header size.
+-	f.a.Load32(tmp, obj, 4)
++	f.a.LoadRsp32(tmp, f.spillOff(extentHome))
+ 	end := f.allocReg(maskOf(obj, index, tmp))
+ 	f.pinned = f.pinned.add(end)
+ 	f.a.MovReg64(end, index)
+-	f.a.AluRI(0, end, int32(gc.PayloadOffset)+int32(scalar.size), true)
++	f.a.AluRI(0, end, int32(gc.ArrayPayloadOffset(uint32(scalar.size)))+int32(scalar.size), true)
+ 	f.a.Cmp64(end, tmp)
+ 	f.trapIf(condA, trapCastFailure)
+ 	if scalar.typ == mtV128 {
+ 		x := f.allocFReg(0)
+-		f.mov128LoadIdx(x, obj, index, int32(gc.PayloadOffset))
++		f.mov128LoadIdx(x, obj, index, int32(gc.ArrayPayloadOffset(uint32(scalar.size))))
+ 		f.pinned = f.pinned.remove(end)
+ 		f.pinned = f.pinned.remove(tmp)
+ 		f.pinned = f.pinned.remove(index)
+@@ -3224,7 +3186,7 @@ func (f *fn) emitDirectGCArrayGet(typeIndex uint32, helper uint32, knownIndex, k
+ 	}
+ 	if scalar.typ.isFloat() {
+ 		x := f.allocFReg(0)
+-		f.a.FLoadIdx(x, obj, index, int32(gc.PayloadOffset), scalar.typ == mtF64)
++		f.a.FLoadIdx(x, obj, index, int32(gc.ArrayPayloadOffset(uint32(scalar.size))), scalar.typ == mtF64)
+ 		f.pinned = f.pinned.remove(end)
+ 		f.pinned = f.pinned.remove(tmp)
+ 		f.pinned = f.pinned.remove(index)
+@@ -3238,7 +3200,7 @@ func (f *fn) emitDirectGCArrayGet(typeIndex uint32, helper uint32, knownIndex, k
+ 	f.pinned = f.pinned.remove(end)
+ 	result := end
+ 	signed := helper == gcArrayGetS
+-	f.a.LoadIdx(result, obj, index, int32(gc.PayloadOffset), scalar.size, signed, scalar.typ == mtI64)
++	f.a.LoadIdx(result, obj, index, int32(gc.ArrayPayloadOffset(uint32(scalar.size))), scalar.size, signed, scalar.typ == mtI64)
+ 	f.pinned = f.pinned.remove(index)
+ 	f.release(index)
+ 	done()
+@@ -3252,23 +3214,24 @@ func (f *fn) emitDirectGCArraySet(typeIndex, knownIndex, knownLength uint32, log
+ 	if !ok || !final {
+ 		return false
+ 	}
+-	valueRoot := f.s.back()
+-	indexRoot := baseOfValentBlock(valueRoot).prev
+-	local, hasLocal := gcLocalProvenance(baseOfValentBlock(indexRoot).prev)
+ 	f.flush()
+ 	oldFloor := f.spillFloor
+-	f.spillFloor = f.curSpillSlot()
++	extentHome := f.allocSpillSlots(1)
++	f.spillFloor = extentHome + 1
+ 	value := f.popValue()
+ 	indexValue := f.popValue()
+ 	object := f.popValue()
+-	constantOffset := uint64(gc.PayloadOffset) + uint64(knownIndex)*uint64(scalar.size)
++	constantOffset := uint64(gc.ArrayPayloadOffset(uint32(scalar.size))) + uint64(knownIndex)*uint64(scalar.size)
+ 	constantExtent := constantOffset + uint64(scalar.size)
+ 	if logicalBoundsProven && constantExtent <= math.MaxInt32 {
+-		obj, done := f.emitDirectGCObject(object, typeIndex, uint32(constantExtent), local, hasLocal)
++		obj, done := f.emitCheckedGCArrayObject(object, typeIndex, extentHome)
+ 		tmp := f.allocReg(maskOf(obj))
+-		f.a.Load32(tmp, obj, 8)
++		f.a.Load32(tmp, obj, 0)
+ 		f.a.AluRI(cmpDigit, tmp, int32(knownLength), false)
+ 		f.trapIf(condNE, trapCastFailure)
++		f.a.LoadRsp32(tmp, f.spillOff(extentHome))
++		f.a.AluRI(cmpDigit, tmp, int32(constantExtent), false)
++		f.trapIf(condB, trapCastFailure)
+ 		f.release(tmp)
+ 		disp := int32(constantOffset)
+ 		f.stats.peep("gc-array-known-bounds")
+@@ -3291,13 +3254,13 @@ func (f *fn) emitDirectGCArraySet(typeIndex, knownIndex, knownLength uint32, log
+ 		return true
+ 	}
+ 
+-	obj, done := f.emitDirectGCObject(object, typeIndex, gc.PayloadOffset, local, hasLocal)
++	obj, done := f.emitCheckedGCArrayObject(object, typeIndex, extentHome)
+ 	index := f.materialize(indexValue)
+ 	f.a.MovRegReg32(index, index) // Wasm i32 indexes ignore dirty host-result high bits.
+ 	f.pinned = f.pinned.add(index)
+ 	tmp := f.allocReg(maskOf(obj, index))
+ 	f.pinned = f.pinned.add(tmp)
+-	f.a.Load32(tmp, obj, 8)
++	f.a.Load32(tmp, obj, 0)
+ 	if logicalBoundsProven {
+ 		f.a.AluRI(cmpDigit, tmp, int32(knownLength), false)
+ 		f.trapIf(condNE, trapCastFailure)
+@@ -3307,26 +3270,26 @@ func (f *fn) emitDirectGCArraySet(typeIndex, knownIndex, knownLength uint32, log
+ 		f.trapIf(condAE, trapBuiltin)
+ 	}
+ 	f.a.ImulRI(index, int32(scalar.size), true)
+-	f.a.Load32(tmp, obj, 4)
++	f.a.LoadRsp32(tmp, f.spillOff(extentHome))
+ 	end := f.allocReg(maskOf(obj, index, tmp))
+ 	f.pinned = f.pinned.add(end)
+ 	f.a.MovReg64(end, index)
+-	f.a.AluRI(0, end, int32(gc.PayloadOffset)+int32(scalar.size), true)
++	f.a.AluRI(0, end, int32(gc.ArrayPayloadOffset(uint32(scalar.size)))+int32(scalar.size), true)
+ 	f.a.Cmp64(end, tmp)
+ 	f.trapIf(condA, trapCastFailure)
+ 	f.pinned = f.pinned.remove(end)
+ 	f.pinned = f.pinned.remove(tmp)
+ 	if scalar.typ == mtV128 {
+ 		x := f.materializeV128(value)
+-		f.mov128StoreIdx(obj, index, x, int32(gc.PayloadOffset))
++		f.mov128StoreIdx(obj, index, x, int32(gc.ArrayPayloadOffset(uint32(scalar.size))))
+ 		f.releaseF(x)
+ 	} else if scalar.typ.isFloat() {
+ 		x := f.materializeF(value)
+-		f.a.FStoreIdx(obj, index, x, int32(gc.PayloadOffset), scalar.typ == mtF64)
++		f.a.FStoreIdx(obj, index, x, int32(gc.ArrayPayloadOffset(uint32(scalar.size))), scalar.typ == mtF64)
+ 		f.releaseF(x)
+ 	} else {
+ 		r := f.materialize(value)
+-		f.a.StoreIdx(obj, index, r, int32(gc.PayloadOffset), scalar.size)
++		f.a.StoreIdx(obj, index, r, int32(gc.ArrayPayloadOffset(uint32(scalar.size))), scalar.size)
+ 		f.release(r)
+ 	}
+ 	f.pinned = f.pinned.remove(index)
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_induction_emit.go b/src/core/compiler/backend/railshot/amd64/gc_induction_emit.go
+index 12c277294..5f61a0a57 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_induction_emit.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_induction_emit.go
+@@ -89,7 +89,7 @@ func (f *fn) emitGCArrayReduction(typeIndex, length uint32) error {
+ 		return err
+ 	}
+ 	if layout, ok := f.gcTypeLayout(typeIndex, wasm.CompArray); ok && gc.NativeDeadBatchSupported && layout.Type.Final && layout.PointerFree && layout.ElemLayout.DirectAccess && layout.ElemLayout.Size == 4 && f.gcReducedBounded && f.opt(optRegABI) && f.opt(optPreparedDirectEntry) {
+-		f.gcDeadBatchLayout = uint64(gc.Align8(gc.PayloadOffset+length*4)) | uint64(8)<<32
++		f.gcDeadBatchLayout = uint64(gc.Align8(gc.HeaderSize+length*4)) | uint64(8)<<32
+ 	}
+ 	f.stats.peep("gc-array-induction-reduction")
+ 	return f.emitGCInductionSum(false)
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go b/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go
+index 82fd4df6e..0f6f367b1 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go
+@@ -35,7 +35,7 @@ func (f *fn) arrayAllocationShortcut(helper, typeIndex uint32, argSlot int) int
+ 		shift = 3
+ 	}
+ 	f.a.LslImm(X3, X2, shift, true)
+-	f.a.AddImm32(X3, X3, gc.PayloadOffset+7)
++	f.a.AddImm32(X3, X3, gc.ArrayPayloadOffset(elemSize)+7)
+ 	f.a.AndImm32(X3, X3, ^uint32(7))
+ 	f.ld64(X9, linMemReg, -int32(abi.GCNativeViewPtrOffset))
+ 	cold(f.a.Cbz64(X9))
+@@ -69,15 +69,9 @@ func (f *fn) arrayAllocationShortcut(helper, typeIndex uint32, argSlot int) int
+ 	cold(f.a.Cbz64(X16))
+ 	f.a.Add64(X16, X16, X7) // destination header
+ 	// No fallbacks or safepoints after this point. Publish only initialized data.
+-	f.ld64(X17, linMemReg, -int32(abi.GCNativeViewPtrOffset))
+-	f.ld64(X17, X17, gc.NativeInstanceViewLocalTypesOffset)
+-	f.ld32(X17, X17, int32(typeIndex*4))
+-	f.st32(X16, 0, X17)
+-	f.st32(X16, 4, X3)
+-	f.st32(X16, 8, X2)
+-	f.a.MovImm32(X17, int32(gc.FlagPointerFree))
+-	f.st32(X16, 12, X17)
+-	f.a.AddImm64(X16, X16, gc.PayloadOffset)
++	f.st32(X16, 0, X2)
++	f.st32(X16, 4, ZR)
++	f.a.AddImm64(X16, X16, gc.ArrayPayloadOffset(elemSize))
+ 	if helper == gcArrayAllocUniform {
+ 		if elemSize == 4 {
+ 			f.ld32(X17, SP, f.spillOff(argSlot))
+@@ -101,7 +95,7 @@ func (f *fn) arrayAllocationShortcut(helper, typeIndex uint32, argSlot int) int
+ 	f.ld64(X17, X6, 0)
+ 	f.a.AddImm64(X17, X17, 1)
+ 	f.st64(X6, 0, X17)
+-	f.a.MovImm32(X17, int32(gc.NativeSpaceNursery)<<16)
++	f.a.MovImm32(X17, int32(gc.NativeSpaceNursery)<<16|gc.NativeHandlePointerFreeBit)
+ 	f.st32(X16, gc.NativeHandleMetadataOffset, X17)
+ 	f.a.AddImm32(X4, X4, 1)
+ 	f.st32(X10, gc.NativeStructAllocCursorOffset, X4)
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_array_direct.go b/src/core/compiler/backend/railshot/arm64/gc_array_direct.go
+index 777a75ef6..12f4ed451 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_array_direct.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_array_direct.go
+@@ -44,17 +44,18 @@ func (f *fn) arrayScalarShortcut(helper, typeIndex uint32, argSlot int) int {
+ 	f.cmpImm(X17, uint32(gc.NativeSpaceNursery), false)
+ 	cold(f.a.Bcond(condNE))
+ 	f.ld32(X16, X10, gc.NativeHandleOffsetOffset)
++	f.ld32(X17, X10, gc.NativeHandleTypeIDOffset)
+ 	f.ld64(X10, X9, int32(gc.NativeViewSpacesOffset+gc.NativeSpaceNursery*gc.NativeViewSpaceStride+gc.NativeSpaceBaseOffset))
+ 	f.a.Add64(X10, X10, X16)
++	f.a.MovReg32(X16, X17)
+ 	// Resolve the module-local type into this collector's canonical domain.
+ 	f.ld64(X9, linMemReg, -int32(abi.GCNativeViewPtrOffset))
+ 	f.ld64(X9, X9, gc.NativeInstanceViewLocalTypesOffset)
+ 	f.ld32(X17, X9, int32(typeIndex*4))
+-	f.ld32(X16, X10, 0)
+ 	f.cmpRR(X16, X17, false)
+ 	cold(f.a.Bcond(condNE))
+ 	f.ld32(X16, SP, f.spillOff(argSlot+1)) // element index
+-	f.ld32(X17, X10, 8)                    // array length
++	f.ld32(X17, X10, 0)                    // array length
+ 	f.cmpRR(X16, X17, false)
+ 	if helper == gcArrayGet {
+ 		cold(f.a.Bcond(condAE))
+@@ -72,9 +73,9 @@ func (f *fn) arrayScalarShortcut(helper, typeIndex uint32, argSlot int) int {
+ 	f.a.AddShifted(X10, X10, X16, shift, false)
+ 	if helper == gcArrayGet {
+ 		if size == 4 {
+-			f.ld32(X16, X10, int32(gc.PayloadOffset))
++			f.ld32(X16, X10, int32(gc.ArrayPayloadOffset(size)))
+ 		} else {
+-			f.ld64(X16, X10, int32(gc.PayloadOffset))
++			f.ld64(X16, X10, int32(gc.ArrayPayloadOffset(size)))
+ 		}
+ 		f.ld64(X11, linMemReg, -int32(offCustomCtx))
+ 		f.st64(X11, hcResults, X16)
+@@ -84,7 +85,7 @@ func (f *fn) arrayScalarShortcut(helper, typeIndex uint32, argSlot int) int {
+ 		} else {
+ 			f.ld64(X16, SP, f.spillOff(argSlot+2))
+ 		}
+-		f.a.AddImm64(X10, X10, gc.PayloadOffset)
++		f.a.AddImm64(X10, X10, gc.ArrayPayloadOffset(size))
+ 		f.emitGCScalarFill(X10, X9, X16, size)
+ 	}
+ 	done := f.a.Branch()
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_array_forward.go b/src/core/compiler/backend/railshot/arm64/gc_array_forward.go
+index ddebb2667..d063ad9f9 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_array_forward.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_array_forward.go
+@@ -99,5 +99,5 @@ func (f *fn) forwardArrayChargeSize(typeIndex uint32) uint32 {
+ 	if length > 64 {
+ 		return 0
+ 	}
+-	return gc.Align8(gc.PayloadOffset + length*size)
++	return gc.Align8(gc.HeaderSize + length*size)
+ }
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_array_len.go b/src/core/compiler/backend/railshot/arm64/gc_array_len.go
+index 32affa8bf..77542739b 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_array_len.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_array_len.go
+@@ -16,7 +16,7 @@ func (f *fn) arrayLenShortcut(argSlot int) int {
+ 	f.a.MovImm32(X11, int32(gc.HeaderSize))
+ 	site := f.a.Bl()
+ 	fallback := f.a.Cbnz64(X17)
+-	f.ld32(X16, X10, 8)
++	f.ld32(X16, X10, 0)
+ 	f.ld64(X11, linMemReg, -int32(offCustomCtx))
+ 	f.st64(X11, hcResults, X16)
+ 	done := f.a.Branch()
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_array_reduction.go b/src/core/compiler/backend/railshot/arm64/gc_array_reduction.go
+index e14f825f4..66b11759b 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_array_reduction.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_array_reduction.go
+@@ -112,7 +112,7 @@ func (f *fn) emitGCArrayReduction(typeIndex, length uint32) error {
+ 	// Two raw slots: count and an exact pair of u32 type index / array length.
+ 	f.pushValue(storage{kind: stConst, typ: mtI64, cval: int64(uint64(typeIndex)<<32 | uint64(length))})
+ 	if layout, ok := f.gcTypeLayout(typeIndex, wasm.CompArray); ok && gc.NativeDeadBatchSupported && layout.Type.Final && layout.PointerFree && layout.ElemLayout.DirectAccess && layout.ElemLayout.Size == 4 {
+-		f.nativeDeadArrayBatchBytes = gc.Align8(gc.PayloadOffset + length*4)
++		f.nativeDeadArrayBatchBytes = gc.Align8(gc.HeaderSize + length*4)
+ 		if f.gcReducedBounded && f.opt(optRegABI) && f.opt(optPreparedDirectEntry) {
+ 			f.gcDeadBatchLayout = uint64(f.nativeDeadArrayBatchBytes) | uint64(8)<<32
+ 		}
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_branch_cast.go b/src/core/compiler/backend/railshot/arm64/gc_branch_cast.go
+index cfadcf2da..b277c6fa3 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_branch_cast.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_branch_cast.go
+@@ -71,13 +71,14 @@ func (f *fn) emitNativeBranchCastTest(typeIndex uint32, nullable bool) {
+ 	f.cmpRR(ref, tmp, false)
+ 	f.trapIf(condA, trapCastFailure)
+ 	f.a.Sub32(tmp, tmp, ref)
++	f.ld32(X16, handle, gc.NativeHandleTypeIDOffset)
+ 	f.ld32(handle, handle, gc.NativeHandleSizeOffset)
+ 	f.cmpRR(handle, tmp, false)
+ 	f.trapIf(condA, trapCastFailure)
+ 	f.cmpImm(handle, gc.HeaderSize, false)
+ 	f.trapIf(condB, trapCastFailure)
+ 	f.a.Add64(space, space, ref)
+-	f.ld32(ref, space, 0) // actual canonical type ID
++	f.a.MovReg32(ref, X16) // actual canonical type ID
+ 
+ 	// required.pre <= actual.pre && actual.post <= required.post.
+ 	f.ld32(tmp, view, gc.NativeViewSubtypeIntervalCountOffset)
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_object_stub.go b/src/core/compiler/backend/railshot/arm64/gc_object_stub.go
+index 377dd7906..32be297f1 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_object_stub.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_object_stub.go
+@@ -90,11 +90,6 @@ func emitGCObjectStub(code []byte) []byte {
+ 	a.Load32(X16, X10, gc.NativeHandleOffsetOffset)
+ 	a.Load64(X9, X9, gc.NativeSpaceBaseOffset)
+ 	a.Add64(X10, X9, X16)
+-	a.Load32(X16, X10, 4)
+-	a.CmpReg32(X16, X17)
+-	cold(a.Bcond(condA))
+-	a.CmpReg32(X16, X11)
+-	cold(a.Bcond(condB))
+ 	a.MovImm32(X17, 0)
+ 	a.Ret()
+ 	for _, site := range fallback[:n] {
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go b/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go
+index eb0174ca1..610344ed9 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go
+@@ -60,12 +60,11 @@ func TestGCObjectStubPhysicalGuards(t *testing.T) {
+ 	instance.Handles = uintptr(unsafe.Pointer(&handles[0]))
+ 	binary.LittleEndian.PutUint64(basedata[:], uint64(uintptr(unsafe.Pointer(&instance))))
+ 	handle := handles[gc.NativeHandleStride:]
+-	for _, name := range []string{"nursery", "old", "large", "tiny", "null", "i31", "high bits", "count", "free", "unknown space", "offset", "size", "short handle", "short header", "long header", "space bytes"} {
++	for _, name := range []string{"nursery", "old", "large", "tiny", "null", "i31", "high bits", "count", "free", "unknown space", "offset", "size", "short handle", "space bytes"} {
+ 		t.Run(name, func(t *testing.T) {
+ 			collector = gc.NativeCollectorView{Handles: uintptr(unsafe.Pointer(&handles[0])), HandleCount: 2}
+ 			clear(handle)
+ 			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.HeaderSize)
+-			binary.LittleEndian.PutUint32(header[4:], gc.HeaderSize)
+ 			space := byte(gc.NativeSpaceNursery)
+ 			ref := uint64(2)
+ 			want := uintptr(1)
+@@ -96,10 +95,6 @@ func TestGCObjectStubPhysicalGuards(t *testing.T) {
+ 				binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], ^uint32(0))
+ 			case "short handle":
+ 				binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.HeaderSize-1)
+-			case "short header":
+-				binary.LittleEndian.PutUint32(header[4:], gc.HeaderSize-1)
+-			case "long header":
+-				binary.LittleEndian.PutUint32(header[4:], gc.HeaderSize+1)
+ 			}
+ 			handle[gc.NativeHandleSpaceOffset] = space
+ 			if space < gc.NativeSpaceCount {
+diff --git a/src/core/runtime/gc/native/alloc.go b/src/core/runtime/gc/native/alloc.go
+index c98506279..ef1b4001f 100644
+--- a/src/core/runtime/gc/native/alloc.go
++++ b/src/core/runtime/gc/native/alloc.go
+@@ -279,11 +279,15 @@ func (c *Collector) refDescPtrBytes(r Ref) (*TypeDesc, []byte, error) {
+ 		return nil, nil, errors.New("gc: invalid object ref")
+ 	}
+ 	object := span[entry.off : uint64(entry.off)+uint64(entry.size)]
+-	id := TypeID(binary.LittleEndian.Uint32(object))
++	id := TypeID(entry.typeID)
+ 	if int(id) >= len(c.types) {
+ 		return nil, nil, fmt.Errorf("gc: unknown type id %d", id)
+ 	}
+-	return &c.types[id], object, nil
++	d := &c.types[id]
++	if entry.size < d.PayloadOffset() {
++		return nil, nil, errors.New("gc: object prefix out of bounds")
++	}
++	return d, object, nil
+ }
+ func (c *Collector) validObjectRef(r Ref) bool {
+ 	if !r.IsObj() {
+@@ -332,16 +336,39 @@ func (c *Collector) bytes(r Ref) []byte {
+ 	}
+ }
+ func (c *Collector) header(r Ref) ObjHeader {
+-	b := c.bytes(r)
+-	return ObjHeader{binary.LittleEndian.Uint32(b[0:4]), binary.LittleEndian.Uint32(b[4:8]), binary.LittleEndian.Uint32(b[8:12]), binary.LittleEndian.Uint32(b[12:16])}
++	e := c.entry(r)
++	h := ObjHeader{TypeID: e.typeID, Size: e.size}
++	if e.class&NativeHandlePointerFreeBit != 0 {
++		h.Flags |= FlagPointerFree
++	}
++	if e.space == spaceOld || e.space == spaceLarge && !e.young() {
++		h.Flags |= FlagOld
++	}
++	if e.space == spaceLarge {
++		h.Flags |= FlagLarge
++	}
++	if uint64(e.typeID) < uint64(len(c.types)) && c.types[e.typeID].Kind == KindArray {
++		h.Aux = binary.LittleEndian.Uint32(c.bytes(r))
++	}
++	return h
+ }
+ func (c *Collector) writeHeader(r Ref, h ObjHeader) {
+-	c.entry(r).typeID = h.TypeID
+-	b := c.bytes(r)
+-	binary.LittleEndian.PutUint32(b[0:4], h.TypeID)
+-	binary.LittleEndian.PutUint32(b[4:8], h.Size)
+-	binary.LittleEndian.PutUint32(b[8:12], h.Aux)
+-	binary.LittleEndian.PutUint32(b[12:16], h.Flags)
++	e := c.entry(r)
++	if h.Size != e.size {
++		panic("gc: object publication extent differs from authoritative handle")
++	}
++	e.typeID = h.TypeID
++	e.class &^= NativeHandlePointerFreeBit
++	if h.Flags&FlagPointerFree != 0 {
++		e.class |= NativeHandlePointerFreeBit
++	}
++	if uint64(e.typeID) < uint64(len(c.types)) && c.types[e.typeID].Kind == KindArray {
++		b := c.bytes(r)
++		binary.LittleEndian.PutUint32(b, h.Aux)
++		clear(b[4:HeaderSize])
++	} else if PayloadOffset != 0 {
++		clear(c.bytes(r)[:PayloadOffset])
++	}
+ }
+ 
+ func (c *Collector) zeroObjectPayload(r Ref) {
+@@ -353,7 +380,7 @@ func (c *Collector) zeroObjectPayload(r Ref) {
+ 	if e.space == spaceOld || e.space == spaceLarge {
+ 		end = e.off + c.throughput.handleAllocSize(*e)
+ 	}
+-	start := e.off + PayloadOffset
++	start := e.off + c.payloadOffset(handleOf(r))
+ 	if start > end {
+ 		return
+ 	}
+diff --git a/src/core/runtime/gc/native/array_bulk_test.go b/src/core/runtime/gc/native/array_bulk_test.go
+index 22e3743a3..cfd7231f6 100644
+--- a/src/core/runtime/gc/native/array_bulk_test.go
++++ b/src/core/runtime/gc/native/array_bulk_test.go
+@@ -187,8 +187,8 @@ func TestV128ObjectPhysicalAlignment(t *testing.T) {
+ 				t.Fatal(err)
+ 			}
+ 			b := c.bytes(ref)
+-			if uintptr(unsafe.Pointer(&b[0]))%16 != 0 || uintptr(unsafe.Pointer(&b[PayloadOffset]))%16 != 0 {
+-				t.Fatalf("v128 object/payload are not 16-byte aligned: object=%p payload=%p", &b[0], &b[PayloadOffset])
++			if uintptr(unsafe.Pointer(&b[0]))%16 != 0 || uintptr(unsafe.Pointer(&b[ArrayPayloadOffset(16)]))%16 != 0 {
++				t.Fatalf("v128 object/payload are not 16-byte aligned: object=%p payload=%p", &b[0], &b[ArrayPayloadOffset(16)])
+ 			}
+ 		})
+ 	}
+@@ -403,7 +403,7 @@ func TestArrayCopyHardeningModesValidateCollectorPayloads(t *testing.T) {
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+-		binary.LittleEndian.PutUint32(c.bytes(src)[PayloadOffset:], uint32(makeObjRef(0xffff)))
++		binary.LittleEndian.PutUint32(c.bytes(src)[ArrayPayloadOffset(4):], uint32(makeObjRef(0xffff)))
+ 		if err := c.ArrayCopy(dst, 0, src, 0, 1); err == nil {
+ 			t.Fatalf("hardening config %+v accepted forged source payload", cfg)
+ 		}
+@@ -446,7 +446,7 @@ func TestArrayCopyReferenceCompatibilityAndBarriers(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	nullableSrc, err := c.NewArrayDefault(3, 1)
++	nullableSrc, err := c.NewArrayDefaultWithRoots(3, 1, RefSliceRoots{parent, nonNullDst})
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/src/core/runtime/gc/native/array_data.go b/src/core/runtime/gc/native/array_data.go
+index ee6b33373..68661731d 100644
+--- a/src/core/runtime/gc/native/array_data.go
++++ b/src/core/runtime/gc/native/array_data.go
+@@ -27,8 +27,8 @@ func (c *Collector) NewArrayDataWithRoots(typeID TypeID, length uint32, data []b
+ 	if err != nil {
+ 		return Null(), err
+ 	}
+-	payloadEnd := uint32(uint64(PayloadOffset) + bytes)
+-	copy(c.bytes(r)[PayloadOffset:payloadEnd], data[uint64(source):end])
++	payloadEnd := uint32(uint64(d.PayloadOffset()) + bytes)
++	copy(c.bytes(r)[d.PayloadOffset():payloadEnd], data[uint64(source):end])
+ 	// Clear alignment and size-class padding without overwriting the payload.
+ 	e := c.entry(r)
+ 	start, limit := e.off+payloadEnd, e.off+e.size
+diff --git a/src/core/runtime/gc/native/array_data_test.go b/src/core/runtime/gc/native/array_data_test.go
+index 4108e2c8f..251e99808 100644
+--- a/src/core/runtime/gc/native/array_data_test.go
++++ b/src/core/runtime/gc/native/array_data_test.go
+@@ -29,7 +29,7 @@ func TestArrayDataSingleInitialization(t *testing.T) {
+ 					if err != nil {
+ 						t.Fatal(err)
+ 					}
+-					payload := c.bytes(ref)[PayloadOffset:]
++					payload := c.bytes(ref)[d.PayloadOffset():]
+ 					count := n * d.ElemSize
+ 					if !bytes.Equal(payload[:count], source[3:3+count]) {
+ 						t.Fatalf("kind%d profile%d length%d payload mismatch", kind, profile, n)
+@@ -97,7 +97,7 @@ func TestArrayDataClearsThroughputClassPadding(t *testing.T) {
+ 			t.Fatalf("space=%d, want large", e.space)
+ 		}
+ 		limit := e.off + c.throughput.handleAllocSize(*e)
+-		for _, v := range c.throughput.mem[e.off+PayloadOffset+n : limit] {
++		for _, v := range c.throughput.mem[e.off+ArrayPayloadOffset(1)+n : limit] {
+ 			if v != 0 {
+ 				t.Fatal("stale size-class padding")
+ 			}
+diff --git a/src/core/runtime/gc/native/barrier.go b/src/core/runtime/gc/native/barrier.go
+index c58f2e956..ca38bae1a 100644
+--- a/src/core/runtime/gc/native/barrier.go
++++ b/src/core/runtime/gc/native/barrier.go
+@@ -199,7 +199,7 @@ func (c *Collector) PostBulkWriteBarrier(dst Ref, start, length uint32) {
+ 			}
+ 			for i := uint32(0); i < n; i++ {
+ 				index := uint64(start) + uint64(base) + uint64(i)
+-				value, err := c.loadValue(dst, uint64(PayloadOffset)+index*uint64(d.ElemSize), d.Elem)
++				value, err := c.loadValue(dst, uint64(d.PayloadOffset())+index*uint64(d.ElemSize), d.Elem)
+ 				if err != nil {
+ 					return
+ 				}
+@@ -248,8 +248,8 @@ func (c *Collector) addObjectCardRange(h, start, end uint32) {
+ 		return
+ 	}
+ 	payloadBytes := uint32(0)
+-	if e.size > PayloadOffset {
+-		payloadBytes = e.size - PayloadOffset
++	if e.size > c.payloadOffset(h) {
++		payloadBytes = e.size - c.payloadOffset(h)
+ 	}
+ 	if payloadBytes == 0 || start >= payloadBytes {
+ 		return
+@@ -625,10 +625,10 @@ func (c *Collector) markWholeObjectCard(h uint32) {
+ 		return
+ 	}
+ 	size := c.handles[h].size
+-	if size <= PayloadOffset {
++	if size <= c.payloadOffset(h) {
+ 		return
+ 	}
+-	c.addObjectCardRange(h, 0, size-PayloadOffset-1)
++	c.addObjectCardRange(h, 0, size-c.payloadOffset(h)-1)
+ }
+ 
+ func (c *Collector) handleContainsNurseryRef(h uint32) bool {
+diff --git a/src/core/runtime/gc/native/card_driven_test.go b/src/core/runtime/gc/native/card_driven_test.go
+index cd79d65f1..1e259c34f 100644
+--- a/src/core/runtime/gc/native/card_driven_test.go
++++ b/src/core/runtime/gc/native/card_driven_test.go
+@@ -107,8 +107,8 @@ func TestConservativeObjectBarrierCoversWholeOldParent(t *testing.T) {
+ 		t.Fatalf("whole-object barrier metadata: cards=%d remembered=%d", c.CardCount(), c.RememberedCount())
+ 	}
+ 	card := c.objectCards[c.cardSlot(handleOf(parent))-1]
+-	if card.index != 0 || card.end != c.entry(parent).size-PayloadOffset-1 {
+-		t.Fatalf("whole-object card = %+v, payload bytes=%d", card, c.entry(parent).size-PayloadOffset)
++	if card.index != 0 || card.end != c.entry(parent).size-c.payloadOffset(handleOf(parent))-1 {
++		t.Fatalf("whole-object card = %+v, payload bytes=%d", card, c.entry(parent).size-c.payloadOffset(handleOf(parent)))
+ 	}
+ 	if err := c.StructSet(parent, 1, RefValue(child)); err != nil {
+ 		t.Fatal(err)
+@@ -357,7 +357,7 @@ func TestMalformedFreeCardHeadWidensExistingRange(t *testing.T) {
+ 	c.CardMarkArray(array, 64)
+ 	c.freeObjectCardSlot = 0
+ 	card := c.objectCards[c.cardSlot(handleOf(array))-1]
+-	if card.index != 0 || card.end != c.handles[handleOf(array)].size-PayloadOffset-1 || c.cardFallback {
++	if card.index != 0 || card.end != c.handles[handleOf(array)].size-c.payloadOffset(handleOf(array))-1 || c.cardFallback {
+ 		t.Fatalf("existing-card fallback = %+v/global:%v", card, c.cardFallback)
+ 	}
+ 	root := Root(array)
+diff --git a/src/core/runtime/gc/native/card_failure_debug_test.go b/src/core/runtime/gc/native/card_failure_debug_test.go
+index c17bad2eb..80dbae6f8 100644
+--- a/src/core/runtime/gc/native/card_failure_debug_test.go
++++ b/src/core/runtime/gc/native/card_failure_debug_test.go
+@@ -145,7 +145,7 @@ func TestInjectedDisjointObjectCardGrowthWidensExistingCard(t *testing.T) {
+ 			}
+ 			cleanup()
+ 			card := c.objectCards[c.cardSlot(handleOf(array))-1]
+-			if card.index != 0 || card.end != c.handles[handleOf(array)].size-PayloadOffset-1 {
++			if card.index != 0 || card.end != c.handles[handleOf(array)].size-c.payloadOffset(handleOf(array))-1 {
+ 				t.Fatalf("growth fallback card = %+v, want whole payload", card)
+ 			}
+ 			root := Root(array)
+diff --git a/src/core/runtime/gc/native/card_malformed_test.go b/src/core/runtime/gc/native/card_malformed_test.go
+index c9b258dfe..7319435c9 100644
+--- a/src/core/runtime/gc/native/card_malformed_test.go
++++ b/src/core/runtime/gc/native/card_malformed_test.go
+@@ -97,7 +97,7 @@ func TestMalformedObjectCardChainsFallBackToWholeObjectScan(t *testing.T) {
+ 			}
+ 
+ 			h := handleOf(array)
+-			payloadBytes := c.handles[h].size - PayloadOffset
++			payloadBytes := c.handles[h].size - c.payloadOffset(h)
+ 			cards := test.cards(h, handleOf(child), payloadBytes)
+ 			c.objectCards = cards
+ 			c.freeObjectCardSlot = 0
+diff --git a/src/core/runtime/gc/native/cards.go b/src/core/runtime/gc/native/cards.go
+index 690bcda72..9713e9ea5 100644
+--- a/src/core/runtime/gc/native/cards.go
++++ b/src/core/runtime/gc/native/cards.go
+@@ -30,8 +30,8 @@ func (c *Collector) scanRememberedCards(h uint32) {
+ 	}
+ 
+ 	payloadSize := uint32(0)
+-	if e.size > PayloadOffset {
+-		payloadSize = e.size - PayloadOffset
++	if e.size > c.payloadOffset(h) {
++		payloadSize = e.size - c.payloadOffset(h)
+ 	}
+ 	valid := payloadSize != 0 && c.cardBytes != 0
+ 
+@@ -98,7 +98,7 @@ func (c *Collector) scanObjectPayloadRange(h, start, end uint32) {
+ 		last = length - 1
+ 	}
+ 	for i := first; i <= last; i++ {
+-		c.markNurseryRef(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+i*d.ElemSize:])))
++		c.markNurseryRef(Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+i*d.ElemSize:])))
+ 	}
+ }
+ 
+@@ -131,10 +131,10 @@ func (c *Collector) scanStructCardRanges(h uint32) bool {
+ 	}
+ 
+ 	e := &c.handles[h]
+-	if e.size <= PayloadOffset || c.cardBytes == 0 {
++	if e.size <= c.payloadOffset(h) || c.cardBytes == 0 {
+ 		return false
+ 	}
+-	payloadSize := e.size - PayloadOffset
++	payloadSize := e.size - c.payloadOffset(h)
+ 	var ranges [32]structCardRange
+ 	count := 0
+ 
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 419f557a4..cf586e78c 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -1,7 +1,6 @@
+ package gc
+ 
+ import (
+-	"encoding/binary"
+ 	"errors"
+ 	"time"
+ )
+@@ -519,6 +518,7 @@ func (c *Collector) commitPromotionPlans(plans []plannedPromotion, toSpace uint8
+ 		switch p.entry.space {
+ 		case spaceNursery:
+ 			p.entry.typeID = src.typeID
++			p.entry.class |= src.class & NativeHandlePointerFreeBit
+ 			dst := c.nursery[p.entry.off : p.entry.off+p.entry.size]
+ 			copy(dst, c.bytes(makeObjRef(p.handle)))
+ 			c.poisonYoungSource(src)
+@@ -726,7 +726,7 @@ func srcAlignment(c *Collector, h uint32) uint32 {
+ 	// Promotion planning already validated h as a marked young handle. Read the
+ 	// immutable canonical descriptor directly instead of repeating the public
+ 	// ref/closed/handle checks for every survivor.
+-	typeID := TypeID(binary.LittleEndian.Uint32(c.bytes(makeObjRef(h))))
++	typeID := TypeID(c.handles[h].typeID)
+ 	if int(typeID) < len(c.types) && c.types[typeID].Align > 8 {
+ 		return c.types[typeID].Align
+ 	}
+@@ -770,8 +770,7 @@ func (c *Collector) promoteHandleTo(h uint32, oldEntry handleEntry) {
+ 	oldEntry.typeID = e.typeID
+ 	dst := c.throughput.bytes(oldEntry)
+ 	copy(dst, src)
+-	flags := binary.LittleEndian.Uint32(dst[12:16]) | FlagOld
+-	binary.LittleEndian.PutUint32(dst[12:16], flags)
++	oldEntry.class |= e.class & NativeHandlePointerFreeBit
+ 	if c.cfg.PoisonFreed {
+ 		for i := range src {
+ 			src[i] = 0xdd
+diff --git a/src/core/runtime/gc/native/compact_layout_bench_test.go b/src/core/runtime/gc/native/compact_layout_bench_test.go
+new file mode 100644
+index 000000000..ff1fdc3c5
+--- /dev/null
++++ b/src/core/runtime/gc/native/compact_layout_bench_test.go
+@@ -0,0 +1,50 @@
++package gc
++
++import (
++	"testing"
++	"unsafe"
++)
++
++// Use a fixed iteration count when comparing products, so both retain the same
++// object population and reach the same bounded collector state.
++func BenchmarkCompactStructLayout(b *testing.B) {
++	for _, tc := range []struct {
++		name   string
++		fields []StorageKind
++	}{
++		{"i32", []StorageKind{StorageI32}},
++		{"two-i64", []StorageKind{StorageI64, StorageI64}},
++		{"ref-i32", []StorageKind{StorageRefNull, StorageI32}},
++		{"i32-v128", []StorageKind{StorageI32, StorageV128}},
++	} {
++		b.Run(tc.name, func(b *testing.B) {
++			d, err := NewStructDesc(0, tc.fields)
++			if err != nil {
++				b.Fatal(err)
++			}
++			c, err := NewCollector(Config{NurseryBytes: 1 << 20, ThroughputHeapBytes: 16 << 20}, []TypeDesc{d})
++			if err != nil {
++				b.Fatal(err)
++			}
++			defer c.Close()
++			b.ReportAllocs()
++			b.ResetTimer()
++			var ref Ref
++			for i := 0; i < b.N; i++ {
++				ref, err = c.NewStructDefaultWithRoots(0, EmptyRoots{})
++				if err != nil {
++					b.Fatal(err)
++				}
++				if err = c.ForcePromote(ref); err != nil {
++					b.Fatal(err)
++				}
++			}
++			b.StopTimer()
++			e := c.entry(ref)
++			b.ReportMetric(float64(e.size), "logical-B/object")
++			b.ReportMetric(float64(c.throughput.handleAllocSize(*e)), "allocated-B/object")
++			b.ReportMetric(float64(unsafe.Sizeof(handleEntry{})), "hot-B/object")
++			b.ReportMetric(float64(c.MemoryStats().CommittedBytes), "committed-B")
++		})
++	}
++}
+diff --git a/src/core/runtime/gc/native/compact_layout_test.go b/src/core/runtime/gc/native/compact_layout_test.go
+new file mode 100644
+index 000000000..3e3c185bd
+--- /dev/null
++++ b/src/core/runtime/gc/native/compact_layout_test.go
+@@ -0,0 +1,66 @@
++package gc
++
++import (
++	"testing"
++	"unsafe"
++)
++
++func TestCompactObjectLayoutAndVectorAlignment(t *testing.T) {
++	if HeaderSize != 8 {
++		t.Fatalf("dynamic header = %d bytes, want 8", HeaderSize)
++	}
++	i32, err := NewStructDesc(0, []StorageKind{StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	vec, err := NewStructDesc(1, []StorageKind{StorageI32, StorageV128})
++	if err != nil {
++		t.Fatal(err)
++	}
++	arr, err := NewArrayDesc(2, StorageV128)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{DisableCollection: true}, []TypeDesc{i32, vec, arr})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	s, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	want, err := StructSize(i32)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if c.entry(s).size != want || want > 16 {
++		t.Fatalf("small struct bytes=%d, want at most 16", c.entry(s).size)
++	}
++	v, err := c.NewStructDefault(1)
++	if err != nil {
++		t.Fatal(err)
++	}
++	a, err := c.NewArrayDefault(2, 2)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, tc := range []struct {
++		r   Ref
++		off uint32
++	}{{v, vec.PayloadOffset() + vec.Fields[1].Offset}, {a, arr.PayloadOffset()}} {
++		b := c.bytes(tc.r)
++		if uintptr(unsafe.Pointer(&b[tc.off]))%16 != 0 {
++			t.Fatal("vector payload lost 16-byte alignment")
++		}
++	}
++	if err := c.StructSet(v, 1, V128Value(7, 9)); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.ArraySet(a, 1, V128Value(11, 13)); err != nil {
++		t.Fatal(err)
++	}
++	if err := c.Verify(RefSliceRoots{s, v, a}); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/desc.go b/src/core/runtime/gc/native/desc.go
+index 836278677..e53362e5a 100644
+--- a/src/core/runtime/gc/native/desc.go
++++ b/src/core/runtime/gc/native/desc.go
+@@ -100,10 +100,15 @@ func (b *StructDescBuilder) Add(k StorageKind) error {
+ 	if err != nil {
+ 		return err
+ 	}
+-	off, err := alignChecked(b.off, a)
++	absolute, err := addChecked(PayloadOffset, b.off)
+ 	if err != nil {
+ 		return err
+ 	}
++	off, err := alignChecked(absolute, a)
++	if err != nil {
++		return err
++	}
++	off -= PayloadOffset
+ 	b.desc.Fields[b.index] = FieldDesc{Kind: k, Offset: off}
+ 	off, err = addChecked(off, sz)
+ 	if err != nil {
+@@ -125,10 +130,15 @@ func (b *StructDescBuilder) Finish() (TypeDesc, error) {
+ 		return TypeDesc{}, fmt.Errorf("gc: got %d struct fields, want %d", b.index, len(b.desc.Fields))
+ 	}
+ 	var err error
+-	b.desc.Size, err = alignChecked(b.off, b.desc.Align)
++	absolute, addErr := addChecked(PayloadOffset, b.off)
++	if addErr != nil {
++		return TypeDesc{}, addErr
++	}
++	b.desc.Size, err = alignChecked(absolute, b.desc.Align)
+ 	if err != nil {
+ 		return TypeDesc{}, err
+ 	}
++	b.desc.Size -= PayloadOffset
+ 	b.desc.PrepareScanPlan()
+ 	return b.desc, nil
+ }
+diff --git a/src/core/runtime/gc/native/desc_layout_test.go b/src/core/runtime/gc/native/desc_layout_test.go
+index 11a099d97..922903db1 100644
+--- a/src/core/runtime/gc/native/desc_layout_test.go
++++ b/src/core/runtime/gc/native/desc_layout_test.go
+@@ -19,7 +19,7 @@ func TestCheckArrayAllocationPreservesDeterministicCapacityAndOverflowTraps(t *t
+ 	if err := throughput.CheckArrayAllocation(0, 2000); err != errThroughputHeapExhausted {
+ 		t.Fatalf("throughput impossible array = %v, want %v", err, errThroughputHeapExhausted)
+ 	}
+-	if err := throughput.CheckArrayAllocation(0, 1_073_741_817); !errors.Is(err, ErrAllocationTooLarge) {
++	if err := throughput.CheckArrayAllocation(0, 1_073_741_819); !errors.Is(err, ErrAllocationTooLarge) {
+ 		t.Fatalf("throughput physical overflow = %v, want ErrAllocationTooLarge", err)
+ 	}
+ 
+@@ -152,11 +152,11 @@ func TestDescriptorsAndLayout(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if vstruct.Align != 16 || vstruct.Size != 48 || vstruct.Fields[1].Offset != 16 || vstruct.Fields[2].Offset != 32 {
++	if vstruct.Align != 16 || vstruct.Size != 48-PayloadOffset || vstruct.Fields[1].Offset != 16-PayloadOffset || vstruct.Fields[2].Offset != 32-PayloadOffset {
+ 		t.Fatalf("bad v128 struct layout %+v", vstruct)
+ 	}
+ 	sz, _ := StructSize(pf)
+-	if sz != Align8(HeaderSize+pf.Size) || sz%8 != 0 {
++	if sz != max(uint32(8), Align8(PayloadOffset+pf.Size)) || sz%8 != 0 {
+ 		t.Fatalf("bad struct size %d", sz)
+ 	}
+ 	asz, _ := ArraySize(arr, 3)
+@@ -178,7 +178,7 @@ func TestDescriptorsAndLayout(t *testing.T) {
+ 	// This payload fits the eight-byte object-size rounding but not the
+ 	// throughput allocator's sixteen-byte physical extent. It previously wrapped
+ 	// Align16 and panicked while publishing the object header.
+-	if _, err := collector.NewArrayDefault(0, 1_073_741_817); !errors.Is(err, ErrAllocationTooLarge) {
++	if _, err := collector.NewArrayDefault(0, 1_073_741_819); !errors.Is(err, ErrAllocationTooLarge) {
+ 		t.Fatalf("near-u32 array allocation = %v, want ErrAllocationTooLarge", err)
+ 	}
+ 	if got, err := NewStructDesc(5, []StorageKind{StorageI8, StorageRef, StorageI64, StorageRefNull}); err != nil {
+@@ -219,7 +219,7 @@ func TestDescriptorsAndLayout(t *testing.T) {
+ 	if _, err := NewCollector(Config{}, []TypeDesc{overflowStruct}); err == nil || !strings.Contains(err.Error(), "struct size overflow") {
+ 		t.Fatalf("NewCollector overflow error = %v, want struct size overflow", err)
+ 	}
+-	if HeaderSize != 16 || PayloadOffset != 16 {
++	if HeaderSize != 8 || PayloadOffset != 0 && PayloadOffset != 8 {
+ 		t.Fatalf("header layout changed: %d %d", HeaderSize, PayloadOffset)
+ 	}
+ }
+diff --git a/src/core/runtime/gc/native/heap_test.go b/src/core/runtime/gc/native/heap_test.go
+index 79d4bcba3..d92039fa8 100644
+--- a/src/core/runtime/gc/native/heap_test.go
++++ b/src/core/runtime/gc/native/heap_test.go
+@@ -538,7 +538,7 @@ func TestBulkWriteBarrierPreservesNurseryRefsInRefArrays(t *testing.T) {
+ 			// Simulate array.fill/copy/init-style helpers: perform the bulk stores
+ 			// first, then run the bulk barrier over the written range.
+ 			for _, idx := range []uint32{1, 2} {
+-				if err := c.storeValue(arr, d, uint64(PayloadOffset)+uint64(idx)*uint64(d.ElemSize), d.Elem, RefValue(child)); err != nil {
++				if err := c.storeValue(arr, d, uint64(d.PayloadOffset())+uint64(idx)*uint64(d.ElemSize), d.Elem, RefValue(child)); err != nil {
+ 					t.Fatal(err)
+ 				}
+ 			}
+@@ -592,7 +592,7 @@ func TestBulkWriteBarrierIsPostWriteContract(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if err := c.storeValue(arr, d, uint64(PayloadOffset), d.Elem, RefValue(child)); err != nil {
++	if err := c.storeValue(arr, d, uint64(d.PayloadOffset()), d.Elem, RefValue(child)); err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	c.PostBulkWriteBarrier(arr, 0, 1)
+diff --git a/src/core/runtime/gc/native/host_view.go b/src/core/runtime/gc/native/host_view.go
+index b469345ea..77a31783f 100644
+--- a/src/core/runtime/gc/native/host_view.go
++++ b/src/core/runtime/gc/native/host_view.go
+@@ -39,10 +39,10 @@ func (c *Collector) ArrayPayload(ref Ref) (ArrayPayloadView, error) {
+ 		return ArrayPayloadView{}, errors.New("gc: array payload size overflow")
+ 	}
+ 	object := c.bytes(ref)
+-	if uint64(len(object)) < uint64(PayloadOffset) || payloadBytes > uint64(len(object))-uint64(PayloadOffset) {
++	if uint64(len(object)) < uint64(d.PayloadOffset()) || payloadBytes > uint64(len(object))-uint64(d.PayloadOffset()) {
+ 		return ArrayPayloadView{}, fmt.Errorf("gc: array payload %d bytes exceeds object extent %d", payloadBytes, len(object))
+ 	}
+-	start := int(PayloadOffset)
++	start := int(d.PayloadOffset())
+ 	end := start + int(payloadBytes)
+ 	return ArrayPayloadView{Storage: d.Elem, Length: length, Bytes: object[start:end:end]}, nil
+ }
+diff --git a/src/core/runtime/gc/native/layout.go b/src/core/runtime/gc/native/layout.go
+index 58be029a2..5b67632d9 100644
+--- a/src/core/runtime/gc/native/layout.go
++++ b/src/core/runtime/gc/native/layout.go
+@@ -6,9 +6,10 @@ import (
+ 	"unsafe"
+ )
+ 
+-// ObjHeader is the stable guest-object header stored in the byte heap before
+-// every payload. It is represented here for layout documentation/tests; heap
+-// memory stores the fields little-endian, not as Go heap objects.
++// ObjHeader is a decoded metadata view, not the physical object prefix. Type
++// and extent live in the 16-byte hot handle; flags derive from packed handle
++// state. Arrays store only dynamic length in an eight-byte prefix. Structs
++// have no physical header in the retained layout.
+ type ObjHeader struct {
+ 	TypeID uint32
+ 	Size   uint32 // total object size including header
+@@ -24,8 +25,27 @@ const (
+ 	FlagLarge
+ )
+ 
+-const HeaderSize = uint32(unsafe.Sizeof(ObjHeader{}))
+-const PayloadOffset = HeaderSize
++type arrayHeader struct{ Aux, Reserved uint32 }
++
++const HeaderSize = uint32(unsafe.Sizeof(arrayHeader{}))
++
++// ArrayPayloadOffset preserves vector alignment without padding scalar arrays.
++func ArrayPayloadOffset(elemSize uint32) uint32 { return align(HeaderSize, min(elemSize, uint32(16))) }
++
++func (d TypeDesc) PayloadOffset() uint32 {
++	if d.Kind == KindArray {
++		return ArrayPayloadOffset(d.ElemSize)
++	}
++	return PayloadOffset
++}
++
++func (c *Collector) payloadOffset(h uint32) uint32 {
++	id := c.handles[h].typeID
++	if uint64(id) >= uint64(len(c.types)) {
++		return PayloadOffset
++	}
++	return c.types[id].PayloadOffset()
++}
+ 
+ // ErrAllocationTooLarge reports an object whose physical aligned extent cannot
+ // be represented by the collector's uint32 heap ABI.
+@@ -59,18 +79,18 @@ func StructSize(d TypeDesc) (uint32, error) {
+ 	if d.Kind != KindStruct {
+ 		return 0, fmt.Errorf("gc: type %d is not a struct", d.ID)
+ 	}
+-	total := uint64(HeaderSize) + uint64(d.Size)
++	total := uint64(PayloadOffset) + uint64(d.Size)
+ 	if total > uint64(^uint32(0)-7) {
+ 		return 0, fmt.Errorf("gc: struct size overflow: %w", ErrAllocationTooLarge)
+ 	}
+-	return Align8(uint32(total)), nil
++	return max(uint32(8), Align8(uint32(total))), nil
+ }
+ func ArraySize(d TypeDesc, length uint32) (uint32, error) {
+ 	if d.Kind != KindArray {
+ 		return 0, fmt.Errorf("gc: type %d is not an array", d.ID)
+ 	}
+ 	payload := uint64(d.ElemSize) * uint64(length)
+-	total := uint64(HeaderSize) + payload
++	total := uint64(d.PayloadOffset()) + payload
+ 	if total > uint64(^uint32(0)-7) {
+ 		return 0, fmt.Errorf("gc: array size overflow: %w", ErrAllocationTooLarge)
+ 	}
+diff --git a/src/core/runtime/gc/native/major_blocks_coverage_test.go b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+index f8be38f4e..940417d39 100644
+--- a/src/core/runtime/gc/native/major_blocks_coverage_test.go
++++ b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+@@ -115,6 +115,10 @@ func TestMajorBlocksFlagUsesExistingPadding(t *testing.T) {
+ 
+ func publishMajorBlocksNative(c *Collector, count int) RefSliceRoots {
+ 	roots := make(RefSliceRoots, count)
++	size, err := StructSize(c.types[0])
++	if err != nil {
++		panic(err)
++	}
+ 	for i := range roots {
+ 		if c.nativeStructAlloc.Cursor >= c.nativeStructAlloc.Count {
+ 			if !c.PrepareNativeStructHandles() {
+@@ -124,10 +128,10 @@ func publishMajorBlocksNative(c *Collector, count int) RefSliceRoots {
+ 		cursor := c.nativeStructAlloc.Cursor
+ 		h := c.nativeStructAlloc.Handles[cursor]
+ 		off := c.nurseryBump
+-		c.handles[h] = handleEntry{off: off, size: 16, space: spaceNursery}
++		c.handles[h] = handleEntry{off: off, size: size, space: spaceNursery}
+ 		roots[i] = makeObjRef(h)
+-		c.writeHeader(roots[i], ObjHeader{TypeID: 0, Size: 16, Flags: FlagPointerFree})
+-		c.nurseryBump = off + 16
++		c.writeHeader(roots[i], ObjHeader{TypeID: 0, Size: size, Flags: FlagPointerFree})
++		c.nurseryBump = off + size
+ 		c.nativeStructAlloc.Cursor = cursor + 1
+ 	}
+ 	return roots
+diff --git a/src/core/runtime/gc/native/major_blocks_test.go b/src/core/runtime/gc/native/major_blocks_test.go
+index 076c0a9db..0f5bb65d5 100644
+--- a/src/core/runtime/gc/native/major_blocks_test.go
++++ b/src/core/runtime/gc/native/major_blocks_test.go
+@@ -165,11 +165,15 @@ func TestMajorBlocksNativeReservations(t *testing.T) {
+ 			t.Fatal("native reservation did not dirty the nursery index")
+ 		}
+ 		// Publish one object using the same metadata order as native allocation.
++		size, err := StructSize(c.types[0])
++		if err != nil {
++			t.Fatal(err)
++		}
+ 		h := c.nativeStructAlloc.Handles[0]
+ 		off := c.nurseryBump
+-		c.handles[h] = handleEntry{off: off, size: 16, space: spaceNursery}
+-		c.writeHeader(makeObjRef(h), ObjHeader{TypeID: 0, Size: 16, Flags: FlagPointerFree})
+-		c.nurseryBump = off + 16
++		c.handles[h] = handleEntry{off: off, size: size, space: spaceNursery}
++		c.writeHeader(makeObjRef(h), ObjHeader{TypeID: 0, Size: size, Flags: FlagPointerFree})
++		c.nurseryBump = off + size
+ 		c.nativeStructAlloc.Cursor = 1
+ 		if err = c.CollectFull(RefSliceRoots{makeObjRef(h)}); err != nil {
+ 			t.Fatal(err)
+diff --git a/src/core/runtime/gc/native/mark.go b/src/core/runtime/gc/native/mark.go
+index 7f2538554..d71e22a0e 100644
+--- a/src/core/runtime/gc/native/mark.go
++++ b/src/core/runtime/gc/native/mark.go
+@@ -139,7 +139,7 @@ func (c *Collector) drainNurseryMarkStack() uint64 {
+ 		scanned++
+ 		// The mark stack contains validated live handles. Scalar payloads carry
+ 		// this flag from construction, so they need no descriptor or ref walk.
+-		if nativeCollectorFastPaths && c.header(makeObjRef(h)).Flags&FlagPointerFree != 0 {
++		if nativeCollectorFastPaths && c.handles[h].class&NativeHandlePointerFreeBit != 0 {
+ 			continue
+ 		}
+ 		c.scanNurseryObject(h)
+@@ -168,7 +168,7 @@ func (c *Collector) drainNurseryMarkStackForPromotion() uint64 {
+ 		// overwrites the complete entry before reading it, so publish only the
+ 		// handle into this already-zero scratch slot.
+ 		c.promotionScratch[plan].handle = h
+-		if nativeCollectorFastPaths && c.header(makeObjRef(h)).Flags&FlagPointerFree != 0 {
++		if nativeCollectorFastPaths && c.handles[h].class&NativeHandlePointerFreeBit != 0 {
+ 			continue
+ 		}
+ 		c.scanNurseryObject(h)
+diff --git a/src/core/runtime/gc/native/native_view.go b/src/core/runtime/gc/native/native_view.go
+index ded0dac48..63461d971 100644
+--- a/src/core/runtime/gc/native/native_view.go
++++ b/src/core/runtime/gc/native/native_view.go
+@@ -12,7 +12,7 @@ import (
+ // mappings keep it fixed; portable Go growth updates live instance bindings.
+ // Generated operations still reload mutable counts/extents and callers must
+ // serialize native execution with collector mutation.
+-const NativeABIVersion uint32 = 11
++const NativeABIVersion uint32 = compactLayoutABI
+ 
+ // SubtypeEncoding is an optional extension in the existing ABI padding word.
+ // Encoding zero is legacy and must use the Go abstract-array cast fallback.
+@@ -43,6 +43,7 @@ const (
+ 	NativeHandleMetadataOffset        = 12
+ 	NativeHandleSpaceOffset           = 14
+ 	NativeHandleRememberedOffset      = 15
++	NativeHandlePointerFreeBit        = 1 << 11
+ 	NativeSpaceFree              byte = byte(spaceFree)
+ 	NativeSpaceNursery           byte = byte(spaceNursery)
+ 	NativeSpaceOld               byte = byte(spaceOld)
+diff --git a/src/core/runtime/gc/native/native_view_test.go b/src/core/runtime/gc/native/native_view_test.go
+index 968b847ed..ff117d5d4 100644
+--- a/src/core/runtime/gc/native/native_view_test.go
++++ b/src/core/runtime/gc/native/native_view_test.go
+@@ -6,8 +6,8 @@ import (
+ )
+ 
+ func TestNativeCollectorViewLayoutAndRefresh(t *testing.T) {
+-	if NativeABIVersion != 11 {
+-		t.Fatalf("native collector ABI version = %d, want version 11", NativeABIVersion)
++	if NativeABIVersion != compactLayoutABI {
++		t.Fatalf("native collector ABI version = %d, want compact layout version", NativeABIVersion)
+ 	}
+ 	if got := unsafe.Sizeof(handleEntry{}); got != NativeHandleStride {
+ 		t.Fatalf("handle entry size = %d, want %d", got, NativeHandleStride)
+diff --git a/src/core/runtime/gc/native/nursery_growth_test.go b/src/core/runtime/gc/native/nursery_growth_test.go
+index 47d06573d..ad9208a2e 100644
+--- a/src/core/runtime/gc/native/nursery_growth_test.go
++++ b/src/core/runtime/gc/native/nursery_growth_test.go
+@@ -37,6 +37,8 @@ func testDefaultNurseryRollingGraph(t *testing.T, replaceRoot bool) {
+ 	root := Root(parent)
+ 	roots := Slots{&root}
+ 	const allocations = 64 << 10
++	// Keep the original 80-byte allocation charge while testing compact headers.
++	childLength := (uint32(80) - values.PayloadOffset()) / values.ElemSize
+ 	for i := 0; i < allocations; i++ {
+ 		if replaceRoot && i != 0 && i%4096 == 0 {
+ 			parent, err = c.NewArrayDefaultWithRoots(1, 4096, roots)
+@@ -45,7 +47,7 @@ func testDefaultNurseryRollingGraph(t *testing.T, replaceRoot bool) {
+ 			}
+ 			root = Root(parent)
+ 		}
+-		child, err := c.NewArrayWithRoots(0, 16, I32Value(int32(i)), roots)
++		child, err := c.NewArrayWithRoots(0, childLength, I32Value(int32(i)), roots)
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+diff --git a/src/core/runtime/gc/native/object_access.go b/src/core/runtime/gc/native/object_access.go
+index b76825356..58e23f9e1 100644
+--- a/src/core/runtime/gc/native/object_access.go
++++ b/src/core/runtime/gc/native/object_access.go
+@@ -59,7 +59,7 @@ func (c *Collector) NewStructWordsPrevalidatedWithRootScratch(typeID TypeID, wor
+ 		defer scratch.clear()
+ 		roots = scratch
+ 	}
+-	sz := Align8(HeaderSize + d.Size)
++	sz := max(uint32(8), Align8(PayloadOffset+d.Size))
+ 	r, err := c.alloc(d, sz, 0, roots)
+ 	if err != nil {
+ 		return Null(), err
+@@ -118,7 +118,7 @@ func (c *Collector) newStructWithRoots(typeID TypeID, values []Value, roots Root
+ 	}
+ 	// Collector construction validates every descriptor and padded size, so this
+ 	// initialized-constructor hot path need not repeat overflow arithmetic.
+-	sz := Align8(HeaderSize + d.Size)
++	sz := max(uint32(8), Align8(PayloadOffset+d.Size))
+ 	r, err := c.alloc(d, sz, 0, roots)
+ 	if err != nil {
+ 		return Null(), err
+@@ -350,7 +350,7 @@ func (c *Collector) newArrayFixedWithRoots(typeID TypeID, values []Value, roots
+ 	if err != nil {
+ 		return Null(), err
+ 	}
+-	payload := c.bytes(r)[PayloadOffset:]
++	payload := c.bytes(r)[d.PayloadOffset():]
+ 	for i := range values {
+ 		storeValueUnchecked(payload, uint64(i)*uint64(d.ElemSize), d.Elem, values[i])
+ 	}
+@@ -633,7 +633,7 @@ func (c *Collector) StructGetFinalRef(ref Ref, required TypeID, field uint32) (v
+ 	if len(b) < int(HeaderSize) {
+ 		return Null(), false, errors.New("gc: object header out of bounds")
+ 	}
+-	if TypeID(binary.LittleEndian.Uint32(b)) != required {
++	if TypeID(c.handles[h].typeID) != required {
+ 		return Null(), false, nil
+ 	}
+ 	off := uint64(PayloadOffset) + uint64(f.Offset)
+@@ -745,7 +745,7 @@ func (c *Collector) ArrayGet(ref Ref, index uint32) (Value, error) {
+ 	if index >= ln {
+ 		return Value{}, errors.New("gc: index out of range")
+ 	}
+-	return c.loadValue(ref, uint64(PayloadOffset)+uint64(index)*uint64(d.ElemSize), d.Elem)
++	return c.loadValue(ref, uint64(d.PayloadOffset())+uint64(index)*uint64(d.ElemSize), d.Elem)
+ }
+ 
+ // ArrayGetTyped combines the dynamic array type test, bounds check, and element
+@@ -766,7 +766,7 @@ func (c *Collector) ArrayGetTyped(ref Ref, required TypeID, exact bool, index ui
+ 	if index >= c.header(ref).Aux {
+ 		return Value{}, actual, true, errors.New("gc: index out of range")
+ 	}
+-	value, err = c.loadValue(ref, uint64(PayloadOffset)+uint64(index)*uint64(d.ElemSize), d.Elem)
++	value, err = c.loadValue(ref, uint64(d.PayloadOffset())+uint64(index)*uint64(d.ElemSize), d.Elem)
+ 	return value, actual, true, err
+ }
+ 
+@@ -815,7 +815,7 @@ func (c *Collector) ArraySetDeferredBarrier(ref Ref, index uint32, value Value)
+ 			return err
+ 		}
+ 	}
+-	return c.storeValue(ref, d, uint64(PayloadOffset)+uint64(index)*uint64(d.ElemSize), d.Elem, value)
++	return c.storeValue(ref, d, uint64(d.PayloadOffset())+uint64(index)*uint64(d.ElemSize), d.Elem, value)
+ }
+ 
+ // ArraySetTyped is ArrayGetTyped's mutation counterpart and retains reference
+@@ -891,7 +891,7 @@ func (c *Collector) fillArrayPayload(ref Ref, d TypeDesc, start uint32, value Va
+ 	if length == 0 {
+ 		return nil
+ 	}
+-	payload := c.bytes(ref)[PayloadOffset:]
++	payload := c.bytes(ref)[d.PayloadOffset():]
+ 	lo := uint64(start) * uint64(d.ElemSize)
+ 	hi := lo + uint64(length)*uint64(d.ElemSize)
+ 	if lo > uint64(len(payload)) || hi > uint64(len(payload)) || hi < lo {
+@@ -941,7 +941,7 @@ func (c *Collector) ArrayInitData(dst Ref, dstStart uint32, data []byte, srcStar
+ 	default:
+ 		return errors.New("gc: array.init_data element width is unsupported")
+ 	}
+-	dstOffset := uint64(PayloadOffset) + uint64(dstStart)*uint64(d.ElemSize)
++	dstOffset := uint64(d.PayloadOffset()) + uint64(dstStart)*uint64(d.ElemSize)
+ 	copy(c.bytes(dst)[dstOffset:dstOffset+byteLength], data[uint64(srcStart):sourceEnd])
+ 	return nil
+ }
+@@ -962,7 +962,7 @@ func (c *Collector) ArrayInitWords(dst Ref, dstStart uint32, words []uint64) err
+ 		return errRange
+ 	}
+ 	b := c.bytes(dst)
+-	off := uint64(PayloadOffset) + uint64(dstStart)*8
++	off := uint64(d.PayloadOffset()) + uint64(dstStart)*8
+ 	for _, bits := range words {
+ 		binary.LittleEndian.PutUint64(b[off:off+8], bits)
+ 		off += 8
+@@ -993,7 +993,7 @@ func (c *Collector) ArrayCopy(dst Ref, dstStart uint32, src Ref, srcStart uint32
+ 		// Valid source arrays already satisfy their storage invariant. Repeat the
+ 		// expensive element integrity check only in explicit hardening modes.
+ 		for i := uint32(0); i < length; i++ {
+-			value, err := c.loadValue(src, uint64(PayloadOffset)+uint64(srcStart+i)*uint64(srcDesc.ElemSize), srcDesc.Elem)
++			value, err := c.loadValue(src, uint64(srcDesc.PayloadOffset())+uint64(srcStart+i)*uint64(srcDesc.ElemSize), srcDesc.Elem)
+ 			if err != nil {
+ 				return err
+ 			}
+@@ -1007,7 +1007,7 @@ func (c *Collector) ArrayCopy(dst Ref, dstStart uint32, src Ref, srcStart uint32
+ 	}
+ 	if isCollectorRefKind(dstDesc.Elem) && c.cfg.Profile == ProfileTiny {
+ 		copyOne := func(dstIndex, srcIndex uint32) error {
+-			value, err := c.loadValue(src, uint64(PayloadOffset)+uint64(srcIndex)*uint64(srcDesc.ElemSize), srcDesc.Elem)
++			value, err := c.loadValue(src, uint64(srcDesc.PayloadOffset())+uint64(srcIndex)*uint64(srcDesc.ElemSize), srcDesc.Elem)
+ 			if err != nil {
+ 				return err
+ 			}
+@@ -1029,8 +1029,8 @@ func (c *Collector) ArrayCopy(dst Ref, dstStart uint32, src Ref, srcStart uint32
+ 		return nil
+ 	}
+ 	width := uint64(dstDesc.ElemSize)
+-	dstOff := uint64(PayloadOffset) + uint64(dstStart)*width
+-	srcOff := uint64(PayloadOffset) + uint64(srcStart)*uint64(srcDesc.ElemSize)
++	dstOff := uint64(dstDesc.PayloadOffset()) + uint64(dstStart)*width
++	srcOff := uint64(srcDesc.PayloadOffset()) + uint64(srcStart)*uint64(srcDesc.ElemSize)
+ 	byteLen := uint64(length) * width
+ 	copy(c.bytes(dst)[dstOff:dstOff+byteLen], c.bytes(src)[srcOff:srcOff+byteLen])
+ 	if isCollectorRefKind(dstDesc.Elem) {
+@@ -1056,7 +1056,7 @@ func (c *Collector) storeArrayValue(ref Ref, d TypeDesc, index uint32, value Val
+ 				return err
+ 			}
+ 		}
+-		if err := c.storeValue(ref, d, uint64(PayloadOffset)+uint64(index)*uint64(d.ElemSize), d.Elem, value); err != nil {
++		if err := c.storeValue(ref, d, uint64(d.PayloadOffset())+uint64(index)*uint64(d.ElemSize), d.Elem, value); err != nil {
+ 			return err
+ 		}
+ 		off := index * d.ElemSize
+@@ -1065,7 +1065,7 @@ func (c *Collector) storeArrayValue(ref Ref, d TypeDesc, index uint32, value Val
+ 		}
+ 		return nil
+ 	}
+-	return c.storeValue(ref, d, uint64(PayloadOffset)+uint64(index)*uint64(d.ElemSize), d.Elem, value)
++	return c.storeValue(ref, d, uint64(d.PayloadOffset())+uint64(index)*uint64(d.ElemSize), d.Elem, value)
+ }
+ 
+ func arrayStorageCopyCompatible(dst, src StorageKind) bool {
+diff --git a/src/core/runtime/gc/native/ref_desc_ptr_test.go b/src/core/runtime/gc/native/ref_desc_ptr_test.go
+index d955be4a3..af0934bee 100644
+--- a/src/core/runtime/gc/native/ref_desc_ptr_test.go
++++ b/src/core/runtime/gc/native/ref_desc_ptr_test.go
+@@ -26,11 +26,14 @@ func TestRefDescPtrReturnsCanonicalDescriptor(t *testing.T) {
+ 	if got != &c.types[0] {
+ 		t.Fatal("object descriptor was copied")
+ 	}
++	if err := c.StructSet(r, 0, I32Value(42)); err != nil {
++		t.Fatal(err)
++	}
+ 	got, object, err := c.refDescPtrBytes(r)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if got != &c.types[0] || TypeID(binary.LittleEndian.Uint32(object)) != got.ID {
++	if got != &c.types[0] || TypeID(c.entry(r).typeID) != got.ID || binary.LittleEndian.Uint32(object[PayloadOffset:]) != 42 {
+ 		t.Fatal("object bytes and descriptor disagree")
+ 	}
+ 	if _, err := c.refDescPtr(Null()); err == nil {
+diff --git a/src/core/runtime/gc/native/scan.go b/src/core/runtime/gc/native/scan.go
+index 67c6871cc..01be92584 100644
+--- a/src/core/runtime/gc/native/scan.go
++++ b/src/core/runtime/gc/native/scan.go
+@@ -120,7 +120,7 @@ func (c *Collector) scanObjectRefsRange(h uint32, cursor *objectScanCursor, budg
+ 			work.RefSlots = length
+ 			work.PayloadBytes = length * d.ElemSize
+ 			for cursor.index < length {
+-				off := uint64(PayloadOffset) + uint64(cursor.index)*uint64(d.ElemSize)
++				off := uint64(d.PayloadOffset()) + uint64(cursor.index)*uint64(d.ElemSize)
+ 				c.tinyMarkRef(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 				cursor.index++
+ 			}
+@@ -168,13 +168,13 @@ func (c *Collector) scanObjectRefsRange(h uint32, cursor *objectScanCursor, budg
+ 		end := cursor.index + count
+ 		if visitor.mode == objectScanVisitTinyMark {
+ 			for cursor.index < end {
+-				off := uint64(PayloadOffset) + uint64(cursor.index)*uint64(d.ElemSize)
++				off := uint64(d.PayloadOffset()) + uint64(cursor.index)*uint64(d.ElemSize)
+ 				c.tinyMarkRef(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 				cursor.index++
+ 			}
+ 		} else {
+ 			for cursor.index < end {
+-				off := uint64(PayloadOffset) + uint64(cursor.index)*uint64(d.ElemSize)
++				off := uint64(d.PayloadOffset()) + uint64(cursor.index)*uint64(d.ElemSize)
+ 				if visitor.fn != nil {
+ 					visitor.fn(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 				}
+@@ -220,7 +220,7 @@ func (c *Collector) scanObjectRefs(h uint32, visit func(Ref)) {
+ 		}
+ 	} else if d.ArrayElementsAreRefs() {
+ 		for i := uint32(0); i < hdr.Aux; i++ {
+-			off := PayloadOffset + i*d.ElemSize
++			off := d.PayloadOffset() + i*d.ElemSize
+ 			visit(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 		}
+ 	}
+diff --git a/src/core/runtime/gc/native/scan_mark.go b/src/core/runtime/gc/native/scan_mark.go
+index 1e03ae621..6081e4b42 100644
+--- a/src/core/runtime/gc/native/scan_mark.go
++++ b/src/core/runtime/gc/native/scan_mark.go
+@@ -31,7 +31,7 @@ func (c *Collector) scanObjectMark(h uint32) {
+ 		}
+ 	} else if d.ArrayElementsAreRefs() {
+ 		for i := uint32(0); i < hdr.Aux; i++ {
+-			off := PayloadOffset + i*d.ElemSize
++			off := d.PayloadOffset() + i*d.ElemSize
+ 			c.markRef(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 		}
+ 	}
+@@ -64,7 +64,7 @@ func (c *Collector) scanObjectNursery(h uint32) {
+ 		}
+ 	} else if d.ArrayElementsAreRefs() {
+ 		for i := uint32(0); i < hdr.Aux; i++ {
+-			off := PayloadOffset + i*d.ElemSize
++			off := d.PayloadOffset() + i*d.ElemSize
+ 			c.markNurseryRef(Ref(binary.LittleEndian.Uint32(b[off:])))
+ 		}
+ 	}
+diff --git a/src/core/runtime/gc/native/shadow_trace_test.go b/src/core/runtime/gc/native/shadow_trace_test.go
+index 18e9bd59c..a791d2bcd 100644
+--- a/src/core/runtime/gc/native/shadow_trace_test.go
++++ b/src/core/runtime/gc/native/shadow_trace_test.go
+@@ -87,7 +87,7 @@ func shadowTraceLive(c *Collector, roots RootSet) ([]bool, error) {
+ 		if len(b) < int(HeaderSize) || uint32(len(b)) != e.size {
+ 			return nil, fmt.Errorf("shadow trace: handle %d has invalid object bounds", h)
+ 		}
+-		typeID := binary.LittleEndian.Uint32(b[0:4])
++		typeID := c.handles[h].typeID
+ 		if int(typeID) >= len(c.types) {
+ 			return nil, fmt.Errorf("shadow trace: handle %d has unknown type %d", h, typeID)
+ 		}
+@@ -113,9 +113,9 @@ func shadowTraceLive(c *Collector, roots RootSet) ([]bool, error) {
+ 		if !isCollectorRefKind(d.Elem) {
+ 			continue
+ 		}
+-		length := binary.LittleEndian.Uint32(b[8:12])
++		length := binary.LittleEndian.Uint32(b)
+ 		for i := uint32(0); i < length; i++ {
+-			off := uint64(PayloadOffset) + uint64(i)*uint64(d.ElemSize)
++			off := uint64(d.PayloadOffset()) + uint64(i)*uint64(d.ElemSize)
+ 			if off+4 > uint64(len(b)) {
+ 				return nil, fmt.Errorf("shadow trace: handle %d array element is out of bounds", h)
+ 			}
+diff --git a/src/core/runtime/gc/native/sparse_card_transition_test.go b/src/core/runtime/gc/native/sparse_card_transition_test.go
+index e7a0880b8..c4c11224a 100644
+--- a/src/core/runtime/gc/native/sparse_card_transition_test.go
++++ b/src/core/runtime/gc/native/sparse_card_transition_test.go
+@@ -11,7 +11,7 @@ func TestSparseCardBoundsRangeTransitions(t *testing.T) {
+ 	for _, seed := range []int64{1, 7, 31, 73, 127, 1024} {
+ 		c, parent, _ := sparseCardBoundsFixture(t, 16)
+ 		h := handleOf(parent)
+-		payload := c.handles[h].size - PayloadOffset
++		payload := c.handles[h].size - c.payloadOffset(h)
+ 		expected := make([]bool, payload)
+ 		rng := rand.New(rand.NewSource(seed))
+ 		check := func(step int) {
+diff --git a/src/core/runtime/gc/native/struct_header_free.go b/src/core/runtime/gc/native/struct_header_free.go
+new file mode 100644
+index 000000000..5969c2858
+--- /dev/null
++++ b/src/core/runtime/gc/native/struct_header_free.go
+@@ -0,0 +1,6 @@
++//go:build !wago_gc_struct_headers
++
++package gc
++
++const PayloadOffset uint32 = 0
++const compactLayoutABI uint32 = 12
+diff --git a/src/core/runtime/gc/native/struct_header_padded.go b/src/core/runtime/gc/native/struct_header_padded.go
+new file mode 100644
+index 000000000..a670f4907
+--- /dev/null
++++ b/src/core/runtime/gc/native/struct_header_padded.go
+@@ -0,0 +1,8 @@
++//go:build wago_gc_struct_headers
++
++package gc
++
++// The comparison product reserves eight prefix bytes for structs, so metadata
++// density can be measured against the header-free product with the same code.
++const PayloadOffset uint32 = 8
++const compactLayoutABI uint32 = 13
+diff --git a/src/core/runtime/gc/native/struct_layout_validation_test.go b/src/core/runtime/gc/native/struct_layout_validation_test.go
+index cc542854d..51749cbe1 100644
+--- a/src/core/runtime/gc/native/struct_layout_validation_test.go
++++ b/src/core/runtime/gc/native/struct_layout_validation_test.go
+@@ -55,7 +55,7 @@ func TestStructFieldAlignmentAdmission(t *testing.T) {
+ 				}
+ 				valid := alignment >= desc.Align
+ 				desc.Align = alignment
+-				desc.Size = (desc.Size + alignment - 1) &^ (alignment - 1)
++				desc.Size = (PayloadOffset+desc.Size+alignment-1)&^(alignment-1) - PayloadOffset
+ 				checkStructLayoutAdmission(t, desc, valid)
+ 			})
+ 		}
+@@ -171,7 +171,8 @@ func FuzzValidateStructFieldLayout(f *testing.F) {
+ 		for at := 1; at+5 <= len(data) && len(desc.Fields) < 64; at += 5 {
+ 			kind := data[at] % 5
+ 			width := widths[kind]
+-			offset := binary.LittleEndian.Uint32(data[at+1:]) & 0x00ffffff &^ (width - 1)
++			rawOffset := binary.LittleEndian.Uint32(data[at+1:]) & 0x00ffffff
++			offset := (PayloadOffset+rawOffset+width-1)&^(width-1) - PayloadOffset
+ 			end := offset + width
+ 			// Independent pairwise interval oracle; no sorting and no calls
+ 			// to the production layout/overlap helpers.
+@@ -188,7 +189,7 @@ func FuzzValidateStructFieldLayout(f *testing.F) {
+ 				desc.Size = end
+ 			}
+ 		}
+-		desc.Size = (desc.Size + desc.Align - 1) &^ (desc.Align - 1)
++		desc.Size = (PayloadOffset+desc.Size+desc.Align-1)&^(desc.Align-1) - PayloadOffset
+ 		before := append([]FieldDesc(nil), desc.Fields...)
+ 		err := ValidateTypeDescs([]TypeDesc{desc})
+ 		if (err == nil) != valid {
+diff --git a/src/core/runtime/gc/native/survivor.go b/src/core/runtime/gc/native/survivor.go
+index 99970e2c6..408498c8a 100644
+--- a/src/core/runtime/gc/native/survivor.go
++++ b/src/core/runtime/gc/native/survivor.go
+@@ -12,7 +12,7 @@ const (
+ 	handleAgeMask         = uint16(3 << handleAgeShift)
+ 	handleAbsorbedTailBit = uint16(1 << 12)
+ 	handleClassMask       = uint16((1 << 5) - 1)
+-	handleAllocationMask  = handleClassMask | handleAbsorbedTailBit
++	handleAllocationMask  = handleClassMask | handleAbsorbedTailBit | NativeHandlePointerFreeBit
+ 	maxTenuringThreshold  = 3
+ )
+ 
+@@ -56,9 +56,6 @@ func (c *Collector) inActiveSurvivor(e handleEntry) bool {
+ func (c *Collector) tenureLargeInPlace(h uint32) {
+ 	e := &c.handles[h]
+ 	e.clearYoungAge()
+-	b := c.throughput.bytes(*e)
+-	flags := binary.LittleEndian.Uint32(b[12:16]) | FlagOld | FlagLarge
+-	binary.LittleEndian.PutUint32(b[12:16], flags)
+ }
+ 
+ func (c *Collector) ageLargeInPlace(h uint32, age uint8) {
+@@ -198,7 +195,7 @@ func (c *Collector) payloadRangeContainsYoung(h, start, end uint32) bool {
+ 		last = length - 1
+ 	}
+ 	for i := first; i <= last; i++ {
+-		if c.isNurseryRef(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+i*d.ElemSize:]))) {
++		if c.isNurseryRef(Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+i*d.ElemSize:]))) {
+ 			return true
+ 		}
+ 	}
+diff --git a/src/core/runtime/gc/native/survivor_test.go b/src/core/runtime/gc/native/survivor_test.go
+index c3900e6dd..7c68822f0 100644
+--- a/src/core/runtime/gc/native/survivor_test.go
++++ b/src/core/runtime/gc/native/survivor_test.go
+@@ -120,7 +120,7 @@ func TestPureSurvivorMinorLeavesDeferredOldFreesUnindexed(t *testing.T) {
+ }
+ 
+ func TestThroughputSurvivorCapacityFallsBackToPromotion(t *testing.T) {
+-	c := newTestCollector(t, Config{NurseryBytes: 1024, SurvivorBytes: 32, ThroughputHeapBytes: 4096, ThroughputPageBytes: 4096, VerifyAfterCollect: true})
++	c := newTestCollector(t, Config{NurseryBytes: 1024, SurvivorBytes: Align16(PayloadOffset + 16), ThroughputHeapBytes: 4096, ThroughputPageBytes: 4096, VerifyAfterCollect: true})
+ 	roots := make([]Root, 3)
+ 	slots := make(Slots, len(roots))
+ 	for i := range roots {
+diff --git a/src/core/runtime/gc/native/throughput_alloc.go b/src/core/runtime/gc/native/throughput_alloc.go
+index e64621aa6..85d3949d9 100644
+--- a/src/core/runtime/gc/native/throughput_alloc.go
++++ b/src/core/runtime/gc/native/throughput_alloc.go
+@@ -8,7 +8,10 @@ import (
+ 	"github.com/wago-org/wago/internal/virtualmem"
+ )
+ 
+-var errThroughputHeapExhausted = errors.New("gc: throughput heap exhausted")
++// ErrHeapExhausted reports the configured bounded Throughput heap limit.
++var ErrHeapExhausted = errors.New("gc: throughput heap exhausted")
++
++var errThroughputHeapExhausted = ErrHeapExhausted
+ 
+ const throughputNoSlot = ^uint32(0)
+ 
+diff --git a/src/core/runtime/gc/native/tiny_scan_test.go b/src/core/runtime/gc/native/tiny_scan_test.go
+index 0089df678..47357e907 100644
+--- a/src/core/runtime/gc/native/tiny_scan_test.go
++++ b/src/core/runtime/gc/native/tiny_scan_test.go
+@@ -597,7 +597,7 @@ func TestTinyBulkBarrierRangeValidationEveryPhase(t *testing.T) {
+ 			roots := Slots{&root}
+ 			phase.advance(t, c, roots, parent)
+ 			d, _ := c.refDesc(parent)
+-			if err := c.storeValue(parent, d, uint64(PayloadOffset)+3*uint64(d.ElemSize), d.Elem, RefValue(child)); err != nil {
++			if err := c.storeValue(parent, d, uint64(d.PayloadOffset())+3*uint64(d.ElemSize), d.Elem, RefValue(child)); err != nil {
+ 				t.Fatal(err)
+ 			}
+ 			c.PostBulkWriteBarrier(parent, 3, 1)
+@@ -614,7 +614,7 @@ func TestTinyBulkBarrierRangeValidationEveryPhase(t *testing.T) {
+ 				roots := Slots{&root}
+ 				phase.advance(t, c, roots, parent)
+ 				d, _ := c.refDesc(parent)
+-				if err := c.storeValue(parent, d, uint64(PayloadOffset), d.Elem, RefValue(child)); err != nil {
++				if err := c.storeValue(parent, d, uint64(d.PayloadOffset()), d.Elem, RefValue(child)); err != nil {
+ 					t.Fatal(err)
+ 				}
+ 				c.PostBulkWriteBarrier(parent, test.start, test.length)
+@@ -668,7 +668,7 @@ func TestTinyRemarkBulkBarrierResumesActivePartialScan(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if err := c.storeValue(parent, d, uint64(PayloadOffset), d.Elem, RefValue(child)); err != nil {
++	if err := c.storeValue(parent, d, uint64(d.PayloadOffset()), d.Elem, RefValue(child)); err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	c.PostBulkWriteBarrier(parent, 0, 1)
+diff --git a/src/core/runtime/gc/native/tiny_test.go b/src/core/runtime/gc/native/tiny_test.go
+index ee42c1236..542900824 100644
+--- a/src/core/runtime/gc/native/tiny_test.go
++++ b/src/core/runtime/gc/native/tiny_test.go
+@@ -222,7 +222,7 @@ func TestTinyVerifyRejectsCompactMetadataCorruption(t *testing.T) {
+ 	})
+ 	t.Run("interior allocation start", func(t *testing.T) {
+ 		c := newTinyTestCollector(t, Config{TinyHeapBytes: 128, TinyBlockBytes: 16})
+-		r, err := c.NewStructDefault(0)
++		r, err := c.NewArrayDefault(2, 5)
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+@@ -337,14 +337,14 @@ func assertTinyHeapMetadata(t *testing.T, h *tinyHeap) {
+ 
+ func TestTinyAllocateFreeReuseCoalesceAndFailure(t *testing.T) {
+ 	c := newTinyTestCollector(t, Config{TinyHeapBytes: 96, TinyBlockBytes: 16, PoisonFreed: true})
+-	a, err := c.NewStructDefault(0)
++	a, err := c.NewArrayDefault(2, 5)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	b, _ := c.NewStructDefault(0)
++	b, _ := c.NewArrayDefault(2, 5)
+ 	coff := c.entry(a).off
+ 	c.free(handleOf(a))
+-	reuse, err := c.NewStructDefault(0)
++	reuse, err := c.NewArrayDefault(2, 5)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+@@ -368,13 +368,13 @@ func TestTinyAllocateFreeReuseCoalesceAndFailure(t *testing.T) {
+ 	}
+ 	roots := RefSliceRoots{}
+ 	for i := 0; i < 3; i++ {
+-		r, err := c.NewStructDefaultWithRoots(0, roots)
++		r, err := c.NewArrayDefaultWithRoots(2, 5, roots)
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+ 		roots = append(roots, r)
+ 	}
+-	if _, err := c.NewStructDefaultWithRoots(0, roots); err == nil {
++	if _, err := c.NewArrayDefaultWithRoots(2, 5, roots); err == nil {
+ 		t.Fatal("expected deterministic tiny heap exhaustion")
+ 	}
+ }
+@@ -383,7 +383,7 @@ func TestTinyFragmentationFailureThenCoalesceSucceeds(t *testing.T) {
+ 	c := newTinyTestCollector(t, Config{TinyHeapBytes: 128, TinyBlockBytes: 16})
+ 	var objs []Ref
+ 	for i := 0; i < 4; i++ {
+-		r, err := c.NewStructDefault(0)
++		r, err := c.NewArrayDefault(2, 5)
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+diff --git a/src/core/runtime/gc/native/validate.go b/src/core/runtime/gc/native/validate.go
+index ea4d04493..10e7f902f 100644
+--- a/src/core/runtime/gc/native/validate.go
++++ b/src/core/runtime/gc/native/validate.go
+@@ -99,7 +99,7 @@ func validateStructDesc(d TypeDesc) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		if d.Align < a || f.Offset%a != 0 || uint64(f.Offset)+uint64(sz) > uint64(d.Size) {
++		if d.Align < a || (uint64(PayloadOffset)+uint64(f.Offset))%uint64(a) != 0 || uint64(f.Offset)+uint64(sz) > uint64(d.Size) {
+ 			return errors.New("invalid field layout")
+ 		}
+ 		if f.Offset < maxEnd {
+@@ -117,7 +117,7 @@ func validateStructDesc(d TypeDesc) error {
+ 			return err
+ 		}
+ 	}
+-	if d.Size != align(maxEnd, d.Align) {
++	if uint64(PayloadOffset)+uint64(d.Size) != (uint64(PayloadOffset)+uint64(maxEnd)+uint64(d.Align)-1)&^(uint64(d.Align)-1) {
+ 		return errors.New("size mismatch")
+ 	}
+ 	if d.HasRefs != seenRefs {
+diff --git a/src/core/runtime/gc/native/verify.go b/src/core/runtime/gc/native/verify.go
+index 4088c0883..da5bb562d 100644
+--- a/src/core/runtime/gc/native/verify.go
++++ b/src/core/runtime/gc/native/verify.go
+@@ -32,17 +32,12 @@ func (c *Collector) Verify(roots RootSet) error {
+ 			continue
+ 		}
+ 		r := makeObjRef(h)
+-		hdr := c.header(r)
+-		if hdr.TypeID != e.typeID {
+-			return errors.New("gc: hot handle type does not match object header")
+-		}
+-		d, err := c.desc(TypeID(hdr.TypeID))
++		dp, _, err := c.refDescPtrBytes(r)
+ 		if err != nil {
+ 			return err
+ 		}
+-		if hdr.Size != e.size {
+-			return errors.New("gc: object size mismatch")
+-		}
++		d := *dp
++		hdr := c.header(r)
+ 		var sz uint32
+ 		if d.Kind == KindStruct {
+ 			sz, err = StructSize(d)
+@@ -160,7 +155,7 @@ func (c *Collector) verifyScanObjectRefs(h uint32, visit func(Ref)) error {
+ 	if len(b) < int(HeaderSize) {
+ 		return fmt.Errorf("gc: shadow scan short object %d", h)
+ 	}
+-	typeID := TypeID(binary.LittleEndian.Uint32(b[:4]))
++	typeID := TypeID(c.handles[h].typeID)
+ 	d, err := c.desc(typeID)
+ 	if err != nil {
+ 		return err
+@@ -181,9 +176,9 @@ func (c *Collector) verifyScanObjectRefs(h uint32, visit func(Ref)) error {
+ 	if d.Kind != KindArray || !isCollectorRefKind(d.Elem) {
+ 		return nil
+ 	}
+-	length := binary.LittleEndian.Uint32(b[8:12])
++	length := binary.LittleEndian.Uint32(b)
+ 	for i := uint32(0); i < length; i++ {
+-		off := uint64(PayloadOffset) + uint64(i)*uint64(d.ElemSize)
++		off := uint64(d.PayloadOffset()) + uint64(i)*uint64(d.ElemSize)
+ 		if off+4 > uint64(len(b)) {
+ 			return fmt.Errorf("gc: shadow scan array element outside handle %d", h)
+ 		}
+@@ -217,7 +212,7 @@ func (c *Collector) verifyNurseryEdgesCarded(h uint32) error {
+ 		return err
+ 	}
+ 	check := func(off uint32) error {
+-		child := Ref(binary.LittleEndian.Uint32(b[PayloadOffset+off:]))
++		child := Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+off:]))
+ 		slot := c.cardSlot(h)
+ 		if c.isNurseryRef(child) && !c.cardFallback && slot != 0 && !c.objectCardCovers(h, off) {
+ 			return fmt.Errorf("gc: shadow verifier found uncarded old-to-nursery edge from handle %d at payload byte %d", h, off)
+@@ -312,7 +307,7 @@ func (c *Collector) verifyCardMetadata() error {
+ 			if card.handle != h || (c.handles[h].space != spaceOld && c.handles[h].space != spaceLarge) {
+ 				return errors.New("gc: object card owner mismatch")
+ 			}
+-			payloadBytes := c.handles[h].size - PayloadOffset
++			payloadBytes := c.handles[h].size - c.payloadOffset(h)
+ 			if card.end < card.index || card.index >= payloadBytes || card.end >= payloadBytes || card.index%c.cardBytes != 0 {
+ 				return errors.New("gc: invalid object card range")
+ 			}
+@@ -390,7 +385,7 @@ func (c *Collector) verifyEdges(r Ref, d TypeDesc) error {
+ 		}
+ 	} else if d.ArrayElementsAreRefs() {
+ 		for i := uint32(0); i < hdr.Aux; i++ {
+-			if err := check(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+i*d.ElemSize:]))); err != nil {
++			if err := check(Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+i*d.ElemSize:]))); err != nil {
+ 				return err
+ 			}
+ 		}
+diff --git a/src/wago/gc_array_copy_native_amd64_test.go b/src/wago/gc_array_copy_native_amd64_test.go
+index 16dfadba3..c328ac6d7 100644
+--- a/src/wago/gc_array_copy_native_amd64_test.go
++++ b/src/wago/gc_array_copy_native_amd64_test.go
+@@ -353,15 +353,12 @@ func TestGCNativeArrayCopyTwoShortObjectSize(t *testing.T) {
+ 			view := in.gc.NativeView()
+ 			ref := uint32(readGlobalObject(in.globalCells[target], in.c.Globals[target].Type))
+ 			handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-			offset := binary.LittleEndian.Uint32(handle[gc.NativeHandleOffsetOffset:])
+-			space := handle[gc.NativeHandleSpaceOffset]
+-			header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[space].Base+uintptr(offset))), gc.PayloadOffset)
+-			size := binary.LittleEndian.Uint32(header[4:])
+-			binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset+4)
++			size := binary.LittleEndian.Uint32(handle[gc.NativeHandleSizeOffset:])
++			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.HeaderSize+4)
+ 			_, copyTwoErr := in.Invoke("copy-two", 0, 0)
+ 			_, copyThreeErr := in.Invoke("copy-three", 0, 0)
+ 			_, copyFourErr := in.Invoke("copy-four", 0, 0)
+-			binary.LittleEndian.PutUint32(header[4:], size)
++			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], size)
+ 			after0, readErr0 := in.Invoke("get-dst", 0)
+ 			after1, readErr1 := in.Invoke("get-dst", 1)
+ 			in.Close()
+diff --git a/src/wago/gc_array_direct_arm64_test.go b/src/wago/gc_array_direct_arm64_test.go
+index 173b721a6..5df0f1f69 100644
+--- a/src/wago/gc_array_direct_arm64_test.go
++++ b/src/wago/gc_array_direct_arm64_test.go
+@@ -167,7 +167,7 @@ func TestGCArrayConstructorForwardBoundsAndLocalMutation(t *testing.T) {
+ 		}
+ 		in.Close()
+ 		if tc.length > 0 {
+-			tiny, err := Instantiate(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 16, TinyBlockBytes: 16}})
++			tiny, err := Instantiate(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 8, TinyBlockBytes: 8}})
+ 			if err != nil {
+ 				t.Fatal(err)
+ 			}
+diff --git a/src/wago/gc_array_helper.go b/src/wago/gc_array_helper.go
+index cc80377d8..f5d865ff0 100644
+--- a/src/wago/gc_array_helper.go
++++ b/src/wago/gc_array_helper.go
+@@ -771,7 +771,7 @@ func (in *Instance) gcArrayElemValuePrevalidated(typeID uint32, entries uintptr,
+ 
+ //go:noinline
+ func (in *Instance) gcPanicArrayError(err error) {
+-	if errors.Is(err, gc.ErrAllocationTooLarge) {
++	if errors.Is(err, gc.ErrAllocationTooLarge) || errors.Is(err, gc.ErrHeapExhausted) {
+ 		panic(gcHelperTrap(coreruntime.TrapBuiltin))
+ 	}
+ 	panic(gcHelperFailure(err))
+diff --git a/src/wago/gc_array_helper_amd64_test.go b/src/wago/gc_array_helper_amd64_test.go
+index 51f20a3a2..78ed2e2e1 100644
+--- a/src/wago/gc_array_helper_amd64_test.go
++++ b/src/wago/gc_array_helper_amd64_test.go
+@@ -70,7 +70,7 @@ func TestStagedGCArrayNumericLocalTinyExhaustionAndAllocation(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	defer c.Close()
+-	in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 16, TinyBlockBytes: 16}})
++	in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 8, TinyBlockBytes: 8}})
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/src/wago/gc_array_len_native_test.go b/src/wago/gc_array_len_native_test.go
+index 401b01058..7a06a52b2 100644
+--- a/src/wago/gc_array_len_native_test.go
++++ b/src/wago/gc_array_len_native_test.go
+@@ -146,11 +146,12 @@ func TestGCGeneralArrayLenNativeGuardFallback(t *testing.T) {
+ 	original := append([]byte(nil), entry...)
+ 	originalRef := readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)
+ 	var falseHeader [gc.HeaderSize]byte
+-	for _, name := range []string{"count", "free", "unknown space", "offset", "size", "short handle", "space bytes", "short header", "long header", "high bits"} {
++	for _, name := range []string{"count", "free", "unknown space", "offset", "size", "short handle", "space bytes", "zero extent", "high bits"} {
+ 		t.Run(name, func(t *testing.T) {
+ 			*view = saved
+ 			copy(entry, original)
+ 			view.Handles = uintptr(unsafe.Pointer(&fake[0]))
++			in.gcNativeView.Handles = view.Handles
+ 			switch name {
+ 			case "count":
+ 				view.HandleCount = index
+@@ -166,26 +167,22 @@ func TestGCGeneralArrayLenNativeGuardFallback(t *testing.T) {
+ 				binary.LittleEndian.PutUint32(entry[gc.NativeHandleSizeOffset:], gc.HeaderSize-1)
+ 			case "space bytes":
+ 				view.Spaces[entry[gc.NativeHandleSpaceOffset]].Bytes = 0
+-			case "short header", "long header", "high bits":
++			case "zero extent", "high bits":
+ 				binary.LittleEndian.PutUint32(entry[gc.NativeHandleOffsetOffset:], 0)
+ 				binary.LittleEndian.PutUint32(entry[gc.NativeHandleSizeOffset:], gc.HeaderSize)
+ 				space := &view.Spaces[entry[gc.NativeHandleSpaceOffset]]
+ 				space.Base = uintptr(unsafe.Pointer(&falseHeader[0]))
+ 				space.Bytes = gc.HeaderSize
+-				size := gc.HeaderSize
+-				if name == "short header" {
+-					size--
+-				} else if name == "long header" {
+-					size++
++				if name == "zero extent" {
++					binary.LittleEndian.PutUint32(entry[gc.NativeHandleSizeOffset:], 0)
+ 				} else {
+-					// Public boundary checks must reject this non-compact reference.
+ 					writeGlobalObject(in.globalCells[0], in.c.Globals[0].Type, originalRef|uint64(1)<<40)
+ 				}
+-				binary.LittleEndian.PutUint32(falseHeader[4:], size)
+-				binary.LittleEndian.PutUint32(falseHeader[8:], 777)
++				binary.LittleEndian.PutUint32(falseHeader[:], 777)
+ 			}
+ 			got, err := in.Invoke("global")
+ 			*view = saved
++			in.gcNativeView.Handles = saved.Handles
+ 			writeGlobalObject(in.globalCells[0], in.c.Globals[0].Type, originalRef)
+ 			goruntime.KeepAlive(fake)
+ 			goruntime.KeepAlive(falseHeader)
+diff --git a/src/wago/gc_array_packed_data_amd64_test.go b/src/wago/gc_array_packed_data_amd64_test.go
+index 548b6440a..1e90b7106 100644
+--- a/src/wago/gc_array_packed_data_amd64_test.go
++++ b/src/wago/gc_array_packed_data_amd64_test.go
+@@ -162,7 +162,7 @@ func TestStagedGCArrayPackedDataTinyCodecAndAllocation(t *testing.T) {
+ 	}
+ 	defer c.Close()
+ 	for i := 0; i < 2; i++ {
+-		in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 16, TinyBlockBytes: 8}})
++		in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 8, TinyBlockBytes: 8}})
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+diff --git a/src/wago/gc_constructor_forward_amd64_test.go b/src/wago/gc_constructor_forward_amd64_test.go
+index 17ef28b5c..e38cc0701 100644
+--- a/src/wago/gc_constructor_forward_amd64_test.go
++++ b/src/wago/gc_constructor_forward_amd64_test.go
+@@ -208,6 +208,13 @@ func TestGCConstructorScalarReplacementPreservesBoundedAllocation(t *testing.T)
+ 			compiled.Close()
+ 			t.Fatal(err)
+ 		}
++		// Keep one real object in the only block. The tested constructor must
++		// still attempt allocation when its field result can be forwarded.
++		root, rootErr := instance.gc.NewStructDefault(instance.requireGCDomainType(0))
++		if rootErr != nil {
++			t.Fatal(rootErr)
++		}
++		instance.gc.NewGlobalSlot(root)
+ 		_, invokeErr := instance.Invoke("run", 37)
+ 		instance.Close()
+ 		compiled.Close()
+diff --git a/src/wago/gc_constructor_forward_arm64_test.go b/src/wago/gc_constructor_forward_arm64_test.go
+index d5f6ea5cb..7414ef530 100644
+--- a/src/wago/gc_constructor_forward_arm64_test.go
++++ b/src/wago/gc_constructor_forward_arm64_test.go
+@@ -217,6 +217,11 @@ func TestGCConstructorScalarReplacementPreservesBoundedAllocation(t *testing.T)
+ 			compiled.Close()
+ 			t.Fatal(err)
+ 		}
++		root, rootErr := instance.gc.NewStructDefault(instance.requireGCDomainType(0))
++		if rootErr != nil {
++			t.Fatal(rootErr)
++		}
++		instance.gc.NewGlobalSlot(root)
+ 		_, invokeErr := instance.Invoke("run", 37)
+ 		instance.Close()
+ 		compiled.Close()
+diff --git a/src/wago/gc_constructor_if_pressure_amd64_test.go b/src/wago/gc_constructor_if_pressure_amd64_test.go
+index ff95affe1..f9360e524 100644
+--- a/src/wago/gc_constructor_if_pressure_amd64_test.go
++++ b/src/wago/gc_constructor_if_pressure_amd64_test.go
+@@ -4,6 +4,7 @@ package wago
+ 
+ import (
+ 	"fmt"
++	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
+ 	"testing"
+ 
+ 	"github.com/wago-org/wago/src/core/compiler/wasm"
+@@ -57,7 +58,11 @@ func TestGCConstructorIfPressure(t *testing.T) {
+ 			defer c.Close()
+ 			for _, profile := range []GCProfile{GCProfileThroughput, GCProfileTiny} {
+ 				for _, cond := range []uint64{0, 1} {
+-					cfg := GCConfig{Profile: profile, StressNurseryBytes: 64, VerifyAfterCollect: true}
++					objectBytes, sizeErr := gc.StructSize(c.GCTypeDescs[0])
++					if sizeErr != nil {
++						t.Fatal(sizeErr)
++					}
++					cfg := GCConfig{Profile: profile, StressNurseryBytes: 2 * objectBytes, VerifyAfterCollect: true}
+ 					if profile == GCProfileThroughput {
+ 						cfg.SurvivorBytes = 64
+ 					}
+diff --git a/src/wago/gc_dead_group_amd64_test.go b/src/wago/gc_dead_group_amd64_test.go
+index 474c07041..9142b1acb 100644
+--- a/src/wago/gc_dead_group_amd64_test.go
++++ b/src/wago/gc_dead_group_amd64_test.go
+@@ -155,8 +155,8 @@ func TestGCDeadDefaultGroupExhaustion(t *testing.T) {
+ 			if _, err := in.Invoke("run", 129); err == nil {
+ 				t.Fatal("expected bounded heap exhaustion within one invocation")
+ 			}
+-			if got := in.gc.Stats().Allocations - before; got != 128 {
+-				t.Fatalf("n%d: successful allocations%d want128", n, got)
++			if got := in.gc.Stats().Allocations - before; got != 256 {
++				t.Fatalf("n%d: successful allocations%d want256", n, got)
+ 			}
+ 		}
+ 		in.Close()
+diff --git a/src/wago/gc_dead_group_native_amd64_test.go b/src/wago/gc_dead_group_native_amd64_test.go
+index 4e4a627ef..d1a86fc20 100644
+--- a/src/wago/gc_dead_group_native_amd64_test.go
++++ b/src/wago/gc_dead_group_native_amd64_test.go
+@@ -55,9 +55,9 @@ func TestGCDeadDefaultGroupNativeBoundaries(t *testing.T) {
+ 			for i := range n {
+ 				end = (end + 7) &^ 7
+ 				if form == "mixed" && i%2 == 1 {
+-					end += 48
++					end += gc.Align8(gc.PayloadOffset + 32)
+ 				} else {
+-					end += 24
++					end += gc.Align8(gc.PayloadOffset + 4)
+ 				}
+ 			}
+ 			savedLimit := view.NurseryAllocBytes
+@@ -130,7 +130,7 @@ func TestGCDeadDefaultGroupSingleReservation(t *testing.T) {
+ 	if _, err := in.Invoke("leaf"); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if view.RefreshGeneration != generation || *bump != beforeBump+96 || in.gc.Stats().Allocations-before != 4 {
++	if view.RefreshGeneration != generation || *bump != beforeBump+4*gc.Align8(gc.PayloadOffset+4) || in.gc.Stats().Allocations-before != 4 {
+ 		t.Fatal("dead group did not charge beyond the array chunk in native code")
+ 	}
+ 	chargedEnd := *bump
+diff --git a/src/wago/gc_dead_new_semantics_amd64_test.go b/src/wago/gc_dead_new_semantics_amd64_test.go
+index 2935a5ac9..b345f8989 100644
+--- a/src/wago/gc_dead_new_semantics_amd64_test.go
++++ b/src/wago/gc_dead_new_semantics_amd64_test.go
+@@ -63,11 +63,11 @@ func deadGCNestedAllocationModule() ([]byte, GCConfig) {
+ 		wasmtest.Section(3, wasmtest.Vec(wasmtest.ULEB(2))),
+ 		wasmtest.Section(7, wasmtest.Vec(wasmtest.ExportEntry("run", 0, 0))),
+ 		wasmtest.Section(10, wasmtest.Vec(wasmtest.Code(body))),
+-	), GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 24, TinyBlockBytes: 8}
++	), GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 8, TinyBlockBytes: 8}
+ }
+ 
+ func deadGCNestedReferenceAllocationModule(arrayIntermediate bool) ([]byte, GCConfig) {
+-	numericArray := []byte{0x5e, 0x7e, 0x01} // final (array (mut i64)); fixed length two is 32 bytes
++	numericArray := []byte{0x5e, 0x7e, 0x01} // final (array (mut i64)); fixed length two has a 16-byte payload
+ 	intermediate := []byte{0x5f}
+ 	intermediate = append(intermediate, wasmtest.Vec([]byte{0x63, 0x00, 0x00})...) // struct (ref null 0)
+ 	outer := []byte{0x5f}
+@@ -77,11 +77,11 @@ func deadGCNestedReferenceAllocationModule(arrayIntermediate bool) ([]byte, GCCo
+ 		0x42, 0x00,
+ 		0xfb, 0x08, 0x00, 0x02, // array.new_fixed 0 2
+ 	}
+-	cfg := GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 56, TinyBlockBytes: 8}
++	cfg := GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 32, TinyBlockBytes: 8}
+ 	if arrayIntermediate {
+ 		intermediate = []byte{0x5e, 0x63, 0x00, 0x01} // array (mut (ref null 0))
+ 		body = append(body, 0xfb, 0x08, 0x01, 0x01)   // array.new_fixed 1 1
+-		cfg.TinyHeapBytes = 64
++		cfg.TinyHeapBytes = 40
+ 	} else {
+ 		body = append(body, 0xfb, 0x00, 0x01) // struct.new 1
+ 	}
+diff --git a/src/wago/gc_dynamic_copy_amd64_test.go b/src/wago/gc_dynamic_copy_amd64_test.go
+index 83861ca70..d502e0c60 100644
+--- a/src/wago/gc_dynamic_copy_amd64_test.go
++++ b/src/wago/gc_dynamic_copy_amd64_test.go
+@@ -129,11 +129,10 @@ func testGCDynamicNumericCopy(t *testing.T) {
+ 					view := in.gc.NativeView()
+ 					ref := uint32(readGlobalObject(in.globalCells[global], in.c.Globals[global].Type))
+ 					handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-					header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[handle[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(handle)))), gc.HeaderSize)
+-					size := binary.LittleEndian.Uint32(header[4:])
+-					binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset)
++					size := binary.LittleEndian.Uint32(handle[gc.NativeHandleSizeOffset:])
++					binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.HeaderSize)
+ 					_, err := in.Invoke("copy-dynamic", 0, 0, 17)
+-					binary.LittleEndian.PutUint32(header[4:], size)
++					binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], size)
+ 					var trap *TrapError
+ 					if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
+ 						t.Fatalf("short object%d: %v", global, err)
+diff --git a/src/wago/gc_dynamic_fill_amd64_test.go b/src/wago/gc_dynamic_fill_amd64_test.go
+index 58e04c184..955e4ca3f 100644
+--- a/src/wago/gc_dynamic_fill_amd64_test.go
++++ b/src/wago/gc_dynamic_fill_amd64_test.go
+@@ -259,12 +259,14 @@ func TestGCDynamicNumericFillPhysicalExtent(t *testing.T) {
+ 	handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*corergc.NativeHandleStride)), corergc.NativeHandleStride)
+ 	offset := binary.LittleEndian.Uint32(handle)
+ 	space := handle[corergc.NativeHandleSpaceOffset]
+-	header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[space].Base+uintptr(offset))), corergc.PayloadOffset)
++	header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[space].Base+uintptr(offset))), corergc.HeaderSize)
+ 	saved := append([]byte(nil), header...)
++	savedHandle := append([]byte(nil), handle...)
+ 	for _, count := range []uint64{1, 17, 129, 1025} {
+-		binary.LittleEndian.PutUint32(header[4:], uint32(corergc.PayloadOffset))
++		binary.LittleEndian.PutUint32(handle[corergc.NativeHandleSizeOffset:], uint32(corergc.PayloadOffset))
+ 		_, fillErr := in.Invoke("fill", 3, 7, count)
+ 		copy(header, saved)
++		copy(handle, savedHandle)
+ 		var trap *TrapError
+ 		if !errors.As(fillErr, &trap) || trap.Code != TrapCastFailure {
+ 			t.Fatalf("count%d: %v", count, fillErr)
+diff --git a/src/wago/gc_final_cast_array_get_amd64_test.go b/src/wago/gc_final_cast_array_get_amd64_test.go
+index 4d2fafcf8..8d0cca830 100644
+--- a/src/wago/gc_final_cast_array_get_amd64_test.go
++++ b/src/wago/gc_final_cast_array_get_amd64_test.go
+@@ -184,10 +184,9 @@ func TestGCFinalCastArrayGetColdPins(t *testing.T) {
+ 				if name == "extent" {
+ 					view := in.gc.NativeView()
+ 					handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-					header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[handle[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(handle)))), gc.HeaderSize)
+-					old := binary.LittleEndian.Uint32(header[4:])
+-					binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset+4)
+-					defer binary.LittleEndian.PutUint32(header[4:], old)
++					old := binary.LittleEndian.Uint32(handle[gc.NativeHandleSizeOffset:])
++					binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.HeaderSize+4)
++					defer binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], old)
+ 				}
+ 			}
+ 			got, e := in.Invoke("run")
+diff --git a/src/wago/gc_leaf_trap_pins_amd64_test.go b/src/wago/gc_leaf_trap_pins_amd64_test.go
+index 1b63b1ed3..bbc9672d2 100644
+--- a/src/wago/gc_leaf_trap_pins_amd64_test.go
++++ b/src/wago/gc_leaf_trap_pins_amd64_test.go
+@@ -128,11 +128,14 @@ func TestGCLeafTrapPreservesGlobalPins(t *testing.T) {
+ 								case "space":
+ 									h[gc.NativeHandleSpaceOffset] = 255
+ 								case "handle":
+-									binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], gc.PayloadOffset)
++									binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], gc.HeaderSize)
+ 								case "header":
+-									binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset)
++									binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], gc.HeaderSize)
++								}
++								// Struct stores need their field; array length needs its prefix.
++								if leaf == "struct-set" {
++									binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], 0)
+ 								}
+-								// Length reads only the header. Shrink its handle below HeaderSize.
+ 								if (leaf == "len" || leaf == "len-nullable") && kind == "handle" {
+ 									binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], gc.HeaderSize-1)
+ 								}
+diff --git a/src/wago/gc_native_fill_amd64_test.go b/src/wago/gc_native_fill_amd64_test.go
+index 9d8846881..347129b87 100644
+--- a/src/wago/gc_native_fill_amd64_test.go
++++ b/src/wago/gc_native_fill_amd64_test.go
+@@ -178,12 +178,14 @@ func TestGCNativeNumericFillPreflight(t *testing.T) {
+ 			handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*corergc.NativeHandleStride)), corergc.NativeHandleStride)
+ 			offset := binary.LittleEndian.Uint32(handle)
+ 			space := handle[corergc.NativeHandleSpaceOffset]
+-			header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[space].Base+uintptr(offset))), corergc.PayloadOffset)
++			header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[space].Base+uintptr(offset))), corergc.HeaderSize)
+ 			saved := append([]byte(nil), header...)
+-			binary.LittleEndian.PutUint32(header[4:], 0)
+-			binary.LittleEndian.PutUint32(header[8:], ^uint32(0))
++			savedHandle := append([]byte(nil), handle...)
++			binary.LittleEndian.PutUint32(handle[corergc.NativeHandleSizeOffset:], 0)
++			binary.LittleEndian.PutUint32(header, ^uint32(0))
+ 			_, fillErr := in.Invoke("fill4", 100, 7)
+ 			copy(header, saved)
++			copy(handle, savedHandle)
+ 			var trap *TrapError
+ 			if !errors.As(fillErr, &trap) || trap.Code != TrapCastFailure {
+ 				t.Fatalf("invalid size: %v", fillErr)
+diff --git a/src/wago/gc_native_open_struct_alloc_amd64_test.go b/src/wago/gc_native_open_struct_alloc_amd64_test.go
+index c38fe242e..98a716bbf 100644
+--- a/src/wago/gc_native_open_struct_alloc_amd64_test.go
++++ b/src/wago/gc_native_open_struct_alloc_amd64_test.go
+@@ -78,7 +78,7 @@ func TestGCNativeOpenStructRespectsLargeObjectThreshold(t *testing.T) {
+ 			t.Fatal(err)
+ 		}
+ 		defer c.Close()
+-		in, err := Instantiate(c, InstantiateOptions{GC: GCConfig{NurseryBytes: 1024, SurvivorBytes: 512, LargeObjectBytes: 32, VerifyAfterCollect: true}})
++		in, err := Instantiate(c, InstantiateOptions{GC: GCConfig{NurseryBytes: 1024, SurvivorBytes: 512, LargeObjectBytes: 16, VerifyAfterCollect: true}})
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+@@ -90,7 +90,7 @@ func TestGCNativeOpenStructRespectsLargeObjectThreshold(t *testing.T) {
+ 		view := in.gc.NativeView()
+ 		handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*corergc.NativeHandleStride)), corergc.NativeHandleStride)
+ 		if got := handle[corergc.NativeHandleSpaceOffset]; got != corergc.NativeSpaceLarge {
+-			t.Fatalf("32-byte object space=%d, want large=%d", got, corergc.NativeSpaceLarge)
++			t.Fatalf("16-byte object space=%d, want large=%d", got, corergc.NativeSpaceLarge)
+ 		}
+ 	}
+ }
+diff --git a/src/wago/gc_native_open_struct_get_amd64_test.go b/src/wago/gc_native_open_struct_get_amd64_test.go
+index 5510f3b38..d63b1a4e7 100644
+--- a/src/wago/gc_native_open_struct_get_amd64_test.go
++++ b/src/wago/gc_native_open_struct_get_amd64_test.go
+@@ -168,8 +168,7 @@ func TestGCNativeOpenStructReadPreflight(t *testing.T) {
+ 	ref := uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type))
+ 	view := in.gc.NativeView()
+ 	handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*corergc.NativeHandleStride)), corergc.NativeHandleStride)
+-	offset := binary.LittleEndian.Uint32(handle)
+-	header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[handle[corergc.NativeHandleSpaceOffset]].Base+uintptr(offset))), corergc.PayloadOffset)
++	header := handle
+ 	check := func(name string, entryCheck bool, mutate func(), restore func()) {
+ 		t.Helper()
+ 		mutate()
+@@ -194,12 +193,13 @@ func TestGCNativeOpenStructReadPreflight(t *testing.T) {
+ 	}
+ 	savedHeader := append([]byte(nil), header...)
+ 	savedHandle := append([]byte(nil), handle...)
+-	check("short header", false, func() { binary.LittleEndian.PutUint32(header[4:], corergc.HeaderSize) }, func() { copy(header, savedHeader) })
+-	check("short handle", false, func() { binary.LittleEndian.PutUint32(handle[corergc.NativeHandleSizeOffset:], corergc.HeaderSize) }, func() { copy(handle, savedHandle) })
+-	check("unknown type", false, func() { binary.LittleEndian.PutUint32(header, ^uint32(0)) }, func() { copy(header, savedHeader) })
++	check("short handle", false, func() { binary.LittleEndian.PutUint32(handle[corergc.NativeHandleSizeOffset:], corergc.PayloadOffset) }, func() { copy(handle, savedHandle) })
++	check("unknown type", false, func() { binary.LittleEndian.PutUint32(handle[corergc.NativeHandleTypeIDOffset:], ^uint32(0)) }, func() { copy(header, savedHeader) })
+ 	localTypes := unsafe.Slice((*uint32)(offHeapPtr(in.gcNativeView.LocalTypes)), in.gcNativeView.LocalTypeCount)
+ 	for _, localType := range []int{1, 7} {
+-		check(fmt.Sprintf("incompatible type%d", localType), false, func() { binary.LittleEndian.PutUint32(header, localTypes[localType]) }, func() { copy(header, savedHeader) })
++		check(fmt.Sprintf("incompatible type%d", localType), false, func() {
++			binary.LittleEndian.PutUint32(handle[corergc.NativeHandleTypeIDOffset:], localTypes[localType])
++		}, func() { copy(header, savedHeader) })
+ 	}
+ 
+ 	count := view.SubtypeIntervalCount
+diff --git a/src/wago/gc_old_array_store_amd64_test.go b/src/wago/gc_old_array_store_amd64_test.go
+index 356356be8..c69384227 100644
+--- a/src/wago/gc_old_array_store_amd64_test.go
++++ b/src/wago/gc_old_array_store_amd64_test.go
+@@ -3,7 +3,9 @@
+ package wago
+ 
+ import (
++	"encoding/binary"
+ 	"testing"
++	"unsafe"
+ 
+ 	"github.com/wago-org/wago/src/core/compiler/wasm"
+ 	corergc "github.com/wago-org/wago/src/core/runtime/gc/native"
+@@ -128,3 +130,52 @@ func TestGCNativeOldArrayReferenceStorePreservesBarrier(t *testing.T) {
+ 		t.Fatalf("stored array child after minor collection = %+v, %v", value, err)
+ 	}
+ }
++
++// Element 40 is in the second 128-byte card, although its index fits the
++// first card's byte range. Native card checks must compare bytes to bytes.
++func TestGCNativeOldArrayStoreUsesPayloadByteCards(t *testing.T) {
++	compiled, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3), gcNativeOldArrayReferenceStoreFixture(130, 40))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer compiled.Close()
++	in, err := Instantiate(compiled, InstantiateOptions{GC: GCConfig{StressBarriers: true, VerifyAfterCollect: true}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer in.Close()
++	if _, err = in.Invoke("init"); err != nil {
++		t.Fatal(err)
++	}
++	parent := corergc.Ref(uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)))
++	if err = in.gc.ForcePromote(parent); err != nil {
++		t.Fatal(err)
++	}
++	if _, err = in.Invoke("set_both"); err != nil {
++		t.Fatal(err)
++	}
++	view := in.gc.NativeView()
++	head := *(*uint32)(offHeapPtr(view.ObjectCardSlots + uintptr(uint32(parent)>>1)*4))
++	if head == 0 || head > view.ObjectCardCount {
++		t.Fatalf("invalid parent card head %d", head)
++	}
++	card := unsafe.Slice((*byte)(offHeapPtr(view.ObjectCards+uintptr(head-1)*corergc.NativeObjectCardStride)), corergc.NativeObjectCardStride)
++	if binary.LittleEndian.Uint32(card[corergc.NativeObjectCardHandleOffset:]) != uint32(parent)>>1 || binary.LittleEndian.Uint32(card[corergc.NativeObjectCardStartOffset:]) > 160 || binary.LittleEndian.Uint32(card[corergc.NativeObjectCardEndOffset:]) < 163 {
++		t.Fatalf("parent card %x does not cover element 40 at bytes160..163", card)
++	}
++	if _, err = in.Invoke("clear_children"); err != nil {
++		t.Fatal(err)
++	}
++	if err = in.gc.CollectMinor(nil); err != nil {
++		t.Fatal(err)
++	}
++	for _, index := range []uint32{0, 40} {
++		child, err := in.gc.ArrayGet(parent, index)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if _, err = in.gc.StructGet(child.Ref, 0); err != nil {
++			t.Fatalf("index%d lost child: %v", index, err)
++		}
++	}
++}
+diff --git a/src/wago/gc_old_space_descriptor_amd64_test.go b/src/wago/gc_old_space_descriptor_amd64_test.go
+index 1604ebed8..4cc45392f 100644
+--- a/src/wago/gc_old_space_descriptor_amd64_test.go
++++ b/src/wago/gc_old_space_descriptor_amd64_test.go
+@@ -26,7 +26,7 @@ var gcDescriptorSpaces = []struct {
+ func gcDescriptorConfig(space byte) GCConfig {
+ 	cfg := GCConfig{NurseryBytes: 1 << 20}
+ 	if space == gc.NativeSpaceLarge {
+-		cfg.LargeObjectBytes = 16
++		cfg.LargeObjectBytes = 8
+ 	}
+ 	if space == gc.NativeSpaceTiny {
+ 		cfg = GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 1 << 20, TinyBlockBytes: 16}
+@@ -102,7 +102,7 @@ func TestGCResolverSelectedSpaceDescriptor(t *testing.T) {
+ 						{"unknown-space", true, func() { handle[gc.NativeHandleSpaceOffset] = 255 }},
+ 						{"offset-overflow", true, func() { binary.LittleEndian.PutUint32(handle[gc.NativeHandleOffsetOffset:], ^uint32(0)) }},
+ 						{"size-overflow", true, func() { binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], ^uint32(0)) }},
+-						{"short-handle", true, func() { binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.HeaderSize-1) }},
++						{"short-handle", true, func() { binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], 0) }},
+ 					} {
+ 						t.Run(tc.name, func(t *testing.T) {
+ 							tc.edit()
+diff --git a/src/wago/gc_old_struct_store_amd64_test.go b/src/wago/gc_old_struct_store_amd64_test.go
+index 795452a35..c4664fc90 100644
+--- a/src/wago/gc_old_struct_store_amd64_test.go
++++ b/src/wago/gc_old_struct_store_amd64_test.go
+@@ -101,3 +101,55 @@ func TestGCNativeOldStructReferenceStorePreservesBarrier(t *testing.T) {
+ 		t.Fatalf("stored child after minor collection = %+v, %v", value, err)
+ 	}
+ }
++
++func TestGCNativeOldStructDistantStoresRetainSeparateCards(t *testing.T) {
++	fields := make([][]byte, 40)
++	for i := range fields {
++		fields[i] = []byte{0x6d, 1}
++	}
++	parentType := append([]byte{0x5f}, wasmtest.Vec(fields...)...)
++	data := wasmtest.Module(
++		wasmtest.Section(1, wasmtest.Vec(parentType, []byte{0x5f, 1, 0x7f, 1}, wasmtest.FuncType(nil, nil))),
++		wasmtest.Section(3, wasmtest.Vec([]byte{2}, []byte{2}, []byte{2})),
++		wasmtest.Section(6, wasmtest.Vec([]byte{0x63, 0, 1, 0xd0, 0, 0x0b})),
++		wasmtest.Section(7, wasmtest.Vec(wasmtest.ExportEntry("init", 0, 0), wasmtest.ExportEntry("first", 0, 1), wasmtest.ExportEntry("distant", 0, 2))),
++		wasmtest.Section(10, wasmtest.Vec(
++			wasmtest.Code([]byte{0xfb, 1, 0, 0x24, 0, 0x0b}),
++			wasmtest.Code([]byte{0x23, 0, 0x41, 17, 0xfb, 0, 1, 0xfb, 5, 0, 0, 0x0b}),
++			wasmtest.Code([]byte{0x23, 0, 0x41, 23, 0xfb, 0, 1, 0xfb, 5, 0, 32, 0x0b}))))
++	compiled, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3), data)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer compiled.Close()
++	in, err := Instantiate(compiled, InstantiateOptions{GC: GCConfig{VerifyAfterCollect: true, StressBarriers: true}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer in.Close()
++	if _, err = in.Invoke("init"); err != nil {
++		t.Fatal(err)
++	}
++	parent := corergc.Ref(uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)))
++	if err = in.gc.ForcePromote(parent); err != nil {
++		t.Fatal(err)
++	}
++	for _, name := range []string{"first", "distant"} {
++		if _, err = in.Invoke(name); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err = in.gc.CollectMinor(nil); err != nil {
++		t.Fatal(err)
++	}
++	for i, field := range []uint32{0, 32} {
++		child, err := in.gc.StructGet(parent, field)
++		if err != nil {
++			t.Fatal(err)
++		}
++		value, err := in.gc.StructGet(child.Ref, 0)
++		if err != nil || value.I32() != int32(17+i*6) {
++			t.Fatalf("field%d child=%+v: %+v, %v", field, child, value, err)
++		}
++	}
++}
+diff --git a/src/wago/gc_read_regions_amd64_test.go b/src/wago/gc_read_regions_amd64_test.go
+index 3774e9dda..a9cc672f9 100644
+--- a/src/wago/gc_read_regions_amd64_test.go
++++ b/src/wago/gc_read_regions_amd64_test.go
+@@ -123,14 +123,14 @@ func BenchmarkGCReadRegions(b *testing.B) {
+ 	}
+ }
+ 
+-// The first backing-field check proves 20 bytes. The later length field needs
+-// 24 bytes. Do not enlarge the first check or carry a sibling-arm proof.
++// The first backing-field check needs four payload bytes. The later length
++// field needs eight payload bytes. Do not enlarge the first check or carry a sibling-arm proof.
+ func TestGCReadRegionsConditionalExtent(t *testing.T) {
+ 	c := gcReadRegionsCompiled(t)
+ 	loaded := publicArtifactRoundTrip(t, c)
+ 	defer loaded.Close()
+ 	for ai, artifact := range []*Compiled{c, loaded} {
+-		for _, kind := range []string{"header", "handle"} {
++		for _, kind := range []string{"extent"} {
+ 			t.Run(fmt.Sprintf("artifact%d/%s", ai, kind), func(t *testing.T) {
+ 				in, e := Instantiate(artifact)
+ 				if e != nil {
+@@ -144,13 +144,12 @@ func TestGCReadRegionsConditionalExtent(t *testing.T) {
+ 				v := in.gc.NativeView()
+ 				ref := gc.Ref(uint32(bits))
+ 				h := unsafe.Slice((*byte)(offHeapPtr(v.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-				header := unsafe.Slice((*byte)(offHeapPtr(v.Spaces[h[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(h)))), gc.HeaderSize)
+-				field := header[4:]
++				field := h[gc.NativeHandleSizeOffset:]
+ 				if kind == "handle" {
+ 					field = h[gc.NativeHandleSizeOffset:]
+ 				}
+ 				old := binary.LittleEndian.Uint32(field)
+-				binary.LittleEndian.PutUint32(field, 20)
++				binary.LittleEndian.PutUint32(field, gc.PayloadOffset+4)
+ 				defer binary.LittleEndian.PutUint32(field, old)
+ 				for _, tc := range []struct {
+ 					name  string
+diff --git a/src/wago/gc_ref_test_table_amd64_test.go b/src/wago/gc_ref_test_table_amd64_test.go
+index 9c406eeea..8aeee5119 100644
+--- a/src/wago/gc_ref_test_table_amd64_test.go
++++ b/src/wago/gc_ref_test_table_amd64_test.go
+@@ -147,7 +147,7 @@ func TestStagedGCRefTestTableTrapAtomicityAndTinyFailure(t *testing.T) {
+ 		t.Fatalf("ref.test after close = %v, want collector closed", err)
+ 	}
+ 
+-	tiny, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 24, TinyBlockBytes: 8, TinyCollectEveryAlloc: true, VerifyAfterCollect: true}})
++	tiny, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 8, TinyBlockBytes: 8, TinyCollectEveryAlloc: true, VerifyAfterCollect: true}})
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/src/wago/gc_resolver_arithmetic_amd64_test.go b/src/wago/gc_resolver_arithmetic_amd64_test.go
+index 7c8cb2292..1256b3680 100644
+--- a/src/wago/gc_resolver_arithmetic_amd64_test.go
++++ b/src/wago/gc_resolver_arithmetic_amd64_test.go
+@@ -4,6 +4,7 @@ package wago
+ 
+ import (
+ 	"fmt"
++	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
+ 	"testing"
+ 
+ 	"github.com/wago-org/wago/src/core/compiler/wasm"
+@@ -170,10 +171,10 @@ func TestGCResolverAcrossCollectingCall(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	defer c.Close()
+-	// Each object occupies 24 bytes: the second allocation must evacuate the
+-	// first from a 32-byte nursery. CollectEveryAlloc deliberately mixes minor
++	// Use one object of nursery space, so the second allocation must
++	// evacuate the first in either compact-layout product. CollectEveryAlloc deliberately mixes minor
+ 	// and full collections in debug builds and cannot guarantee movement.
+-	in, err := Instantiate(c, InstantiateOptions{GC: GCConfig{StressNurseryBytes: 32, SurvivorBytes: 32, VerifyAfterCollect: true}})
++	in, err := Instantiate(c, InstantiateOptions{GC: GCConfig{StressNurseryBytes: gc.Align8(gc.PayloadOffset + 4), SurvivorBytes: 32, VerifyAfterCollect: true}})
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+diff --git a/src/wago/gc_resolver_cached_read_amd64_test.go b/src/wago/gc_resolver_cached_read_amd64_test.go
+index 28ed30692..1ca4de2c1 100644
+--- a/src/wago/gc_resolver_cached_read_amd64_test.go
++++ b/src/wago/gc_resolver_cached_read_amd64_test.go
+@@ -155,13 +155,12 @@ func TestGCCachedReadPackedAndExtent(t *testing.T) {
+ 		view := in.gc.NativeView()
+ 		ref := uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type))
+ 		handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-		header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[handle[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(handle)))), gc.HeaderSize)
+ 		// The packed field fits, but the later i64 does not. The cache must
+ 		// recheck the larger extent rather than accept the first certificate.
+-		size := binary.LittleEndian.Uint32(header[4:])
+-		binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset+1)
++		size := binary.LittleEndian.Uint32(handle[gc.NativeHandleSizeOffset:])
++		binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.PayloadOffset+1)
+ 		_, err = in.Invoke("run")
+-		binary.LittleEndian.PutUint32(header[4:], size)
++		binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], size)
+ 		var trap *TrapError
+ 		if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
+ 			t.Fatalf("profile%d larger extent: %v", profile, err)
+diff --git a/src/wago/gc_space_byte_amd64_test.go b/src/wago/gc_space_byte_amd64_test.go
+index 4a5c600e8..a197fb3db 100644
+--- a/src/wago/gc_space_byte_amd64_test.go
++++ b/src/wago/gc_space_byte_amd64_test.go
+@@ -99,7 +99,7 @@ func TestGCResolverSpaceByteAcrossSpaces(t *testing.T) {
+ 					t.Run(fmt.Sprintf("saved=%v/space=%d", saved, space), func(t *testing.T) {
+ 						cfg := GCConfig{VerifyAfterCollect: true}
+ 						if space == gc.NativeSpaceLarge {
+-							cfg.LargeObjectBytes = 16
++							cfg.LargeObjectBytes = 8
+ 						}
+ 						if space == gc.NativeSpaceTiny {
+ 							cfg = GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 4096, TinyBlockBytes: 16, TinyCollectEveryAlloc: true, TinyStepEveryAlloc: true, VerifyAfterCollect: true}
+@@ -188,7 +188,7 @@ func TestGCResolverSpaceByteRejectsInvalidEntries(t *testing.T) {
+ 				offset int
+ 				value  uint32
+ 			}{
+-				{"short handle", gc.NativeHandleSizeOffset, gc.HeaderSize - 1},
++				{"short handle", gc.NativeHandleSizeOffset, 0},
+ 				{"large size", gc.NativeHandleSizeOffset, ^uint32(0)},
+ 				{"large offset", gc.NativeHandleOffsetOffset, ^uint32(0)},
+ 			} {
+diff --git a/src/wago/gc_struct_get_packed_guard_native_test.go b/src/wago/gc_struct_get_packed_guard_native_test.go
+index b7c992580..199671bf7 100644
+--- a/src/wago/gc_struct_get_packed_guard_native_test.go
++++ b/src/wago/gc_struct_get_packed_guard_native_test.go
+@@ -4,6 +4,7 @@ package wago
+ 
+ import (
+ 	"encoding/binary"
++	"errors"
+ 	gc "github.com/wago-org/wago/src/core/runtime/gc/native"
+ 	"runtime"
+ 	"testing"
+@@ -26,7 +27,7 @@ func TestGCPackedStructGetExtentFallback(t *testing.T) {
+ 	}
+ 	view := in.gc.NativeView()
+ 	saved := *view
+-	defer func() { *view = saved }()
++	defer func() { *view = saved; in.gcNativeView.Handles = saved.Handles }()
+ 	index := uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)) >> 1
+ 	handles := append([]byte(nil), unsafe.Slice((*byte)(offHeapPtr(view.Handles)), int(view.HandleCount)*gc.NativeHandleStride)...)
+ 	handle := handles[int(index)*gc.NativeHandleStride:][:gc.NativeHandleStride]
+@@ -34,25 +35,33 @@ func TestGCPackedStructGetExtentFallback(t *testing.T) {
+ 	required := offset + 2
+ 	object := make([]byte, required)
+ 	binary.LittleEndian.PutUint16(object[offset:], 123)
+-	for _, mode := range []string{"handle extent", "header extent", "count"} {
++	for _, mode := range []string{"handle extent", "unknown type", "count"} {
+ 		*view = saved
+ 		view.Handles = uintptr(unsafe.Pointer(&handles[0]))
++		in.gcNativeView.Handles = view.Handles
+ 		space := &view.Spaces[handle[gc.NativeHandleSpaceOffset]]
+ 		space.Base, space.Bytes = uintptr(unsafe.Pointer(&object[0])), required
++		binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], binary.LittleEndian.Uint32(unsafe.Slice((*byte)(offHeapPtr(saved.Handles+uintptr(index)*gc.NativeHandleStride)), gc.NativeHandleStride)[gc.NativeHandleTypeIDOffset:]))
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleOffsetOffset:], 0)
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required)
+-		binary.LittleEndian.PutUint32(object[4:], required)
+ 		switch mode {
+ 		case "handle extent":
+ 			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required-1)
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
+-		case "header extent":
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
++		case "unknown type":
++			binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], ^uint32(0))
+ 		case "count":
+ 			view.HandleCount = index
+ 		}
+ 		got, err := in.Invoke("global")
+ 		*view = saved
++		in.gcNativeView.Handles = saved.Handles
++		if runtime.GOARCH == "amd64" && mode != "count" {
++			var trap *TrapError
++			if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
++				t.Fatalf("%s: %v; want native bounds/type trap", mode, err)
++			}
++			continue
++		}
+ 		if err != nil || len(got) != 1 || got[0] != 0xffffffff {
+ 			t.Fatalf("%s: %v, %v; want signed helper value0xffffffff", mode, got, err)
+ 		}
+diff --git a/src/wago/gc_struct_get_scalar_native_test.go b/src/wago/gc_struct_get_scalar_native_test.go
+index 427741c38..f29dcfec0 100644
+--- a/src/wago/gc_struct_get_scalar_native_test.go
++++ b/src/wago/gc_struct_get_scalar_native_test.go
+@@ -90,7 +90,7 @@ func TestGCScalarStructGetExtentFallback(t *testing.T) {
+ 	}
+ 	view := in.gc.NativeView()
+ 	saved := *view
+-	defer func() { *view = saved }()
++	defer func() { *view = saved; in.gcNativeView.Handles = saved.Handles }()
+ 	index := uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)) >> 1
+ 	handles := append([]byte(nil), unsafe.Slice((*byte)(offHeapPtr(view.Handles)), int(view.HandleCount)*gc.NativeHandleStride)...)
+ 	handle := handles[int(index)*gc.NativeHandleStride:][:gc.NativeHandleStride]
+@@ -98,25 +98,33 @@ func TestGCScalarStructGetExtentFallback(t *testing.T) {
+ 	required := offset + 4
+ 	object := make([]byte, required)
+ 	binary.LittleEndian.PutUint32(object[offset:], 999)
+-	for _, mode := range []string{"handle extent", "header extent", "count"} {
++	for _, mode := range []string{"handle extent", "unknown type", "count"} {
+ 		*view = saved
+ 		view.Handles = uintptr(unsafe.Pointer(&handles[0]))
++		in.gcNativeView.Handles = view.Handles
+ 		space := &view.Spaces[handle[gc.NativeHandleSpaceOffset]]
+ 		space.Base, space.Bytes = uintptr(unsafe.Pointer(&object[0])), required
++		binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], binary.LittleEndian.Uint32(unsafe.Slice((*byte)(offHeapPtr(saved.Handles+uintptr(index)*gc.NativeHandleStride)), gc.NativeHandleStride)[gc.NativeHandleTypeIDOffset:]))
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleOffsetOffset:], 0)
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required)
+-		binary.LittleEndian.PutUint32(object[4:], required)
+ 		switch mode {
+ 		case "handle extent":
+ 			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required-1)
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
+-		case "header extent":
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
++		case "unknown type":
++			binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], ^uint32(0))
+ 		case "count":
+ 			view.HandleCount = index
+ 		}
+ 		got, err := in.Invoke("global")
+ 		*view = saved
++		in.gcNativeView.Handles = saved.Handles
++		if runtime.GOARCH == "amd64" && mode != "count" {
++			var trap *TrapError
++			if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
++				t.Fatalf("%s: %v; want native bounds/type trap", mode, err)
++			}
++			continue
++		}
+ 		if err != nil || len(got) != 1 || got[0] != 17 {
+ 			t.Fatalf("%s: %v, %v; want helper value17", mode, got, err)
+ 		}
+diff --git a/src/wago/gc_struct_globals_amd64_test.go b/src/wago/gc_struct_globals_amd64_test.go
+index d29b24774..781e21ca2 100644
+--- a/src/wago/gc_struct_globals_amd64_test.go
++++ b/src/wago/gc_struct_globals_amd64_test.go
+@@ -94,7 +94,7 @@ func TestStagedGCStructGlobalRootRollbackAndCodecGate(t *testing.T) {
+ 	}
+ 	defer c.Close()
+ 	for i := 0; i < 3; i++ {
+-		if in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 32, TinyBlockBytes: 16}}); err == nil || !strings.Contains(err.Error(), "tiny heap exhausted") {
++		if in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 16, TinyBlockBytes: 16}}); err == nil || !strings.Contains(err.Error(), "tiny heap exhausted") {
+ 			if in != nil {
+ 				_ = in.Close()
+ 			}
+diff --git a/src/wago/gc_struct_helper_amd64_test.go b/src/wago/gc_struct_helper_amd64_test.go
+index 277808831..fa1cfc6a9 100644
+--- a/src/wago/gc_struct_helper_amd64_test.go
++++ b/src/wago/gc_struct_helper_amd64_test.go
+@@ -192,7 +192,7 @@ func TestStagedGCStructPackedGlobalExecution(t *testing.T) {
+ 	if _, err := instantiateCore(&loaded, InstantiateOptions{}); err == nil || !strings.Contains(err.Error(), "required feature") {
+ 		t.Fatalf("packed codec-loaded instantiate = %v, want required-feature rejection", err)
+ 	}
+-	if in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 32, TinyBlockBytes: 16}}); err == nil || !strings.Contains(err.Error(), "tiny heap exhausted") {
++	if in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 16, TinyBlockBytes: 16}}); err == nil || !strings.Contains(err.Error(), "tiny heap exhausted") {
+ 		if in != nil {
+ 			_ = in.Close()
+ 		}
+@@ -266,7 +266,7 @@ func TestStagedGCStructBasicNumericActionsAndPublicResultToken(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	defer c.Close()
+-	in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 64, TinyBlockBytes: 16}})
++	in, err := instantiateCore(c, InstantiateOptions{GC: GCConfig{Profile: GCProfileTiny, TinyHeapBytes: 32, TinyBlockBytes: 16}})
+ 	if err != nil {
+ 		t.Fatalf("instantiate two-root Tiny product: %v", err)
+ 	}
+@@ -288,6 +288,14 @@ func TestStagedGCStructGetAllocationFailureAndCodecGate(t *testing.T) {
+ 		t.Fatalf("instantiate tiny exhausted product: %v", err)
+ 	}
+ 	defer in.Close()
++	// The compact object fits one Tiny block. Keep that block rooted so the
++	// tested constructor still exercises repeatable allocation failure.
++	root, rootErr := in.gc.NewStructDefault(in.requireGCDomainType(0))
++	if rootErr != nil {
++		t.Fatal(rootErr)
++	}
++	in.gc.NewGlobalSlot(root)
++
+ 	if _, err := in.Invoke("get"); err == nil || !strings.Contains(err.Error(), "tiny heap exhausted") {
+ 		t.Fatalf("tiny exhausted invocation = %v, want deterministic allocation failure", err)
+ 	}
+diff --git a/src/wago/gc_struct_set_packed_native_test.go b/src/wago/gc_struct_set_packed_native_test.go
+index b2db4cc42..4ab966834 100644
+--- a/src/wago/gc_struct_set_packed_native_test.go
++++ b/src/wago/gc_struct_set_packed_native_test.go
+@@ -167,34 +167,45 @@ func TestGCPackedStructSetExtentFallback(t *testing.T) {
+ 	}
+ 	view := in.gc.NativeView()
+ 	saved := *view
+-	defer func() { *view = saved }()
++	defer func() { *view = saved; in.gcNativeView.Handles = saved.Handles }()
+ 	index := uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)) >> 1
+ 	handles := append([]byte(nil), unsafe.Slice((*byte)(offHeapPtr(view.Handles)), int(view.HandleCount)*gc.NativeHandleStride)...)
+ 	handle := handles[int(index)*gc.NativeHandleStride:][:gc.NativeHandleStride]
+ 	offset := gc.PayloadOffset + c.GCTypeDescs[0].Fields[20].Offset
+ 	required := offset + 1
+ 	object := make([]byte, required+3)
+-	for _, mode := range []string{"handle extent", "header extent", "count"} {
++	for _, mode := range []string{"handle extent", "unknown type", "count"} {
+ 		*view = saved
+ 		view.Handles = uintptr(unsafe.Pointer(&handles[0]))
++		in.gcNativeView.Handles = view.Handles
+ 		space := &view.Spaces[handle[gc.NativeHandleSpaceOffset]]
+ 		space.Base, space.Bytes = uintptr(unsafe.Pointer(&object[0])), required
++		binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], binary.LittleEndian.Uint32(unsafe.Slice((*byte)(offHeapPtr(saved.Handles+uintptr(index)*gc.NativeHandleStride)), gc.NativeHandleStride)[gc.NativeHandleTypeIDOffset:]))
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleOffsetOffset:], 0)
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required)
+-		binary.LittleEndian.PutUint32(object[4:], required)
+ 		object[offset] = 99
+ 		switch mode {
+ 		case "handle extent":
+ 			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required-1)
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
+-		case "header extent":
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
++		case "unknown type":
++			binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], ^uint32(0))
+ 		case "count":
+ 			view.HandleCount = index
+ 		}
+ 		_, err := in.Invoke("global", 23)
+ 		*view = saved
++		in.gcNativeView.Handles = saved.Handles
+ 		got, getErr := in.Invoke("get")
++		if runtime.GOARCH == "amd64" && mode != "count" {
++			var trap *TrapError
++			if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
++				t.Fatalf("%s: %v; want native bounds/type trap", mode, err)
++			}
++			if getErr != nil || len(got) != 1 || got[0] != 17 {
++				t.Fatalf("%s changed real object: %v, %v", mode, got, getErr)
++			}
++			continue
++		}
+ 		if err != nil || getErr != nil || len(got) != 1 || got[0] != 23 || object[offset] != 99 {
+ 			t.Fatalf("%s: write%v read%v,%v fake%d", mode, err, got, getErr, object[offset])
+ 		}
+diff --git a/src/wago/gc_struct_set_scalar_native_test.go b/src/wago/gc_struct_set_scalar_native_test.go
+index 13a66d93c..97085b473 100644
+--- a/src/wago/gc_struct_set_scalar_native_test.go
++++ b/src/wago/gc_struct_set_scalar_native_test.go
+@@ -170,34 +170,45 @@ func TestGCScalarStructSetExtentFallback(t *testing.T) {
+ 	}
+ 	view := in.gc.NativeView()
+ 	saved := *view
+-	defer func() { *view = saved }()
++	defer func() { *view = saved; in.gcNativeView.Handles = saved.Handles }()
+ 	index := uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)) >> 1
+ 	handles := append([]byte(nil), unsafe.Slice((*byte)(offHeapPtr(view.Handles)), int(view.HandleCount)*gc.NativeHandleStride)...)
+ 	handle := handles[int(index)*gc.NativeHandleStride:][:gc.NativeHandleStride]
+ 	offset := gc.PayloadOffset + c.GCTypeDescs[0].Fields[20].Offset
+ 	required := offset + 4
+ 	object := make([]byte, required)
+-	for _, mode := range []string{"handle extent", "header extent", "count"} {
++	for _, mode := range []string{"handle extent", "unknown type", "count"} {
+ 		*view = saved
+ 		view.Handles = uintptr(unsafe.Pointer(&handles[0]))
++		in.gcNativeView.Handles = view.Handles
+ 		space := &view.Spaces[handle[gc.NativeHandleSpaceOffset]]
+ 		space.Base, space.Bytes = uintptr(unsafe.Pointer(&object[0])), required
++		binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], binary.LittleEndian.Uint32(unsafe.Slice((*byte)(offHeapPtr(saved.Handles+uintptr(index)*gc.NativeHandleStride)), gc.NativeHandleStride)[gc.NativeHandleTypeIDOffset:]))
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleOffsetOffset:], 0)
+ 		binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required)
+-		binary.LittleEndian.PutUint32(object[4:], required)
+ 		binary.LittleEndian.PutUint32(object[offset:], 999)
+ 		switch mode {
+ 		case "handle extent":
+ 			binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], required-1)
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
+-		case "header extent":
+-			binary.LittleEndian.PutUint32(object[4:], required-1)
++		case "unknown type":
++			binary.LittleEndian.PutUint32(handle[gc.NativeHandleTypeIDOffset:], ^uint32(0))
+ 		case "count":
+ 			view.HandleCount = index
+ 		}
+ 		_, err := in.Invoke("global", 23)
+ 		*view = saved
++		in.gcNativeView.Handles = saved.Handles
+ 		got, getErr := in.Invoke("get")
++		if runtime.GOARCH == "amd64" && mode != "count" {
++			var trap *TrapError
++			if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
++				t.Fatalf("%s: %v; want native bounds/type trap", mode, err)
++			}
++			if getErr != nil || len(got) != 1 || got[0] != 17 {
++				t.Fatalf("%s changed real object: %v, %v", mode, got, getErr)
++			}
++			continue
++		}
+ 		if err != nil || getErr != nil || len(got) != 1 || got[0] != 23 || binary.LittleEndian.Uint32(object[offset:]) != 999 {
+ 			t.Fatalf("%s: write%v read%v,%v fake%d", mode, err, got, getErr, binary.LittleEndian.Uint32(object[offset:]))
+ 		}
+diff --git a/src/wago/gc_test_field_amd64_test.go b/src/wago/gc_test_field_amd64_test.go
+index d7d2edc8a..8344628d3 100644
+--- a/src/wago/gc_test_field_amd64_test.go
++++ b/src/wago/gc_test_field_amd64_test.go
+@@ -116,7 +116,7 @@ func TestGCTestFieldConditionalExtent(t *testing.T) {
+ 	defer loaded.Close()
+ 	for ai, artifact := range []*Compiled{c, loaded} {
+ 		for _, setup := range []string{"init", "wrong"} {
+-			for _, kind := range []string{"header", "handle", "space", "interval", "high-bits"} {
++			for _, kind := range []string{"extent", "space", "interval", "high-bits"} {
+ 				t.Run(fmt.Sprintf("artifact%d/%s/%s", ai, setup, kind), func(t *testing.T) {
+ 					in, e := Instantiate(artifact)
+ 					if e != nil {
+@@ -130,16 +130,15 @@ func TestGCTestFieldConditionalExtent(t *testing.T) {
+ 					ref := gc.Ref(uint32(bits))
+ 					v := in.gc.NativeView()
+ 					h := unsafe.Slice((*byte)(offHeapPtr(v.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-					header := unsafe.Slice((*byte)(offHeapPtr(v.Spaces[h[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(h)))), gc.HeaderSize)
+ 					var restore func()
+ 					switch kind {
+-					case "header", "handle":
+-						target := header[4:]
++					case "extent":
++						target := h[gc.NativeHandleSizeOffset:]
+ 						if kind == "handle" {
+ 							target = h[gc.NativeHandleSizeOffset:]
+ 						}
+ 						old := binary.LittleEndian.Uint32(target)
+-						binary.LittleEndian.PutUint32(target, gc.HeaderSize)
++						binary.LittleEndian.PutUint32(target, gc.PayloadOffset+3)
+ 						restore = func() { binary.LittleEndian.PutUint32(target, old) }
+ 					case "space":
+ 						old := h[gc.NativeHandleSpaceOffset]
+@@ -313,10 +312,9 @@ func TestGCTestFieldDirtyPins(t *testing.T) {
+ 					ref := gc.Ref(uint32(readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)))
+ 					v := in.gc.NativeView()
+ 					h := unsafe.Slice((*byte)(offHeapPtr(v.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-					header := unsafe.Slice((*byte)(offHeapPtr(v.Spaces[h[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(h)))), gc.HeaderSize)
+-					old := binary.LittleEndian.Uint32(header[4:])
+-					binary.LittleEndian.PutUint32(header[4:], gc.HeaderSize)
+-					restore = func() { binary.LittleEndian.PutUint32(header[4:], old) }
++					old := binary.LittleEndian.Uint32(h[gc.NativeHandleSizeOffset:])
++					binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], gc.PayloadOffset+3)
++					restore = func() { binary.LittleEndian.PutUint32(h[gc.NativeHandleSizeOffset:], old) }
+ 				}
+ 				got, err := in.Invoke("dirty")
+ 				if restore != nil {
+diff --git a/src/wago/gc_trapping_guard_amd64_test.go b/src/wago/gc_trapping_guard_amd64_test.go
+index 53aef0448..9348b8a2e 100644
+--- a/src/wago/gc_trapping_guard_amd64_test.go
++++ b/src/wago/gc_trapping_guard_amd64_test.go
+@@ -166,10 +166,9 @@ func TestGCTrappingGuardFirstExtent(t *testing.T) {
+ 	ref := readGlobalObject(in.globalCells[0], in.c.Globals[0].Type)
+ 	view := in.gc.NativeView()
+ 	handle := unsafe.Slice((*byte)(offHeapPtr(view.Handles+uintptr(ref>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+-	header := unsafe.Slice((*byte)(offHeapPtr(view.Spaces[handle[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(handle)))), gc.HeaderSize)
+-	old := binary.LittleEndian.Uint32(header[4:])
+-	binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset+4)
+-	defer binary.LittleEndian.PutUint32(header[4:], old)
++	old := binary.LittleEndian.Uint32(handle[gc.NativeHandleSizeOffset:])
++	binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.PayloadOffset+4)
++	defer binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], old)
+ 	_, err = in.Invoke("dirty", 4)
+ 	var trap *TrapError
+ 	if !errors.As(err, &trap) || trap.Code != TrapCastFailure {
+@@ -180,7 +179,7 @@ func TestGCTrappingGuardFirstExtent(t *testing.T) {
+ 	}
+ 	// A later larger field must retain its later trap. In particular, a true
+ 	// guard still traps as unreachable before that larger extent is checked.
+-	binary.LittleEndian.PutUint32(header[4:], gc.PayloadOffset+8)
++	binary.LittleEndian.PutUint32(handle[gc.NativeHandleSizeOffset:], gc.PayloadOffset+8)
+ 	for _, tc := range []struct {
+ 		index uint64
+ 		code  TrapCode
+diff --git a/src/wago/gc_value_checks_amd64_test.go b/src/wago/gc_value_checks_amd64_test.go
+index e4b4e9aad..57e2b0ece 100644
+--- a/src/wago/gc_value_checks_amd64_test.go
++++ b/src/wago/gc_value_checks_amd64_test.go
+@@ -105,7 +105,7 @@ func TestGCValueChecksExtentAndChild(t *testing.T) {
+ 	loaded := publicArtifactRoundTrip(t, c)
+ 	defer loaded.Close()
+ 	for _, artifact := range []*Compiled{c, loaded} {
+-		for _, kind := range []string{"header", "handle", "child"} {
++		for _, kind := range []string{"extent", "child"} {
+ 			t.Run(kind, func(t *testing.T) {
+ 				in, e := Instantiate(artifact)
+ 				if e != nil {
+@@ -124,9 +124,7 @@ func TestGCValueChecksExtentAndChild(t *testing.T) {
+ 				h := unsafe.Slice((*byte)(offHeapPtr(v.Handles+uintptr(gc.Ref(uint32(bits))>>1)*gc.NativeHandleStride)), gc.NativeHandleStride)
+ 				obj := unsafe.Slice((*byte)(offHeapPtr(v.Spaces[h[gc.NativeHandleSpaceOffset]].Base+uintptr(binary.LittleEndian.Uint32(h)))), 32)
+ 				var target []byte
+-				if kind == "header" {
+-					target = obj[4:]
+-				} else if kind == "handle" {
++				if kind == "extent" {
+ 					target = h[gc.NativeHandleSizeOffset:]
+ 				} else {
+ 					target = obj[gc.PayloadOffset+4:]
+@@ -142,7 +140,7 @@ func TestGCValueChecksExtentAndChild(t *testing.T) {
+ 					}
+ 					return
+ 				}
+-				binary.LittleEndian.PutUint32(target, 20)
++				binary.LittleEndian.PutUint32(target, gc.PayloadOffset+4)
+ 				if got, e := in.Invoke("small"); e != nil || len(got) != 1 || got[0] != 14 {
+ 					t.Fatalf("small read moved a later extent check: %v,%v", got, e)
+ 				}

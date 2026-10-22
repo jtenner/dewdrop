@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/tmp/wago-gc-deferred-evidence/wago-concurrent-regalloc.test",
+    "-test.run=TestCompiledGenericGCArtifactRejectsNativeABIMismatch|TestGCConcurrent",
+    "-test.count=1",
+    "-test.timeout=30s"
+  ],
+  "seconds": 0.022664034986519255,
+  "exit": 0,
+  "user_seconds": 0.023108999999999998,
+  "system_seconds": 0.002209,
+  "peak_rss_kib": 29692,
+  "minor_faults": 1178,
+  "major_faults": 0,
+  "voluntary_context_switches": 267,
+  "involuntary_context_switches": 3
+}

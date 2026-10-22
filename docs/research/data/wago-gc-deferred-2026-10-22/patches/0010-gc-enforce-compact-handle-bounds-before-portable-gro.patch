@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 03:35:26 +0000
+Subject: [PATCH 10/20] gc: enforce compact handle bounds before portable
+ growth
+
+---
+ .../research/deferred-gc-implementation-2026-10-22.md |  5 +++++
+ src/core/runtime/gc/native/stable_backing.go          |  3 +++
+ src/core/runtime/gc/native/stable_backing_test.go     | 11 +++++++++++
+ 3 files changed, 19 insertions(+)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index ab425caaf..34a34ab08 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -341,3 +341,8 @@ Raw data: immix-evac-screen.log/json. Empty-region bytes are not measured RSS.
+ Immix remains opt-in: its current tracing screen does not justify replacing the
+ faster default collector. All three implementation stages are available for
+ continued workload qualification.
++
++The final handle-bound audit applies compact-reference index limits before both
++mapped and portable fast returns. Negative growth requests and index overflow
++produce diagnostic errors without allocating or publishing. Boundary tests cover
++both backing products.
+diff --git a/src/core/runtime/gc/native/stable_backing.go b/src/core/runtime/gc/native/stable_backing.go
+index 56147c126..9cc556e62 100644
+--- a/src/core/runtime/gc/native/stable_backing.go
++++ b/src/core/runtime/gc/native/stable_backing.go
+@@ -74,6 +74,9 @@ func (c *Collector) initStableBacking(initialBytes uint32) error {
+ // ensureHandleCapacity runs before allocating object bytes or publishing a
+ // native reservation. A commit failure is returned without losing live state.
+ func (c *Collector) ensureHandleCapacity(extra int) error {
++	if extra < 0 || uint64(len(c.handles))+uint64(extra) > 1<<31 {
++		return fmt.Errorf("gc: handle capacity exceeds compact reference bounds (%d + %d)", len(c.handles), extra)
++	}
+ 	if c.backing == nil || extra <= cap(c.handles)-len(c.handles) {
+ 		return nil
+ 	}
+diff --git a/src/core/runtime/gc/native/stable_backing_test.go b/src/core/runtime/gc/native/stable_backing_test.go
+index a45a3094c..c4f383b2b 100644
+--- a/src/core/runtime/gc/native/stable_backing_test.go
++++ b/src/core/runtime/gc/native/stable_backing_test.go
+@@ -124,3 +124,14 @@ func BenchmarkBackingGrowth(b *testing.B) {
+ 		})
+ 	}
+ }
++
++func TestHandleCapacityBoundsApplyToPortableAndMappedBacking(t *testing.T) {
++	for _, portable := range []bool{false, true} {
++		c := newTestCollector(t, Config{DisableVirtualBacking: portable})
++		for _, extra := range []int{-1, int(1 << 31)} {
++			if err := c.ensureHandleCapacity(extra); err == nil {
++				t.Fatalf("portable=%v extra=%d: invalid capacity accepted", portable, extra)
++			}
++		}
++	}
++}

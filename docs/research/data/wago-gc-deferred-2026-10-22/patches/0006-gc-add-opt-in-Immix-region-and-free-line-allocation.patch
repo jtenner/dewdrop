@@ -1,0 +1,1506 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 02:29:51 +0000
+Subject: [PATCH 06/20] gc: add opt-in Immix region and free-line allocation
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  51 ++
+ src/core/runtime/gc/native/alloc.go           |   6 +-
+ src/core/runtime/gc/native/barrier.go         |   8 +
+ .../runtime/gc/native/card_driven_test.go     |   2 +-
+ src/core/runtime/gc/native/collect.go         |   6 +-
+ src/core/runtime/gc/native/collector.go       |   2 +
+ src/core/runtime/gc/native/config.go          |  13 +-
+ src/core/runtime/gc/native/immix.go           | 507 ++++++++++++++++++
+ .../gc/native/immix_failure_debug_test.go     |  51 ++
+ src/core/runtime/gc/native/immix_test.go      | 333 ++++++++++++
+ .../gc/native/major_blocks_coverage_test.go   |   4 +-
+ src/core/runtime/gc/native/mark.go            |   6 +
+ .../gc/native/profile_throughput_test.go      |   4 +-
+ src/core/runtime/gc/native/survivor.go        |   6 +
+ .../runtime/gc/native/throughput_alloc.go     |  68 ++-
+ src/core/runtime/gc/native/verify.go          |   7 +-
+ src/core/runtime/gc/types.go                  |   4 +
+ src/wago/api.go                               |   1 +
+ src/wago/gc_immix_amd64_test.go               |  55 ++
+ wago.go                                       |   1 +
+ 20 files changed, 1112 insertions(+), 23 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/immix.go
+ create mode 100644 src/core/runtime/gc/native/immix_failure_debug_test.go
+ create mode 100644 src/core/runtime/gc/native/immix_test.go
+ create mode 100644 src/wago/gc_immix_amd64_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 4ac3aec94..4dc726a30 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -202,3 +202,54 @@ fixed nursery and handle backing. This is accessible-page accounting, not RSS.
+ The process RSS maximum includes the unchanged vector case and stays about
+ 25 MiB. Timings are screening results; whole-compiler qualification remains
+ outstanding. Raw five-sample medians are in compact-class-summary.json.
++
++## First fixed compiler comparison
++
++The isolated host copies use the same frozen transform-worker code and the same
++three private managed-fork changes. The control is corrected to base 9d84600f1,
++including its retained read-only summaries and diagnostic fix. The candidate is
++3fe616449 (stable backing, compact metadata, 16-byte class). Neither uses Immix
++or collection workers yet. Fresh native/result caches, pinned Wasm/request,
++CPUs 12/14, GOMAXPROCS=2, -p8, 512 MiB heap and 64 MiB nursery are unchanged.
++
++One screening pair: control 34.704 s, peak RSS 1,135,384 KiB; candidate 30.185 s,
++peak RSS 614,980 KiB. Both output hashes match the pinned expected values, Wasm
++validation passes, and main returns 42. These are one-pair observations, not a
++qualified speed factor. Four seconds remains unmet. Full records are in
++`measurements/gc-deferred-{control,compact}-r1.json`.
++
++## Immix stage 1: opt-in region ownership
++
++`GCConfig.Allocator = GCAllocatorImmix` opts into 32 KiB regions, 128-byte lines
++and 16-byte allocation alignment. The default and Tiny profiles remain as
++before. Limits must be whole regions. Separate reference/pointer-free cursors
++allocate through free line runs. Dedicated large extents occupy independently
++owned consecutive regions and retain the existing in-place young-large aging.
++No guest reference is rewritten. Heap and handle bases retain their stable
++backing rules and the portable comparison still works.
++
++Each region owns object-start bits, packed line-use/mark/card bits, per-line
++object-overlap counts, generation/occupancy/live-byte state and an epoch. Mark
++epoch wrap invalidates old words before reuse. Coarse cards are conservative
++locality hints; exact object cards stay authoritative for minor collection.
++Metadata is pointer-free and capped by the configured region count (632 bytes
++per region, about 1.93%). The ordinary collector gains one optional pointer
++(+8 bytes, 3,232 bytes with the 512-handle batch). All exact layout assertions
++are updated explicitly. Transaction snapshots also save both cursors and region
++length. Failed destinations release ownership before restoring the snapshot.
++
++Lazy old frees keep their exact object boundaries. They are reconciled only
++when allocation needs another line run; they cannot be coalesced as generic
++spans because shared line counts need each original object boundary. A live
++object prevents reuse of its boundary line. Empty blocks lose old cursor claims
++before changing class. Unpublished native large reservations are explicit
++allocator owners in Verify until publication or cancellation.
++
++Tests pass: complete collector/debug suites, five-thousand-operation randomized
++mapped/portable retention runs, shared-line exclusion, lazy reuse, class changes,
++independent large extents, transaction restoration, promotion failure injection,
++packed epoch wrap, metadata caps and unused native reservation ownership.
++Native reads, roots, artifact reload and repeated large native reservations pass
++(25.92 s including build, 0.004 s tests). Region-local tracing, accelerated empty
++sweep, page advice and selective evacuation are the next stage. No Immix speed
++claim or default-profile switch is made from these tests.
+diff --git a/src/core/runtime/gc/native/alloc.go b/src/core/runtime/gc/native/alloc.go
+index ef1b4001f..5ca9968d0 100644
+--- a/src/core/runtime/gc/native/alloc.go
++++ b/src/core/runtime/gc/native/alloc.go
+@@ -27,7 +27,7 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 			}
+ 			tx = c.throughput.beginAllocTransaction()
+ 		}
+-		e, err := c.throughput.alloc(size, spaceLarge)
++		e, err := c.throughput.alloc(size, spaceLarge, !d.HasRefs)
+ 		if err != nil {
+ 			if isInjectedFailure(err) {
+ 				c.throughput.restoreAllocTransaction(tx)
+@@ -81,7 +81,7 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 			}
+ 			allocationTx = c.throughput.beginAllocTransaction()
+ 		}
+-		e, err = c.throughput.alloc(size, spaceLarge)
++		e, err = c.throughput.alloc(size, spaceLarge, !d.HasRefs)
+ 		if err != nil {
+ 			if isInjectedFailure(err) {
+ 				c.throughput.restoreAllocTransaction(allocationTx)
+@@ -102,7 +102,7 @@ func (c *Collector) alloc(d TypeDesc, size, aux uint32, roots RootSet) (Ref, err
+ 				}
+ 				allocationTx = c.throughput.beginAllocTransaction()
+ 			}
+-			e, err = c.throughput.alloc(size, spaceLarge)
++			e, err = c.throughput.alloc(size, spaceLarge, !d.HasRefs)
+ 			if err != nil {
+ 				return Null(), err
+ 			}
+diff --git a/src/core/runtime/gc/native/barrier.go b/src/core/runtime/gc/native/barrier.go
+index ca38bae1a..64c54455d 100644
+--- a/src/core/runtime/gc/native/barrier.go
++++ b/src/core/runtime/gc/native/barrier.go
+@@ -264,6 +264,11 @@ func (c *Collector) addObjectCardRange(h, start, end uint32) {
+ 		end = payloadBytes - 1
+ 	}
+ 
++	if m := c.throughput.immix; m != nil {
++		base := e.off + c.payloadOffset(h)
++		m.noteCards(base+start, base+end)
++	}
++
+ 	if err := c.ensureCardSlot(h); err != nil {
+ 		c.cardFallback = true
+ 		return
+@@ -548,6 +553,9 @@ func (c *Collector) removeCardsForHandle(h uint32) {
+ 	c.setCardSlot(h, 0)
+ }
+ func (c *Collector) clearCardMetadata() {
++	if m := c.throughput.immix; m != nil {
++		m.clearCards()
++	}
+ 	c.lastCardBounds = objectCardBounds{}
+ 	for _, card := range c.objectCards {
+ 		if card.handle != 0 && int(card.handle) < len(c.handles) {
+diff --git a/src/core/runtime/gc/native/card_driven_test.go b/src/core/runtime/gc/native/card_driven_test.go
+index 1e259c34f..9cfd98c76 100644
+--- a/src/core/runtime/gc/native/card_driven_test.go
++++ b/src/core/runtime/gc/native/card_driven_test.go
+@@ -462,7 +462,7 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	}
+ 	// Bounds, lazy major-block state, and one large-array list-index hint have
+ 	// fixed descriptor costs. Promotion sorting adds one bounded scratch descriptor.
+-	wantCollector := uintptr(1232) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
++	wantCollector := uintptr(1232) + unsafe.Sizeof((*immixHeap)(nil)) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
+ 	if got := unsafe.Sizeof(Collector{}); got != wantCollector {
+ 		t.Fatalf("Collector size=%d, want %d", got, wantCollector)
+ 	}
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 460bb00f2..5a2e2332e 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -479,7 +479,7 @@ func (c *Collector) promoteNursery(captured bool) (copiedBytes, promotedBytes ui
+ 			i = j
+ 			continue
+ 		}
+-		e, allocErr := c.throughput.alloc(size, spaceOld)
++		e, allocErr := c.throughput.alloc(size, spaceOld, c.handles[plans[i].handle].class&NativeHandlePointerFreeBit != 0)
+ 		if allocErr != nil {
+ 			rollback(nil)
+ 			return 0, 0, false, allocErr
+@@ -653,7 +653,7 @@ func (c *Collector) promoteMarkedNurseryImmediate() (copiedBytes, promotedBytes
+ 			i = j
+ 			continue
+ 		}
+-		e, allocErr := c.throughput.alloc(size, spaceOld)
++		e, allocErr := c.throughput.alloc(size, spaceOld, c.handles[plans[i].handle].class&NativeHandlePointerFreeBit != 0)
+ 		if allocErr != nil {
+ 			rollback(nil)
+ 			return 0, 0, allocErr
+@@ -749,7 +749,7 @@ func (c *Collector) promoteHandle(h uint32) error {
+ 		return err
+ 	}
+ 	tx := c.throughput.beginAllocTransaction()
+-	oldEntry, err := c.throughput.alloc(c.handles[h].size, spaceOld)
++	oldEntry, err := c.throughput.alloc(c.handles[h].size, spaceOld, c.handles[h].class&NativeHandlePointerFreeBit != 0)
+ 	if err != nil {
+ 		c.throughput.restoreAllocTransaction(tx)
+ 		return err
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index a817f6191..e1fc010d3 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -25,6 +25,8 @@ type AllocatorKind uint8
+ const (
+ 	AllocatorPagedSizeClass AllocatorKind = iota
+ 	AllocatorTinyFixedBlock
++	// AllocatorImmix opts Throughput into stable 32-KiB regions and 128-byte lines.
++	AllocatorImmix
+ )
+ 
+ // RuntimeKind selects the GC runtime family after Config normalization.
+diff --git a/src/core/runtime/gc/native/config.go b/src/core/runtime/gc/native/config.go
+index 5f3998ee4..ac5ea7b1a 100644
+--- a/src/core/runtime/gc/native/config.go
++++ b/src/core/runtime/gc/native/config.go
+@@ -47,8 +47,8 @@ func normalizeConfig(cfg Config) (Config, error) {
+ 	if cfg.DisableMovingNursery && (cfg.SurvivorBytes != 0 || cfg.MinorPauseTargetMicros != 0) {
+ 		return cfg, fmt.Errorf("gc: disabled moving nursery cannot configure survivor policy")
+ 	}
+-	if cfg.Allocator != AllocatorPagedSizeClass || cfg.Runtime != RuntimeGenerational {
+-		return cfg, fmt.Errorf("gc: profile throughput requires paged size-class allocator and generational runtime")
++	if (cfg.Allocator != AllocatorPagedSizeClass && cfg.Allocator != AllocatorImmix) || cfg.Runtime != RuntimeGenerational {
++		return cfg, fmt.Errorf("gc: profile throughput requires paged size-class or Immix allocation and generational runtime")
+ 	}
+ 	if cfg.ThroughputHeapBytes == 0 {
+ 		cfg.ThroughputHeapBytes = defaultThroughputHeapBytes
+@@ -59,6 +59,15 @@ func normalizeConfig(cfg Config) (Config, error) {
+ 	if cfg.ThroughputClassLimit == 0 {
+ 		cfg.ThroughputClassLimit = defaultThroughputClassLimit
+ 	}
++	if cfg.Allocator == AllocatorImmix {
++		if cfg.OldBlockBytes != 0 && cfg.OldBlockBytes != immixBlockBytes {
++			return cfg, fmt.Errorf("gc: Immix block size must be %d", immixBlockBytes)
++		}
++		if cfg.ThroughputHeapBytes < immixBlockBytes || cfg.ThroughputHeapBytes%immixBlockBytes != 0 {
++			return cfg, fmt.Errorf("gc: Immix heap limit must be a multiple of %d", immixBlockBytes)
++		}
++		cfg.OldBlockBytes = immixBlockBytes
++	}
+ 	if cfg.StressNurseryBytes != 0 {
+ 		cfg.NurseryBytes = cfg.StressNurseryBytes
+ 	}
+diff --git a/src/core/runtime/gc/native/immix.go b/src/core/runtime/gc/native/immix.go
+new file mode 100644
+index 000000000..b81f9a3fa
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix.go
+@@ -0,0 +1,507 @@
++package gc
++
++import (
++	"errors"
++	"fmt"
++	"math/bits"
++	"unsafe"
++)
++
++const (
++	immixBlockBytes     uint32 = 32 << 10
++	immixLineBytes      uint32 = 128
++	immixLines                 = immixBlockBytes / immixLineBytes
++	immixUnits                 = immixBlockBytes / 16
++	immixLargeThreshold        = immixBlockBytes / 2
++)
++
++type immixRegionKind uint8
++
++const (
++	immixEmpty immixRegionKind = iota
++	immixReferences
++	immixPointerFree
++	immixLarge
++)
++
++// Metadata never contains guest references or raw object pointers. Line counts
++// count object overlaps, not bytes, so shared boundary lines remain occupied
++// until their final object is swept. Eight aligned starts fit in one line.
++type immixRegion struct {
++	starts      [immixUnits / 64]uint64
++	used        [immixLines / 64]uint64
++	marks       [immixLines / 64]uint64
++	cards       [immixLines / 64]uint64
++	counts      [immixLines]uint8
++	owner       uint32 // one-based first block for a dedicated large region
++	blocks      uint32 // extent on its first block only
++	epoch       uint32
++	liveBytes   uint32
++	occupied    uint16
++	kind        immixRegionKind
++	released    bool
++	generation  uint8
++	pointerFree bool
++}
++
++type immixCursor struct{ next, end, block uint32 }
++type immixHeap struct {
++	regions        []immixRegion
++	cursors        [2]immixCursor
++	search         [2]uint32
++	epoch          uint32
++	exclude        []bool
++	releasedBytes  uint64
++	evacuatedBytes uint64
++	handleUpdates  uint64
++	hasCards       bool
++}
++
++type ImmixStats struct {
++	Regions, OccupiedLines, LiveLines, PointerFreeRegions, LargeRegions         uint32
++	LiveBytes, AllocatedBytes, ReleasedPageBytes, EvacuatedBytes, HandleUpdates uint64
++	MetadataBytes                                                               uint64
++}
++
++func (c *Collector) ImmixStats() ImmixStats {
++	var s ImmixStats
++	m := c.throughput.immix
++	if m == nil {
++		return s
++	}
++	s.Regions = uint32(len(m.regions))
++	s.MetadataBytes = uint64(cap(m.regions)) * uint64(unsafe.Sizeof(immixRegion{}))
++	s.ReleasedPageBytes = m.releasedBytes
++	s.EvacuatedBytes = m.evacuatedBytes
++	s.HandleUpdates = m.handleUpdates
++	for i := range m.regions {
++		r := &m.regions[i]
++		s.OccupiedLines += uint32(r.occupied)
++		if r.kind == immixPointerFree {
++			s.PointerFreeRegions++
++		}
++		if r.kind == immixLarge && r.owner == uint32(i)+1 {
++			s.LargeRegions++
++		}
++		if r.epoch == m.epoch {
++			s.LiveBytes += uint64(r.liveBytes)
++			for _, v := range r.marks {
++				s.LiveLines += uint32(bits.OnesCount64(v))
++			}
++		}
++	}
++	for _, e := range c.handles {
++		if e.space == spaceOld || e.space == spaceLarge {
++			s.AllocatedBytes += uint64(Align16(e.size))
++		}
++	}
++	return s
++}
++
++func (m *immixHeap) excluded(block uint32) bool {
++	return int(block) < len(m.exclude) && m.exclude[block]
++}
++func (m *immixHeap) hasStart(off uint32) bool {
++	block := off / immixBlockBytes
++	if int(block) >= len(m.regions) || off%16 != 0 {
++		return false
++	}
++	unit := (off % immixBlockBytes) / 16
++	return m.regions[block].starts[unit/64]&(uint64(1)<<(unit%64)) != 0
++}
++func (m *immixHeap) beginMark() {
++	m.epoch++
++	if m.epoch == 0 {
++		for i := range m.regions {
++			m.regions[i].epoch = 0
++		}
++		m.epoch = 1
++	}
++}
++func (m *immixHeap) mark(e handleEntry) {
++	if e.size == 0 || uint64(e.off)+uint64(e.size) > uint64(len(m.regions))*uint64(immixBlockBytes) {
++		panic("gc: marked Immix object exceeds its region backing")
++	}
++
++	end := uint64(e.off) + uint64(e.size)
++	for off := uint64(e.off); off < end; {
++		block := uint32(off / uint64(immixBlockBytes))
++		r := &m.regions[block]
++		r.generation = 255
++		if e.young() {
++			r.generation = e.age()
++		}
++		if r.kind == immixLarge {
++			r.pointerFree = e.class&NativeHandlePointerFreeBit != 0
++		}
++		if r.epoch != m.epoch {
++			r.epoch = m.epoch
++			r.marks = [immixLines / 64]uint64{}
++			r.liveBytes = 0
++		}
++		limit := min(end, uint64(block+1)*uint64(immixBlockBytes))
++		r.liveBytes += uint32(limit - off)
++		first := (off % uint64(immixBlockBytes)) / uint64(immixLineBytes)
++		last := (limit - 1) % uint64(immixBlockBytes) / uint64(immixLineBytes)
++		for line := first; line <= last; line++ {
++			r.marks[line/64] |= uint64(1) << (line % 64)
++		}
++		off = limit
++	}
++}
++
++func (m *immixHeap) record(off, size uint32) error {
++	if off%16 != 0 || size == 0 || size%16 != 0 || uint64(off)+uint64(size) > uint64(len(m.regions))*uint64(immixBlockBytes) {
++		return errors.New("gc: Immix allocation extent invalid")
++	}
++	block := off / immixBlockBytes
++	unit := (off % immixBlockBytes) / 16
++	if m.hasStart(off) {
++		return errors.New("gc: Immix object start already allocated")
++	}
++	end := uint64(off) + uint64(size)
++	// Validate the complete range before changing counts.
++	for at := uint64(off); at < end; {
++		b := uint32(at / uint64(immixBlockBytes))
++		r := &m.regions[b]
++		limit := min(end, uint64(b+1)*uint64(immixBlockBytes))
++		for line := uint32(at%uint64(immixBlockBytes)) / immixLineBytes; line <= uint32((limit-1)%uint64(immixBlockBytes))/immixLineBytes; line++ {
++			if r.counts[line] >= 8 {
++				return errors.New("gc: Immix line overlap overflow")
++			}
++		}
++		at = limit
++	}
++	m.regions[block].starts[unit/64] |= uint64(1) << (unit % 64)
++	for at := uint64(off); at < end; {
++		b := uint32(at / uint64(immixBlockBytes))
++		r := &m.regions[b]
++		limit := min(end, uint64(b+1)*uint64(immixBlockBytes))
++		for line := uint32(at%uint64(immixBlockBytes)) / immixLineBytes; line <= uint32((limit-1)%uint64(immixBlockBytes))/immixLineBytes; line++ {
++			if r.counts[line] == 0 {
++				r.occupied++
++				r.used[line/64] |= uint64(1) << (line % 64)
++			}
++			r.counts[line]++
++		}
++		r.released = false
++		at = limit
++	}
++	return nil
++}
++
++func (m *immixHeap) release(span throughputFreeSpan) error {
++	if !m.hasStart(span.off) || span.size == 0 || span.size%16 != 0 || uint64(span.off)+uint64(span.size) > uint64(len(m.regions))*uint64(immixBlockBytes) {
++		return errors.New("gc: Immix free has no owned object start")
++	}
++	end := uint64(span.off) + uint64(span.size)
++	for at := uint64(span.off); at < end; {
++		b := uint32(at / uint64(immixBlockBytes))
++		limit := min(end, uint64(b+1)*uint64(immixBlockBytes))
++		r := &m.regions[b]
++		for line := uint32(at%uint64(immixBlockBytes)) / immixLineBytes; line <= uint32((limit-1)%uint64(immixBlockBytes))/immixLineBytes; line++ {
++			if r.counts[line] == 0 {
++				return errors.New("gc: Immix line underflow")
++			}
++		}
++		at = limit
++	}
++	b := span.off / immixBlockBytes
++	unit := (span.off % immixBlockBytes) / 16
++	m.regions[b].starts[unit/64] &^= uint64(1) << (unit % 64)
++	for at := uint64(span.off); at < end; {
++		block := uint32(at / uint64(immixBlockBytes))
++		limit := min(end, uint64(block+1)*uint64(immixBlockBytes))
++		r := &m.regions[block]
++		for line := uint32(at%uint64(immixBlockBytes)) / immixLineBytes; line <= uint32((limit-1)%uint64(immixBlockBytes))/immixLineBytes; line++ {
++			r.counts[line]--
++			if r.counts[line] == 0 {
++				r.occupied--
++				r.used[line/64] &^= uint64(1) << (line % 64)
++			}
++		}
++		at = limit
++	}
++	// A large allocation is alone in its blocks, so all its blocks can immediately
++	// become ordinary arenas. No handle points at their former object bytes.
++	if m.regions[b].kind == immixLarge {
++		count := m.regions[b].blocks
++		for i := b; i < b+count; i++ {
++			m.regions[i] = immixRegion{}
++		}
++	}
++	if m.regions[b].occupied == 0 && m.regions[b].kind != immixLarge {
++		m.regions[b].kind = immixEmpty
++		for i := range m.cursors {
++			if m.cursors[i].end != 0 && m.cursors[i].block == b {
++				m.cursors[i] = immixCursor{}
++			}
++		}
++	}
++	return nil
++}
++
++func (m *immixHeap) findRun(kind immixRegionKind, need uint32) (uint32, uint32, bool) {
++	if len(m.regions) == 0 {
++		return 0, 0, false
++	}
++	which := int(kind - immixReferences)
++	start := m.search[which] % uint32(len(m.regions))
++	for n := uint32(0); n < uint32(len(m.regions)); n++ {
++		b := (start + n) % uint32(len(m.regions))
++		r := &m.regions[b]
++		if m.excluded(b) || r.kind == immixLarge || (r.kind != immixEmpty && r.kind != kind) || immixLines-uint32(r.occupied) < need {
++			continue
++		}
++		for line := uint32(0); line < immixLines; {
++			word := r.used[line/64]
++			free := ^word & (^uint64(0) << (line % 64))
++			if free == 0 {
++				line = (line/64 + 1) * 64
++				continue
++			}
++			line = line/64*64 + uint32(bits.TrailingZeros64(free))
++			end := line
++			for end < immixLines && r.counts[end] == 0 {
++				end++
++			}
++			if end-line >= need {
++				r.kind = kind
++				m.search[which] = b
++				return b*immixBlockBytes + line*immixLineBytes, b*immixBlockBytes + end*immixLineBytes, true
++			}
++			line = end + 1
++		}
++	}
++	return 0, 0, false
++}
++
++func (h *throughputHeap) allocImmix(size uint32, sp spaceKind, pointerFree bool) (handleEntry, error) {
++	if size == 0 || size > ^uint32(0)-15 {
++		return handleEntry{}, ErrAllocationTooLarge
++	}
++	m := h.immix
++	charged := Align16(size)
++	if sp == spaceLarge || charged > immixLargeThreshold {
++		blocks := uint32((uint64(charged) + uint64(immixBlockBytes) - 1) / uint64(immixBlockBytes))
++		first, ok := m.findEmptyBlocks(blocks)
++		for !ok && len(h.pendingFree) != 0 {
++			if err := h.sweepOnePending(); err != nil {
++				return handleEntry{}, err
++			}
++			first, ok = m.findEmptyBlocks(blocks)
++		}
++		if !ok {
++			off, err := h.growImmixBlocks(blocks)
++			if err != nil {
++				return handleEntry{}, err
++			}
++			first = off / immixBlockBytes
++		}
++		for b := first; b < first+blocks; b++ {
++			m.regions[b] = immixRegion{kind: immixLarge, owner: first + 1}
++		}
++		m.regions[first].blocks = blocks
++		off := first * immixBlockBytes
++		if err := m.record(off, charged); err != nil {
++			return handleEntry{}, err
++		}
++		return handleEntry{off: off, size: size, class: uint16(len(throughputClassSizes)), space: sp}, nil
++	}
++	which := 0
++	kind := immixReferences
++	if pointerFree {
++		which = 1
++		kind = immixPointerFree
++	}
++	cursor := &m.cursors[which]
++	if cursor.end == 0 || m.excluded(cursor.block) || uint64(cursor.next)+uint64(charged) > uint64(cursor.end) {
++		// Lazily reconcile dead objects only when another free-line run is needed.
++		for {
++			off, end, ok := m.findRun(kind, (charged+immixLineBytes-1)/immixLineBytes)
++			if ok {
++				*cursor = immixCursor{next: off, end: end, block: off / immixBlockBytes}
++				break
++			}
++			if len(h.pendingFree) == 0 {
++				off, err := h.growImmixBlocks(1)
++				if err != nil {
++					return handleEntry{}, err
++				}
++				m.regions[off/immixBlockBytes].kind = kind
++				*cursor = immixCursor{next: off, end: off + immixBlockBytes, block: off / immixBlockBytes}
++				break
++			}
++			if err := h.sweepOnePending(); err != nil {
++				return handleEntry{}, err
++			}
++		}
++	}
++	off := cursor.next
++	if err := m.record(off, charged); err != nil {
++		return handleEntry{}, err
++	}
++	cursor.next += charged
++	return handleEntry{off: off, size: size, class: uint16(len(throughputClassSizes)), space: sp}, nil
++}
++
++func (m *immixHeap) findEmptyBlocks(count uint32) (uint32, bool) {
++	run := uint32(0)
++	for b := uint32(0); b < uint32(len(m.regions)); b++ {
++		r := &m.regions[b]
++		if r.occupied != 0 || r.kind == immixLarge || m.excluded(b) {
++			run = 0
++			continue
++		}
++		run++
++		if run == count {
++			first := b + 1 - count
++			for i := range m.cursors {
++				if m.cursors[i].end != 0 && m.cursors[i].block >= first && m.cursors[i].block <= b {
++					m.cursors[i] = immixCursor{}
++				}
++			}
++			return first, true
++		}
++	}
++	return 0, false
++}
++func (h *throughputHeap) growImmixBlocks(count uint32) (uint32, error) {
++	bytes := uint64(count) * uint64(immixBlockBytes)
++	if count == 0 || bytes > uint64(^uint32(0)) {
++		return 0, ErrAllocationTooLarge
++	}
++	off, err := h.grow(uint32(bytes))
++	if err != nil {
++		return 0, err
++	}
++	if off%immixBlockBytes != 0 {
++		panic("gc: Immix region base is not block aligned")
++	}
++	m := h.immix
++	needed := len(m.regions) + int(count)
++	if needed > cap(m.regions) {
++		capacity := min(int(h.limit/immixBlockBytes), max(needed, cap(m.regions)+cap(m.regions)/2+1))
++		next := make([]immixRegion, needed, capacity)
++		copy(next, m.regions)
++		m.regions = next
++	} else {
++		m.regions = m.regions[:needed]
++		clear(m.regions[needed-int(count):])
++	}
++	return off, nil
++}
++
++func (h *throughputHeap) verifyImmix(handles []handleEntry, reserved []handleEntry) error {
++	m := h.immix
++	if len(m.regions) != int(h.bump/immixBlockBytes) || h.bump%immixBlockBytes != 0 || h.bump > uint32(len(h.mem)) || h.bump > h.limit {
++		return errors.New("gc: Immix region extent mismatch")
++	}
++	// Independent exact intervals catch overlap even within a shared live line.
++	owned := make([]throughputFreeSpan, 0)
++	counts := make([][immixLines]uint8, len(m.regions))
++	starts := make([][immixUnits / 64]uint64, len(m.regions))
++	add := func(off, size uint32) error {
++		if off%16 != 0 || size == 0 || uint64(off)+uint64(size) > uint64(h.bump) {
++			return errors.New("gc: Immix owned interval out of bounds")
++		}
++		for _, s := range owned {
++			if spansOverlap(s.off, s.size, off, size) {
++				return errors.New("gc: Immix object ownership overlap")
++			}
++		}
++		owned = append(owned, throughputFreeSpan{off, size})
++		b := off / immixBlockBytes
++		u := (off % immixBlockBytes) / 16
++		starts[b][u/64] |= uint64(1) << (u % 64)
++		end := uint64(off) + uint64(size)
++		for at := uint64(off); at < end; {
++			block := uint32(at / uint64(immixBlockBytes))
++			limit := min(end, uint64(block+1)*uint64(immixBlockBytes))
++			for line := uint32(at%uint64(immixBlockBytes)) / immixLineBytes; line <= uint32((limit-1)%uint64(immixBlockBytes))/immixLineBytes; line++ {
++				counts[block][line]++
++			}
++			at = limit
++		}
++		return nil
++	}
++	for i, e := range handles {
++		if i != 0 && (e.space == spaceOld || e.space == spaceLarge) {
++			if err := add(e.off, Align16(e.size)); err != nil {
++				return fmt.Errorf("gc: Immix handle%d: %w", i, err)
++			}
++		}
++	}
++	for _, e := range reserved {
++		if err := add(e.off, Align16(e.size)); err != nil {
++			return err
++		}
++	}
++	for _, span := range h.pendingFree {
++		if err := add(span.off, span.size); err != nil {
++			return err
++		}
++	}
++	for i := range m.regions {
++		r := &m.regions[i]
++		if r.counts != counts[i] || r.starts != starts[i] {
++			return fmt.Errorf("gc: Immix region%d ownership metadata mismatch", i)
++		}
++		var occupied uint16
++		for line, count := range r.counts {
++			if count > 8 {
++				return errors.New("gc: Immix line overlap overflow")
++			}
++			used := r.used[line/64]&(uint64(1)<<uint(line%64)) != 0
++			if used != (count != 0) {
++				return errors.New("gc: Immix free-line bitmap mismatch")
++			}
++			if used {
++				occupied++
++			}
++		}
++		if r.occupied != occupied {
++			return errors.New("gc: Immix occupancy mismatch")
++		}
++	}
++	return nil
++}
++
++// Region cards are conservative locality/evacuation-cost hints. Exact object
++// cards remain the authoritative minor-collection inputs.
++func (m *immixHeap) noteCards(start, end uint32) {
++	if end < start || uint64(end) >= uint64(len(m.regions))*uint64(immixBlockBytes) {
++		panic("gc: Immix card exceeds its object region")
++	}
++	m.hasCards = true
++	for at := uint64(start); at <= uint64(end); {
++		block := uint32(at / uint64(immixBlockBytes))
++		last := min(uint64(end), uint64(block+1)*uint64(immixBlockBytes)-1)
++		r := &m.regions[block]
++		for line := uint32(at%uint64(immixBlockBytes)) / immixLineBytes; line <= uint32(last%uint64(immixBlockBytes))/immixLineBytes; line++ {
++			r.cards[line/64] |= uint64(1) << (line % 64)
++		}
++		at = last + 1
++	}
++}
++func (m *immixHeap) clearCards() {
++	if m.hasCards {
++		for i := range m.regions {
++			m.regions[i].cards = [immixLines / 64]uint64{}
++		}
++		m.hasCards = false
++	}
++}
++func (m *immixHeap) noteLargeAge(e handleEntry) {
++	first := e.off / immixBlockBytes
++	if int(first) >= len(m.regions) || m.regions[first].kind != immixLarge {
++		panic("gc: large object has no dedicated Immix region")
++	}
++	age := uint8(255)
++	if e.young() {
++		age = e.age()
++	}
++	for b := first; b < first+m.regions[first].blocks; b++ {
++		m.regions[b].generation = age
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_failure_debug_test.go b/src/core/runtime/gc/native/immix_failure_debug_test.go
+new file mode 100644
+index 000000000..220c46b65
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_failure_debug_test.go
+@@ -0,0 +1,51 @@
++//go:build wagodebug
++
++package gc
++
++import (
++	"errors"
++	"fmt"
++	"slices"
++	"testing"
++)
++
++func TestImmixPromotionFailureRestoresRegionOwnership(t *testing.T) {
++	for _, point := range []failurePoint{failPromotionDestination, failPromotionCommit} {
++		for after := 0; after < 4; after++ {
++			t.Run(fmt.Sprintf("%d/%d", point, after), func(t *testing.T) {
++				c := newTestCollector(t, Config{Allocator: AllocatorImmix, NurseryBytes: 4096, DisableMovingNursery: true, ThroughputHeapBytes: 4 * immixBlockBytes, ThroughputPageBytes: 4096})
++				guard, err := c.NewStructDefault(0)
++				if err != nil {
++					t.Fatal(err)
++				}
++				if err = c.ForcePromote(guard); err != nil {
++					t.Fatal(err)
++				}
++				roots := make([]Root, 4)
++				for i := range roots {
++					ref, err := c.NewStructDefault(0)
++					if err != nil {
++						t.Fatal(err)
++					}
++					roots[i] = Root(ref)
++				}
++				before := snapshotPromotionState(c)
++				regions := slices.Clone(c.throughput.immix.regions)
++				cursors := c.throughput.immix.cursors
++				cleanup := armFailure(c, point, after)
++				err = c.CollectMinor(stressRootSlots(roots))
++				cleanup()
++				if !errors.Is(err, errInjectedFailure) {
++					t.Fatalf("failure not visible: %v", err)
++				}
++				assertPromotionStateEqual(t, c, before)
++				if !slices.Equal(regions, c.throughput.immix.regions) || cursors != c.throughput.immix.cursors {
++					t.Fatal("failed promotion changed Immix ownership/cursors")
++				}
++				if err = c.Verify(stressRootSlots(roots)); err != nil {
++					t.Fatal(err)
++				}
++			})
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/immix_test.go b/src/core/runtime/gc/native/immix_test.go
+new file mode 100644
+index 000000000..5b16a9e89
+--- /dev/null
++++ b/src/core/runtime/gc/native/immix_test.go
+@@ -0,0 +1,333 @@
++package gc
++
++import (
++	"encoding/binary"
++	"errors"
++	"math/rand"
++	"slices"
++	"testing"
++)
++
++func TestImmixProfileAdmission(t *testing.T) {
++	// Allocator kind 2 is the new opt-in region/line product. Keep this initial
++	// admission test independent of its private metadata representation.
++	for _, portable := range []bool{false, true} {
++		c, err := NewCollector(Config{Allocator: AllocatorImmix, ThroughputHeapBytes: 128 << 10, ThroughputPageBytes: 4096, DisableVirtualBacking: portable}, testTypes(t))
++		if err != nil {
++			t.Fatalf("Immix portable=%v: %v", portable, err)
++		}
++		c.Close()
++	}
++}
++
++func newImmixTestHeap(t *testing.T, limit uint32, portable bool) *throughputHeap {
++	t.Helper()
++	cfg, err := normalizeConfig(Config{Allocator: AllocatorImmix, ThroughputHeapBytes: limit, ThroughputPageBytes: 4096, DisableVirtualBacking: portable})
++	if err != nil {
++		t.Fatal(err)
++	}
++	h := new(throughputHeap)
++	if err = h.Init(cfg); err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(h.Close)
++	return h
++}
++func TestImmixSharedLineCannotBeReusedUntilItsLastObjectDies(t *testing.T) {
++	h := newImmixTestHeap(t, immixBlockBytes, false)
++	live := make([]handleEntry, immixBlockBytes/16)
++	for i := range live {
++		var err error
++		live[i], err = h.alloc(8, spaceOld)
++		if err != nil {
++			t.Fatal(err)
++		}
++		binary.LittleEndian.PutUint64(h.mem[live[i].off:], uint64(i)+1)
++	}
++	for i := 1; i < 8; i++ {
++		if err := h.free(live[i]); err != nil {
++			t.Fatal(err)
++		}
++		live[i] = handleEntry{}
++	}
++	if _, err := h.alloc(8, spaceOld); !errors.Is(err, ErrHeapExhausted) {
++		t.Fatalf("partly live line reused: %v", err)
++	}
++	for i := 8; i < 16; i++ {
++		if err := h.deferFree(live[i]); err != nil {
++			t.Fatal(err)
++		}
++		live[i] = handleEntry{}
++	}
++	if len(h.pendingFree) != 8 {
++		t.Fatal("dead line was not deferred")
++	}
++	replacement, err := h.alloc(8, spaceOld)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if replacement.off != immixLineBytes || len(h.pendingFree) != 0 {
++		t.Fatalf("lazy free-line reuse: %+v pending%d", replacement, len(h.pendingFree))
++	}
++	binary.LittleEndian.PutUint64(h.mem[replacement.off:], 0xfeedbeef)
++	for i, e := range live {
++		if e.space != spaceFree && binary.LittleEndian.Uint64(h.mem[e.off:]) != uint64(i)+1 {
++			t.Fatalf("retained object%d changed", i)
++		}
++	}
++	if err = h.verify(append(append([]handleEntry{{}}, live...), replacement)); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestImmixEmptyBlockChangesClassWithoutRetainingOldCursor(t *testing.T) {
++	h := newImmixTestHeap(t, 2*immixBlockBytes, false)
++	old, err := h.alloc(8, spaceOld, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = h.free(old); err != nil {
++		t.Fatal(err)
++	}
++	scalar, err := h.alloc(8, spaceOld, true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	refs, err := h.alloc(8, spaceOld, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if scalar.off/immixBlockBytes == refs.off/immixBlockBytes {
++		t.Fatal("old cursor entered a block claimed by the other class")
++	}
++	if err = h.verify([]handleEntry{{}, scalar, refs}); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestImmixLargeRegionsCanBeReusedIndependently(t *testing.T) {
++	h := newImmixTestHeap(t, 4*immixBlockBytes, false)
++	large, err := h.alloc(70000, spaceLarge)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if h.bump != 3*immixBlockBytes || h.immix.regions[0].blocks != 3 {
++		t.Fatal("large object did not get dedicated blocks")
++	}
++	guard, err := h.alloc(8, spaceOld)
++	if err != nil {
++		t.Fatal(err)
++	}
++	binary.LittleEndian.PutUint64(h.mem[guard.off:], 42)
++	if err = h.free(large); err != nil {
++		t.Fatal(err)
++	}
++	next, err := h.alloc(40000, spaceLarge)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if next.off != large.off || h.bump != 4*immixBlockBytes || binary.LittleEndian.Uint64(h.mem[guard.off:]) != 42 {
++		t.Fatal("dedicated-region reuse changed a retained object or grew backing")
++	}
++	if err = h.verify([]handleEntry{{}, guard, next}); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestImmixAllocationTransactionRestoresCursorsAndOwnership(t *testing.T) {
++	h := newImmixTestHeap(t, 4*immixBlockBytes, false)
++	guard, err := h.alloc(8, spaceOld, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	before := slices.Clone(h.immix.regions)
++	tx := h.beginAllocTransaction()
++	var entries []handleEntry
++	for _, size := range []uint32{8, 64, 32768} {
++		e, err := h.alloc(size, spaceOld, false)
++		if err != nil {
++			t.Fatal(err)
++		}
++		entries = append(entries, e)
++	}
++	for i := len(entries) - 1; i >= 0; i-- {
++		h.rollbackSuccessfulAlloc(entries[i], tx.bump)
++	}
++	h.restoreAllocTransaction(tx)
++	if !slices.Equal(h.immix.regions, before) || h.immix.cursors != tx.immixCursors || h.bump != tx.bump {
++		t.Fatal("rollback retained destination ownership or changed a cursor")
++	}
++	if err = h.verify([]handleEntry{{}, guard}); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestImmixRandomizedAllocationPreservesRetainedBytes(t *testing.T) {
++	for _, portable := range []bool{false, true} {
++		t.Run(map[bool]string{false: "mapped", true: "portable"}[portable], func(t *testing.T) {
++			h := newImmixTestHeap(t, 4<<20, portable)
++			random := rand.New(rand.NewSource(313))
++			var live []handleEntry
++			var values []uint64
++			for step := 0; step < 5000; step++ {
++				if len(live) > 0 && (len(live) >= 96 || random.Intn(2) == 0) {
++					i := random.Intn(len(live))
++					if err := h.free(live[i]); err != nil {
++						t.Fatal(err)
++					}
++					live = append(live[:i], live[i+1:]...)
++					values = append(values[:i], values[i+1:]...)
++				} else {
++					size := uint32(8 + random.Intn(2048))
++					space := spaceOld
++					if random.Intn(10) == 0 {
++						space = spaceLarge
++						size = uint32(32768 + random.Intn(32768))
++					}
++					e, err := h.alloc(size, space, random.Intn(2) == 0)
++					if err != nil {
++						t.Fatalf("step%d live%d: %v", step, len(live), err)
++					}
++					value := uint64(step) + 1
++					binary.LittleEndian.PutUint64(h.mem[e.off:], value)
++					live = append(live, e)
++					values = append(values, value)
++				}
++				for i, e := range live {
++					if binary.LittleEndian.Uint64(h.mem[e.off:]) != values[i] {
++						t.Fatalf("step%d object%d aliases another allocation", step, i)
++					}
++				}
++				if step%50 == 0 {
++					if err := h.verify(append([]handleEntry{{}}, live...)); err != nil {
++						t.Fatalf("step%d: %v", step, err)
++					}
++				}
++			}
++		})
++	}
++}
++func TestImmixCollectorCyclesAndStableReferences(t *testing.T) {
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	array, err := NewArrayDesc(1, StorageI32)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 64 << 10, ThroughputHeapBytes: 128 << 10, ThroughputPageBytes: 4096, LargeObjectBytes: 1024, VerifyAfterCollect: true}, []TypeDesc{node, array})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	root := Null()
++	for i := 0; i < 400; i++ {
++		next, err := c.NewStructWithRoots(0, []Value{RefValue(root), I32Value(int32(i))}, RefSliceRoots{root})
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.ForcePromote(next); err != nil {
++			t.Fatal(err)
++		}
++		root = next
++	}
++	large, err := c.NewArrayWithRoots(1, 1000, I32Value(42), RefSliceRoots{root})
++	if err != nil {
++		t.Fatal(err)
++	}
++	oldOffset := c.entry(large).off
++	for i := 0; i < 2; i++ {
++		if err = c.CollectMinor(RefSliceRoots{root, large}); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if c.entry(large).off != oldOffset || c.entry(large).young() {
++		t.Fatal("large survivor was not aged in place")
++	}
++	if err = c.CollectFull(RefSliceRoots{root, large}); err != nil {
++		t.Fatal(err)
++	}
++	for i := 399; i >= 0; i-- {
++		value, err := c.StructGet(root, 1)
++		if err != nil || value.I32() != int32(i) {
++			t.Fatalf("chain%d: %+v %v", i, value, err)
++		}
++		child, err := c.StructGet(root, 0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		root = child.Ref
++	}
++	if !root.IsNull() {
++		t.Fatal("stable chain ended at the wrong reference")
++	}
++	if err = c.CollectFull(RefSliceRoots{large}); err != nil {
++		t.Fatal(err)
++	}
++	if got := c.Stats().LiveObjects; got != 1 {
++		t.Fatalf("reclaimed graph retains%d objects", got)
++	}
++	if err = c.Verify(RefSliceRoots{large}); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestImmixUnusedNativeLargeReservationHasExplicitOwnership(t *testing.T) {
++	array, err := NewArrayDesc(0, StorageI32)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 1024, LargeObjectBytes: 1024, ThroughputHeapBytes: 4 * immixBlockBytes, ThroughputPageBytes: 4096}, []TypeDesc{array})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	if !c.PrepareNativeArrayAllocationImmediate(4104) {
++		t.Fatal("large native reservation rejected")
++	}
++	if err = c.Verify(EmptyRoots{}); err != nil {
++		t.Fatalf("unpublished reservation lost ownership: %v", err)
++	}
++	c.discardNativeLargeArrayAllocation()
++	if err = c.Verify(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestImmixLineMarkEpochWrapAndBoundedMetadata(t *testing.T) {
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI32})
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, ThroughputHeapBytes: 2 * immixBlockBytes, ThroughputPageBytes: 4096}, []TypeDesc{node})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	ref, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = c.ForcePromote(ref); err != nil {
++		t.Fatal(err)
++	}
++	for _, epoch := range []uint32{c.throughput.immix.epoch, ^uint32(0)} {
++		c.throughput.immix.epoch = epoch
++		if err = c.CollectFull(RefSliceRoots{ref}); err != nil {
++			t.Fatal(err)
++		}
++		stats := c.ImmixStats()
++		if stats.LiveBytes != uint64(c.entry(ref).size) || stats.LiveLines != 1 {
++			t.Fatalf("marked region telemetry: %+v", stats)
++		}
++		if stats.MetadataBytes > uint64(c.throughput.limit/immixBlockBytes)*640 {
++			t.Fatalf("metadata exceeds region bound: %+v", stats)
++		}
++	}
++	if c.throughput.immix.epoch != 1 {
++		t.Fatal("mark epoch did not wrap safely")
++	}
++	if err = c.CollectFull(EmptyRoots{}); err != nil {
++		t.Fatal(err)
++	}
++	if stats := c.ImmixStats(); stats.LiveLines != 0 || stats.LiveBytes != 0 {
++		t.Fatalf("stale mark survived epoch: %+v", stats)
++	}
++}
+diff --git a/src/core/runtime/gc/native/major_blocks_coverage_test.go b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+index 940417d39..23fbe8e7b 100644
+--- a/src/core/runtime/gc/native/major_blocks_coverage_test.go
++++ b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+@@ -102,10 +102,10 @@ func TestMajorBlocksReservationWordRevisits(t *testing.T) {
+ 
+ func TestMajorBlocksFlagUsesExistingPadding(t *testing.T) {
+ 	const batchBytes = (512 - nativeStructHandleBatch) * 4
+-	if unsafe.Offsetof(Collector{}.checkedHandles) != 3112-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3128-batchBytes {
++	if unsafe.Offsetof(Collector{}.checkedHandles) != 3120-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3136-batchBytes {
+ 		t.Fatal("native index changed existing collector offsets")
+ 	}
+-	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3152-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3152-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3152-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil))+unsafe.Sizeof([]uint32(nil)) {
++	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3160-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3160-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3160-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil))+unsafe.Sizeof([]uint32(nil)) {
+ 		t.Fatal("large-array hint and promotion scratch must follow the existing collector state")
+ 	}
+ 	if unsafe.Offsetof(Collector{}.majorYoungDirty) >= unsafe.Offsetof(Collector{}.checkedHandles) {
+diff --git a/src/core/runtime/gc/native/mark.go b/src/core/runtime/gc/native/mark.go
+index d71e22a0e..84790bf33 100644
+--- a/src/core/runtime/gc/native/mark.go
++++ b/src/core/runtime/gc/native/mark.go
+@@ -1,6 +1,9 @@
+ package gc
+ 
+ func (c *Collector) clearMarks() {
++	if m := c.throughput.immix; m != nil {
++		m.beginMark()
++	}
+ 	if len(c.mark) < len(c.handles) {
+ 		c.mark = make([]bool, len(c.handles))
+ 	}
+@@ -208,6 +211,9 @@ func (c *Collector) markRef(r Ref) {
+ 		return
+ 	}
+ 	c.mark[h] = true
++	if m := c.throughput.immix; m != nil && (c.handles[h].space == spaceOld || c.handles[h].space == spaceLarge) {
++		m.mark(c.handles[h])
++	}
+ 	c.markStack = append(c.markStack, h)
+ }
+ func (c *Collector) scanObject(h uint32) {
+diff --git a/src/core/runtime/gc/native/profile_throughput_test.go b/src/core/runtime/gc/native/profile_throughput_test.go
+index 73b21dd87..2ba90fef0 100644
+--- a/src/core/runtime/gc/native/profile_throughput_test.go
++++ b/src/core/runtime/gc/native/profile_throughput_test.go
+@@ -594,8 +594,8 @@ func TestThroughputFreeSpanFootprint(t *testing.T) {
+ 	if got := unsafe.Sizeof(throughputSpanNode{}); got != 28 {
+ 		t.Fatalf("throughputSpanNode size = %d, want 28", got)
+ 	}
+-	if got := unsafe.Sizeof(throughputHeap{}); got != 136 {
+-		t.Fatalf("throughputHeap size = %d, want 136", got)
++	if got := unsafe.Sizeof(throughputHeap{}); got != 144 {
++		t.Fatalf("throughputHeap size = %d, want 144", got)
+ 	}
+ }
+ 
+diff --git a/src/core/runtime/gc/native/survivor.go b/src/core/runtime/gc/native/survivor.go
+index 408498c8a..53fcf58ad 100644
+--- a/src/core/runtime/gc/native/survivor.go
++++ b/src/core/runtime/gc/native/survivor.go
+@@ -56,10 +56,16 @@ func (c *Collector) inActiveSurvivor(e handleEntry) bool {
+ func (c *Collector) tenureLargeInPlace(h uint32) {
+ 	e := &c.handles[h]
+ 	e.clearYoungAge()
++	if m := c.throughput.immix; m != nil {
++		m.noteLargeAge(c.handles[h])
++	}
+ }
+ 
+ func (c *Collector) ageLargeInPlace(h uint32, age uint8) {
+ 	c.handles[h].setYoungAge(age)
++	if m := c.throughput.immix; m != nil {
++		m.noteLargeAge(c.handles[h])
++	}
+ }
+ 
+ func (c *Collector) poisonYoungSource(e handleEntry) {
+diff --git a/src/core/runtime/gc/native/throughput_alloc.go b/src/core/runtime/gc/native/throughput_alloc.go
+index 9cc694eca..565553f19 100644
+--- a/src/core/runtime/gc/native/throughput_alloc.go
++++ b/src/core/runtime/gc/native/throughput_alloc.go
+@@ -45,8 +45,11 @@ type throughputSpanNode struct {
+ // rollbackSuccessfulAlloc; the AVL arena is reusable and does not need a full
+ // metadata snapshot on the successful path.
+ type throughputAllocTransaction struct {
+-	mem  []byte
+-	bump uint32
++	mem          []byte
++	bump         uint32
++	immixRegions int
++	immixCursors [2]immixCursor
++	immixSearch  [2]uint32
+ }
+ 
+ type throughputAllocRun struct {
+@@ -72,6 +75,7 @@ type throughputHeap struct {
+ 	spanCount        uint32
+ 	reservation      *virtualmem.Region
+ 	backingCopyBytes uint64
++	immix            *immixHeap
+ }
+ 
+ func (h *throughputHeap) Init(cfg Config) error {
+@@ -87,6 +91,9 @@ func (h *throughputHeap) Init(cfg Config) error {
+ 	if !supportedThroughputClassLimit(cfg.ThroughputClassLimit) {
+ 		return fmt.Errorf("gc: throughput class limit %d is not a supported size class", cfg.ThroughputClassLimit)
+ 	}
++	if cfg.Allocator == AllocatorImmix {
++		h.immix = &immixHeap{epoch: 1}
++	}
+ 	h.limit = cfg.ThroughputHeapBytes
+ 	h.pageBytes = cfg.ThroughputPageBytes
+ 	h.classLimit = cfg.ThroughputClassLimit
+@@ -110,6 +117,7 @@ func (h *throughputHeap) Init(cfg Config) error {
+ }
+ 
+ func (h *throughputHeap) Close() {
++	h.immix = nil
+ 	h.mem = nil
+ 	if h.reservation != nil {
+ 		if err := h.reservation.Close(); err != nil {
+@@ -129,7 +137,14 @@ func (h *throughputHeap) Close() {
+ 
+ func (h *throughputHeap) bytes(e handleEntry) []byte { return h.mem[e.off : e.off+e.size] }
+ 
+-func (h *throughputHeap) alloc(size uint32, sp spaceKind) (handleEntry, error) {
++func (h *throughputHeap) alloc(size uint32, sp spaceKind, pointerFree ...bool) (handleEntry, error) {
++	if len(pointerFree) > 1 {
++		panic("gc: multiple pointer-free classifications for one allocation")
++	}
++	if h.immix != nil {
++		return h.allocImmix(size, sp, len(pointerFree) == 1 && pointerFree[0])
++	}
++
+ 	if size > ^uint32(0)-15 {
+ 		return handleEntry{}, ErrAllocationTooLarge
+ 	}
+@@ -185,6 +200,9 @@ func (h *throughputHeap) alloc(size uint32, sp spaceKind) (handleEntry, error) {
+ }
+ 
+ func (h *throughputHeap) handleAllocSize(e handleEntry) uint32 {
++	if h.immix != nil {
++		return Align16(e.size)
++	}
+ 	var allocSize uint32
+ 	if e.space != spaceLarge {
+ 		class := int(e.class & handleClassMask)
+@@ -202,10 +220,30 @@ func (h *throughputHeap) handleAllocSize(e handleEntry) uint32 {
+ }
+ 
+ func (h *throughputHeap) beginAllocTransaction() throughputAllocTransaction {
+-	return throughputAllocTransaction{mem: h.mem, bump: h.bump}
++	tx := throughputAllocTransaction{mem: h.mem, bump: h.bump}
++	if h.immix != nil {
++		tx.immixRegions = len(h.immix.regions)
++		tx.immixCursors = h.immix.cursors
++		tx.immixSearch = h.immix.search
++	}
++	return tx
+ }
+ 
+ func (h *throughputHeap) restoreAllocTransaction(tx throughputAllocTransaction) {
++	if h.immix != nil {
++		if len(h.immix.regions) < tx.immixRegions {
++			panic("gc: Immix transaction lost a region")
++		}
++		h.immix.regions = h.immix.regions[:tx.immixRegions]
++		h.immix.cursors = tx.immixCursors
++		h.immix.search = tx.immixSearch
++		for i, c := range h.immix.cursors {
++			if c.end != 0 {
++				h.immix.regions[c.block].kind = immixRegionKind(int(immixReferences) + i)
++			}
++		}
++	}
++
+ 	h.mem = tx.mem
+ 	h.bump = tx.bump
+ }
+@@ -216,7 +254,7 @@ func (h *throughputHeap) restoreAllocTransaction(tx throughputAllocTransaction)
+ // allocations require no per-allocation restoration because the transaction
+ // restores the bump and backing slice after all indexed allocations are freed.
+ func (h *throughputHeap) rollbackSuccessfulAlloc(e handleEntry, initialBump uint32) {
+-	if e.off >= initialBump {
++	if h.immix == nil && e.off >= initialBump {
+ 		return
+ 	}
+ 	if err := h.free(e); err != nil {
+@@ -225,6 +263,9 @@ func (h *throughputHeap) rollbackSuccessfulAlloc(e handleEntry, initialBump uint
+ }
+ 
+ func (h *throughputHeap) free(e handleEntry) error {
++	if h.immix != nil {
++		return h.immix.release(throughputFreeSpan{e.off, Align16(e.size)})
++	}
+ 	allocSize := h.handleAllocSize(e)
+ 	if allocSize == 0 || e.off%16 != 0 || e.off+allocSize < e.off || e.off+allocSize > h.bump {
+ 		return errors.New("gc: invalid throughput free span")
+@@ -251,7 +292,13 @@ func (h *throughputHeap) sweepOnePending() error {
+ 	if err := injectFailure(h, failThroughputReconciliation); err != nil {
+ 		return err
+ 	}
+-	if err := h.insertFreeSpan(span); err != nil {
++	var err error
++	if h.immix != nil {
++		err = h.immix.release(span)
++	} else {
++		err = h.insertFreeSpan(span)
++	}
++	if err != nil {
+ 		return err
+ 	}
+ 	h.pendingFree[last] = throughputFreeSpan{}
+@@ -266,7 +313,7 @@ func (h *throughputHeap) sweepAllPending() error {
+ 	// index so a dead contiguous old heap becomes one insertion rather than one
+ 	// insertion and coalescing operation per object. Arbitrary handle reuse can
+ 	// break address order; leave that case to the ordinary exact path.
+-	if len(h.pendingFree) > 1 {
++	if h.immix == nil && len(h.pendingFree) > 1 {
+ 		ascending, descending := true, true
+ 		for i := 1; i < len(h.pendingFree); i++ {
+ 			previous, current := h.pendingFree[i-1], h.pendingFree[i]
+@@ -809,7 +856,10 @@ func (h *throughputHeap) freeSpans() []throughputFreeSpan {
+ 	return out
+ }
+ 
+-func (h *throughputHeap) verify(handles []handleEntry) error {
++func (h *throughputHeap) verify(handles []handleEntry, reserved ...handleEntry) error {
++	if h.immix != nil {
++		return h.verifyImmix(handles, reserved)
++	}
+ 	if h.limit == 0 {
+ 		return errors.New("gc: throughput heap is not initialized")
+ 	}
+@@ -941,7 +991,7 @@ func spansOverlap(aOff, aSize, bOff, bSize uint32) bool {
+ // injection points, while warmed promotion batches can remove one AVL span or
+ // advance the bump once for the complete equal-sized run.
+ func (h *throughputHeap) tryAllocRun(size uint32, count int, sp spaceKind) (throughputAllocRun, bool, error) {
+-	if count < 2 || size > ^uint32(0)-15 {
++	if h.immix != nil || count < 2 || size > ^uint32(0)-15 {
+ 		return throughputAllocRun{}, false, nil
+ 	}
+ 	allocSize := Align16(size)
+diff --git a/src/core/runtime/gc/native/verify.go b/src/core/runtime/gc/native/verify.go
+index da5bb562d..e90dc3df8 100644
+--- a/src/core/runtime/gc/native/verify.go
++++ b/src/core/runtime/gc/native/verify.go
+@@ -11,7 +11,12 @@ func (c *Collector) Verify(roots RootSet) error {
+ 		return err
+ 	}
+ 	if c.cfg.Profile == ProfileThroughput && c.throughput.limit != 0 {
+-		if err := c.throughput.verify(c.handles); err != nil {
++		var reserved []handleEntry
++		s := &c.nativeLargeArrayAlloc
++		if c.throughput.immix != nil && s.Count != 0 && s.Cursor == 0 && s.Handle != 0 && int(s.Handle) < len(c.handles) && c.handles[s.Handle].space == spaceFree && spaceKind(s.ChunkBump>>16&0xff) == spaceLarge {
++			reserved = []handleEntry{{off: s.ChunkStart, size: s.ChunkEnd - s.ChunkStart, class: uint16(s.ChunkBump), space: spaceLarge}}
++		}
++		if err := c.throughput.verify(c.handles, reserved...); err != nil {
+ 			return err
+ 		}
+ 	}
+diff --git a/src/core/runtime/gc/types.go b/src/core/runtime/gc/types.go
+index 8db807a79..b016e4da2 100644
+--- a/src/core/runtime/gc/types.go
++++ b/src/core/runtime/gc/types.go
+@@ -22,6 +22,10 @@ const ProfileThroughput = raw.ProfileThroughput
+ const ProfileTiny = raw.ProfileTiny
+ const AllocatorPagedSizeClass = raw.AllocatorPagedSizeClass
+ const AllocatorTinyFixedBlock = raw.AllocatorTinyFixedBlock
++const AllocatorImmix = raw.AllocatorImmix
++
++type ImmixStats = raw.ImmixStats
++
+ const RuntimeGenerational = raw.RuntimeGenerational
+ const RuntimeIncrementalMarkSweep = raw.RuntimeIncrementalMarkSweep
+ const KindFunc = raw.KindFunc
+diff --git a/src/wago/api.go b/src/wago/api.go
+index 9e2aab3e0..634c15dc7 100644
+--- a/src/wago/api.go
++++ b/src/wago/api.go
+@@ -71,6 +71,7 @@ func DefaultArtifactLimits() ArtifactLimits {
+ const (
+ 	GCAllocatorPagedSizeClass     = gc.AllocatorPagedSizeClass
+ 	GCAllocatorTinyFixedBlock     = gc.AllocatorTinyFixedBlock
++	GCAllocatorImmix              = gc.AllocatorImmix
+ 	GCProfileThroughput           = gc.ProfileThroughput
+ 	GCProfileTiny                 = gc.ProfileTiny
+ 	GCRuntimeGenerational         = gc.RuntimeGenerational
+diff --git a/src/wago/gc_immix_amd64_test.go b/src/wago/gc_immix_amd64_test.go
+new file mode 100644
+index 000000000..8f3bf57e8
+--- /dev/null
++++ b/src/wago/gc_immix_amd64_test.go
+@@ -0,0 +1,55 @@
++//go:build linux && amd64 && !tinygo && !wago_guardpage
++
++package wago
++
++import "testing"
++
++func TestGCImmixNativeReadsRootsAndArtifactReload(t *testing.T) {
++	compiled := gcReadRegionsCompiled(t)
++	loaded := publicArtifactRoundTrip(t, compiled)
++	defer loaded.Close()
++	for _, artifact := range []*Compiled{compiled, loaded} {
++		in, err := Instantiate(artifact, InstantiateOptions{GC: GCConfig{Allocator: GCAllocatorImmix, NurseryBytes: 256, SurvivorBytes: 128, ThroughputHeapBytes: 1 << 20, ThroughputPageBytes: 4096, CollectEveryAlloc: true, ForceMajorEveryMinor: true, VerifyAfterCollect: true}})
++		if err != nil {
++			t.Fatal(err)
++		}
++		for i := 0; i < 3; i++ {
++			if _, err = in.Invoke("init"); err != nil {
++				t.Fatal(err)
++			}
++			if got, err := in.Invoke("loop", 8192); err != nil || len(got) != 1 || got[0] != 57344 {
++				t.Fatalf("loop: %v,%v", got, err)
++			}
++			if got, err := in.Invoke("roots"); err != nil || len(got) != 1 || got[0] != 1040 {
++				t.Fatalf("roots: %v,%v", got, err)
++			}
++			if err = in.CollectGC(); err != nil {
++				t.Fatal(err)
++			}
++		}
++		in.Close()
++	}
++}
++func TestGCImmixNativeLargeAllocationReservations(t *testing.T) {
++	compiled, err := Compile(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3), gcNativeDynamicDefaultArrayModule(4))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer compiled.Close()
++	in, err := Instantiate(compiled, InstantiateOptions{GC: GCConfig{Allocator: GCAllocatorImmix, NurseryBytes: 1024, LargeObjectBytes: 1024, ThroughputHeapBytes: 1 << 20, ThroughputPageBytes: 4096, VerifyAfterCollect: true}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer in.Close()
++	for i := 0; i < 32; i++ {
++		if got, err := in.Invoke("run", 1024); err != nil || len(got) != 1 || got[0] != 1024 {
++			t.Fatalf("iteration%d: %v,%v", i, got, err)
++		}
++		if err = in.gc.Verify(nil); err != nil {
++			t.Fatal(err)
++		}
++		if err = in.CollectGC(); err != nil {
++			t.Fatal(err)
++		}
++	}
++}
+diff --git a/wago.go b/wago.go
+index acc24ed96..ba199a095 100644
+--- a/wago.go
++++ b/wago.go
+@@ -303,6 +303,7 @@ const (
+ 	Experimental                               = impl.Experimental
+ 	GCAllocatorPagedSizeClass                  = impl.GCAllocatorPagedSizeClass
+ 	GCAllocatorTinyFixedBlock                  = impl.GCAllocatorTinyFixedBlock
++	GCAllocatorImmix                           = impl.GCAllocatorImmix
+ 	GCProfileThroughput                        = impl.GCProfileThroughput
+ 	GCProfileTiny                              = impl.GCProfileTiny
+ 	GCRuntimeGenerational                      = impl.GCRuntimeGenerational

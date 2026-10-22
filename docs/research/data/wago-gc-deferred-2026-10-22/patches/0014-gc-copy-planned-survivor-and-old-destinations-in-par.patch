@@ -1,0 +1,606 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 04:04:09 +0000
+Subject: [PATCH 14/20] gc: copy planned survivor and old destinations in
+ parallel
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  31 +++++
+ src/core/runtime/gc/native/collect.go         |  28 +++-
+ .../gc/native/copy_parallel_debug_test.go     |  38 ++++++
+ .../gc/native/copy_parallel_disabled.go       |   7 +
+ .../gc/native/copy_parallel_enabled.go        | 125 ++++++++++++++++++
+ .../runtime/gc/native/copy_parallel_test.go   | 117 ++++++++++++++++
+ src/core/runtime/gc/native/execution.go       |   8 +-
+ .../runtime/gc/native/execution_bench_test.go |  58 ++++++++
+ .../runtime/gc/native/execution_disabled.go   |   2 +
+ .../runtime/gc/native/execution_enabled.go    |  11 +-
+ 10 files changed, 416 insertions(+), 9 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/copy_parallel_debug_test.go
+ create mode 100644 src/core/runtime/gc/native/copy_parallel_disabled.go
+ create mode 100644 src/core/runtime/gc/native/copy_parallel_enabled.go
+ create mode 100644 src/core/runtime/gc/native/copy_parallel_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 5ef976170..8de01354a 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -416,3 +416,34 @@ MinMarkBytes=0 therefore leaves parallel marking disabled, even when a worker
+ count is configured. An explicit measured byte threshold and object threshold
+ are required to run the A/B path. Nil execution options still create no workers
+ or clocks. No compiler speed claim is based on this experiment.
++
++## Execution phase 3: parallel evacuation copies
++
++Survivor/old allocation and every injected commit failure finish before any
++worker starts. Plans divide into disjoint destination ranges of at least 64 KiB
++per worker. Sources and inactive-survivor/old extents have diagnostic assertions.
++Workers copy complete logical payloads while all handles still name their old
++sources. The owner joins every worker before poisoning sources, publishing stable
++handles, updating ages or installing old-to-young cards. Existing serial code
++remains the default/minimal path. Large young objects still age without copying.
++Selective old compaction remains serial because its bounded copy volume does
++not justify worker startup.
++
++Tests cover immediate old promotion, alternating survivor spaces, mixed young/old
++ages, large in-place aging, reference cards, poisoning and threshold rejection.
++Injected destination/commit failures prove no copy worker or publication runs
++early; retry succeeds. Full worker/debug and focused race suites pass.
++
++Three fixed five-iteration screens on CPUs 0-15 compare 16,384 numeric arrays.
++For one-element arrays, median full-minor times are 1.090 ms serial and 0.893 ms
++with four copy workers, but samples are noisy (one four-worker sample 1.294 ms).
++For 128-element arrays (~16.1 MiB logical payload), serial is 3.419 ms, four workers
++3.603 ms, and sixteen workers 4.208 ms. The small-array requested-16 case actually
++uses at most four workers due to the 64-KiB chunk floor. Worker elapsed and full
++planning/evacuation pause records are in gc-parallel-copy-screen.log/json. Whole
++run peak RSS is 52,392 KiB; process CPU 1.198 s over 0.695 s wall, including setup.
++
++The screen does not establish a broadly safe automatic copy threshold.
++MinCopyBytes=0 therefore disables parallel copying until a measured threshold is
++supplied, independently of parallel marking and background sweep. This preserves
++small/default runtime performance while retaining explicit A/B experiments.
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 9fd0bfc01..b287b102a 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -71,6 +71,9 @@ func (c *Collector) CollectMinor(roots RootSet) (err error) {
+ 	var cycle executionCycle
+ 	if executionProduct {
+ 		cycle = c.beginExecutionCycle(CollectionMinor)
++		if c.throughput.immix != nil && c.throughput.immix.execution != nil {
++			c.throughput.immix.execution.resetCopyCycle()
++		}
+ 		defer func() { c.finishExecutionCycle(cycle, err) }()
+ 		if _, err := c.throughput.finishBackgroundSweep(true); err != nil {
+ 			return err
+@@ -147,6 +150,7 @@ func (c *Collector) CollectMinor(roots RootSet) (err error) {
+ 	}
+ 	if executionProduct {
+ 		cycle.copyDone()
++		cycle.workers(c.copyExecutionWorkers())
+ 	}
+ 	c.finishMinorCardMetadata()
+ 	pauseNS := uint64(0)
+@@ -553,6 +557,10 @@ func (c *Collector) promoteNursery(captured bool) (copiedBytes, promotedBytes ui
+ }
+ 
+ func (c *Collector) commitPromotionPlans(plans []plannedPromotion, toSpace uint8, toBump uint32) (copiedBytes, promotedBytes uint64, finishedEvacuation bool, err error) {
++	precopied := false
++	if executionProduct {
++		precopied = c.parallelCopyPlans(plans)
++	}
+ 	// Like V8's scavenger, merge copying and final young-list publication when
+ 	// every young handle survived. On the measured pure-survivor path, the last
+ 	// plan represents the most recent allocation run; limit this AMD64 path to
+@@ -572,12 +580,18 @@ func (c *Collector) commitPromotionPlans(plans []plannedPromotion, toSpace uint8
+ 			p.entry.typeID = src.typeID
+ 			p.entry.class |= src.class & NativeHandlePointerFreeBit
+ 			dst := c.nursery[p.entry.off : p.entry.off+p.entry.size]
+-			copy(dst, c.bytes(makeObjRef(p.handle)))
++			if !precopied {
++				copy(dst, c.bytes(makeObjRef(p.handle)))
++			}
+ 			c.poisonYoungSource(src)
+ 			c.handles[p.handle] = p.entry
+ 			copiedBytes += uint64(size)
+ 		case spaceOld:
+-			c.promoteHandleTo(p.handle, p.entry)
++			if executionProduct && precopied {
++				c.publishPrecopiedPromotion(p.handle, p.entry)
++			} else {
++				c.promoteHandleTo(p.handle, p.entry)
++			}
+ 			copiedBytes += uint64(size)
+ 			promotedBytes += uint64(size)
+ 		case spaceLarge:
+@@ -726,13 +740,21 @@ func (c *Collector) promoteMarkedNurseryImmediate() (copiedBytes, promotedBytes
+ 		}
+ 	}
+ 	c.throughput.commitAllocTransaction(tx)
++	precopied := false
++	if executionProduct {
++		precopied = c.parallelCopyPlans(plans)
++	}
+ 	for _, p := range plans {
+ 		size := c.handles[p.handle].size
+ 		if p.entry.space == spaceLarge {
+ 			c.tenureLargeInPlace(p.handle)
+ 			promotedBytes += uint64(size)
+ 		} else {
+-			c.promoteHandleTo(p.handle, p.entry)
++			if executionProduct && precopied {
++				c.publishPrecopiedPromotion(p.handle, p.entry)
++			} else {
++				c.promoteHandleTo(p.handle, p.entry)
++			}
+ 			copiedBytes += uint64(size)
+ 			promotedBytes += uint64(size)
+ 		}
+diff --git a/src/core/runtime/gc/native/copy_parallel_debug_test.go b/src/core/runtime/gc/native/copy_parallel_debug_test.go
+new file mode 100644
+index 000000000..aa0f779b3
+--- /dev/null
++++ b/src/core/runtime/gc/native/copy_parallel_debug_test.go
+@@ -0,0 +1,38 @@
++//go:build wago_gc_workers && wagodebug && !tinygo
++
++package gc
++
++import (
++	"errors"
++	"runtime"
++	"testing"
++)
++
++func TestParallelCopyFailureBeforePublicationRollsBack(t *testing.T) {
++	previous := runtime.GOMAXPROCS(4)
++	defer runtime.GOMAXPROCS(previous)
++	for _, point := range []failurePoint{failPromotionDestination, failPromotionCommit} {
++		c := newParallelCopyCollector(t, 4, true)
++		roots := allocateParallelCopyNodes(t, c, 16384)
++		before := snapshotPromotionState(c)
++		cleanup := armFailure(c, point, 17)
++		err := c.CollectMinor(roots)
++		cleanup()
++		if !errors.Is(err, errInjectedFailure) {
++			t.Fatalf("failure hidden: %v", err)
++		}
++		assertPromotionStateEqual(t, c, before)
++		if c.CycleTelemetry().ParallelCopyCycles != 0 {
++			t.Fatal("copy workers ran before the final failure point")
++		}
++		if err = c.CollectMinor(roots); err != nil {
++			t.Fatal(err)
++		}
++		if c.CycleTelemetry().ParallelCopyCycles != 1 {
++			t.Fatal("parallel retry did not copy")
++		}
++		if err = c.Verify(roots); err != nil {
++			t.Fatal(err)
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/copy_parallel_disabled.go b/src/core/runtime/gc/native/copy_parallel_disabled.go
+new file mode 100644
+index 000000000..21d8c7123
+--- /dev/null
++++ b/src/core/runtime/gc/native/copy_parallel_disabled.go
+@@ -0,0 +1,7 @@
++//go:build !wago_gc_workers || tinygo
++
++package gc
++
++func (c *Collector) parallelCopyPlans([]plannedPromotion) bool     { return false }
++func (c *Collector) publishPrecopiedPromotion(uint32, handleEntry) {}
++func (c *Collector) copyExecutionWorkers() int                     { return 1 }
+diff --git a/src/core/runtime/gc/native/copy_parallel_enabled.go b/src/core/runtime/gc/native/copy_parallel_enabled.go
+new file mode 100644
+index 000000000..7c21793d4
+--- /dev/null
++++ b/src/core/runtime/gc/native/copy_parallel_enabled.go
+@@ -0,0 +1,125 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import (
++	"runtime"
++	"sync"
++	"time"
++)
++
++const parallelCopyChunkBytes = 64 << 10
++
++type parallelCopyChunk struct {
++	start, end int
++	elapsed    uint64
++}
++
++func (c *Collector) parallelCopyPlans(plans []plannedPromotion) bool {
++	m := c.throughput.immix
++	if m == nil || m.execution == nil {
++		return false
++	}
++	x := m.execution
++	x.lastCopyWorkers = 1
++	workers := min(int(x.options.Workers), runtime.GOMAXPROCS(0))
++	if workers < 2 {
++		return false
++	}
++	var total uint64
++	for _, p := range plans {
++		if p.entry.space != spaceLarge {
++			total += uint64(p.entry.size)
++		}
++	}
++	workers = min(workers, int(total/parallelCopyChunkBytes), len(plans))
++	if workers < 2 || total < x.options.MinCopyBytes {
++		return false
++	}
++	chunks := x.copyChunks[:0]
++	target := (total + uint64(workers) - 1) / uint64(workers)
++	start := 0
++	var bytes uint64
++	for i, p := range plans {
++		if p.entry.space != spaceLarge {
++			source := c.handles[p.handle]
++			if p.entry.space != spaceNursery && p.entry.space != spaceOld {
++				panic("gc: parallel copy destination has invalid space")
++			}
++			if p.entry.space == spaceNursery {
++				base := c.survivorBase(c.survivorFrom ^ 1)
++				if p.entry.off < base || uint64(p.entry.off)+uint64(p.entry.size) > uint64(base)+uint64(c.survivorBytes) {
++					panic("gc: parallel copy destination is not in the inactive survivor space")
++				}
++			}
++			if source.space != spaceNursery || source.size != p.entry.size {
++				panic("gc: parallel copy plan has an invalid nursery source or extent")
++			}
++			totalSource := uint64(source.off) + uint64(source.size)
++			totalDestination := uint64(p.entry.off) + uint64(p.entry.size)
++			if totalSource > uint64(len(c.nursery)) || p.entry.space == spaceNursery && totalDestination > uint64(len(c.nursery)) || p.entry.space == spaceOld && totalDestination > uint64(len(c.throughput.mem)) {
++				panic("gc: parallel copy plan exceeds reserved backing")
++			}
++			bytes += uint64(p.entry.size)
++		}
++		if bytes >= target && len(chunks) < workers-1 {
++			chunks = append(chunks, parallelCopyChunk{start: start, end: i + 1})
++			start = i + 1
++			bytes = 0
++		}
++	}
++	if start < len(plans) {
++		chunks = append(chunks, parallelCopyChunk{start: start, end: len(plans)})
++	}
++	x.copyChunks = chunks
++	var group sync.WaitGroup
++	group.Add(len(chunks))
++	// All destinations and commit failures were resolved before this call.
++	// Chunks own disjoint fully reserved destinations; handles remain unchanged.
++	for i := range chunks {
++		go func(index int) {
++			defer group.Done()
++			begin := time.Now()
++			chunk := &chunks[index]
++			for _, p := range plans[chunk.start:chunk.end] {
++				if p.entry.space == spaceLarge {
++					continue
++				}
++				source := c.handles[p.handle]
++				from := c.nursery[source.off : source.off+source.size]
++				if p.entry.space == spaceNursery {
++					copy(c.nursery[p.entry.off:p.entry.off+p.entry.size], from)
++				} else {
++					copy(c.throughput.mem[p.entry.off:p.entry.off+p.entry.size], from)
++				}
++			}
++			chunk.elapsed = uint64(time.Since(begin))
++		}(i)
++	}
++	group.Wait()
++	for _, chunk := range chunks {
++		x.copyWorkerNS += chunk.elapsed
++	}
++	x.lastCopyWorkers = uint16(len(chunks))
++	x.parallelCopyCycles++
++	return true
++}
++
++// publishPrecopiedPromotion mirrors promoteHandleTo after workers have joined.
++// No source poisoning or handle publication is allowed during the copy phase.
++func (c *Collector) publishPrecopiedPromotion(h uint32, entry handleEntry) {
++	if nativeCollectorFastPaths && c.majorYoungDirty {
++		c.noteMajorHandle(h)
++	}
++	source := c.handles[h]
++	entry.typeID = source.typeID
++	entry.class |= source.class & NativeHandlePointerFreeBit
++	c.poisonYoungSource(source)
++	c.handles[h] = entry
++}
++func (c *Collector) copyExecutionWorkers() int {
++	if c.throughput.immix == nil || c.throughput.immix.execution == nil {
++		return 1
++	}
++	return max(1, int(c.throughput.immix.execution.lastCopyWorkers))
++}
+diff --git a/src/core/runtime/gc/native/copy_parallel_test.go b/src/core/runtime/gc/native/copy_parallel_test.go
+new file mode 100644
+index 000000000..98217d2af
+--- /dev/null
++++ b/src/core/runtime/gc/native/copy_parallel_test.go
+@@ -0,0 +1,117 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import (
++	"runtime"
++	"testing"
++)
++
++func newParallelCopyCollector(t testing.TB, workers uint16, immediate bool) *Collector {
++	t.Helper()
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageI64})
++	if err != nil {
++		t.Fatal(err)
++	}
++	array, err := NewArrayDesc(1, StorageI64)
++	if err != nil {
++		t.Fatal(err)
++	}
++	cfg := Config{Allocator: AllocatorImmix, NurseryBytes: 4 << 20, SurvivorBytes: 1 << 20, ThroughputHeapBytes: 4 << 20, ThroughputPageBytes: 4096, PoisonFreed: true, Execution: &ExecutionOptions{Workers: workers, Telemetry: true, MinCopyBytes: 1}}
++	if immediate {
++		cfg.SurvivorBytes = 0
++		cfg.DisableMovingNursery = true
++	}
++	c, err := NewCollector(cfg, []TypeDesc{node, array})
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(c.Close)
++	return c
++}
++func allocateParallelCopyNodes(t testing.TB, c *Collector, count int) RefSliceRoots {
++	t.Helper()
++	roots := make(RefSliceRoots, count)
++	for i := range roots {
++		var err error
++		roots[i], err = c.NewStructDefault(0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.StructSet(roots[i], 1, I64Value(int64(i)+1000)); err != nil {
++			t.Fatal(err)
++		}
++	}
++	return roots
++}
++func TestParallelCopyPublishesAfterCompleteInitialization(t *testing.T) {
++	previous := runtime.GOMAXPROCS(4)
++	defer runtime.GOMAXPROCS(previous)
++	for _, immediate := range []bool{false, true} {
++		c := newParallelCopyCollector(t, 4, immediate)
++		roots := allocateParallelCopyNodes(t, c, 16384)
++		large, err := c.NewArrayDefault(1, 8192)
++		if err != nil {
++			t.Fatal(err)
++		}
++		roots = append(roots, large)
++		largeOffset := c.handles[handleOf(large)].off
++		if err = c.CollectMinor(roots); err != nil {
++			t.Fatal(err)
++		}
++		for i, r := range roots[:16384] {
++			v, err := c.StructGet(r, 1)
++			if err != nil || v.I64() != int64(i)+1000 {
++				t.Fatalf("first copy object%d: %v", i, err)
++			}
++		}
++		if c.handles[handleOf(large)].off != largeOffset {
++			t.Fatal("large young object was copied")
++		}
++		if !immediate {
++			young := allocateParallelCopyNodes(t, c, 8192)
++			child := young[0]
++			for _, r := range roots[:16384] {
++				if err = c.StructSet(r, 0, RefValue(child)); err != nil {
++					t.Fatal(err)
++				}
++			}
++			roots = append(roots, young...)
++			if err = c.CollectMinor(roots); err != nil {
++				t.Fatal(err)
++			}
++			if c.handles[handleOf(roots[0])].young() || !c.handles[handleOf(child)].young() || !c.handles[handleOf(roots[0])].remembered {
++				t.Fatal("mixed survivor/old publication lost generation cards")
++			}
++		}
++		if err = c.Verify(roots); err != nil {
++			t.Fatal(err)
++		}
++		stats := c.CycleTelemetry()
++		if stats.ParallelCopyCycles == 0 || stats.CopyWorkerNS == 0 {
++			t.Fatal("parallel copy did not run")
++		}
++		if cycle := stats.Cycles[len(stats.Cycles)-1]; cycle.Workers < 2 || cycle.WorkerNS == 0 {
++			t.Fatalf("missing per-cycle workers: %+v", cycle)
++		}
++	}
++}
++func TestParallelCopyThresholdKeepsSmallMinorWorkerFree(t *testing.T) {
++	c := newParallelCopyCollector(t, 4, true)
++	roots := allocateParallelCopyNodes(t, c, 128)
++	if err := c.CollectMinor(roots); err != nil {
++		t.Fatal(err)
++	}
++	if c.CycleTelemetry().ParallelCopyCycles != 0 {
++		t.Fatal("tiny copy started workers")
++	}
++	c = newParallelCopyCollector(t, 4, true)
++	c.throughput.immix.execution.options.MinCopyBytes = 1 << 30
++	roots = allocateParallelCopyNodes(t, c, 16384)
++	if err := c.CollectMinor(roots); err != nil {
++		t.Fatal(err)
++	}
++	if c.CycleTelemetry().ParallelCopyCycles != 0 {
++		t.Fatal("copy byte threshold ignored")
++	}
++}
+diff --git a/src/core/runtime/gc/native/execution.go b/src/core/runtime/gc/native/execution.go
+index f6a5bda53..517718a1f 100644
+--- a/src/core/runtime/gc/native/execution.go
++++ b/src/core/runtime/gc/native/execution.go
+@@ -12,8 +12,9 @@ type ExecutionOptions struct {
+ 	// MinMarkBytes must be set from workload evidence. Zero disables parallel mark.
+ 	MinMarkBytes   uint64
+ 	MinMarkObjects uint32
+-	MinCopyBytes   uint64
+-	MinSweepBytes  uint64
++	// MinCopyBytes is explicit after measurement; zero disables parallel copying.
++	MinCopyBytes  uint64
++	MinSweepBytes uint64
+ }
+ type CollectionKind uint8
+ 
+@@ -35,6 +36,7 @@ type CollectionCycle struct {
+ 	HeapBytes                                                    uint64
+ }
+ type CycleTelemetry struct {
++	ParallelCopyCycles, CopyWorkerNS                                                    uint64
+ 	ParallelMarkCycles, QueueSteals, QueueTransfers, MarkWorkerNS, ParallelScratchBytes uint64
+ 	BackgroundTasks, BackgroundSweptBytes, AssistWaitNS                                 uint64
+ 	Cycles                                                                              []CollectionCycle
+@@ -66,7 +68,7 @@ func normalizeExecution(cfg *Config) error {
+ 		options.MinMarkObjects = 65536
+ 	}
+ 	if options.MinCopyBytes == 0 {
+-		options.MinCopyBytes = 1 << 20
++		options.MinCopyBytes = ^uint64(0)
+ 	}
+ 	if options.MinSweepBytes == 0 {
+ 		options.MinSweepBytes = 256 << 10
+diff --git a/src/core/runtime/gc/native/execution_bench_test.go b/src/core/runtime/gc/native/execution_bench_test.go
+index 5fa8bdb34..0966ccd2e 100644
+--- a/src/core/runtime/gc/native/execution_bench_test.go
++++ b/src/core/runtime/gc/native/execution_bench_test.go
+@@ -40,3 +40,61 @@ func BenchmarkParallelFullMark(b *testing.B) {
+ 		}
+ 	}
+ }
++
++func BenchmarkParallelEvacuation(b *testing.B) {
++	counts := []uint16{1, 2, 4, uint16(min(128, runtime.GOMAXPROCS(0)))}
++	seen := map[uint16]bool{}
++	for _, workers := range counts {
++		if seen[workers] {
++			continue
++		}
++		seen[workers] = true
++		for _, length := range []uint32{1, 128} {
++			b.Run(fmt.Sprintf("array%d/workers%d", length, workers), func(b *testing.B) {
++				var pause, copyPhase, workerTime uint64
++				for iteration := 0; iteration < b.N; iteration++ {
++					b.StopTimer()
++					array, err := NewArrayDesc(0, StorageI64)
++					if err != nil {
++						b.Fatal(err)
++					}
++					c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: 32 << 20, DisableMovingNursery: true, ThroughputHeapBytes: 32 << 20, ThroughputPageBytes: 4096, Execution: &ExecutionOptions{Workers: workers, Telemetry: true, MinCopyBytes: 1}}, []TypeDesc{array})
++					if err != nil {
++						b.Fatal(err)
++					}
++					roots := make(RefSliceRoots, 16384)
++					for i := range roots {
++						roots[i], err = c.NewArrayDefault(0, length)
++						if err != nil {
++							b.Fatal(err)
++						}
++						if err = c.ArraySet(roots[i], length-1, I64Value(int64(i)+7)); err != nil {
++							b.Fatal(err)
++						}
++					}
++					b.StartTimer()
++					err = c.CollectMinor(roots)
++					b.StopTimer()
++					if err != nil {
++						b.Fatal(err)
++					}
++					record := c.CycleTelemetry().Cycles[0]
++					b.ReportMetric(float64(record.Workers), "actual-workers")
++					pause += record.PauseNS
++					copyPhase += record.CopyNS
++					workerTime += record.WorkerNS
++					for i, r := range roots {
++						v, err := c.ArrayGet(r, length-1)
++						if err != nil || v.I64() != int64(i)+7 {
++							b.Fatal("copy payload changed")
++						}
++					}
++					c.Close()
++				}
++				b.ReportMetric(float64(pause)/float64(b.N), "pause-ns")
++				b.ReportMetric(float64(copyPhase)/float64(b.N), "copy-plan-ns")
++				b.ReportMetric(float64(workerTime)/float64(b.N), "worker-elapsed-ns")
++			})
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/execution_disabled.go b/src/core/runtime/gc/native/execution_disabled.go
+index 4f1ff48f7..7128320b6 100644
+--- a/src/core/runtime/gc/native/execution_disabled.go
++++ b/src/core/runtime/gc/native/execution_disabled.go
+@@ -14,3 +14,5 @@ func (t *executionCycle) markDone()                                    {}
+ func (t *executionCycle) sweepDone()                                   {}
+ func (t *executionCycle) copyDone()                                    {}
+ func (c *Collector) CycleTelemetry() CycleTelemetry                    { return CycleTelemetry{} }
++
++func (x *collectorExecution) resetCopyCycle() {}
+diff --git a/src/core/runtime/gc/native/execution_enabled.go b/src/core/runtime/gc/native/execution_enabled.go
+index 7b15fd9a4..6083b18a3 100644
+--- a/src/core/runtime/gc/native/execution_enabled.go
++++ b/src/core/runtime/gc/native/execution_enabled.go
+@@ -11,6 +11,9 @@ const executionProduct = true
+ const cycleHistory = 64
+ 
+ type collectorExecution struct {
++	copyChunks                                                                          []parallelCopyChunk
++	parallelCopyCycles, copyWorkerNS                                                    uint64
++	lastCopyWorkers                                                                     uint16
+ 	markPool                                                                            *parallelMarkPool
+ 	parallelMarkCycles, queueSteals, queueTransfers, markWorkerNS, parallelScratchBytes uint64
+ 	sweep                                                                               *backgroundSweep
+@@ -42,7 +45,7 @@ func (c *Collector) beginExecutionCycle(kind CollectionKind) executionCycle {
+ 		return executionCycle{}
+ 	}
+ 	now := time.Now()
+-	return executionCycle{owner: x, start: now, phase: now, workerStartNS: x.markWorkerNS, record: CollectionCycle{Kind: kind, Workers: 1}}
++	return executionCycle{owner: x, start: now, phase: now, workerStartNS: x.markWorkerNS + x.copyWorkerNS, record: CollectionCycle{Kind: kind, Workers: 1}}
+ }
+ func (t *executionCycle) markDone() {
+ 	if t.owner != nil {
+@@ -72,7 +75,7 @@ func (c *Collector) finishExecutionCycle(t executionCycle, err error) {
+ 	t.record.PauseNS = uint64(time.Since(t.start))
+ 	t.record.WallNS = t.record.PauseNS
+ 	t.record.Failed = err != nil
+-	t.record.WorkerNS = t.owner.markWorkerNS - t.workerStartNS
++	t.record.WorkerNS = t.owner.markWorkerNS + t.owner.copyWorkerNS - t.workerStartNS
+ 	t.record.Objects = uint32(len(c.handles) - min(len(c.freeHandles)+1, len(c.handles)))
+ 	t.record.HeapBytes = uint64(c.throughput.bump)
+ 	t.owner.record(t.record)
+@@ -89,7 +92,7 @@ func (c *Collector) CycleTelemetry() CycleTelemetry {
+ 	}
+ 	x := m.execution
+ 	n := min(x.sequence, uint64(cycleHistory))
+-	result := CycleTelemetry{Count: x.sequence, Cycles: make([]CollectionCycle, n), ParallelMarkCycles: x.parallelMarkCycles, QueueSteals: x.queueSteals, QueueTransfers: x.queueTransfers, MarkWorkerNS: x.markWorkerNS, ParallelScratchBytes: x.parallelScratchBytes, BackgroundTasks: x.backgroundTasks, BackgroundSweptBytes: x.backgroundSweptBytes, AssistWaitNS: x.assistWaitNS}
++	result := CycleTelemetry{Count: x.sequence, Cycles: make([]CollectionCycle, n), ParallelCopyCycles: x.parallelCopyCycles, CopyWorkerNS: x.copyWorkerNS, ParallelMarkCycles: x.parallelMarkCycles, QueueSteals: x.queueSteals, QueueTransfers: x.queueTransfers, MarkWorkerNS: x.markWorkerNS, ParallelScratchBytes: x.parallelScratchBytes, BackgroundTasks: x.backgroundTasks, BackgroundSweptBytes: x.backgroundSweptBytes, AssistWaitNS: x.assistWaitNS}
+ 	pauses := make([]uint64, 0, n)
+ 	for i := range result.Cycles {
+ 		r := x.cycles[(x.sequence-n+uint64(i))%cycleHistory]
+@@ -111,3 +114,5 @@ func (t *executionCycle) workers(count int) {
+ 		t.record.Workers = uint16(max(1, count))
+ 	}
+ }
++
++func (x *collectorExecution) resetCopyCycle() { x.lastCopyWorkers = 1 }

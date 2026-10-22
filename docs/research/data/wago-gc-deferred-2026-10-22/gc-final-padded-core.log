@@ -1,0 +1,15 @@
+--- FAIL: TestImmixMixedVectorCompactionPreservesAlignmentAndCards (0.00s)
+    immix_compact_test.go:221: vector data/alignment changed
+--- FAIL: TestImmixEvacuationFailureLeavesSourcesAndHandlesUnchanged (0.00s)
+    immix_failure_debug_test.go:106: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepFailureKeepsReclamationDebt (0.00s)
+    sweep_background_debug_test.go:14: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepAllocationFallbackAtHeapLimit (0.00s)
+    sweep_background_test.go:31: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepThresholdAndSingleProcessorRemainWorkerFree (0.00s)
+    sweep_background_test.go:69: gc: throughput heap exhausted
+--- FAIL: TestBackgroundSweepCloseJoinsBeforeUnmapping (0.00s)
+    sweep_background_test.go:84: gc: throughput heap exhausted
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.915s
+FAIL

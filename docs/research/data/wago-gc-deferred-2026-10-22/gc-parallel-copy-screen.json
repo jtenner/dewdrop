@@ -1,0 +1,23 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "0-15",
+    "/tmp/wago-gc-deferred-evidence/gc-copy-bench.test",
+    "-test.run",
+    "^$",
+    "-test.bench",
+    "^BenchmarkParallelEvacuation$",
+    "-test.benchtime",
+    "5x",
+    "-test.count",
+    "3"
+  ],
+  "seconds": 0.6947999609983526,
+  "exit": 0,
+  "user_seconds": 0.795217,
+  "system_seconds": 0.402356,
+  "peak_rss_kib": 52392,
+  "minor_faults": 30222,
+  "major_faults": 0
+}

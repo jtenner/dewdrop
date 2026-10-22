@@ -1,0 +1,18 @@
+--- FAIL: TestGCNativeArrayCopyTwoShortObjectSize (0.00s)
+panic: runtime error: slice bounds out of range [4:0] [recovered, repanicked]
+
+goroutine 94 [running]:
+testing.tRunner.func1.2({0x2376e88, 0x26cf6934aa20})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x232
+testing.tRunner.func1()
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x329
+panic({0x2376e88?, 0x26cf6934aa20?})
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+github.com/wago-org/wago/src/wago.TestGCNativeArrayCopyTwoShortObjectSize(0x26cf693f8248)
+	/tmp/wago-gc-deferred-20261022/src/wago/gc_array_copy_native_amd64_test.go:359 +0x559
+testing.tRunner(0x26cf693f8248, 0x23ac058)
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/dev/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/wago-org/wago/src/wago	0.026s
+FAIL

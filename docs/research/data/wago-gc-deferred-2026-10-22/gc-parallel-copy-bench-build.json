@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-tags",
+    "wago_gc_workers",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/gc-copy-bench.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.4430717270006426,
+  "exit": 0,
+  "user_seconds": 3.993557,
+  "system_seconds": 0.186434,
+  "peak_rss_kib": 318084,
+  "minor_faults": 20794,
+  "major_faults": 4
+}

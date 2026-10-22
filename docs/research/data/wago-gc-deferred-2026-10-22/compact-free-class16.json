@@ -1,0 +1,21 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "12,14",
+    "/tmp/wago-gc-deferred-evidence/compact-class-bench.test",
+    "-test.run",
+    "^$",
+    "-test.bench",
+    "BenchmarkCompactStructLayout",
+    "-test.benchtime=250000x",
+    "-test.count=5"
+  ],
+  "seconds": 0.4755951300030574,
+  "exit": 0,
+  "user_seconds": 0.373816,
+  "system_seconds": 0.105817,
+  "peak_rss_kib": 25888,
+  "minor_faults": 52393,
+  "major_faults": 0
+}

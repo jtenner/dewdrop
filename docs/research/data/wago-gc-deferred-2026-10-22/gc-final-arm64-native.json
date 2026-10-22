@@ -1,0 +1,19 @@
+{
+  "command": [
+    "qemu-aarch64",
+    "/tmp/wago-gc-deferred-evidence/final-arm64.test",
+    "-test.run=^TestGC",
+    "-test.skip=^TestGCReducedBatchHonorsDeadline$",
+    "-test.count=1",
+    "-test.timeout=30s"
+  ],
+  "seconds": 9.055315245001111,
+  "exit": 0,
+  "user_seconds": 9.322201,
+  "system_seconds": 0.215023,
+  "peak_rss_kib": 625324,
+  "minor_faults": 29574,
+  "major_faults": 7,
+  "voluntary_context_switches": 13507,
+  "involuntary_context_switches": 520
+}

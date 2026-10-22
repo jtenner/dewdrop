@@ -1,0 +1,20 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "tinygo",
+    "./src/core/runtime/gc/native",
+    "./internal/virtualmem"
+  ],
+  "seconds": 3.945256351988064,
+  "exit": 0,
+  "user_seconds": 5.359274,
+  "system_seconds": 0.342727,
+  "peak_rss_kib": 322420,
+  "minor_faults": 86784,
+  "major_faults": 7,
+  "voluntary_context_switches": 6718,
+  "involuntary_context_switches": 407
+}

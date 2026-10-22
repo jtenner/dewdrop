@@ -1,0 +1,13 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/arm64-hot-handles-wago.test",
+    "./src/wago"
+  ],
+  "seconds": 20.414589722000528,
+  "exit_code": 0,
+  "output": ""
+}

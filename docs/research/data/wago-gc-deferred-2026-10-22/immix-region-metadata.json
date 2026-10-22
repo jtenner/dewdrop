@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 3.7632076680019964,
+  "exit": 0,
+  "user_seconds": 5.056308,
+  "system_seconds": 0.287979,
+  "peak_rss_kib": 307544,
+  "minor_faults": 58600,
+  "major_faults": 6
+}

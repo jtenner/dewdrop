@@ -1,0 +1,18 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "wago_gc_workers wago_gc_concurrent wagodebug",
+    "./src/core/runtime/gc/native",
+    "./internal/virtualmem"
+  ],
+  "seconds": 3.8182149680069415,
+  "exit": 0,
+  "user_seconds": 6.252957,
+  "system_seconds": 0.346549,
+  "peak_rss_kib": 347496,
+  "minor_faults": 65349,
+  "major_faults": 8
+}

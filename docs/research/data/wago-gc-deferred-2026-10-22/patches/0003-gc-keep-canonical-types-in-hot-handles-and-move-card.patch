@@ -1,0 +1,1114 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 00:39:44 +0000
+Subject: [PATCH 03/20] gc: keep canonical types in hot handles and move card
+ links aside
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  | 30 ++++++++++
+ .../backend/railshot/amd64/gc_direct.go       | 16 ++++-
+ .../backend/railshot/arm64/gc_array_alloc.go  |  5 +-
+ src/core/runtime/gc/native/alloc.go           |  1 +
+ .../runtime/gc/native/allocator_error_test.go |  2 +-
+ src/core/runtime/gc/native/barrier.go         | 36 +++++++-----
+ .../runtime/gc/native/barrier_bench_test.go   |  2 +-
+ .../runtime/gc/native/card_driven_test.go     | 20 +++----
+ .../gc/native/card_failure_debug_test.go      | 20 +++----
+ .../runtime/gc/native/card_malformed_test.go  |  4 +-
+ src/core/runtime/gc/native/card_slots.go      | 58 +++++++++++++++++++
+ src/core/runtime/gc/native/cards.go           | 10 ++--
+ src/core/runtime/gc/native/collect.go         |  8 ++-
+ src/core/runtime/gc/native/collector.go       |  4 +-
+ .../runtime/gc/native/failure_debug_test.go   | 10 ++--
+ src/core/runtime/gc/native/hot_handle_test.go | 48 +++++++++++++++
+ src/core/runtime/gc/native/invariant_test.go  |  6 +-
+ .../gc/native/major_blocks_coverage_test.go   |  2 +-
+ .../gc/native/native_card_view_test.go        |  4 +-
+ src/core/runtime/gc/native/native_view.go     | 21 +++++--
+ .../runtime/gc/native/native_view_test.go     | 12 ++--
+ .../gc/native/sparse_card_transition_test.go  |  2 +-
+ src/core/runtime/gc/native/stable_backing.go  |  5 +-
+ .../gc/native/struct_card_finish_test.go      | 16 ++---
+ .../gc/native/struct_card_fixture_test.go     |  2 +-
+ .../gc/native/struct_card_mixed_bench_test.go |  2 +-
+ .../gc/native/struct_card_scan_test.go        |  4 +-
+ src/core/runtime/gc/native/survivor.go        |  4 +-
+ src/core/runtime/gc/native/verify.go          |  9 ++-
+ 29 files changed, 268 insertions(+), 95 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/card_slots.go
+ create mode 100644 src/core/runtime/gc/native/hot_handle_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index f025ce401..2ee022949 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -88,3 +88,33 @@ from this load-order change.
+ The ARM64 physical-guard test passes under QEMU after rebuilding its raw ABI
+ fixture with the bound handle base (7.12 s cross-build, 0.087 s execution).
+ The focused native ABI loader/refresh tests reject the preceding version too.
++
++## Compact metadata: hot type IDs and cold cards
++
++ABI 11 replaces the handle's four-byte card-list link with its canonical type
++ID, keeping the hot record exactly 16 bytes. All Go/native constructors and
++evacuation publish that ID. This preparation still retains the original object
++header, and Verify requires its type to agree with the new hot type field.
++
++Card-list heads move into a separate collector-owned uint32 array. Nursery-only
++collectors allocate no card array. On supported mapped collectors its bounded
++reservation is created on first use and pages become accessible before the
++native prefix is published. Only written old-parent links dirty physical pages.
++Portable builds use a growable Go slice. Read-only card lookups do not grow it.
++OS reservation/commit failure selects the existing conservative remembered-set
++scan before changing card nodes. The native reference-array store checks the
++cold prefix bound and pointer before looking up a card head.
++
++The collector view grows from 200 to 216 bytes for the cold array pointer/count.
++Collector adds one 24-byte slice descriptor; the optional mapped-backing owner
++adds one pointer. Cold committed link pages cost four bytes per covered handle
++index, with lazy physical writes; this is not a claim of zero side metadata.
++The later header removal must earn this cost. Existing card/failure/root tests
++use cold link accessors and retain the same semantic assertions.
++
++Complete native collector and wagodebug suites pass (1.70/1.89 s test time).
++Complete AMD64 backend/runtime/Wago tests pass (53.48 s including build;
++5.15/0.42/26.94 s tests). ARM64 ABI, struct execution and native reservation
++checks pass under QEMU (20.41 s cross-build, 0.192 s execution). Header removal
++and its two-layout comparison are the next step; this is not yet issue 309's
++completed representation.
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_direct.go b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+index 0e18a73b0..3e3a4b716 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_direct.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+@@ -1610,7 +1610,8 @@ func (f *fn) emitNativeArrayAllocStub(site gcArrayAllocStubSite) {
+ 
+ 	a.Store32(R9, gc.NativeHandleOffsetOffset, R15)
+ 	a.Store32(R9, gc.NativeHandleSizeOffset, sizeReg)
+-	a.StoreImm32Mem(R9, gc.NativeHandleCardSlotOffset, 0)
++	a.Load32(RAX, R11, 0)
++	a.Store32(R9, gc.NativeHandleTypeIDOffset, RAX)
+ 	a.MovRegReg32(RAX, R15)
+ 	a.AluRR(0x01, RAX, sizeReg, false)
+ 	if site.mode != gcArrayNativeDefault {
+@@ -1971,7 +1972,8 @@ func (f *fn) emitNativeStructAlloc(typeIndex uint32, dead, inline bool, argSlot,
+ 	}
+ 	a.Store32(R9, gc.NativeHandleOffsetOffset, RCX)
+ 	a.StoreImm32Mem(R9, gc.NativeHandleSizeOffset, int32(objectSize))
+-	a.StoreImm32Mem(R9, gc.NativeHandleCardSlotOffset, 0)
++	a.Load32(RAX, R11, 0)
++	a.Store32(R9, gc.NativeHandleTypeIDOffset, RAX)
+ 	a.Load64(RAX, R8, gc.NativeViewNurseryBumpOffset)
+ 	a.MovRegReg32(R10, RCX)
+ 	a.AluRI(0, R10, int32(objectSize), false)
+@@ -2961,7 +2963,15 @@ func (f *fn) emitNativeCardSafeArrayRefSetStub() {
+ 	// valid fixed-card range covering this payload byte. A store in another card
+ 	// falls back so Go can append or coalesce linked metadata without relocating it
+ 	// under native code.
+-	a.Load32(RAX, R9, gc.NativeHandleCardSlotOffset)
++	a.Load32(RAX, RSP, 0)
++	a.ShiftImm(5, RAX, 1, false)
++	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewObjectCardSlotCountOffset, false)
++	addFallback(a.JccPlaceholder(condAE))
++	a.Load64(R10, R8, gc.NativeViewObjectCardSlotsOffset)
++	a.TestSelf(R10, true)
++	addFallback(a.JccPlaceholder(condE))
++	a.ShiftImm(4, RAX, 2, true)
++	a.LoadIdx(RAX, R10, RAX, 0, 4, false, false)
+ 	a.TestSelf(RAX, false)
+ 	addFallback(a.JccPlaceholder(condE))
+ 	a.AluRI(5, RAX, 1, false)
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go b/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go
+index 6537afa39..82fd4df6e 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_array_alloc.go
+@@ -92,7 +92,10 @@ func (f *fn) arrayAllocationShortcut(helper, typeIndex uint32, argSlot int) int
+ 	f.a.AddShifted(X16, X16, X5, 4, false)
+ 	f.st32(X16, gc.NativeHandleOffsetOffset, X7)
+ 	f.st32(X16, gc.NativeHandleSizeOffset, X3)
+-	f.st32(X16, gc.NativeHandleCardSlotOffset, ZR)
++	f.ld64(X17, linMemReg, -int32(abi.GCNativeViewPtrOffset))
++	f.ld64(X17, X17, gc.NativeInstanceViewLocalTypesOffset)
++	f.ld32(X17, X17, int32(typeIndex*4))
++	f.st32(X16, gc.NativeHandleTypeIDOffset, X17)
+ 	f.a.Add32(X7, X7, X3)
+ 	f.st32(X10, gc.NativeStructAllocChunkCursorOffset, X7)
+ 	f.ld64(X17, X6, 0)
+diff --git a/src/core/runtime/gc/native/alloc.go b/src/core/runtime/gc/native/alloc.go
+index 84aa2e005..c98506279 100644
+--- a/src/core/runtime/gc/native/alloc.go
++++ b/src/core/runtime/gc/native/alloc.go
+@@ -336,6 +336,7 @@ func (c *Collector) header(r Ref) ObjHeader {
+ 	return ObjHeader{binary.LittleEndian.Uint32(b[0:4]), binary.LittleEndian.Uint32(b[4:8]), binary.LittleEndian.Uint32(b[8:12]), binary.LittleEndian.Uint32(b[12:16])}
+ }
+ func (c *Collector) writeHeader(r Ref, h ObjHeader) {
++	c.entry(r).typeID = h.TypeID
+ 	b := c.bytes(r)
+ 	binary.LittleEndian.PutUint32(b[0:4], h.TypeID)
+ 	binary.LittleEndian.PutUint32(b[4:8], h.Size)
+diff --git a/src/core/runtime/gc/native/allocator_error_test.go b/src/core/runtime/gc/native/allocator_error_test.go
+index ee8dcc786..48c0d5e63 100644
+--- a/src/core/runtime/gc/native/allocator_error_test.go
++++ b/src/core/runtime/gc/native/allocator_error_test.go
+@@ -38,7 +38,7 @@ func TestCollectorAllocatorFreeErrorsFailStopBeforeHandleRelease(t *testing.T) {
+ 		original := c.handles[h]
+ 		c.handles[h].off++
+ 		expectAllocatorInvariantPanic(t, "internal throughput free invariant", func() { c.free(h) })
+-		if c.handles[h].space != spaceOld || !c.handles[h].remembered || c.handles[h].cardSlot == 0 {
++		if c.handles[h].space != spaceOld || !c.handles[h].remembered || c.cardSlot(h) == 0 {
+ 			t.Fatalf("failed free released handle/card state: %+v", c.handles[h])
+ 		}
+ 		c.handles[h] = original
+diff --git a/src/core/runtime/gc/native/barrier.go b/src/core/runtime/gc/native/barrier.go
+index cb81ee4cc..c58f2e956 100644
+--- a/src/core/runtime/gc/native/barrier.go
++++ b/src/core/runtime/gc/native/barrier.go
+@@ -81,7 +81,7 @@ func (c *Collector) writeBarrierObjectRange(parent Ref, child Ref, start, end ui
+ 	}
+ 
+ 	c.remember(h)
+-	if slot := e.cardSlot; slot != 0 && slotIndexOK(slot-1, len(c.objectCards)) {
++	if slot := c.cardSlot(h); slot != 0 && slotIndexOK(slot-1, len(c.objectCards)) {
+ 		card := c.objectCards[slot-1]
+ 		if card.handle == h && start >= card.index && end <= card.end {
+ 			return
+@@ -264,15 +264,20 @@ func (c *Collector) addObjectCardRange(h, start, end uint32) {
+ 		end = payloadBytes - 1
+ 	}
+ 
++	if err := c.ensureCardSlot(h); err != nil {
++		c.cardFallback = true
++		return
++	}
++
+ 	// A sparse traversal commonly extends the lowest or highest dirty card.
+ 	// Keep a proof only when the new head is an outermost range. No list walk
+ 	// or per-card state is needed to extend a previously proved interval.
+ 	previous := c.lastCardBounds
+ 	c.lastCardBounds = objectCardBounds{}
+ 	bounds := objectCardBounds{}
+-	if e.cardSlot == 0 {
++	if c.cardSlot(h) == 0 {
+ 		bounds = objectCardBounds{head: 1, oppositeEdge: start}
+-	} else if previous.head == e.cardSlot {
++	} else if previous.head == c.cardSlot(h) {
+ 		if !slotIndexOK(previous.head-1, len(c.objectCards)) {
+ 			goto fallback
+ 		}
+@@ -295,7 +300,7 @@ func (c *Collector) addObjectCardRange(h, start, end uint32) {
+ 	// range; sparse writes retain disjoint cards instead of widening across the
+ 	// untouched middle of a large array. Move a matched range's interval to the
+ 	// head slot so repeated writes return through both Go and native head checks.
+-	for slot := e.cardSlot; slot != 0; {
++	for slot := c.cardSlot(h); slot != 0; {
+ 		if !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			goto fallback
+ 		}
+@@ -342,8 +347,8 @@ func (c *Collector) addObjectCardRange(h, start, end uint32) {
+ 			candidateLink = &other.next
+ 			candidate = candidateNext
+ 		}
+-		if slot != e.cardSlot {
+-			head := &c.objectCards[e.cardSlot-1]
++		if slot != c.cardSlot(h) {
++			head := &c.objectCards[c.cardSlot(h)-1]
+ 			head.index, card.index = card.index, head.index
+ 			head.end, card.end = card.end, head.end
+ 		}
+@@ -351,7 +356,7 @@ func (c *Collector) addObjectCardRange(h, start, end uint32) {
+ 	}
+ appendNewCard:
+ 	{
+-		card := objectCard{handle: h, index: start, end: end, next: e.cardSlot}
++		card := objectCard{handle: h, index: start, end: end, next: c.cardSlot(h)}
+ 		if slot := c.freeObjectCardSlot; slot != 0 {
+ 			if !slotIndexOK(slot-1, len(c.objectCards)) {
+ 				goto fallback
+@@ -362,7 +367,7 @@ appendNewCard:
+ 			}
+ 			c.freeObjectCardSlot = free.next
+ 			*free = card
+-			e.cardSlot = slot
++			c.setCardSlot(h, slot)
+ 			if bounds.head != 0 {
+ 				bounds.head = slot
+ 			}
+@@ -374,9 +379,9 @@ appendNewCard:
+ 		}
+ 
+ 		c.objectCards = append(c.objectCards, card)
+-		e.cardSlot = uint32(len(c.objectCards))
++		c.setCardSlot(h, uint32(len(c.objectCards)))
+ 		if bounds.head != 0 {
+-			bounds.head = e.cardSlot
++			bounds.head = c.cardSlot(h)
+ 		}
+ 		c.lastCardBounds = bounds
+ 		c.refreshNativeCards()
+@@ -387,7 +392,7 @@ fallback:
+ 	// If another exact range exists, make it conservative. Otherwise keep a
+ 	// collector-wide cold fallback active so later successful card additions
+ 	// cannot hide the already-published edge.
+-	if slot := e.cardSlot; slot != 0 && slotIndexOK(slot-1, len(c.objectCards)) {
++	if slot := c.cardSlot(h); slot != 0 && slotIndexOK(slot-1, len(c.objectCards)) {
+ 		card := &c.objectCards[slot-1]
+ 		if card.handle == h {
+ 			card.index = 0
+@@ -528,11 +533,10 @@ func (c *Collector) removeCardsForHandle(h uint32) {
+ 		return
+ 	}
+ 	c.lastCardBounds = objectCardBounds{}
+-	e := &c.handles[h]
+-	if e.cardSlot == 0 {
++	if c.cardSlot(h) == 0 {
+ 		return
+ 	}
+-	for slot, steps := e.cardSlot, 0; slot != 0 && steps <= len(c.objectCards); steps++ {
++	for slot, steps := c.cardSlot(h), 0; slot != 0 && steps <= len(c.objectCards); steps++ {
+ 		if !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			break
+ 		}
+@@ -541,13 +545,13 @@ func (c *Collector) removeCardsForHandle(h uint32) {
+ 		c.releaseObjectCardSlot(pos)
+ 		slot = next
+ 	}
+-	e.cardSlot = 0
++	c.setCardSlot(h, 0)
+ }
+ func (c *Collector) clearCardMetadata() {
+ 	c.lastCardBounds = objectCardBounds{}
+ 	for _, card := range c.objectCards {
+ 		if card.handle != 0 && int(card.handle) < len(c.handles) {
+-			c.handles[card.handle].cardSlot = 0
++			c.setCardSlot(card.handle, 0)
+ 		}
+ 	}
+ 	for _, card := range c.slotCards {
+diff --git a/src/core/runtime/gc/native/barrier_bench_test.go b/src/core/runtime/gc/native/barrier_bench_test.go
+index b488ef75d..fb634c26c 100644
+--- a/src/core/runtime/gc/native/barrier_bench_test.go
++++ b/src/core/runtime/gc/native/barrier_bench_test.go
+@@ -29,7 +29,7 @@ func BenchmarkGCBarrierStateMatrix(b *testing.B) {
+ 		}, reset: func(c *Collector, parent Ref) {
+ 			h := handleOf(parent)
+ 			c.handles[h].remembered = false
+-			c.handles[h].cardSlot = 0
++			c.setCardSlot(h, 0)
+ 			c.remembered = c.remembered[:0]
+ 			c.objectCards = c.objectCards[:0]
+ 			c.freeObjectCardSlot = 0
+diff --git a/src/core/runtime/gc/native/card_driven_test.go b/src/core/runtime/gc/native/card_driven_test.go
+index a9ee144e8..cd79d65f1 100644
+--- a/src/core/runtime/gc/native/card_driven_test.go
++++ b/src/core/runtime/gc/native/card_driven_test.go
+@@ -106,7 +106,7 @@ func TestConservativeObjectBarrierCoversWholeOldParent(t *testing.T) {
+ 	if c.CardCount() != 1 || c.RememberedCount() != 1 {
+ 		t.Fatalf("whole-object barrier metadata: cards=%d remembered=%d", c.CardCount(), c.RememberedCount())
+ 	}
+-	card := c.objectCards[c.entry(parent).cardSlot-1]
++	card := c.objectCards[c.cardSlot(handleOf(parent))-1]
+ 	if card.index != 0 || card.end != c.entry(parent).size-PayloadOffset-1 {
+ 		t.Fatalf("whole-object card = %+v, payload bytes=%d", card, c.entry(parent).size-PayloadOffset)
+ 	}
+@@ -319,14 +319,14 @@ func TestMalformedFreeCardHeadFallsBackAcrossLaterWrites(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	c.freeObjectCardSlot = 0
+-	if !c.cardFallback || c.handles[handleOf(array)].cardSlot != 0 {
+-		t.Fatalf("malformed free head fallback = %v/%d", c.cardFallback, c.handles[handleOf(array)].cardSlot)
++	if !c.cardFallback || c.cardSlot(handleOf(array)) != 0 {
++		t.Fatalf("malformed free head fallback = %v/%d", c.cardFallback, c.cardSlot(handleOf(array)))
+ 	}
+ 	if err := c.ArraySet(array, 64, RefValue(second)); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if c.handles[handleOf(array)].cardSlot == 0 || !c.cardFallback {
+-		t.Fatalf("later exact card lost fallback = %d/%v", c.handles[handleOf(array)].cardSlot, c.cardFallback)
++	if c.cardSlot(handleOf(array)) == 0 || !c.cardFallback {
++		t.Fatalf("later exact card lost fallback = %d/%v", c.cardSlot(handleOf(array)), c.cardFallback)
+ 	}
+ 	root := Root(array)
+ 	if err := c.CollectMinor(Slots{&root}); err != nil {
+@@ -356,7 +356,7 @@ func TestMalformedFreeCardHeadWidensExistingRange(t *testing.T) {
+ 	c.freeObjectCardSlot = uint32(len(c.objectCards) + 1)
+ 	c.CardMarkArray(array, 64)
+ 	c.freeObjectCardSlot = 0
+-	card := c.objectCards[c.handles[handleOf(array)].cardSlot-1]
++	card := c.objectCards[c.cardSlot(handleOf(array))-1]
+ 	if card.index != 0 || card.end != c.handles[handleOf(array)].size-PayloadOffset-1 || c.cardFallback {
+ 		t.Fatalf("existing-card fallback = %+v/global:%v", card, c.cardFallback)
+ 	}
+@@ -376,14 +376,14 @@ func TestObjectCardRepeatedWriteMovesRangeToHead(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	c.CardMarkArray(array, 0)
+-	firstSlot := c.handles[handleOf(array)].cardSlot
++	firstSlot := c.cardSlot(handleOf(array))
+ 	c.CardMarkArray(array, 64)
+-	secondSlot := c.handles[handleOf(array)].cardSlot
++	secondSlot := c.cardSlot(handleOf(array))
+ 	if firstSlot == 0 || secondSlot == 0 || firstSlot == secondSlot {
+ 		t.Fatalf("initial card slots = %d/%d", firstSlot, secondSlot)
+ 	}
+ 	c.CardMarkArray(array, 0)
+-	if got := c.handles[handleOf(array)].cardSlot; got != secondSlot {
++	if got := c.cardSlot(handleOf(array)); got != secondSlot {
+ 		t.Fatalf("repeated non-head card changed stable head slot = %d, want %d", got, secondSlot)
+ 	}
+ 	head, tail := c.objectCards[secondSlot-1], c.objectCards[firstSlot-1]
+@@ -462,7 +462,7 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	}
+ 	// Bounds, lazy major-block state, and one large-array list-index hint have
+ 	// fixed descriptor costs. Promotion sorting adds one bounded scratch descriptor.
+-	wantCollector := uintptr(1208) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
++	wantCollector := uintptr(1232) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
+ 	if got := unsafe.Sizeof(Collector{}); got != wantCollector {
+ 		t.Fatalf("Collector size=%d, want %d", got, wantCollector)
+ 	}
+diff --git a/src/core/runtime/gc/native/card_failure_debug_test.go b/src/core/runtime/gc/native/card_failure_debug_test.go
+index bd7b0871f..c17bad2eb 100644
+--- a/src/core/runtime/gc/native/card_failure_debug_test.go
++++ b/src/core/runtime/gc/native/card_failure_debug_test.go
+@@ -26,8 +26,8 @@ func TestInjectedObjectCardGrowthFallsBackToWholeObjectScan(t *testing.T) {
+ 		t.Fatal(err)
+ 	}
+ 	cleanup()
+-	if c.RememberedCount() != 1 || c.handles[handleOf(array)].cardSlot != 0 || !c.cardFallback {
+-		t.Fatalf("object-card fallback metadata remembered=%d slot=%d fallback=%v", c.RememberedCount(), c.handles[handleOf(array)].cardSlot, c.cardFallback)
++	if c.RememberedCount() != 1 || c.cardSlot(handleOf(array)) != 0 || !c.cardFallback {
++		t.Fatalf("object-card fallback metadata remembered=%d slot=%d fallback=%v", c.RememberedCount(), c.cardSlot(handleOf(array)), c.cardFallback)
+ 	}
+ 	root := Root(array)
+ 	if err := c.CollectMinor(Slots{&root}); err != nil {
+@@ -64,7 +64,7 @@ func TestObjectCardFallbackSurvivesLaterSuccessfulWrite(t *testing.T) {
+ 	if err := c.ArraySet(array, 64, RefValue(second)); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if slot := c.handles[handleOf(array)].cardSlot; slot == 0 || !c.cardFallback {
++	if slot := c.cardSlot(handleOf(array)); slot == 0 || !c.cardFallback {
+ 		t.Fatalf("later write lost whole-object fallback: slot=%d fallback=%v", slot, c.cardFallback)
+ 	}
+ 	root := Root(array)
+@@ -74,7 +74,7 @@ func TestObjectCardFallbackSurvivesLaterSuccessfulWrite(t *testing.T) {
+ 	if c.entry(first).space != spaceOld || c.entry(second).space != spaceOld {
+ 		t.Fatalf("fallback-scanned child spaces=%v/%v, want old/old", c.entry(first).space, c.entry(second).space)
+ 	}
+-	if slot := c.handles[handleOf(array)].cardSlot; slot != 0 || c.cardFallback {
++	if slot := c.cardSlot(handleOf(array)); slot != 0 || c.cardFallback {
+ 		t.Fatalf("drained fallback slot/state = %d/%v, want 0/false", slot, c.cardFallback)
+ 	}
+ }
+@@ -102,14 +102,14 @@ func TestObjectCardFallbackPersistsWhileSurvivorEdgeRemains(t *testing.T) {
+ 	if err := c.CollectMinor(Slots{&root}); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if !c.entry(child).young() || c.handles[handleOf(array)].cardSlot != 0 || !c.cardFallback {
+-		t.Fatalf("first minor child/fallback = young:%v slot:%d fallback:%v", c.entry(child).young(), c.handles[handleOf(array)].cardSlot, c.cardFallback)
++	if !c.entry(child).young() || c.cardSlot(handleOf(array)) != 0 || !c.cardFallback {
++		t.Fatalf("first minor child/fallback = young:%v slot:%d fallback:%v", c.entry(child).young(), c.cardSlot(handleOf(array)), c.cardFallback)
+ 	}
+ 	if err := c.CollectMinor(Slots{&root}); err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if c.entry(child).young() || c.handles[handleOf(array)].cardSlot != 0 || c.handles[handleOf(array)].remembered || c.cardFallback {
+-		t.Fatalf("second minor child/fallback/remembered = young:%v slot:%d remembered:%v fallback:%v", c.entry(child).young(), c.handles[handleOf(array)].cardSlot, c.handles[handleOf(array)].remembered, c.cardFallback)
++	if c.entry(child).young() || c.cardSlot(handleOf(array)) != 0 || c.handles[handleOf(array)].remembered || c.cardFallback {
++		t.Fatalf("second minor child/fallback/remembered = young:%v slot:%d remembered:%v fallback:%v", c.entry(child).young(), c.cardSlot(handleOf(array)), c.handles[handleOf(array)].remembered, c.cardFallback)
+ 	}
+ }
+ 
+@@ -135,7 +135,7 @@ func TestInjectedDisjointObjectCardGrowthWidensExistingCard(t *testing.T) {
+ 			if err := c.ArraySet(array, 0, RefValue(first)); err != nil {
+ 				t.Fatal(err)
+ 			}
+-			if slot := c.handles[handleOf(array)].cardSlot; slot == 0 {
++			if slot := c.cardSlot(handleOf(array)); slot == 0 {
+ 				t.Fatal("first store did not establish an exact card")
+ 			}
+ 			cleanup := armFailure(c, failObjectCardGrowth, 0)
+@@ -144,7 +144,7 @@ func TestInjectedDisjointObjectCardGrowthWidensExistingCard(t *testing.T) {
+ 				t.Fatal(err)
+ 			}
+ 			cleanup()
+-			card := c.objectCards[c.handles[handleOf(array)].cardSlot-1]
++			card := c.objectCards[c.cardSlot(handleOf(array))-1]
+ 			if card.index != 0 || card.end != c.handles[handleOf(array)].size-PayloadOffset-1 {
+ 				t.Fatalf("growth fallback card = %+v, want whole payload", card)
+ 			}
+diff --git a/src/core/runtime/gc/native/card_malformed_test.go b/src/core/runtime/gc/native/card_malformed_test.go
+index 911c48577..c9b258dfe 100644
+--- a/src/core/runtime/gc/native/card_malformed_test.go
++++ b/src/core/runtime/gc/native/card_malformed_test.go
+@@ -101,9 +101,9 @@ func TestMalformedObjectCardChainsFallBackToWholeObjectScan(t *testing.T) {
+ 			cards := test.cards(h, handleOf(child), payloadBytes)
+ 			c.objectCards = cards
+ 			c.freeObjectCardSlot = 0
+-			c.handles[h].cardSlot = 1
++			c.setCardSlot(h, 1)
+ 			if test.head != nil {
+-				c.handles[h].cardSlot = test.head(cards)
++				c.setCardSlot(h, test.head(cards))
+ 			}
+ 			c.refreshNativeCards()
+ 
+diff --git a/src/core/runtime/gc/native/card_slots.go b/src/core/runtime/gc/native/card_slots.go
+new file mode 100644
+index 000000000..2994349d1
+--- /dev/null
++++ b/src/core/runtime/gc/native/card_slots.go
+@@ -0,0 +1,58 @@
++package gc
++
++import (
++	"fmt"
++	"slices"
++	"unsafe"
++
++	"github.com/wago-org/wago/internal/virtualmem"
++)
++
++func (c *Collector) cardSlot(h uint32) uint32 {
++	if uint64(h) >= uint64(len(c.cardSlots)) {
++		return 0
++	}
++	return c.cardSlots[h]
++}
++
++func (c *Collector) ensureCardSlot(h uint32) error {
++	if uint64(h) < uint64(len(c.cardSlots)) {
++		return nil
++	}
++	if h == 0 || uint64(h) >= uint64(len(c.handles)) {
++		return fmt.Errorf("gc: card link handle %d outside live table", h)
++	}
++	need := uint64(h) + 1
++	if c.backing != nil {
++		if c.backing.cardSlots == nil {
++			r, err := virtualmem.Reserve(c.backing.handleLimit * 4)
++			if err != nil {
++				return fmt.Errorf("gc: reserve cold card links: %w", err)
++			}
++			c.backing.cardSlots = r
++		}
++		r := c.backing.cardSlots
++		old := uint64(len(c.cardSlots)) * 4
++		if err := r.Commit(old, need*4-old); err != nil {
++			return fmt.Errorf("gc: commit cold card links: %w", err)
++		}
++		capacity := min(r.CommittedBytes()/4, c.backing.handleLimit)
++		b := r.Bytes(capacity * 4)
++		c.cardSlots = unsafe.Slice((*uint32)(unsafe.Pointer(&b[0])), int(capacity))
++	} else {
++		c.cardSlots = slices.Grow(c.cardSlots, int(need)-len(c.cardSlots))[:need]
++	}
++	c.refreshNativeCards()
++	return nil
++}
++
++func (c *Collector) setCardSlot(h, slot uint32) {
++	if slot == 0 && uint64(h) >= uint64(len(c.cardSlots)) {
++		return
++	}
++	if err := c.ensureCardSlot(h); err != nil {
++		// Nonzero production stores are preflighted before changing card nodes.
++		panic("gc: cold card link publication without committed capacity: " + err.Error())
++	}
++	c.cardSlots[h] = slot
++}
+diff --git a/src/core/runtime/gc/native/cards.go b/src/core/runtime/gc/native/cards.go
+index 745b83059..690bcda72 100644
+--- a/src/core/runtime/gc/native/cards.go
++++ b/src/core/runtime/gc/native/cards.go
+@@ -18,14 +18,14 @@ func (c *Collector) scanRememberedCards(h uint32) {
+ 	if e.young() || (e.space != spaceOld && e.space != spaceLarge) {
+ 		return
+ 	}
+-	if c.cardFallback || e.cardSlot == 0 {
++	if c.cardFallback || c.cardSlot(h) == 0 {
+ 		// Metadata growth failure is fail-safe: remembered membership remains
+ 		// authoritative and falls back to complete object scans until evacuation
+ 		// clears the young generation.
+ 		c.scanNurseryObject(h)
+ 		return
+ 	}
+-	if len(c.objectCards) >= 16 && c.hasSixteenObjectCardRanges(e.cardSlot) && c.scanStructCardRanges(h) {
++	if len(c.objectCards) >= 16 && c.hasSixteenObjectCardRanges(c.cardSlot(h)) && c.scanStructCardRanges(h) {
+ 		return
+ 	}
+ 
+@@ -35,7 +35,7 @@ func (c *Collector) scanRememberedCards(h uint32) {
+ 	}
+ 	valid := payloadSize != 0 && c.cardBytes != 0
+ 
+-	for slot, steps := e.cardSlot, 0; valid && slot != 0; steps++ {
++	for slot, steps := c.cardSlot(h), 0; valid && slot != 0; steps++ {
+ 		if steps >= len(c.objectCards) || !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			valid = false
+ 			break
+@@ -55,7 +55,7 @@ func (c *Collector) scanRememberedCards(h uint32) {
+ 		// but later writes and complete metadata clearing cannot follow a stale or
+ 		// wrong-owner link.
+ 		c.lastCardBounds = objectCardBounds{}
+-		e.cardSlot = 0
++		c.setCardSlot(h, 0)
+ 		c.cardFallback = true
+ 		c.scanNurseryObject(h)
+ 		return
+@@ -138,7 +138,7 @@ func (c *Collector) scanStructCardRanges(h uint32) bool {
+ 	var ranges [32]structCardRange
+ 	count := 0
+ 
+-	for slot := e.cardSlot; slot != 0; {
++	for slot := c.cardSlot(h); slot != 0; {
+ 		if count == len(ranges) || !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			return false
+ 		}
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 4a93cffe8..419f557a4 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -189,7 +189,7 @@ func (c *Collector) finishMinorEvacuation(liveCount uint64) {
+ 			continue
+ 		}
+ 		e := &c.handles[h]
+-		if nativeCollectorFastPaths && e.space == spaceNursery && !c.cfg.PoisonFreed && e.cardSlot == 0 {
++		if nativeCollectorFastPaths && e.space == spaceNursery && !c.cfg.PoisonFreed && c.cardSlot(h) == 0 {
+ 			// Nursery payload has no individual allocator ownership to release.
+ 			// The space byte invalidates the identity. Both native and Go reuse
+ 			// overwrite the complete entry before publishing it again; leave the
+@@ -236,7 +236,7 @@ func (c *Collector) finishSparseMinorEvacuation() {
+ 				}
+ 			} else {
+ 				e := &c.handles[h]
+-				if e.space == spaceNursery && e.cardSlot == 0 {
++				if e.space == spaceNursery && c.cardSlot(h) == 0 {
+ 					e.space = spaceFree
+ 					continue
+ 				} else if e.young() {
+@@ -280,7 +280,7 @@ func (c *Collector) finishDeadNurseryEvacuation() bool {
+ 		h := nursery[i]
+ 		if h != 0 && int(h) < len(c.handles) {
+ 			e := &c.handles[h]
+-			if e.space == spaceNursery && e.cardSlot == 0 {
++			if e.space == spaceNursery && c.cardSlot(h) == 0 {
+ 				e.space = spaceFree
+ 				continue
+ 			} else if e.young() {
+@@ -518,6 +518,7 @@ func (c *Collector) commitPromotionPlans(plans []plannedPromotion, toSpace uint8
+ 		size := src.size
+ 		switch p.entry.space {
+ 		case spaceNursery:
++			p.entry.typeID = src.typeID
+ 			dst := c.nursery[p.entry.off : p.entry.off+p.entry.size]
+ 			copy(dst, c.bytes(makeObjRef(p.handle)))
+ 			c.poisonYoungSource(src)
+@@ -766,6 +767,7 @@ func (c *Collector) promoteHandleTo(h uint32, oldEntry handleEntry) {
+ 	}
+ 	e := &c.handles[h]
+ 	src := c.nursery[e.off : e.off+e.size]
++	oldEntry.typeID = e.typeID
+ 	dst := c.throughput.bytes(oldEntry)
+ 	copy(dst, src)
+ 	flags := binary.LittleEndian.Uint32(dst[12:16]) | FlagOld
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index 905f6130e..a817f6191 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -118,7 +118,7 @@ const (
+ 
+ type handleEntry struct {
+ 	off, size  uint32
+-	cardSlot   uint32 // one-based index in Collector.objectCards
++	typeID     uint32 // canonical type; cold card links live outside the hot record
+ 	class      uint16
+ 	space      spaceKind
+ 	remembered bool
+@@ -179,6 +179,7 @@ type Collector struct {
+ 	promotionSortScratch         []plannedPromotion // bounded stable counting-sort workspace
+ 	backing                      *collectorBacking
+ 	bindings                     *nativeBindings
++	cardSlots                    []uint32
+ }
+ 
+ const defaultNursery = 64 << 10
+@@ -269,6 +270,7 @@ func (c *Collector) Close() {
+ 	c.tiny.Close()
+ 	c.throughput.Close()
+ 	c.handles = nil
++	c.cardSlots = nil
+ 	if c.backing != nil {
+ 		c.backing.close()
+ 		c.backing = nil
+diff --git a/src/core/runtime/gc/native/failure_debug_test.go b/src/core/runtime/gc/native/failure_debug_test.go
+index 82ed37bfc..1583e12ac 100644
+--- a/src/core/runtime/gc/native/failure_debug_test.go
++++ b/src/core/runtime/gc/native/failure_debug_test.go
+@@ -30,13 +30,13 @@ func TestObjectCardReuseDoesNotConsumeGrowthFailure(t *testing.T) {
+ 
+ 	cleanup := armFailure(c, failObjectCardGrowth, 0)
+ 	c.CardMarkArray(arrays[2], 0)
+-	if c.entry(arrays[2]).cardSlot == 0 || c.freeObjectCardSlot != 0 {
+-		t.Fatalf("reusable slot incorrectly used growth failure: slot=%d free=%d", c.entry(arrays[2]).cardSlot, c.freeObjectCardSlot)
++	if c.cardSlot(handleOf(arrays[2])) == 0 || c.freeObjectCardSlot != 0 {
++		t.Fatalf("reusable slot incorrectly used growth failure: slot=%d free=%d", c.cardSlot(handleOf(arrays[2])), c.freeObjectCardSlot)
+ 	}
+ 	c.CardMarkArray(arrays[3], 0)
+ 	cleanup()
+-	if c.entry(arrays[3]).cardSlot != 0 || !c.entry(arrays[3]).remembered || !c.cardFallback {
+-		t.Fatalf("growth failure did not retain whole-object fallback: slot=%d remembered=%v fallback=%v", c.entry(arrays[3]).cardSlot, c.entry(arrays[3]).remembered, c.cardFallback)
++	if c.cardSlot(handleOf(arrays[3])) != 0 || !c.entry(arrays[3]).remembered || !c.cardFallback {
++		t.Fatalf("growth failure did not retain whole-object fallback: slot=%d remembered=%v fallback=%v", c.cardSlot(handleOf(arrays[3])), c.entry(arrays[3]).remembered, c.cardFallback)
+ 	}
+ }
+ 
+@@ -228,7 +228,7 @@ func TestInjectedCardGrowthLeavesMetadataUnchanged(t *testing.T) {
+ 	cleanup := armFailure(c, failObjectCardGrowth, 0)
+ 	c.addObjectCard(handleOf(parent), 0)
+ 	cleanup()
+-	if !reflect.DeepEqual(c.objectCards, beforeCards) || c.entry(parent).cardSlot != 0 {
++	if !reflect.DeepEqual(c.objectCards, beforeCards) || c.cardSlot(handleOf(parent)) != 0 {
+ 		t.Fatal("object card failure partially mutated metadata")
+ 	}
+ 
+diff --git a/src/core/runtime/gc/native/hot_handle_test.go b/src/core/runtime/gc/native/hot_handle_test.go
+new file mode 100644
+index 000000000..87b66a312
+--- /dev/null
++++ b/src/core/runtime/gc/native/hot_handle_test.go
+@@ -0,0 +1,48 @@
++package gc
++
++import (
++	"testing"
++	"unsafe"
++)
++
++func TestHotHandleTypeAndColdCardLinks(t *testing.T) {
++	c := newTestCollector(t, Config{})
++	parent, err := c.NewStructDefault(1)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if c.entry(parent).typeID != 1 {
++		t.Fatal("canonical type is not in the hot handle")
++	}
++	if unsafe.Sizeof(handleEntry{}) != 16 {
++		t.Fatal("hot handle grew")
++	}
++	if len(c.cardSlots) != 0 {
++		t.Fatal("nursery allocation created cold card metadata")
++	}
++	if err := c.ForcePromote(parent); err != nil {
++		t.Fatal(err)
++	}
++	child, err := c.NewStructDefault(0)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := c.StructSet(parent, 0, RefValue(child)); err != nil {
++		t.Fatal(err)
++	}
++	if c.cardSlot(handleOf(parent)) == 0 || c.entry(parent).typeID != 1 {
++		t.Fatal("card publication changed canonical type")
++	}
++	if c.NativeView().ObjectCardSlots != sliceData(c.cardSlots) || c.NativeView().ObjectCardSlotCount != uint32(len(c.cardSlots)) {
++		t.Fatal("native cold card links do not match their owned backing")
++	}
++	if err := c.CollectMinor(RefSliceRoots{parent}); err != nil {
++		t.Fatal(err)
++	}
++	if c.entry(parent).typeID != 1 || c.entry(child).typeID != 0 {
++		t.Fatal("evacuation lost canonical types")
++	}
++	if err := c.Verify(RefSliceRoots{parent}); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/invariant_test.go b/src/core/runtime/gc/native/invariant_test.go
+index 2d0354e78..fc0349e11 100644
+--- a/src/core/runtime/gc/native/invariant_test.go
++++ b/src/core/runtime/gc/native/invariant_test.go
+@@ -290,12 +290,12 @@ func TestVerifyRejectsInvalidCardMetadata(t *testing.T) {
+ 		t.Fatal("Verify accepted inconsistent remembered membership")
+ 	}
+ 	c.handles[h].remembered = true
+-	cardSlot := c.handles[h].cardSlot
+-	c.handles[h].cardSlot = 0
++	cardSlot := c.cardSlot(h)
++	c.setCardSlot(h, 0)
+ 	if err := c.Verify(nil); err == nil {
+ 		t.Fatal("Verify accepted inconsistent object-card membership")
+ 	}
+-	c.handles[h].cardSlot = cardSlot
++	c.setCardSlot(h, cardSlot)
+ 	c.globalCardBits[g>>6] &^= uint64(1) << (g & 63)
+ 	if err := c.Verify(nil); err == nil {
+ 		t.Fatal("Verify accepted inconsistent slot-card membership")
+diff --git a/src/core/runtime/gc/native/major_blocks_coverage_test.go b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+index 8cbaaf59a..f8be38f4e 100644
+--- a/src/core/runtime/gc/native/major_blocks_coverage_test.go
++++ b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+@@ -105,7 +105,7 @@ func TestMajorBlocksFlagUsesExistingPadding(t *testing.T) {
+ 	if unsafe.Offsetof(Collector{}.checkedHandles) != 3112-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3128-batchBytes {
+ 		t.Fatal("native index changed existing collector offsets")
+ 	}
+-	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3152-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3152-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3152-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil)) {
++	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3152-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3152-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3152-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil))+unsafe.Sizeof([]uint32(nil)) {
+ 		t.Fatal("large-array hint and promotion scratch must follow the existing collector state")
+ 	}
+ 	if unsafe.Offsetof(Collector{}.majorYoungDirty) >= unsafe.Offsetof(Collector{}.checkedHandles) {
+diff --git a/src/core/runtime/gc/native/native_card_view_test.go b/src/core/runtime/gc/native/native_card_view_test.go
+index 8bf274531..3ca4a8b64 100644
+--- a/src/core/runtime/gc/native/native_card_view_test.go
++++ b/src/core/runtime/gc/native/native_card_view_test.go
+@@ -71,8 +71,8 @@ func TestNativeObjectCardViewSeesReusedSlotWithoutRelocation(t *testing.T) {
+ 	if view.ObjectCards != pointer || view.ObjectCardCount != count || view.RefreshGeneration != generation {
+ 		t.Fatalf("slot reuse relocated native metadata: before=%#x/%d/%d after=%#x/%d/%d", pointer, count, generation, view.ObjectCards, view.ObjectCardCount, view.RefreshGeneration)
+ 	}
+-	if c.entry(arrays[2]).cardSlot != 1 || c.objectCards[0].handle != handleOf(arrays[2]) || c.CardCount() != 2 {
+-		t.Fatalf("reused native card slot: slot=%d cards=%+v live=%d", c.entry(arrays[2]).cardSlot, c.objectCards, c.CardCount())
++	if c.cardSlot(handleOf(arrays[2])) != 1 || c.objectCards[0].handle != handleOf(arrays[2]) || c.CardCount() != 2 {
++		t.Fatalf("reused native card slot: slot=%d cards=%+v live=%d", c.cardSlot(handleOf(arrays[2])), c.objectCards, c.CardCount())
+ 	}
+ 	if err := c.Verify(nil); err != nil {
+ 		t.Fatal(err)
+diff --git a/src/core/runtime/gc/native/native_view.go b/src/core/runtime/gc/native/native_view.go
+index 4d07fc4fa..ded0dac48 100644
+--- a/src/core/runtime/gc/native/native_view.go
++++ b/src/core/runtime/gc/native/native_view.go
+@@ -12,7 +12,7 @@ import (
+ // mappings keep it fixed; portable Go growth updates live instance bindings.
+ // Generated operations still reload mutable counts/extents and callers must
+ // serialize native execution with collector mutation.
+-const NativeABIVersion uint32 = 10
++const NativeABIVersion uint32 = 11
+ 
+ // SubtypeEncoding is an optional extension in the existing ABI padding word.
+ // Encoding zero is legacy and must use the Go abstract-array cast fallback.
+@@ -39,7 +39,7 @@ const (
+ 	NativeHandleStride                = 16
+ 	NativeHandleOffsetOffset          = 0
+ 	NativeHandleSizeOffset            = 4
+-	NativeHandleCardSlotOffset        = 8
++	NativeHandleTypeIDOffset          = 8
+ 	NativeHandleMetadataOffset        = 12
+ 	NativeHandleSpaceOffset           = 14
+ 	NativeHandleRememberedOffset      = 15
+@@ -92,6 +92,9 @@ type NativeCollectorView struct {
+ 	DeadNurseryCycle      uint64
+ 	LargeArrayAllocState  uintptr
+ 	LargeArrayAllocEpoch  uintptr
++	ObjectCardSlots       uintptr
++	ObjectCardSlotCount   uint32
++	_                     uint32
+ }
+ 
+ const (
+@@ -118,7 +121,9 @@ const (
+ 	NativeViewDeadNurseryCycleOffset      = 176
+ 	NativeViewLargeArrayAllocStateOffset  = 184
+ 	NativeViewLargeArrayAllocEpochOffset  = 192
+-	NativeCollectorViewSize               = 200
++	NativeViewObjectCardSlotsOffset       = 200
++	NativeViewObjectCardSlotCountOffset   = 208
++	NativeCollectorViewSize               = 216
+ )
+ 
+ // NativeInstanceView adds the immutable module-local to canonical-domain type
+@@ -171,7 +176,7 @@ func ValidateNativeABI() error {
+ 	if unsafe.Sizeof(entry) != NativeHandleStride ||
+ 		unsafe.Offsetof(entry.off) != NativeHandleOffsetOffset ||
+ 		unsafe.Offsetof(entry.size) != NativeHandleSizeOffset ||
+-		unsafe.Offsetof(entry.cardSlot) != NativeHandleCardSlotOffset ||
++		unsafe.Offsetof(entry.typeID) != NativeHandleTypeIDOffset ||
+ 		unsafe.Offsetof(entry.class) != NativeHandleMetadataOffset ||
+ 		unsafe.Offsetof(entry.space) != NativeHandleSpaceOffset ||
+ 		unsafe.Offsetof(entry.remembered) != NativeHandleRememberedOffset {
+@@ -240,7 +245,9 @@ func ValidateNativeABI() error {
+ 		return fmt.Errorf("gc: native collector ABI layout mismatch")
+ 	}
+ 	if unsafe.Offsetof(view.LargeArrayAllocState) != NativeViewLargeArrayAllocStateOffset ||
+-		unsafe.Offsetof(view.LargeArrayAllocEpoch) != NativeViewLargeArrayAllocEpochOffset {
++		unsafe.Offsetof(view.LargeArrayAllocEpoch) != NativeViewLargeArrayAllocEpochOffset ||
++		unsafe.Offsetof(view.ObjectCardSlots) != NativeViewObjectCardSlotsOffset ||
++		unsafe.Offsetof(view.ObjectCardSlotCount) != NativeViewObjectCardSlotCountOffset {
+ 		return fmt.Errorf("gc: native large-array allocation ABI layout mismatch")
+ 	}
+ 	var instance NativeInstanceView
+@@ -324,6 +331,8 @@ func (c *Collector) refreshNativeView() {
+ 	v.Spaces[NativeSpaceTiny] = NativeSpaceView{Base: sliceData(c.tiny.mem), Bytes: uint32(len(c.tiny.mem))}
+ 	v.ObjectCards = sliceData(c.objectCards)
+ 	v.ObjectCardCount = uint32(len(c.objectCards))
++	v.ObjectCardSlots = sliceData(c.cardSlots)
++	v.ObjectCardSlotCount = uint32(len(c.cardSlots))
+ 	v.SubtypeIntervals = sliceData(c.subtypeIntervals)
+ 	v.SubtypeIntervalCount = uint32(len(c.subtypeIntervals))
+ 	if c.closed {
+@@ -358,6 +367,8 @@ func (c *Collector) refreshNativeCards() {
+ 	v := c.nativeView
+ 	v.ObjectCards = sliceData(c.objectCards)
+ 	v.ObjectCardCount = uint32(len(c.objectCards))
++	v.ObjectCardSlots = sliceData(c.cardSlots)
++	v.ObjectCardSlotCount = uint32(len(c.cardSlots))
+ 	v.RefreshGeneration++
+ }
+ 
+diff --git a/src/core/runtime/gc/native/native_view_test.go b/src/core/runtime/gc/native/native_view_test.go
+index ba75444fc..968b847ed 100644
+--- a/src/core/runtime/gc/native/native_view_test.go
++++ b/src/core/runtime/gc/native/native_view_test.go
+@@ -6,8 +6,8 @@ import (
+ )
+ 
+ func TestNativeCollectorViewLayoutAndRefresh(t *testing.T) {
+-	if NativeABIVersion != 10 {
+-		t.Fatalf("native collector ABI version = %d, want version 10", NativeABIVersion)
++	if NativeABIVersion != 11 {
++		t.Fatalf("native collector ABI version = %d, want version 11", NativeABIVersion)
+ 	}
+ 	if got := unsafe.Sizeof(handleEntry{}); got != NativeHandleStride {
+ 		t.Fatalf("handle entry size = %d, want %d", got, NativeHandleStride)
+@@ -19,8 +19,8 @@ func TestNativeCollectorViewLayoutAndRefresh(t *testing.T) {
+ 	if got := unsafe.Offsetof(entry.size); got != NativeHandleSizeOffset {
+ 		t.Fatalf("handle size field = %d", got)
+ 	}
+-	if got := unsafe.Offsetof(entry.cardSlot); got != NativeHandleCardSlotOffset {
+-		t.Fatalf("handle card slot field = %d", got)
++	if got := unsafe.Offsetof(entry.typeID); got != NativeHandleTypeIDOffset {
++		t.Fatalf("handle type field = %d", got)
+ 	}
+ 	if got := unsafe.Offsetof(entry.class); got != NativeHandleMetadataOffset {
+ 		t.Fatalf("handle metadata field = %d", got)
+@@ -210,8 +210,8 @@ func TestNativeSubtypeKindEncodingUsesExistingPadding(t *testing.T) {
+ 	if got := unsafe.Offsetof(view.SubtypeEncoding); got != 20 {
+ 		t.Fatalf("encoding offset=%d, want reserved offset 20", got)
+ 	}
+-	if got := unsafe.Sizeof(*view); got != 200 {
+-		t.Fatalf("collector view grew to %d bytes, want 200", got)
++	if got := unsafe.Sizeof(*view); got != 216 {
++		t.Fatalf("collector view grew to %d bytes, want 216", got)
+ 	}
+ 	instance := NewNativeInstanceView(c, []TypeID{0})
+ 	if view.SubtypeEncoding != NativeSubtypeEncodingKindBit {
+diff --git a/src/core/runtime/gc/native/sparse_card_transition_test.go b/src/core/runtime/gc/native/sparse_card_transition_test.go
+index 7035176e3..e7a0880b8 100644
+--- a/src/core/runtime/gc/native/sparse_card_transition_test.go
++++ b/src/core/runtime/gc/native/sparse_card_transition_test.go
+@@ -18,7 +18,7 @@ func TestSparseCardBoundsRangeTransitions(t *testing.T) {
+ 			t.Helper()
+ 			actual := make([]bool, payload)
+ 			steps := 0
+-			for slot := c.handles[h].cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++			for slot := c.cardSlot(h); slot != 0; slot = c.objectCards[slot-1].next {
+ 				steps++
+ 				if steps > len(c.objectCards) {
+ 					t.Fatal("cyclic card list")
+diff --git a/src/core/runtime/gc/native/stable_backing.go b/src/core/runtime/gc/native/stable_backing.go
+index cb39e35b9..56147c126 100644
+--- a/src/core/runtime/gc/native/stable_backing.go
++++ b/src/core/runtime/gc/native/stable_backing.go
+@@ -9,11 +9,12 @@ import (
+ 
+ type collectorBacking struct {
+ 	nursery, handles *virtualmem.Region
++	cardSlots        *virtualmem.Region
+ 	handleLimit      uint64
+ }
+ 
+ func (b *collectorBacking) close() {
+-	for _, r := range []*virtualmem.Region{b.nursery, b.handles} {
++	for _, r := range []*virtualmem.Region{b.nursery, b.handles, b.cardSlots} {
+ 		if err := r.Close(); err != nil {
+ 			panic("gc: close backing: " + err.Error())
+ 		}
+@@ -99,7 +100,7 @@ type MemoryStats struct {
+ func (c *Collector) MemoryStats() MemoryStats {
+ 	s := MemoryStats{BackingCopyBytes: c.throughput.backingCopyBytes}
+ 	if c.backing != nil {
+-		for _, r := range []*virtualmem.Region{c.backing.nursery, c.backing.handles, c.throughput.reservation} {
++		for _, r := range []*virtualmem.Region{c.backing.nursery, c.backing.handles, c.backing.cardSlots, c.throughput.reservation} {
+ 			if r != nil {
+ 				s.ReservedBytes += r.ReservedBytes()
+ 				s.CommittedBytes += r.CommittedBytes()
+diff --git a/src/core/runtime/gc/native/struct_card_finish_test.go b/src/core/runtime/gc/native/struct_card_finish_test.go
+index 254bd38c7..258d60acf 100644
+--- a/src/core/runtime/gc/native/struct_card_finish_test.go
++++ b/src/core/runtime/gc/native/struct_card_finish_test.go
+@@ -34,7 +34,7 @@ func TestStructCardLifecycle(t *testing.T) {
+ 									t.Fatal(err)
+ 								}
+ 							}
+-							if c.entry(f.parent).cardSlot != 0 || c.cardFallback || c.RememberedCount() != 0 {
++							if c.cardSlot(handleOf(f.parent)) != 0 || c.cardFallback || c.RememberedCount() != 0 {
+ 								t.Fatal("cards not cleared after promotion")
+ 							}
+ 							for _, field := range f.fields {
+@@ -65,7 +65,7 @@ func TestStructCardBoundaryPaths(t *testing.T) {
+ 		for _, count := range counts {
+ 			f := newStructRangeFixture(t, fields, count, "shuffled", true, false, fields < 4097, 29)
+ 			f.c.clearNurseryMarks()
+-			got := f.c.hasSixteenObjectCardRanges(f.c.entry(f.parent).cardSlot) && f.c.scanStructCardRanges(handleOf(f.parent))
++			got := f.c.hasSixteenObjectCardRanges(f.c.cardSlot(handleOf(f.parent))) && f.c.scanStructCardRanges(handleOf(f.parent))
+ 			if want := fields >= 256 && count >= 16 && count <= 32; got != want {
+ 				t.Fatalf("fields=%d ranges=%d fast=%v want=%v", fields, count, got, want)
+ 			}
+@@ -89,7 +89,7 @@ func TestStructCardRejectedPrefix(t *testing.T) {
+ 			c := f.c
+ 			h := handleOf(f.parent)
+ 			slots := make([]uint32, 0, count)
+-			for slot := c.handles[h].cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++			for slot := c.cardSlot(h); slot != 0; slot = c.objectCards[slot-1].next {
+ 				slots = append(slots, slot)
+ 			}
+ 			bad := &c.objectCards[slots[16]-1]
+@@ -132,14 +132,14 @@ func TestStructCardRejectedPrefix(t *testing.T) {
+ 			full := kind != "duplicate" && kind != "overlap" && kind != "33"
+ 			if !full {
+ 				c.clearNurseryMarks()
+-				for slot := c.handles[h].cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++				for slot := c.cardSlot(h); slot != 0; slot = c.objectCards[slot-1].next {
+ 					card := c.objectCards[slot-1]
+ 					c.scanObjectPayloadRange(h, card.index, card.end)
+ 				}
+ 				want := append([]bool(nil), c.mark...)
+ 				c.clearNurseryMarks()
+ 				c.scanRememberedCards(h)
+-				if c.cardFallback || c.handles[h].cardSlot != slots[0] {
++				if c.cardFallback || c.cardSlot(h) != slots[0] {
+ 					t.Fatal("optimization rejection changed fallback rules")
+ 				}
+ 				if !reflect.DeepEqual(want, c.mark) {
+@@ -158,7 +158,7 @@ func TestStructCardRejectedPrefix(t *testing.T) {
+ 			}
+ 			f.parent = Ref(root)
+ 			f.check(t, true)
+-			if !c.cardFallback || c.entry(f.parent).cardSlot != 0 {
++			if !c.cardFallback || c.cardSlot(handleOf(f.parent)) != 0 {
+ 				t.Fatal("corrupt chain was not detached")
+ 			}
+ 			if err := c.Verify(Slots{&root}); err == nil {
+@@ -187,7 +187,7 @@ func structCardDifferential(t *testing.T, seed uint64) {
+ 	c := f.c
+ 	h := handleOf(f.parent)
+ 	c.clearNurseryMarks()
+-	for slot := c.handles[h].cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++	for slot := c.cardSlot(h); slot != 0; slot = c.objectCards[slot-1].next {
+ 		card := c.objectCards[slot-1]
+ 		c.scanObjectPayloadRange(h, card.index, card.end)
+ 	}
+@@ -280,7 +280,7 @@ func TestStructCardFixtureGeometry(t *testing.T) {
+ 		c := f.c
+ 		payload := c.entry(f.parent).size - PayloadOffset
+ 		coalesced, partial := false, false
+-		for slot := c.entry(f.parent).cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++		for slot := c.cardSlot(handleOf(f.parent)); slot != 0; slot = c.objectCards[slot-1].next {
+ 			card := c.objectCards[slot-1]
+ 			coalesced = coalesced || card.end-card.index+1 > c.cardBytes
+ 			partial = partial || card.end == payload-1 && (card.end+1)%c.cardBytes != 0
+diff --git a/src/core/runtime/gc/native/struct_card_fixture_test.go b/src/core/runtime/gc/native/struct_card_fixture_test.go
+index 911a7fa59..4e7752c7c 100644
+--- a/src/core/runtime/gc/native/struct_card_fixture_test.go
++++ b/src/core/runtime/gc/native/struct_card_fixture_test.go
+@@ -150,7 +150,7 @@ func (f structRangeFixture) check(tb testing.TB, young bool) {
+ func structRangeCount(tb testing.TB, c *Collector, parent Ref) int {
+ 	tb.Helper()
+ 	count := 0
+-	for slot := c.entry(parent).cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++	for slot := c.cardSlot(handleOf(parent)); slot != 0; slot = c.objectCards[slot-1].next {
+ 		if count >= len(c.objectCards) || !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			tb.Fatal("invalid fixture chain")
+ 		}
+diff --git a/src/core/runtime/gc/native/struct_card_mixed_bench_test.go b/src/core/runtime/gc/native/struct_card_mixed_bench_test.go
+index be5c17335..a52c10ffd 100644
+--- a/src/core/runtime/gc/native/struct_card_mixed_bench_test.go
++++ b/src/core/runtime/gc/native/struct_card_mixed_bench_test.go
+@@ -31,7 +31,7 @@ func structCardMixedParentFixture(tb testing.TB, fields, ranges int) (*Collector
+ 		tb.Fatalf("got%d global ranges, want%d", len(c.objectCards), ranges+256)
+ 	}
+ 	count := 0
+-	for slot := c.handles[handleOf(parent)].cardSlot; slot != 0; slot = c.objectCards[slot-1].next {
++	for slot := c.cardSlot(handleOf(parent)); slot != 0; slot = c.objectCards[slot-1].next {
+ 		count++
+ 	}
+ 	if count != ranges {
+diff --git a/src/core/runtime/gc/native/struct_card_scan_test.go b/src/core/runtime/gc/native/struct_card_scan_test.go
+index f45096fa2..d8d2da1d3 100644
+--- a/src/core/runtime/gc/native/struct_card_scan_test.go
++++ b/src/core/runtime/gc/native/struct_card_scan_test.go
+@@ -57,12 +57,12 @@ func TestGCStructRangeAdmission(t *testing.T) {
+ func TestStructCardRangeCountGuard(t *testing.T) {
+ 	for _, count := range []int{1, 2, 3, 4, 8, 15, 16, 32} {
+ 		c, parent, _ := structCardScanFixture(t, 8192, count, false)
+-		if got := c.hasSixteenObjectCardRanges(c.handles[handleOf(parent)].cardSlot); got != (count >= 16) {
++		if got := c.hasSixteenObjectCardRanges(c.cardSlot(handleOf(parent))); got != (count >= 16) {
+ 			t.Fatalf("count=%d guard=%t", count, got)
+ 		}
+ 	}
+ 	c, parent, _ := structCardMixedParentFixture(t, 256, 1)
+-	if c.hasSixteenObjectCardRanges(c.handles[handleOf(parent)].cardSlot) {
++	if c.hasSixteenObjectCardRanges(c.cardSlot(handleOf(parent))) {
+ 		t.Fatal("other object ranges satisfied target guard")
+ 	}
+ 	if c.hasSixteenObjectCardRanges(0) || c.hasSixteenObjectCardRanges(uint32(len(c.objectCards)+1)) {
+diff --git a/src/core/runtime/gc/native/survivor.go b/src/core/runtime/gc/native/survivor.go
+index 0755827d3..99970e2c6 100644
+--- a/src/core/runtime/gc/native/survivor.go
++++ b/src/core/runtime/gc/native/survivor.go
+@@ -112,7 +112,7 @@ func (c *Collector) finishMinorCardMetadata() {
+ 			(c.handles[h].space == spaceOld || c.handles[h].space == spaceLarge)
+ 		if keep && c.cardFallback {
+ 			keep = c.handleContainsNurseryRef(h)
+-		} else if keep && c.handles[h].cardSlot != 0 {
++		} else if keep && c.cardSlot(h) != 0 {
+ 			keep = c.objectCardsContainYoung(h)
+ 		}
+ 		if keep {
+@@ -153,7 +153,7 @@ func (c *Collector) finishMinorCardMetadata() {
+ }
+ 
+ func (c *Collector) objectCardsContainYoung(h uint32) bool {
+-	for slot, steps := c.handles[h].cardSlot, 0; slot != 0 && steps <= len(c.objectCards); steps++ {
++	for slot, steps := c.cardSlot(h), 0; slot != 0 && steps <= len(c.objectCards); steps++ {
+ 		if !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			return true
+ 		}
+diff --git a/src/core/runtime/gc/native/verify.go b/src/core/runtime/gc/native/verify.go
+index cdbce4a72..4088c0883 100644
+--- a/src/core/runtime/gc/native/verify.go
++++ b/src/core/runtime/gc/native/verify.go
+@@ -33,6 +33,9 @@ func (c *Collector) Verify(roots RootSet) error {
+ 		}
+ 		r := makeObjRef(h)
+ 		hdr := c.header(r)
++		if hdr.TypeID != e.typeID {
++			return errors.New("gc: hot handle type does not match object header")
++		}
+ 		d, err := c.desc(TypeID(hdr.TypeID))
+ 		if err != nil {
+ 			return err
+@@ -193,7 +196,7 @@ func (c *Collector) objectCardCovers(h, payloadOffset uint32) bool {
+ 	if h == 0 || int(h) >= len(c.handles) {
+ 		return false
+ 	}
+-	for slot, steps := c.handles[h].cardSlot, 0; slot != 0 && steps <= len(c.objectCards); steps++ {
++	for slot, steps := c.cardSlot(h), 0; slot != 0 && steps <= len(c.objectCards); steps++ {
+ 		if !slotIndexOK(slot-1, len(c.objectCards)) {
+ 			return false
+ 		}
+@@ -215,7 +218,7 @@ func (c *Collector) verifyNurseryEdgesCarded(h uint32) error {
+ 	}
+ 	check := func(off uint32) error {
+ 		child := Ref(binary.LittleEndian.Uint32(b[PayloadOffset+off:]))
+-		slot := c.handles[h].cardSlot
++		slot := c.cardSlot(h)
+ 		if c.isNurseryRef(child) && !c.cardFallback && slot != 0 && !c.objectCardCovers(h, off) {
+ 			return fmt.Errorf("gc: shadow verifier found uncarded old-to-nursery edge from handle %d at payload byte %d", h, off)
+ 		}
+@@ -292,7 +295,7 @@ func (c *Collector) verifyCardMetadata() error {
+ 		slot = card.next
+ 	}
+ 	for h := uint32(1); int(h) < len(c.handles); h++ {
+-		slot := c.handles[h].cardSlot
++		slot := c.cardSlot(h)
+ 		for steps := 0; slot != 0; steps++ {
+ 			if steps > len(c.objectCards) || !slotIndexOK(slot-1, len(c.objectCards)) {
+ 				return fmt.Errorf("gc: handle %d has cyclic or stale object card slot %d", h, slot)

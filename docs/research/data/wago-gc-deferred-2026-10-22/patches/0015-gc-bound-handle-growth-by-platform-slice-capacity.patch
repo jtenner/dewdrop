@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 05:06:45 +0000
+Subject: [PATCH 15/20] gc: bound handle growth by platform slice capacity
+
+---
+ docs/research/deferred-gc-implementation-2026-10-22.md | 5 +++++
+ src/core/runtime/gc/native/stable_backing.go           | 4 ++--
+ src/core/runtime/gc/native/stable_backing_test.go      | 2 +-
+ 3 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 8de01354a..f0610e0a9 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -447,3 +447,8 @@ The screen does not establish a broadly safe automatic copy threshold.
+ MinCopyBytes=0 therefore disables parallel copying until a measured threshold is
+ supplied, independently of parallel marking and background sweep. This preserves
+ small/default runtime performance while retaining explicit A/B experiments.
++
++The portable capacity bound also respects the platform's maximum slice length.
++Boundary tests use the platform integer maximum, so they compile on 32-bit
++products without an overflowing constant. This is a compile/bounds check, not a
++claim of native execution support on those targets.
+diff --git a/src/core/runtime/gc/native/stable_backing.go b/src/core/runtime/gc/native/stable_backing.go
+index 9cc556e62..20bff82de 100644
+--- a/src/core/runtime/gc/native/stable_backing.go
++++ b/src/core/runtime/gc/native/stable_backing.go
+@@ -74,8 +74,8 @@ func (c *Collector) initStableBacking(initialBytes uint32) error {
+ // ensureHandleCapacity runs before allocating object bytes or publishing a
+ // native reservation. A commit failure is returned without losing live state.
+ func (c *Collector) ensureHandleCapacity(extra int) error {
+-	if extra < 0 || uint64(len(c.handles))+uint64(extra) > 1<<31 {
+-		return fmt.Errorf("gc: handle capacity exceeds compact reference bounds (%d + %d)", len(c.handles), extra)
++	if extra < 0 || uint64(len(c.handles))+uint64(extra) > min(uint64(1)<<31, uint64(^uint(0)>>1)) {
++		return fmt.Errorf("gc: handle capacity exceeds compact reference or platform bounds (%d + %d)", len(c.handles), extra)
+ 	}
+ 	if c.backing == nil || extra <= cap(c.handles)-len(c.handles) {
+ 		return nil
+diff --git a/src/core/runtime/gc/native/stable_backing_test.go b/src/core/runtime/gc/native/stable_backing_test.go
+index c4f383b2b..d3f13d33e 100644
+--- a/src/core/runtime/gc/native/stable_backing_test.go
++++ b/src/core/runtime/gc/native/stable_backing_test.go
+@@ -128,7 +128,7 @@ func BenchmarkBackingGrowth(b *testing.B) {
+ func TestHandleCapacityBoundsApplyToPortableAndMappedBacking(t *testing.T) {
+ 	for _, portable := range []bool{false, true} {
+ 		c := newTestCollector(t, Config{DisableVirtualBacking: portable})
+-		for _, extra := range []int{-1, int(1 << 31)} {
++		for _, extra := range []int{-1, int(^uint(0) >> 1)} {
+ 			if err := c.ensureHandleCapacity(extra); err == nil {
+ 				t.Fatalf("portable=%v extra=%d: invalid capacity accepted", portable, extra)
+ 			}

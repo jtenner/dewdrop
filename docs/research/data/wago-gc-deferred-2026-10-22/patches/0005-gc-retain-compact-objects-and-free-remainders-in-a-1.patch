@@ -1,0 +1,281 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 01:55:13 +0000
+Subject: [PATCH 05/20] gc: retain compact objects and free remainders in a
+ 16-byte old class
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  | 21 +++++
+ src/core/runtime/gc/native/collect.go         |  2 +-
+ .../gc/native/profile_throughput_test.go      |  8 +-
+ .../gc/native/promotion_failure_test.go       |  4 +-
+ .../runtime/gc/native/throughput_alloc.go     | 19 ++--
+ .../gc/native/throughput_alloc_model_test.go  |  2 +-
+ .../native/throughput_compact_class_test.go   | 86 +++++++++++++++++++
+ 7 files changed, 122 insertions(+), 20 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/throughput_compact_class_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 00e476e81..4ac3aec94 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -181,3 +181,24 @@ are in compact-pre16-summary.json. The next allocator change must remove that
+ Throughput array heap-limit failures now produce the guest allocation trap;
+ checked Tiny failure diagnostics remain visible. This matters for the pinned
+ Wasmtime overflow fixture after the physical header becomes smaller.
++
++## Compact old-space allocation
++
++The old allocator now supports a 16-byte class and retains 16-byte free-span
++remainders, including batched promotion runs. A four-KiB heap retains 256 small
++old objects instead of 128. Red/green tests fill the whole bound, replace every
++other object without aliasing retained payloads, and reuse a 16-byte remainder
++without growing past a retained guard object. The independent randomized span
++model and every class/limit boundary still pass. A promotion-failure fixture now
++uses 320 compact objects so it still exceeds the same bounded destination and
++checks complete rollback. Dense survivor admission keeps its measured 32-byte
++limit; adding a smaller class does not silently narrow that optimization.
++
++Full native collector tests pass (3.81 s including build, 1.69 s tests), as do
++debug/fault tests (4.04 s including build, 1.79 s tests). In the same fixed-population
++screening benchmark, small old allocations charge 16 vs 32 bytes. Accessible
++pages for 250,000 small objects fall from 15,273,984 to 10,162,176 bytes, including
++fixed nursery and handle backing. This is accessible-page accounting, not RSS.
++The process RSS maximum includes the unchanged vector case and stays about
++25 MiB. Timings are screening results; whole-compiler qualification remains
++outstanding. Raw five-sample medians are in compact-class-summary.json.
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index cf586e78c..460bb00f2 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -506,7 +506,7 @@ func (c *Collector) commitPromotionPlans(plans []plannedPromotion, toSpace uint8
+ 	// plan represents the most recent allocation run; limit this AMD64 path to
+ 	// its measured small-object case. Sorted promotion plans may reject the path.
+ 	dense := nativeCollectorFastPaths && len(plans) != 0 && len(plans) == len(c.nurseryHandles) &&
+-		c.handles[plans[len(plans)-1].handle].size <= throughputClassSizes[0]
++		c.handles[plans[len(plans)-1].handle].size <= 32
+ 	var young []uint32
+ 	if dense {
+ 		young = c.nurseryHandles[:0]
+diff --git a/src/core/runtime/gc/native/profile_throughput_test.go b/src/core/runtime/gc/native/profile_throughput_test.go
+index 1a5aea27b..73b21dd87 100644
+--- a/src/core/runtime/gc/native/profile_throughput_test.go
++++ b/src/core/runtime/gc/native/profile_throughput_test.go
+@@ -180,14 +180,14 @@ func TestThroughputOversizedNurseryObjectUsesLargeSpace(t *testing.T) {
+ }
+ 
+ func TestThroughputClassLimitMustBeSupportedSizeClass(t *testing.T) {
+-	for _, limit := range []uint32{0, 32, 4096, 32768} {
++	for _, limit := range []uint32{0, 16, 32, 4096, 32768} {
+ 		c, err := NewCollector(Config{ThroughputClassLimit: limit}, testTypes(t))
+ 		if err != nil {
+ 			t.Fatalf("supported class limit %d rejected: %v", limit, err)
+ 		}
+ 		c.Close()
+ 	}
+-	for _, limit := range []uint32{16, 33, 4097, 65536} {
++	for _, limit := range []uint32{8, 33, 4097, 65536} {
+ 		if _, err := NewCollector(Config{ThroughputClassLimit: limit}, testTypes(t)); err == nil {
+ 			t.Fatalf("unsupported class limit %d accepted", limit)
+ 		}
+@@ -499,7 +499,7 @@ func TestThroughputAllocRunPreservesFirstFitAndTail(t *testing.T) {
+ 			t.Fatalf("run bypassed smaller first fit: ok=%t err=%v", ok, err)
+ 		}
+ 	})
+-	t.Run("consume-short-tail", func(t *testing.T) {
++	t.Run("retain-sixteen-byte-tail", func(t *testing.T) {
+ 		h := newHeap(t)
+ 		if err := h.insertFreeSpan(throughputFreeSpan{off: 0, size: 112}); err != nil {
+ 			t.Fatal(err)
+@@ -508,7 +508,7 @@ func TestThroughputAllocRunPreservesFirstFitAndTail(t *testing.T) {
+ 		if err != nil || !ok {
+ 			t.Fatalf("run allocation ok=%t err=%v", ok, err)
+ 		}
+-		if run.off != 0 || run.allocSize != 32 || run.lastAllocSize != 48 || h.spanCount != 0 || h.freeBytes != 0 {
++		if run.off != 0 || run.allocSize != 32 || run.lastAllocSize != 32 || h.spanCount != 1 || h.freeBytes != 16 {
+ 			t.Fatalf("run=%+v spans=%d free=%d", run, h.spanCount, h.freeBytes)
+ 		}
+ 	})
+diff --git a/src/core/runtime/gc/native/promotion_failure_test.go b/src/core/runtime/gc/native/promotion_failure_test.go
+index dcd6f0fa0..f83f14e42 100644
+--- a/src/core/runtime/gc/native/promotion_failure_test.go
++++ b/src/core/runtime/gc/native/promotion_failure_test.go
+@@ -57,8 +57,8 @@ func TestCollectMinorPromotionFailureLeavesNurserySurvivorsUnmoved(t *testing.T)
+ 		VerifyAfterCollect:  true,
+ 	})
+ 
+-	roots := make([]Root, 0, 160)
+-	for i := 0; i < 160; i++ {
++	roots := make([]Root, 0, 320)
++	for i := 0; i < 320; i++ {
+ 		r, err := c.NewStructDefault(1)
+ 		if err != nil {
+ 			t.Fatal(err)
+diff --git a/src/core/runtime/gc/native/throughput_alloc.go b/src/core/runtime/gc/native/throughput_alloc.go
+index 85d3949d9..9cc694eca 100644
+--- a/src/core/runtime/gc/native/throughput_alloc.go
++++ b/src/core/runtime/gc/native/throughput_alloc.go
+@@ -15,7 +15,7 @@ var errThroughputHeapExhausted = ErrHeapExhausted
+ 
+ const throughputNoSlot = ^uint32(0)
+ 
+-var throughputClassSizes = [...]uint32{32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 8192, 16384, 32768}
++var throughputClassSizes = [...]uint32{16, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 8192, 16384, 32768}
+ 
+ type throughputFreeSpan struct {
+ 	off  uint32
+@@ -156,7 +156,7 @@ func (h *throughputHeap) alloc(size uint32, sp spaceKind) (handleEntry, error) {
+ 	}
+ 	if idx != throughputNoSlot {
+ 		span := throughputFreeSpan{off: h.spanNodes[idx].off, size: h.spanNodes[idx].size}
+-		if span.size-allocSize >= 32 {
++		if span.size-allocSize >= 16 {
+ 			// Consuming a prefix leaves the replacement span between the same
+ 			// predecessor and successor. Update its key and max-size path in place
+ 			// instead of removing/reinserting and rebalancing the AVL tree.
+@@ -312,14 +312,11 @@ func (h *throughputHeap) sweepAllPending() error {
+ //go:noinline
+ func (h *throughputHeap) classFor(size uint32) int {
+ 	if size <= 128 {
+-		class := 0
++		class := 5
+ 		switch {
+-		case size <= 32:
+ 		case size <= 64:
+-			class = int((size-1)>>4) - 1
++			class = int((max(size, 1) - 1) >> 4)
+ 		case size <= 96:
+-			class = 3
+-		default:
+ 			class = 4
+ 		}
+ 		if throughputClassSizes[class] <= h.classLimit {
+@@ -330,12 +327,10 @@ func (h *throughputHeap) classFor(size uint32) int {
+ 	if size > 32768 {
+ 		return -1
+ 	}
+-
+ 	exponent := bits.Len32(size - 1)
+-	class := exponent + 2
++	class := exponent + 3
+ 	if size <= 4096 {
+-		// Classes through 4 KiB alternate powers of two and 1.5x.
+-		class = 2 * (exponent - 5)
++		class = 2*(exponent-5) + 1
+ 		if size <= uint32(3)<<(exponent-2) {
+ 			class--
+ 		}
+@@ -971,7 +966,7 @@ func (h *throughputHeap) tryAllocRun(size uint32, count int, sp spaceKind) (thro
+ 		}
+ 		consumed := uint32(total)
+ 		lastAllocSize := allocSize
+-		if span.size-consumed >= 32 {
++		if span.size-consumed >= 16 {
+ 			if !h.replaceFreeSpan(span.off, throughputFreeSpan{off: span.off + consumed, size: span.size - consumed}) {
+ 				return throughputAllocRun{}, false, errors.New("gc: throughput free-span index changed during run allocation")
+ 			}
+diff --git a/src/core/runtime/gc/native/throughput_alloc_model_test.go b/src/core/runtime/gc/native/throughput_alloc_model_test.go
+index ca5f0f889..469c56dad 100644
+--- a/src/core/runtime/gc/native/throughput_alloc_model_test.go
++++ b/src/core/runtime/gc/native/throughput_alloc_model_test.go
+@@ -38,7 +38,7 @@ func (m *throughputIntervalModel) alloc(size uint32, sp spaceKind) (handleEntry,
+ 				continue
+ 			}
+ 			off := span.off
+-			if span.size-allocSize >= 32 {
++			if span.size-allocSize >= 16 {
+ 				m.free[i].off += allocSize
+ 				m.free[i].size -= allocSize
+ 			} else {
+diff --git a/src/core/runtime/gc/native/throughput_compact_class_test.go b/src/core/runtime/gc/native/throughput_compact_class_test.go
+new file mode 100644
+index 000000000..e3a023928
+--- /dev/null
++++ b/src/core/runtime/gc/native/throughput_compact_class_test.go
+@@ -0,0 +1,86 @@
++package gc
++
++import (
++	"encoding/binary"
++	"testing"
++)
++
++func TestThroughputCompactClassRetainsFullSmallObjectCapacity(t *testing.T) {
++	var heap throughputHeap
++	cfg, _ := normalizeConfig(Config{ThroughputHeapBytes: 4096, ThroughputPageBytes: 4096})
++	if err := heap.Init(cfg); err != nil {
++		t.Fatal(err)
++	}
++	defer heap.Close()
++	entries := make([]handleEntry, 256)
++	for i := range entries {
++		var err error
++		entries[i], err = heap.alloc(8, spaceOld)
++		if err != nil {
++			t.Fatalf("small-object allocation%d of256: %v", i, err)
++		}
++		binary.LittleEndian.PutUint64(heap.mem[entries[i].off:], uint64(i)+1)
++	}
++	if _, err := heap.alloc(8, spaceOld); err == nil {
++		t.Fatal("bounded old heap accepted object257")
++	}
++	for i := 1; i < len(entries); i += 2 {
++		if err := heap.free(entries[i]); err != nil {
++			t.Fatal(err)
++		}
++	}
++	for i := 1; i < len(entries); i += 2 {
++		e, err := heap.alloc(8, spaceOld)
++		if err != nil {
++			t.Fatal(err)
++		}
++		entries[i] = e
++		binary.LittleEndian.PutUint64(heap.mem[e.off:], uint64(i)+1)
++	}
++	for i, e := range entries {
++		if got := binary.LittleEndian.Uint64(heap.mem[e.off:]); got != uint64(i)+1 {
++			t.Fatalf("object%d aliases another allocation: %d", i, got)
++		}
++	}
++	if err := heap.verify(append([]handleEntry{{}}, entries...)); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestThroughputCompactClassReusesSixteenByteRemainder(t *testing.T) {
++	var heap throughputHeap
++	cfg, _ := normalizeConfig(Config{ThroughputHeapBytes: 4096, ThroughputPageBytes: 4096})
++	if err := heap.Init(cfg); err != nil {
++		t.Fatal(err)
++	}
++	defer heap.Close()
++	span, err := heap.alloc(48, spaceOld)
++	if err != nil {
++		t.Fatal(err)
++	}
++	guard, err := heap.alloc(8, spaceOld)
++	if err != nil {
++		t.Fatal(err)
++	}
++	binary.LittleEndian.PutUint64(heap.mem[guard.off:], 0xfeedbeef)
++	if err = heap.free(span); err != nil {
++		t.Fatal(err)
++	}
++	first, err := heap.alloc(32, spaceOld)
++	if err != nil {
++		t.Fatal(err)
++	}
++	second, err := heap.alloc(8, spaceOld)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if first.off != 0 || second.off != 32 || heap.bump != 64 {
++		t.Fatalf("split16 lost capacity: first=%+v second=%+v bump%d", first, second, heap.bump)
++	}
++	if got := binary.LittleEndian.Uint64(heap.mem[guard.off:]); got != 0xfeedbeef {
++		t.Fatalf("split overwrote guard: %x", got)
++	}
++	if err = heap.verify([]handleEntry{{}, first, second, guard}); err != nil {
++		t.Fatal(err)
++	}
++}

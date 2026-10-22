@@ -1,0 +1,11 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run=TestGC",
+    "./src/wago"
+  ],
+  "seconds": 29.295926321996376,
+  "exit_code": 0
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run=TestImmixProfileAdmission",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.172119869006565,
+  "exit": 1,
+  "user_seconds": 3.512667,
+  "system_seconds": 0.143818,
+  "peak_rss_kib": 303460,
+  "minor_faults": 12808,
+  "major_faults": 3
+}

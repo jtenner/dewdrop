@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-native-linux-386.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 6.277064371999586,
+  "exit": 0,
+  "user_seconds": 14.07215,
+  "system_seconds": 1.141572,
+  "peak_rss_kib": 299132,
+  "minor_faults": 149542,
+  "major_faults": 5,
+  "voluntary_context_switches": 27062,
+  "involuntary_context_switches": 1257
+}

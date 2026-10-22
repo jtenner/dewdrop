@@ -1,0 +1,4 @@
+# github.com/wago-org/wago/src/core/runtime/gc/native [github.com/wago-org/wago/src/core/runtime/gc/native.test]
+src/core/runtime/gc/native/immix_compact_test.go:76:45: undefined: StructHeaderBytes
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native [build failed]
+FAIL

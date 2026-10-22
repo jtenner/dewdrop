@@ -1,0 +1,20 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "tinygo wago_gc_workers wago_gc_concurrent",
+    "./src/core/runtime/gc/native",
+    "./internal/virtualmem"
+  ],
+  "seconds": 3.9581160509987967,
+  "exit": 0,
+  "user_seconds": 5.397905,
+  "system_seconds": 0.311542,
+  "peak_rss_kib": 330876,
+  "minor_faults": 78792,
+  "major_faults": 7,
+  "voluntary_context_switches": 6645,
+  "involuntary_context_switches": 222
+}

@@ -1,0 +1,25 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkParallelFullMark/n262144/workers1-16         	      10	  16701981 ns/op	  19716649 max-pause-ns	  19716649 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-16         	      10	  15612640 ns/op	  19539776 max-pause-ns	  19539776 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-16         	      10	  15891399 ns/op	  17607755 max-pause-ns	  17607755 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-16         	      10	  17568454 ns/op	  24123301 max-pause-ns	  24123301 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers1-16         	      10	  16572033 ns/op	  17685781 max-pause-ns	  17685781 p99-pause-ns	         0 parallel-scratch-B	         0 steals	      24 B/op	       1 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-16         	      10	  22432891 ns/op	  24355227 max-pause-ns	  24355227 p99-pause-ns	    976384 parallel-scratch-B	      1087 steals	   23585 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-16         	      10	  33922838 ns/op	  35485376 max-pause-ns	  35485376 p99-pause-ns	   1010688 parallel-scratch-B	       865.0 steals	   38657 B/op	       9 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-16         	      10	  33916143 ns/op	  34555228 max-pause-ns	  34555228 p99-pause-ns	    969600 parallel-scratch-B	       738.0 steals	   30372 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-16         	      10	  22360670 ns/op	  25222016 max-pause-ns	  25222016 p99-pause-ns	    983296 parallel-scratch-B	       967.0 steals	   30395 B/op	       9 allocs/op
+BenchmarkParallelFullMark/n262144/workers2-16         	      10	  25196672 ns/op	  27264154 max-pause-ns	  27264154 p99-pause-ns	    955904 parallel-scratch-B	      1079 steals	   26955 B/op	       8 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-16         	      10	  22437626 ns/op	  23135335 max-pause-ns	  23135335 p99-pause-ns	   1021056 parallel-scratch-B	      1158 steals	   42656 B/op	      17 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-16         	      10	  32840140 ns/op	  34249403 max-pause-ns	  34249403 p99-pause-ns	   1049856 parallel-scratch-B	      1100 steals	   47684 B/op	      17 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-16         	      10	  33138567 ns/op	  35559415 max-pause-ns	  35559415 p99-pause-ns	   1056000 parallel-scratch-B	       924.0 steals	   45868 B/op	      16 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-16         	      10	  26669024 ns/op	  27403356 max-pause-ns	  27403356 p99-pause-ns	   1025280 parallel-scratch-B	      1493 steals	   36308 B/op	      14 allocs/op
+BenchmarkParallelFullMark/n262144/workers4-16         	      10	  27025896 ns/op	  29371705 max-pause-ns	  29371705 p99-pause-ns	   1035520 parallel-scratch-B	      1221 steals	   43867 B/op	      16 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16        	      10	  22855594 ns/op	  23389771 max-pause-ns	  23389771 p99-pause-ns	   1390592 parallel-scratch-B	      2738 steals	   84270 B/op	      71 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16        	      10	  22971494 ns/op	  23958641 max-pause-ns	  23958641 p99-pause-ns	   1386112 parallel-scratch-B	      2408 steals	   82395 B/op	      64 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16        	      10	  22929551 ns/op	  23721044 max-pause-ns	  23721044 p99-pause-ns	   1402624 parallel-scratch-B	      2352 steals	   77299 B/op	      57 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16        	      10	  22825490 ns/op	  24284022 max-pause-ns	  24284022 p99-pause-ns	   1379968 parallel-scratch-B	      2580 steals	   79385 B/op	      60 allocs/op
+BenchmarkParallelFullMark/n262144/workers16-16        	      10	  16606475 ns/op	  17336264 max-pause-ns	  17336264 p99-pause-ns	   1366912 parallel-scratch-B	      2842 steals	   73780 B/op	      57 allocs/op
+PASS

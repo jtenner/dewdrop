@@ -1,0 +1,18 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-tags=wago_gc_struct_headers",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/compact-padded-bench.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.210965493999538,
+  "exit": 0,
+  "user_seconds": 3.647478,
+  "system_seconds": 0.149866,
+  "peak_rss_kib": 303128,
+  "minor_faults": 17059,
+  "major_faults": 3
+}

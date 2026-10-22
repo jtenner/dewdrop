@@ -1,0 +1,122 @@
+{
+  "BenchmarkImmixFullCollection/chain/n4096/allocator0-2": {
+    "samples": [
+      73306,
+      74365,
+      75044,
+      90587,
+      74642
+    ],
+    "median_ns": 74642
+  },
+  "BenchmarkImmixFullCollection/chain/n4096/allocator2-2": {
+    "samples": [
+      152921,
+      136486,
+      137885,
+      139633,
+      137681
+    ],
+    "median_ns": 137885
+  },
+  "BenchmarkImmixFullCollection/scalar-array/n4096/allocator0-2": {
+    "samples": [
+      39751,
+      39890,
+      39950,
+      39593,
+      39099
+    ],
+    "median_ns": 39751
+  },
+  "BenchmarkImmixFullCollection/scalar-array/n4096/allocator2-2": {
+    "samples": [
+      43572,
+      43449,
+      43771,
+      44226,
+      44068
+    ],
+    "median_ns": 43771
+  },
+  "BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator0-2": {
+    "samples": [
+      2482,
+      2351,
+      2392,
+      2386,
+      2377
+    ],
+    "median_ns": 2386
+  },
+  "BenchmarkImmixFullCollection/sparse-scalars/n4096/allocator2-2": {
+    "samples": [
+      8013,
+      8015,
+      8332,
+      8678,
+      7963
+    ],
+    "median_ns": 8015
+  },
+  "BenchmarkImmixFullCollection/chain/n65536/allocator0-2": {
+    "samples": [
+      1192893,
+      1190880,
+      1209904,
+      1194161,
+      1191454
+    ],
+    "median_ns": 1192893
+  },
+  "BenchmarkImmixFullCollection/chain/n65536/allocator2-2": {
+    "samples": [
+      2231282,
+      2213348,
+      2184720,
+      2226643,
+      2205873
+    ],
+    "median_ns": 2213348
+  },
+  "BenchmarkImmixFullCollection/scalar-array/n65536/allocator0-2": {
+    "samples": [
+      640455,
+      644042,
+      646384,
+      645901,
+      646598
+    ],
+    "median_ns": 645901
+  },
+  "BenchmarkImmixFullCollection/scalar-array/n65536/allocator2-2": {
+    "samples": [
+      711078,
+      711640,
+      713164,
+      714318,
+      714152
+    ],
+    "median_ns": 713164
+  },
+  "BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator0-2": {
+    "samples": [
+      36728,
+      46580,
+      39046,
+      37552,
+      36911
+    ],
+    "median_ns": 37552
+  },
+  "BenchmarkImmixFullCollection/sparse-scalars/n65536/allocator2-2": {
+    "samples": [
+      131224,
+      127505,
+      128598,
+      130102,
+      131776
+    ],
+    "median_ns": 130102
+  }
+}

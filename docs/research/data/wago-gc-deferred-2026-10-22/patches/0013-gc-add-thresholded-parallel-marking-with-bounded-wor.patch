@@ -1,0 +1,748 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 03:58:01 +0000
+Subject: [PATCH 13/20] gc: add thresholded parallel marking with bounded work
+ stealing
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  |  31 ++
+ src/core/runtime/gc/native/collect.go         |   9 +-
+ src/core/runtime/gc/native/execution.go       |  20 +-
+ .../runtime/gc/native/execution_bench_test.go |  42 +++
+ .../runtime/gc/native/execution_enabled.go    |  32 +-
+ .../gc/native/mark_parallel_disabled.go       |   6 +
+ .../gc/native/mark_parallel_enabled.go        | 330 ++++++++++++++++++
+ .../runtime/gc/native/mark_parallel_test.go   | 151 ++++++++
+ 8 files changed, 600 insertions(+), 21 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/execution_bench_test.go
+ create mode 100644 src/core/runtime/gc/native/mark_parallel_disabled.go
+ create mode 100644 src/core/runtime/gc/native/mark_parallel_enabled.go
+ create mode 100644 src/core/runtime/gc/native/mark_parallel_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index 0b51a7f0b..5ef976170 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -385,3 +385,34 @@ usage. Tests cover bounded admission, foreground allocation at the hard limit,
+ concurrent mutator card writes, minor collection, failure/retry and teardown.
+ Full worker/debug and focused race suites pass. Performance admission remains
+ explicit; later phase measurements compare synchronization/CPU and pause costs.
++
++## Execution phase 2: parallel stop-the-world marking
++
++Parallel marking uses CAS on packed epoch words. Workers keep private integer
++queues in 16 region buckets. Shared deques transfer/steal at most 32 tasks per
++lock, with bounded shared queues and parked idle workers. Arrays resume in
++512-reference tasks. A pending-task counter covers both active and queued work;
++zero closes the completion signal. Exact root enumeration finishes before any
++worker starts. No payload or handle changes while workers run. After join, the
++owner merges young marks, line/live-byte state and coarse connectivity hints.
++Reusable scratch, task transfers/steals and worker elapsed time are reported.
++
++Tests compare every live identity/payload with serial collection through repeated
++cycles, persistent roots, epoch wrap and a following minor collection. They also
++check bounded stealing and independent byte/object thresholds. Full worker/debug
++and focused race suites pass. Default/minimal code compiles the worker branch out.
++
++The matched screening run uses CPUs 0-15, GOMAXPROCS=16, 262,144 four-edge nodes
++plus their array root, five samples of ten full cycles. Median cycle times are
++16.572 ms (one worker), 25.197 ms (two), 27.026 ms (four), and 22.856 ms (sixteen).
++Peak RSS for the whole mixed run is 38,632 KiB; total process CPU is 31.180 s over
++8.662 s wall time, including untimed setup. Earlier short 16-thread samples looked
++better, but the repeated matched run does not confirm that gain. Raw data are
++`gc-parallel-mark-matched-screen.log/json`; small/four-core and short available-
++thread screens are saved separately. Mark scratch stays about 1.4 MiB at this size.
++
++These results reject automatic parallel-mark admission on this workload.
++MinMarkBytes=0 therefore leaves parallel marking disabled, even when a worker
++count is configured. An explicit measured byte threshold and object threshold
++are required to run the A/B path. Nil execution options still create no workers
++or clocks. No compiler speed claim is based on this experiment.
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 80bbea5e2..9fd0bfc01 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -32,7 +32,14 @@ func (c *Collector) CollectFull(roots RootSet) (err error) {
+ 	c.stats.FullCollections++
+ 	c.clearMarks()
+ 	if c.throughput.immix != nil {
+-		c.markImmixRoots(roots)
++		used := 0
++		if executionProduct {
++			used = c.parallelMarkRoots(roots)
++			cycle.workers(used)
++		}
++		if used == 0 {
++			c.markImmixRoots(roots)
++		}
+ 	} else {
+ 		c.markRoots(roots)
+ 	}
+diff --git a/src/core/runtime/gc/native/execution.go b/src/core/runtime/gc/native/execution.go
+index 94ed194ac..f6a5bda53 100644
+--- a/src/core/runtime/gc/native/execution.go
++++ b/src/core/runtime/gc/native/execution.go
+@@ -9,10 +9,11 @@ type ExecutionOptions struct {
+ 	Telemetry       bool
+ 	BackgroundSweep bool
+ 	Workers         uint16
+-	MinMarkBytes    uint64
+-	MinMarkObjects  uint32
+-	MinCopyBytes    uint64
+-	MinSweepBytes   uint64
++	// MinMarkBytes must be set from workload evidence. Zero disables parallel mark.
++	MinMarkBytes   uint64
++	MinMarkObjects uint32
++	MinCopyBytes   uint64
++	MinSweepBytes  uint64
+ }
+ type CollectionKind uint8
+ 
+@@ -34,10 +35,11 @@ type CollectionCycle struct {
+ 	HeapBytes                                                    uint64
+ }
+ type CycleTelemetry struct {
+-	BackgroundTasks, BackgroundSweptBytes, AssistWaitNS uint64
+-	Cycles                                              []CollectionCycle
+-	Count                                               uint64
+-	P99PauseNS, MaxPauseNS                              uint64
++	ParallelMarkCycles, QueueSteals, QueueTransfers, MarkWorkerNS, ParallelScratchBytes uint64
++	BackgroundTasks, BackgroundSweptBytes, AssistWaitNS                                 uint64
++	Cycles                                                                              []CollectionCycle
++	Count                                                                               uint64
++	P99PauseNS, MaxPauseNS                                                              uint64
+ }
+ 
+ func normalizeExecution(cfg *Config) error {
+@@ -58,7 +60,7 @@ func normalizeExecution(cfg *Config) error {
+ 		return fmt.Errorf("gc: worker count %d exceeds 128", options.Workers)
+ 	}
+ 	if options.MinMarkBytes == 0 {
+-		options.MinMarkBytes = 8 << 20
++		options.MinMarkBytes = ^uint64(0)
+ 	}
+ 	if options.MinMarkObjects == 0 {
+ 		options.MinMarkObjects = 65536
+diff --git a/src/core/runtime/gc/native/execution_bench_test.go b/src/core/runtime/gc/native/execution_bench_test.go
+new file mode 100644
+index 000000000..5fa8bdb34
+--- /dev/null
++++ b/src/core/runtime/gc/native/execution_bench_test.go
+@@ -0,0 +1,42 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import (
++	"fmt"
++	"runtime"
++	"testing"
++)
++
++func BenchmarkParallelFullMark(b *testing.B) {
++	counts := []int{4096, 262144}
++	workers := []uint16{1, 2, 4, uint16(min(128, runtime.GOMAXPROCS(0)))}
++	seen := make(map[uint16]bool)
++	for _, w := range workers {
++		if seen[w] {
++			continue
++		}
++		seen[w] = true
++		for _, count := range counts {
++			b.Run(fmt.Sprintf("n%d/workers%d", count, w), func(b *testing.B) {
++				c, roots := newParallelMarkFixture(b, count, w)
++				if err := c.CollectFull(roots); err != nil {
++					b.Fatal(err)
++				}
++				b.ReportAllocs()
++				b.ResetTimer()
++				for i := 0; i < b.N; i++ {
++					if err := c.CollectFull(roots); err != nil {
++						b.Fatal(err)
++					}
++				}
++				b.StopTimer()
++				got := c.CycleTelemetry()
++				b.ReportMetric(float64(got.P99PauseNS), "p99-pause-ns")
++				b.ReportMetric(float64(got.MaxPauseNS), "max-pause-ns")
++				b.ReportMetric(float64(got.ParallelScratchBytes), "parallel-scratch-B")
++				b.ReportMetric(float64(got.QueueSteals), "steals")
++			})
++		}
++	}
++}
+diff --git a/src/core/runtime/gc/native/execution_enabled.go b/src/core/runtime/gc/native/execution_enabled.go
+index 409faf963..7b15fd9a4 100644
+--- a/src/core/runtime/gc/native/execution_enabled.go
++++ b/src/core/runtime/gc/native/execution_enabled.go
+@@ -11,17 +11,20 @@ const executionProduct = true
+ const cycleHistory = 64
+ 
+ type collectorExecution struct {
+-	sweep                                               *backgroundSweep
+-	busy                                                []uint64
+-	backgroundTasks, backgroundSweptBytes, assistWaitNS uint64
+-	options                                             ExecutionOptions
+-	cycles                                              [cycleHistory]CollectionCycle
+-	sequence                                            uint64
++	markPool                                                                            *parallelMarkPool
++	parallelMarkCycles, queueSteals, queueTransfers, markWorkerNS, parallelScratchBytes uint64
++	sweep                                                                               *backgroundSweep
++	busy                                                                                []uint64
++	backgroundTasks, backgroundSweptBytes, assistWaitNS                                 uint64
++	options                                                                             ExecutionOptions
++	cycles                                                                              [cycleHistory]CollectionCycle
++	sequence                                                                            uint64
+ }
+ type executionCycle struct {
+-	owner        *collectorExecution
+-	start, phase time.Time
+-	record       CollectionCycle
++	workerStartNS uint64
++	owner         *collectorExecution
++	start, phase  time.Time
++	record        CollectionCycle
+ }
+ 
+ func (c *Collector) initExecution() {
+@@ -39,7 +42,7 @@ func (c *Collector) beginExecutionCycle(kind CollectionKind) executionCycle {
+ 		return executionCycle{}
+ 	}
+ 	now := time.Now()
+-	return executionCycle{owner: x, start: now, phase: now, record: CollectionCycle{Kind: kind, Workers: 1}}
++	return executionCycle{owner: x, start: now, phase: now, workerStartNS: x.markWorkerNS, record: CollectionCycle{Kind: kind, Workers: 1}}
+ }
+ func (t *executionCycle) markDone() {
+ 	if t.owner != nil {
+@@ -69,6 +72,7 @@ func (c *Collector) finishExecutionCycle(t executionCycle, err error) {
+ 	t.record.PauseNS = uint64(time.Since(t.start))
+ 	t.record.WallNS = t.record.PauseNS
+ 	t.record.Failed = err != nil
++	t.record.WorkerNS = t.owner.markWorkerNS - t.workerStartNS
+ 	t.record.Objects = uint32(len(c.handles) - min(len(c.freeHandles)+1, len(c.handles)))
+ 	t.record.HeapBytes = uint64(c.throughput.bump)
+ 	t.owner.record(t.record)
+@@ -85,7 +89,7 @@ func (c *Collector) CycleTelemetry() CycleTelemetry {
+ 	}
+ 	x := m.execution
+ 	n := min(x.sequence, uint64(cycleHistory))
+-	result := CycleTelemetry{Count: x.sequence, Cycles: make([]CollectionCycle, n), BackgroundTasks: x.backgroundTasks, BackgroundSweptBytes: x.backgroundSweptBytes, AssistWaitNS: x.assistWaitNS}
++	result := CycleTelemetry{Count: x.sequence, Cycles: make([]CollectionCycle, n), ParallelMarkCycles: x.parallelMarkCycles, QueueSteals: x.queueSteals, QueueTransfers: x.queueTransfers, MarkWorkerNS: x.markWorkerNS, ParallelScratchBytes: x.parallelScratchBytes, BackgroundTasks: x.backgroundTasks, BackgroundSweptBytes: x.backgroundSweptBytes, AssistWaitNS: x.assistWaitNS}
+ 	pauses := make([]uint64, 0, n)
+ 	for i := range result.Cycles {
+ 		r := x.cycles[(x.sequence-n+uint64(i))%cycleHistory]
+@@ -101,3 +105,9 @@ func (c *Collector) CycleTelemetry() CycleTelemetry {
+ 	}
+ 	return result
+ }
++
++func (t *executionCycle) workers(count int) {
++	if t.owner != nil {
++		t.record.Workers = uint16(max(1, count))
++	}
++}
+diff --git a/src/core/runtime/gc/native/mark_parallel_disabled.go b/src/core/runtime/gc/native/mark_parallel_disabled.go
+new file mode 100644
+index 000000000..ec89db344
+--- /dev/null
++++ b/src/core/runtime/gc/native/mark_parallel_disabled.go
+@@ -0,0 +1,6 @@
++//go:build !wago_gc_workers || tinygo
++
++package gc
++
++func (c *Collector) parallelMarkRoots(RootSet) int { return 0 }
++func (t *executionCycle) workers(int)              {}
+diff --git a/src/core/runtime/gc/native/mark_parallel_enabled.go b/src/core/runtime/gc/native/mark_parallel_enabled.go
+new file mode 100644
+index 000000000..55471bd1b
+--- /dev/null
++++ b/src/core/runtime/gc/native/mark_parallel_enabled.go
+@@ -0,0 +1,330 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import (
++	"encoding/binary"
++	"runtime"
++	"sync"
++	"sync/atomic"
++	"time"
++	"unsafe"
++)
++
++const markLocalBuckets = 16
++const markTransferTasks = 32
++const markSharedLimit = 1024
++const parallelArrayChunk = 512
++
++type parallelMarkTask struct{ handle, index uint32 }
++type parallelMarkDeque struct {
++	mu    sync.Mutex
++	tasks []parallelMarkTask
++}
++type parallelMarkWorker struct {
++	pool                       *parallelMarkPool
++	id                         int
++	local                      [markLocalBuckets][]parallelMarkTask
++	first                      int
++	source                     uint32
++	cross                      bool
++	steals, transfers, elapsed uint64
++}
++type parallelMarkPool struct {
++	collector   *Collector
++	workers     []parallelMarkWorker
++	shared      []parallelMarkDeque
++	pending     atomic.Int64
++	wake        chan struct{}
++	done        chan struct{}
++	connections []uint32
++}
++
++func (p *parallelMarkPool) region(h uint32) uint32 {
++	e := p.collector.handles[h]
++	if e.space == spaceOld || e.space == spaceLarge {
++		return e.off / immixBlockBytes
++	}
++	return uint32(len(p.collector.throughput.immix.regions)) + h/256
++}
++func (p *parallelMarkPool) notify() {
++	select {
++	case p.wake <- struct{}{}:
++	default:
++	}
++}
++func (w *parallelMarkWorker) enqueue(task parallelMarkTask) {
++	p := w.pool
++	bucket := int(p.region(task.handle) % markLocalBuckets)
++	p.pending.Add(1)
++	w.local[bucket] = append(w.local[bucket], task)
++	w.first = bucket
++	w.share(bucket)
++}
++func (w *parallelMarkWorker) share(bucket int) {
++	local := w.local[bucket]
++	if len(local) < 2*markTransferTasks {
++		return
++	}
++	q := &w.pool.shared[w.id]
++	q.mu.Lock()
++	if len(q.tasks) >= markSharedLimit {
++		q.mu.Unlock()
++		return
++	}
++	empty := len(q.tasks) == 0
++	start := len(local) - markTransferTasks
++	q.tasks = append(q.tasks, local[start:]...)
++	w.local[bucket] = local[:start]
++	q.mu.Unlock()
++	w.transfers++
++	if empty {
++		w.pool.notify()
++	}
++}
++func (w *parallelMarkWorker) shade(ref Ref) {
++	if !ref.IsObj() {
++		return
++	}
++	h := handleOf(ref)
++	c := w.pool.collector
++	if h == 0 || int(h) >= len(c.handles) || c.handles[h].space == spaceFree {
++		return
++	}
++	if w.source != immixNoRegion && w.pool.region(h) != w.source {
++		w.cross = true
++	}
++	m := c.throughput.immix
++	word := &m.work.seen[h/64]
++	bit := uint64(1) << (h % 64)
++	for {
++		old := atomic.LoadUint64(&word.bits)
++		if old&bit != 0 {
++			return
++		}
++		if atomic.CompareAndSwapUint64(&word.bits, old, old|bit) {
++			break
++		}
++	}
++	if c.handles[h].class&NativeHandlePointerFreeBit == 0 {
++		w.enqueue(parallelMarkTask{handle: h})
++	}
++}
++func (p *parallelMarkPool) VisitRootRef(ref Ref) bool {
++	if !ref.IsObj() || handleOf(ref) == 0 || int(handleOf(ref)) >= len(p.collector.handles) {
++		return true
++	}
++	w := &p.workers[int(p.region(handleOf(ref)))%len(p.workers)]
++	w.shade(ref)
++	return true
++}
++func (w *parallelMarkWorker) pop() (parallelMarkTask, bool) {
++	for i := 0; i < markLocalBuckets; i++ {
++		bucket := (w.first + i) % markLocalBuckets
++		tasks := w.local[bucket]
++		if len(tasks) == 0 {
++			continue
++		}
++		task := tasks[len(tasks)-1]
++		w.local[bucket] = tasks[:len(tasks)-1]
++		w.first = bucket
++		w.share(bucket)
++		return task, true
++	}
++	// Transfer at most 32 integer tasks per synchronization. Region buckets
++	// regroup stolen tasks before descriptor/payload reads.
++	for n := 0; n < len(w.pool.shared); n++ {
++		victim := (w.id + n) % len(w.pool.shared)
++		q := &w.pool.shared[victim]
++		q.mu.Lock()
++		count := min(markTransferTasks, len(q.tasks))
++		if count == 0 {
++			q.mu.Unlock()
++			continue
++		}
++		start := len(q.tasks) - count
++		for _, task := range q.tasks[start:] {
++			bucket := int(w.pool.region(task.handle) % markLocalBuckets)
++			w.local[bucket] = append(w.local[bucket], task)
++		}
++		q.tasks = q.tasks[:start]
++		q.mu.Unlock()
++		if victim != w.id {
++			w.steals++
++		}
++		return w.pop()
++	}
++	return parallelMarkTask{}, false
++}
++func (w *parallelMarkWorker) scan(task parallelMarkTask) {
++	c := w.pool.collector
++	d, b, err := c.refDescPtrBytes(makeObjRef(task.handle))
++	if err != nil || !d.HasRefs {
++		return
++	}
++	w.source = w.pool.region(task.handle)
++	w.cross = false
++	if d.Kind == KindStruct {
++		if uint64(PayloadOffset)+uint64(d.Size) > uint64(len(b)) {
++			panic("gc: parallel mark struct extent invalid")
++		}
++		if d.firstRef != 0 {
++			for index := uint32(d.firstRef); index != 0; {
++				field := d.Fields[index-1]
++				w.shade(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+field.Offset:])))
++				index = uint32(field.nextRef)
++			}
++		} else {
++			for _, field := range d.Fields {
++				if isCollectorRefKind(field.Kind) {
++					w.shade(Ref(binary.LittleEndian.Uint32(b[PayloadOffset+field.Offset:])))
++				}
++			}
++		}
++	} else if d.ArrayElementsAreRefs() {
++		length := binary.LittleEndian.Uint32(b[:4])
++		if uint64(d.PayloadOffset())+uint64(length)*uint64(d.ElemSize) > uint64(len(b)) {
++			panic("gc: parallel mark array extent invalid")
++		}
++		end := min(length, task.index+min(uint32(parallelArrayChunk), ^uint32(0)-task.index))
++		if end < length {
++			w.enqueue(parallelMarkTask{task.handle, end})
++		}
++		for i := task.index; i < end; i++ {
++			w.shade(Ref(binary.LittleEndian.Uint32(b[d.PayloadOffset()+i*d.ElemSize:])))
++		}
++	}
++	if w.cross && int(w.source) < len(w.pool.connections) {
++		atomic.AddUint32(&w.pool.connections[w.source], 1)
++	}
++	w.source = immixNoRegion
++}
++func (w *parallelMarkWorker) run() {
++	start := time.Now()
++	defer func() { w.elapsed = uint64(time.Since(start)) }()
++	for {
++		task, ok := w.pop()
++		if !ok {
++			if w.pool.pending.Load() == 0 {
++				return
++			}
++			select {
++			case <-w.pool.done:
++				return
++			case <-w.pool.wake:
++				continue
++			}
++		}
++		w.scan(task)
++		if w.pool.pending.Add(-1) == 0 {
++			close(w.pool.done)
++			return
++		}
++	}
++}
++func (c *Collector) parallelMarkRoots(roots RootSet) int {
++	m := c.throughput.immix
++	if m == nil || m.execution == nil {
++		return 0
++	}
++	x := m.execution
++	options := x.options
++	workers := min(int(options.Workers), runtime.GOMAXPROCS(0))
++	objects := len(c.handles) - min(len(c.freeHandles)+1, len(c.handles))
++	if workers < 2 || objects < int(options.MinMarkObjects) || uint64(c.throughput.bump)+uint64(c.nurseryBump) < options.MinMarkBytes {
++		return 0
++	}
++	var allocated uint64
++	for _, e := range c.handles {
++		if e.space != spaceFree {
++			allocated += uint64(e.size)
++		}
++	}
++	if allocated < options.MinMarkBytes {
++		return 0
++	}
++	p := x.markPool
++	if p == nil || len(p.workers) != workers {
++		p = &parallelMarkPool{workers: make([]parallelMarkWorker, workers), shared: make([]parallelMarkDeque, workers)}
++		x.markPool = p
++	}
++	p.collector = c
++	p.pending.Store(0)
++	p.wake = make(chan struct{}, workers)
++	p.done = make(chan struct{})
++	p.connections = append(p.connections[:0], make([]uint32, len(m.regions))...)
++	for i := range m.work.seen {
++		m.work.seen[i] = immixMarkWord{epoch: m.epoch}
++	}
++	for i := range p.workers {
++		w := &p.workers[i]
++		w.pool = p
++		w.id = i
++		w.first = 0
++		w.source = immixNoRegion
++		w.cross = false
++		w.steals = 0
++		w.transfers = 0
++		w.elapsed = 0
++		for j := range w.local {
++			w.local[j] = w.local[j][:0]
++		}
++		p.shared[i].tasks = p.shared[i].tasks[:0]
++	}
++	if direct, ok := roots.(DirectRootRefSet); ok {
++		direct.RangeRootRefs(p)
++	} else if roots != nil {
++		roots.RangeRoots(func(slot RootSlot) bool { return p.VisitRootRef(slot.GetRef()) })
++	}
++	for _, r := range c.globalSlots {
++		p.VisitRootRef(r)
++	}
++	for _, r := range c.tableSlots {
++		p.VisitRootRef(r)
++	}
++	used := 1
++	if p.pending.Load() != 0 {
++		var group sync.WaitGroup
++		group.Add(workers)
++		for i := range p.workers {
++			go func(w *parallelMarkWorker) { defer group.Done(); w.run() }(&p.workers[i])
++		}
++		group.Wait()
++		used = workers
++		x.parallelMarkCycles++
++	}
++	// Workers only publish packed atomic marks. Merge young/line state and coarse
++	// connectivity hints after join, before sweep or any stable-handle mutation.
++	for h := uint32(1); int(h) < len(c.handles); h++ {
++		if !m.marked(h) {
++			continue
++		}
++		e := c.handles[h]
++		if e.young() {
++			c.mark[h] = true
++		}
++		if e.space == spaceOld || e.space == spaceLarge {
++			m.mark(e)
++		}
++	}
++	for i := range p.connections {
++		if m.regions[i].epoch == m.epoch {
++			m.regions[i].connections = p.connections[i]
++		}
++	}
++	var scratch uint64
++	for i := range p.workers {
++		w := &p.workers[i]
++		x.markWorkerNS += w.elapsed
++		x.queueSteals += w.steals
++		x.queueTransfers += w.transfers
++		for _, local := range w.local {
++			scratch += uint64(cap(local)) * uint64(unsafe.Sizeof(parallelMarkTask{}))
++		}
++		scratch += uint64(cap(p.shared[i].tasks)) * uint64(unsafe.Sizeof(parallelMarkTask{}))
++	}
++	scratch += uint64(cap(p.connections)) * 4
++	x.parallelScratchBytes = scratch
++	p.collector = nil
++	return used
++}
+diff --git a/src/core/runtime/gc/native/mark_parallel_test.go b/src/core/runtime/gc/native/mark_parallel_test.go
+new file mode 100644
+index 000000000..f02c2d632
+--- /dev/null
++++ b/src/core/runtime/gc/native/mark_parallel_test.go
+@@ -0,0 +1,151 @@
++//go:build wago_gc_workers && !tinygo
++
++package gc
++
++import (
++	"runtime"
++	"slices"
++	"testing"
++)
++
++func newParallelMarkFixture(t testing.TB, count int, workers uint16) (*Collector, RefSliceRoots) {
++	t.Helper()
++	node, err := NewStructDesc(0, []StorageKind{StorageRefNull, StorageRefNull, StorageRefNull, StorageRefNull, StorageI64})
++	if err != nil {
++		t.Fatal(err)
++	}
++	array, err := NewArrayDesc(1, StorageRefNull)
++	if err != nil {
++		t.Fatal(err)
++	}
++	scalar, err := NewStructDesc(2, []StorageKind{StorageI64})
++	if err != nil {
++		t.Fatal(err)
++	}
++	c, err := NewCollector(Config{Allocator: AllocatorImmix, NurseryBytes: uint32(count)*40 + 1<<20, DisableMovingNursery: true, ThroughputHeapBytes: 128 << 20, ThroughputPageBytes: 4096, Execution: &ExecutionOptions{Workers: workers, Telemetry: true, MinMarkObjects: 1, MinMarkBytes: 1}}, []TypeDesc{node, array, scalar})
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(c.Close)
++	refs := make([]Ref, count)
++	for i := range refs {
++		refs[i], err = c.NewStructDefault(0)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err = c.ForcePromote(refs[i]); err != nil {
++			t.Fatal(err)
++		}
++	}
++	for i, r := range refs {
++		for field := uint32(0); field < 4; field++ {
++			if err = c.StructSet(r, field, RefValue(refs[(i*4+int(field)+1)%len(refs)])); err != nil {
++				t.Fatal(err)
++			}
++		}
++	}
++	root, err := c.NewArrayDefault(1, uint32(count))
++	if err != nil {
++		t.Fatal(err)
++	}
++	for i, r := range refs {
++		if err = c.ArraySet(root, uint32(i), RefValue(r)); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err = c.ForcePromote(root); err != nil {
++		t.Fatal(err)
++	}
++	// These leaves are live only through persistent roots; the extra node dies.
++	global, err := c.NewStructDefault(2)
++	if err != nil {
++		t.Fatal(err)
++	}
++	table, err := c.NewStructDefault(2)
++	if err != nil {
++		t.Fatal(err)
++	}
++	c.globalSlots = []Ref{global}
++	c.tableSlots = []Ref{table}
++	c.WriteBarrierSlot(SlotGlobal, 0, global)
++	c.WriteBarrierSlot(SlotTable, 0, table)
++	if _, err = c.NewStructDefault(0); err != nil {
++		t.Fatal(err)
++	}
++	return c, RefSliceRoots{root}
++}
++func TestParallelMarkMatchesSerialAcrossCyclesAndEpochWrap(t *testing.T) {
++	previous := runtime.GOMAXPROCS(4)
++	defer runtime.GOMAXPROCS(previous)
++	serial, sroots := newParallelMarkFixture(t, 4096, 1)
++	parallel, proots := newParallelMarkFixture(t, 4096, 4)
++	for round := 0; round < 4; round++ {
++		if round == 2 {
++			parallel.throughput.immix.epoch = ^uint32(0)
++		}
++		if err := serial.CollectFull(sroots); err != nil {
++			t.Fatal(err)
++		}
++		if err := parallel.CollectFull(proots); err != nil {
++			t.Fatal(err)
++		}
++		if serial.Stats().LiveObjects != parallel.Stats().LiveObjects {
++			t.Fatal("parallel live count differs")
++		}
++		for h, e := range serial.handles {
++			if (e.space == spaceFree) != (parallel.handles[h].space == spaceFree) {
++				t.Fatalf("handle%d liveness differs", h)
++			}
++			if h > 0 && e.space != spaceFree && !slices.Equal(serial.bytes(makeObjRef(uint32(h))), parallel.bytes(makeObjRef(uint32(h)))) {
++				t.Fatalf("handle%d payload changed", h)
++			}
++		}
++		if err := parallel.Verify(proots); err != nil {
++			t.Fatal(err)
++		}
++		if err := parallel.CollectMinor(proots); err != nil {
++			t.Fatal(err)
++		}
++		if err := serial.CollectMinor(sroots); err != nil {
++			t.Fatal(err)
++		}
++	}
++	got := parallel.CycleTelemetry()
++	if got.ParallelMarkCycles != 4 || got.QueueTransfers == 0 || got.ParallelScratchBytes == 0 {
++		t.Fatalf("parallel path not exercised: %+v", got)
++	}
++}
++func TestParallelMarkThresholdAvoidsWorkers(t *testing.T) {
++	previous := runtime.GOMAXPROCS(4)
++	defer runtime.GOMAXPROCS(previous)
++	c, roots := newParallelMarkFixture(t, 256, 4)
++	c.throughput.immix.execution.options.MinMarkObjects = 1 << 20
++	if err := c.CollectFull(roots); err != nil {
++		t.Fatal(err)
++	}
++	if got := c.CycleTelemetry(); got.ParallelMarkCycles != 0 || got.Cycles[len(got.Cycles)-1].Workers != 1 {
++		t.Fatal("below-threshold collection started workers")
++	}
++	c.throughput.immix.execution.options.MinMarkObjects = 1
++	c.throughput.immix.execution.options.MinMarkBytes = 1 << 30
++	if err := c.CollectFull(roots); err != nil {
++		t.Fatal(err)
++	}
++	if c.CycleTelemetry().ParallelMarkCycles != 0 {
++		t.Fatal("byte threshold ignored")
++	}
++}
++func TestParallelMarkStealsBoundedRegionTasks(t *testing.T) {
++	c, roots := newParallelMarkFixture(t, 64, 2)
++	p := &parallelMarkPool{collector: c, workers: make([]parallelMarkWorker, 2), shared: make([]parallelMarkDeque, 2)}
++	for i := range p.workers {
++		p.workers[i].pool = p
++		p.workers[i].id = i
++	}
++	for i := 0; i < 64; i++ {
++		p.shared[0].tasks = append(p.shared[0].tasks, parallelMarkTask{handle: handleOf(roots[0]), index: uint32(i)})
++	}
++	if _, ok := p.workers[1].pop(); !ok || p.workers[1].steals != 1 || len(p.shared[0].tasks) != 64-markTransferTasks {
++		t.Fatal("bounded work stealing failed")
++	}
++}

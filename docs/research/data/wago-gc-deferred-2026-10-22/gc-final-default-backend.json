@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "./src/core/compiler/backend/railshot/amd64"
+  ],
+  "seconds": 11.115432390011847,
+  "exit": 0,
+  "user_seconds": 11.754042,
+  "system_seconds": 3.754874,
+  "peak_rss_kib": 840504,
+  "minor_faults": 665516,
+  "major_faults": 5,
+  "voluntary_context_switches": 25020,
+  "involuntary_context_switches": 950
+}

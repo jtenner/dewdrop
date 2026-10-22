@@ -1,0 +1,78 @@
+--- FAIL: TestArrayCopyHardeningModesValidateCollectorPayloads (0.00s)
+    array_bulk_test.go:408: hardening config {NurseryBytes:0 SurvivorBytes:0 MinorPauseTargetMicros:0 OldBlockBytes:0 LargeObjectBytes:0 StressNurseryBytes:0 TinyHeapBytes:0 TinyBlockBytes:0 TinyStepBudget:0 TinyPacingStepLimit:0 ThroughputHeapBytes:0 ThroughputPageBytes:0 ThroughputClassLimit:0 Profile:0 Allocator:0 Runtime:0 CollectEveryAlloc:false ForceMajorEveryMinor:false VerifyAfterCollect:true PoisonFreed:false StressBarriers:false DisableMovingNursery:false DisableVirtualBacking:false DisableCollection:false TinyCollectEveryAlloc:false TinyStepEveryAlloc:false} accepted forged source payload
+--- FAIL: TestArrayCopyReferenceCompatibilityAndBarriers (0.00s)
+    array_bulk_test.go:451: gc: nursery exhausted and no roots were supplied
+--- FAIL: TestArrayDataSingleInitialization (0.00s)
+    array_data_test.go:35: kind1 profile0 length17 payload mismatch
+--- FAIL: TestArrayDataClearsThroughputClassPadding (0.00s)
+    array_data_test.go:102: stale size-class padding
+--- FAIL: TestMalformedFreeCardHeadWidensExistingRange (0.00s)
+    card_driven_test.go:361: existing-card fallback = {handle:1 index:0 end:263 next:0}/global:false
+--- FAIL: TestCheckArrayAllocationPreservesDeterministicCapacityAndOverflowTraps (0.00s)
+    desc_layout_test.go:23: throughput physical overflow = gc: throughput heap exhausted, want ErrAllocationTooLarge
+--- FAIL: TestDescriptorsAndLayout (0.00s)
+    desc_layout_test.go:160: bad struct size 24
+--- FAIL: TestBulkWriteBarrierPreservesNurseryRefsInRefArrays (0.00s)
+    --- FAIL: TestBulkWriteBarrierPreservesNurseryRefsInRefArrays/old_array (0.00s)
+        heap_test.go:562: array[1]=0, want 4
+    --- FAIL: TestBulkWriteBarrierPreservesNurseryRefsInRefArrays/large_array (0.00s)
+        heap_test.go:562: array[1]=0, want 4
+--- FAIL: TestBulkWriteBarrierIsPostWriteContract (0.00s)
+    heap_test.go:606: post-write bulk barrier did not preserve nursery child: 0
+--- FAIL: TestMajorBlocksDeferredNativeMinor (0.01s)
+    --- FAIL: TestMajorBlocksDeferredNativeMinor/immediate (0.00s)
+        major_blocks_coverage_test.go:175: gc: object size mismatch
+    --- FAIL: TestMajorBlocksDeferredNativeMinor/captured (0.00s)
+        major_blocks_coverage_test.go:175: gc: object size mismatch
+    --- FAIL: TestMajorBlocksDeferredNativeMinor/dense (0.00s)
+        major_blocks_coverage_test.go:175: gc: object size mismatch
+    --- FAIL: TestMajorBlocksDeferredNativeMinor/survivor (0.00s)
+        major_blocks_coverage_test.go:175: gc: object size mismatch
+--- FAIL: TestMajorBlocksNativeRefillFlatThenSparse (0.00s)
+    major_blocks_coverage_test.go:212: gc: object size mismatch
+--- FAIL: TestMajorBlocksNativeReservations (0.00s)
+    major_blocks_test.go:175: gc: object size mismatch
+--- FAIL: TestNativeCollectorViewLayoutAndRefresh (0.00s)
+    native_view_test.go:10: native collector ABI version = 12, want version 11
+--- FAIL: TestDefaultNurseryGrowsForRollingLiveGraph (0.00s)
+    --- FAIL: TestDefaultNurseryGrowsForRollingLiveGraph/replace_root=false (0.00s)
+        nursery_growth_test.go:50: gc: shadow verifier found uncarded old-to-nursery edge from handle 1 at payload byte 0
+    --- FAIL: TestDefaultNurseryGrowsForRollingLiveGraph/replace_root=true (0.00s)
+        nursery_growth_test.go:50: gc: shadow verifier found uncarded old-to-nursery edge from handle 1 at payload byte 0
+--- FAIL: TestFullCollectionMatchesIndependentShadowTrace (0.00s)
+    --- FAIL: TestFullCollectionMatchesIndependentShadowTrace/throughput (0.00s)
+        shadow_trace_test.go:207: shadow trace: handle 6 has unknown type 10
+    --- FAIL: TestFullCollectionMatchesIndependentShadowTrace/tiny (0.00s)
+        shadow_trace_test.go:207: shadow trace: handle 6 has unknown type 10
+--- FAIL: TestSparseCardBoundsRangeTransitions (0.00s)
+    sparse_card_transition_test.go:76: seed=1 step=1 byte=8192 got=false want=true
+--- FAIL: TestTinyExactGraphHammer (0.00s)
+    stress_test.go:164: shadow trace: handle 119 has unknown type 78
+--- FAIL: TestThroughputExactGraphHammer (0.00s)
+    stress_test.go:173: shadow trace: handle 158 has unknown type 4
+--- FAIL: TestThroughputSurvivorCapacityFallsBackToPromotion (0.00s)
+    survivor_test.go:146: survivor overflow result young/old=2/1 entries={off:1056 size:16 typeID:0 class:43008 space:1 remembered:false}/{off:1072 size:16 typeID:0 class:43008 space:1 remembered:false}/{off:0 size:16 typeID:0 class:2048 space:2 remembered:false}, want 1/2
+--- FAIL: TestTinyBulkBarrierRangeValidationEveryPhase (0.00s)
+    --- FAIL: TestTinyBulkBarrierRangeValidationEveryPhase/mark/exact-last (0.00s)
+        tiny_scan_test.go:605: exact last valid element was not shaded
+    --- FAIL: TestTinyBulkBarrierRangeValidationEveryPhase/remark/exact-last (0.00s)
+        tiny_scan_test.go:605: exact last valid element was not shaded
+    --- FAIL: TestTinyBulkBarrierRangeValidationEveryPhase/sweep/exact-last (0.00s)
+        tiny_scan_test.go:605: exact last valid element was not shaded
+--- FAIL: TestTinyRemarkBulkBarrierResumesActivePartialScan (0.00s)
+    tiny_scan_test.go:676: remark barrier partial state: scan={handle:0 scan:{index:0}} stack=[] child=0
+--- FAIL: TestTinyBoundedStepsMatchCollectFull (0.00s)
+    tiny_scan_test.go:787: shadow trace: handle 1 has unknown type 512
+--- FAIL: TestTinyVerifyRejectsCompactMetadataCorruption (0.00s)
+    --- FAIL: TestTinyVerifyRejectsCompactMetadataCorruption/interior_allocation_start (0.00s)
+        tiny_test.go:231: test object does not span two blocks
+--- FAIL: TestTinyAllocateFreeReuseCoalesceAndFailure (0.00s)
+    tiny_test.go:378: expected deterministic tiny heap exhaustion
+--- FAIL: TestTinyFragmentationFailureThenCoalesceSucceeds (0.00s)
+    tiny_test.go:395: fragmented heap unexpectedly satisfied large allocation
+--- FAIL: FuzzCollectorOperations (0.00s)
+    --- FAIL: FuzzCollectorOperations/seed#2 (0.00s)
+        operations_fuzz_test.go:96: shadow trace: handle 2 field is out of bounds
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.137s
+FAIL

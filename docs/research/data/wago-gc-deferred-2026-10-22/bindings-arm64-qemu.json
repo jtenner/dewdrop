@@ -1,0 +1,11 @@
+{
+  "command": [
+    "qemu-aarch64",
+    "/tmp/wago-gc-deferred-evidence/arm64-bindings-backend.test",
+    "-test.run=^TestGCObjectStubPhysicalGuards$",
+    "-test.v"
+  ],
+  "seconds": 0.08655883600295056,
+  "exit_code": 0,
+  "output": "=== RUN   TestGCObjectStubPhysicalGuards\n=== RUN   TestGCObjectStubPhysicalGuards/nursery\n=== RUN   TestGCObjectStubPhysicalGuards/old\n=== RUN   TestGCObjectStubPhysicalGuards/large\n=== RUN   TestGCObjectStubPhysicalGuards/tiny\n=== RUN   TestGCObjectStubPhysicalGuards/null\n=== RUN   TestGCObjectStubPhysicalGuards/i31\n=== RUN   TestGCObjectStubPhysicalGuards/high_bits\n=== RUN   TestGCObjectStubPhysicalGuards/count\n=== RUN   TestGCObjectStubPhysicalGuards/free\n=== RUN   TestGCObjectStubPhysicalGuards/unknown_space\n=== RUN   TestGCObjectStubPhysicalGuards/offset\n=== RUN   TestGCObjectStubPhysicalGuards/size\n=== RUN   TestGCObjectStubPhysicalGuards/short_handle\n=== RUN   TestGCObjectStubPhysicalGuards/short_header\n=== RUN   TestGCObjectStubPhysicalGuards/long_header\n=== RUN   TestGCObjectStubPhysicalGuards/space_bytes\n--- PASS: TestGCObjectStubPhysicalGuards (0.01s)\n    --- PASS: TestGCObjectStubPhysicalGuards/nursery (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/old (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/large (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/tiny (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/null (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/i31 (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/high_bits (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/count (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/free (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/unknown_space (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/offset (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/size (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/short_handle (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/short_header (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/long_header (0.00s)\n    --- PASS: TestGCObjectStubPhysicalGuards/space_bytes (0.00s)\nPASS\n"
+}

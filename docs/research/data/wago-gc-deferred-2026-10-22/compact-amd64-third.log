@@ -1,0 +1,124 @@
+--- FAIL: TestGCConstructorScalarReplacementPreservesBoundedAllocation (0.00s)
+    gc_constructor_forward_amd64_test.go:215: enabled=false error = <nil>; want tiny heap exhaustion
+--- FAIL: TestGCConstructorIfPressure (0.00s)
+    --- FAIL: TestGCConstructorIfPressure/f32 (0.00s)
+        gc_constructor_if_pressure_amd64_test.go:110: fixture did not move live roots
+    --- FAIL: TestGCConstructorIfPressure/f64 (0.00s)
+        gc_constructor_if_pressure_amd64_test.go:110: fixture did not move live roots
+--- FAIL: TestGCDeadDefaultGroupExhaustion (0.00s)
+    gc_dead_group_amd64_test.go:159: n3: successful allocations256 want128
+--- FAIL: TestGCDeadDefaultGroupNativeBoundaries (0.00s)
+    gc_dead_group_native_amd64_test.go:80: n2 kindroom bump40 want72; a miss must not charge a prefix
+--- FAIL: TestGCDeadDefaultGroupSingleReservation (0.00s)
+    gc_dead_group_native_amd64_test.go:134: dead group did not charge beyond the array chunk in native code
+--- FAIL: TestGCLeafTrapPreservesGlobalPins (0.00s)
+    --- FAIL: TestGCLeafTrapPreservesGlobalPins/struct-set/index0 (0.00s)
+        --- FAIL: TestGCLeafTrapPreservesGlobalPins/struct-set/index0/artifact0/header (0.00s)
+            gc_leaf_trap_pins_amd64_test.go:160: trap=<nil> want18
+        --- FAIL: TestGCLeafTrapPreservesGlobalPins/struct-set/index0/artifact1/header (0.00s)
+            gc_leaf_trap_pins_amd64_test.go:160: trap=<nil> want18
+--- FAIL: TestGCNativeOpenStructRespectsLargeObjectThreshold (0.00s)
+    gc_native_open_struct_alloc_amd64_test.go:93: 32-byte object space=1, want large=3
+--- FAIL: TestGCResolverSelectedSpaceDescriptor (0.01s)
+    --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct (0.00s)
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Old (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Old/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Nursery (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Nursery/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Large (0.00s)
+            gc_old_space_descriptor_amd64_test.go:81: actual space = 1, want 3
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Tiny (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/inline-struct/Tiny/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+    --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct (0.00s)
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Old (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Old/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Nursery (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Nursery/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Large (0.00s)
+            gc_old_space_descriptor_amd64_test.go:81: actual space = 1, want 3
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Tiny (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/shared-open-struct/Tiny/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+    --- FAIL: TestGCResolverSelectedSpaceDescriptor/defined-cast (0.00s)
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/defined-cast/Large (0.00s)
+            gc_old_space_descriptor_amd64_test.go:81: actual space = 1, want 3
+    --- FAIL: TestGCResolverSelectedSpaceDescriptor/defined-test (0.00s)
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/defined-test/Large (0.00s)
+            gc_old_space_descriptor_amd64_test.go:81: actual space = 1, want 3
+    --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get (0.00s)
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Old (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Old/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Nursery (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Nursery/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Large (0.00s)
+            gc_old_space_descriptor_amd64_test.go:81: actual space = 1, want 3
+        --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Tiny (0.00s)
+            --- FAIL: TestGCResolverSelectedSpaceDescriptor/cast-struct-get/Tiny/short-handle (0.00s)
+                gc_old_space_descriptor_amd64_test.go:115: got [42], <nil>; want cast trap
+--- FAIL: TestGCResolverDependentSpaceFixture (0.00s)
+    --- FAIL: TestGCResolverDependentSpaceFixture/Large (0.00s)
+        gc_old_space_descriptor_amd64_test.go:227: actual space = 1, want 3
+--- FAIL: TestGCResolverAcrossCollectingCall (0.00s)
+    gc_resolver_arithmetic_amd64_test.go:191: call did not collect and copy: before={Allocations:0 MinorCollections:0 FullCollections:0 MinorObjectsScanned:0 MinorRememberedScanned:0 YoungBytesCopied:0 PromotedBytes:0 LiveObjects:0 TenuringThreshold:2} after={Allocations:2 MinorCollections:0 FullCollections:0 MinorObjectsScanned:0 MinorRememberedScanned:0 YoungBytesCopied:0 PromotedBytes:0 LiveObjects:2 TenuringThreshold:2}
+--- FAIL: TestGCResolverSpaceByteAcrossSpaces (0.00s)
+    --- FAIL: TestGCResolverSpaceByteAcrossSpaces/inline-struct (0.00s)
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/inline-struct/saved=false/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/inline-struct/saved=true/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+    --- FAIL: TestGCResolverSpaceByteAcrossSpaces/shared-open-struct (0.00s)
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/shared-open-struct/saved=false/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/shared-open-struct/saved=true/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+    --- FAIL: TestGCResolverSpaceByteAcrossSpaces/defined-cast (0.00s)
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/defined-cast/saved=false/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/defined-cast/saved=true/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+    --- FAIL: TestGCResolverSpaceByteAcrossSpaces/defined-test (0.00s)
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/defined-test/saved=false/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/defined-test/saved=true/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+    --- FAIL: TestGCResolverSpaceByteAcrossSpaces/cast-struct-get (0.00s)
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/cast-struct-get/saved=false/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+        --- FAIL: TestGCResolverSpaceByteAcrossSpaces/cast-struct-get/saved=true/space=3 (0.00s)
+            gc_space_byte_amd64_test.go:124: fixture space = 1, want 3
+--- FAIL: TestGCResolverSpaceByteRejectsInvalidEntries (0.00s)
+    --- FAIL: TestGCResolverSpaceByteRejectsInvalidEntries/inline-struct (0.00s)
+        gc_space_byte_amd64_test.go:197: short handle = [42], <nil>; want native cast trap
+    --- FAIL: TestGCResolverSpaceByteRejectsInvalidEntries/shared-open-struct (0.00s)
+        gc_space_byte_amd64_test.go:197: short handle = [42], <nil>; want native cast trap
+    --- FAIL: TestGCResolverSpaceByteRejectsInvalidEntries/cast-struct-get (0.00s)
+        gc_space_byte_amd64_test.go:197: short handle = [42], <nil>; want native cast trap
+--- FAIL: TestGCPackedStructGetExtentFallback (0.00s)
+    gc_struct_get_packed_guard_native_test.go:58: handle extent: [], wasm trap: cast failure
+            at global (func[1], wasm pc 0x3); want signed helper value0xffffffff
+--- FAIL: TestGCScalarStructGetExtentFallback (0.00s)
+    gc_struct_get_scalar_native_test.go:122: handle extent: [], wasm trap: cast failure
+            at global (func[1], wasm pc 0x3); want helper value17
+--- FAIL: TestGCPackedStructSetExtentFallback (0.00s)
+    gc_struct_set_packed_native_test.go:200: handle extent: writewasm trap: cast failure
+            at global (func[1], wasm pc 0x5) read[17],<nil> fake99
+--- FAIL: TestGCScalarStructSetExtentFallback (0.00s)
+    gc_struct_set_scalar_native_test.go:203: handle extent: writewasm trap: cast failure
+            at global (func[1], wasm pc 0x5) read[17],<nil> fake999
+--- FAIL: TestGCTestFieldConditionalExtent (0.00s)
+    --- FAIL: TestGCTestFieldConditionalExtent/artifact0/wrong/extent (0.00s)
+        gc_test_field_amd64_test.go:178: result=[],wasm trap: cast failure
+                at read (func[4]) want99
+    --- FAIL: TestGCTestFieldConditionalExtent/artifact1/wrong/extent (0.00s)
+        gc_test_field_amd64_test.go:178: result=[],wasm trap: cast failure
+                at read (func[4]) want99
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	2.790s
+FAIL

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-race",
+    "-count=1",
+    "-tags",
+    "wago_gc_workers wagodebug",
+    "-run",
+    "TestParallelMark",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 4.778160218993435,
+  "exit": 0,
+  "user_seconds": 5.002859,
+  "system_seconds": 0.210529,
+  "peak_rss_kib": 307584,
+  "minor_faults": 22192,
+  "major_faults": 6
+}

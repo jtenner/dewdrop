@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/compact-class-bench.test",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 0.2934345410030801,
+  "exit": 0,
+  "user_seconds": 0.296421,
+  "system_seconds": 0.07564699999999999,
+  "peak_rss_kib": 129548,
+  "minor_faults": 8316,
+  "major_faults": 2
+}

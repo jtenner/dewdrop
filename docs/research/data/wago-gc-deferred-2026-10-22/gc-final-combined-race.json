@@ -1,0 +1,22 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-race",
+    "-count=1",
+    "-tags",
+    "wago_gc_workers wago_gc_concurrent wagodebug",
+    "-run",
+    "TestConcurrent|TestParallel|TestBackground|TestImmixLargeReuseFailure",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 8.269467361009447,
+  "exit": 0,
+  "user_seconds": 8.587814,
+  "system_seconds": 0.300299,
+  "peak_rss_kib": 320088,
+  "minor_faults": 62013,
+  "major_faults": 6,
+  "voluntary_context_switches": 4753,
+  "involuntary_context_switches": 553
+}

@@ -1,0 +1,8 @@
+--- FAIL: TestGCConstructorIfPressure (0.00s)
+    --- FAIL: TestGCConstructorIfPressure/f64 (0.00s)
+        gc_constructor_if_pressure_amd64_test.go:110: fixture did not move live roots
+--- FAIL: TestGCResolverAcrossCollectingCall (0.00s)
+    gc_resolver_arithmetic_amd64_test.go:191: call did not collect and copy: before={Allocations:0 MinorCollections:0 FullCollections:0 MinorObjectsScanned:0 MinorRememberedScanned:0 YoungBytesCopied:0 PromotedBytes:0 LiveObjects:0 TenuringThreshold:2} after={Allocations:2 MinorCollections:0 FullCollections:0 MinorObjectsScanned:0 MinorRememberedScanned:0 YoungBytesCopied:0 PromotedBytes:0 LiveObjects:2 TenuringThreshold:2}
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	2.782s
+FAIL

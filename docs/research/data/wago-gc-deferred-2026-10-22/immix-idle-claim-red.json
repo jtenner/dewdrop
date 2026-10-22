@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-run",
+    "TestImmixTransactionRestoresIdleRegionClaim",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.2391431180003565,
+  "exit": 1,
+  "user_seconds": 3.583576,
+  "system_seconds": 0.157022,
+  "peak_rss_kib": 311692,
+  "minor_faults": 18048,
+  "major_faults": 4
+}

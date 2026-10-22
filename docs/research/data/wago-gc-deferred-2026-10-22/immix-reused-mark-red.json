@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run=TestImmixPackedFullMarks",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.24505225699977,
+  "exit": 1,
+  "user_seconds": 3.59687,
+  "system_seconds": 0.147313,
+  "peak_rss_kib": 307800,
+  "minor_faults": 14301,
+  "major_faults": 6
+}

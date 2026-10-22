@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-c",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/final-wago.test",
+    "./src/wago"
+  ],
+  "seconds": 25.636319735989673,
+  "exit": 0,
+  "user_seconds": 44.483951,
+  "system_seconds": 1.042005,
+  "peak_rss_kib": 3531696,
+  "minor_faults": 85969,
+  "major_faults": 7,
+  "voluntary_context_switches": 8822,
+  "involuntary_context_switches": 1633
+}

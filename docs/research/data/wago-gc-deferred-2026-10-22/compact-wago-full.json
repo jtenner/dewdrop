@@ -1,0 +1,16 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "./src/wago",
+    "./src/core/runtime"
+  ],
+  "seconds": 27.56424494899693,
+  "exit": 1,
+  "user_seconds": 23.309546,
+  "system_seconds": 4.251934,
+  "peak_rss_kib": 684432,
+  "minor_faults": 1000659,
+  "major_faults": 7
+}

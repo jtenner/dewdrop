@@ -1,0 +1,12 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-race",
+    "-count=1",
+    "./internal/virtualmem",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 26.68988810198789,
+  "exit_code": 0
+}

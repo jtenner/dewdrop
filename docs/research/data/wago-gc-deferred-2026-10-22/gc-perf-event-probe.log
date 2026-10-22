@@ -1,0 +1,1 @@
+perf_event_open: errno=1 (Operation not permitted)

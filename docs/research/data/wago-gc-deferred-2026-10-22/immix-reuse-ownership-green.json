@@ -1,0 +1,21 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "wagodebug",
+    "-run",
+    "TestImmixLargeReuseFailure|TestImmixAllocationTransaction|TestImmixTransactionRestoresIdle",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.3508221350057283,
+  "exit": 0,
+  "user_seconds": 3.758445,
+  "system_seconds": 0.177415,
+  "peak_rss_kib": 318132,
+  "minor_faults": 17866,
+  "major_faults": 4,
+  "voluntary_context_switches": 1970,
+  "involuntary_context_switches": 147
+}

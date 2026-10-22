@@ -1,0 +1,41 @@
+=== RUN   TestGCObjectStubPhysicalGuards
+=== RUN   TestGCObjectStubPhysicalGuards/nursery
+=== RUN   TestGCObjectStubPhysicalGuards/old
+=== RUN   TestGCObjectStubPhysicalGuards/large
+=== RUN   TestGCObjectStubPhysicalGuards/tiny
+=== RUN   TestGCObjectStubPhysicalGuards/null
+=== RUN   TestGCObjectStubPhysicalGuards/i31
+=== RUN   TestGCObjectStubPhysicalGuards/high_bits
+=== RUN   TestGCObjectStubPhysicalGuards/count
+=== RUN   TestGCObjectStubPhysicalGuards/free
+=== RUN   TestGCObjectStubPhysicalGuards/unknown_space
+=== RUN   TestGCObjectStubPhysicalGuards/offset
+=== RUN   TestGCObjectStubPhysicalGuards/size
+=== RUN   TestGCObjectStubPhysicalGuards/short_handle
+=== RUN   TestGCObjectStubPhysicalGuards/space_bytes
+--- PASS: TestGCObjectStubPhysicalGuards (0.01s)
+    --- PASS: TestGCObjectStubPhysicalGuards/nursery (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/old (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/large (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/tiny (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/null (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/i31 (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/high_bits (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/count (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/free (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/unknown_space (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/offset (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/size (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/short_handle (0.00s)
+    --- PASS: TestGCObjectStubPhysicalGuards/space_bytes (0.00s)
+=== RUN   TestGCObjectStubFarCallUsesHelper
+=== RUN   TestGCObjectStubFarCallUsesHelper/last_BL_displacement
+=== RUN   TestGCObjectStubFarCallUsesHelper/first_far_displacement
+=== RUN   TestGCObjectStubFarCallUsesHelper/moved_function_prefix
+--- PASS: TestGCObjectStubFarCallUsesHelper (0.00s)
+    --- PASS: TestGCObjectStubFarCallUsesHelper/last_BL_displacement (0.00s)
+    --- PASS: TestGCObjectStubFarCallUsesHelper/first_far_displacement (0.00s)
+    --- PASS: TestGCObjectStubFarCallUsesHelper/moved_function_prefix (0.00s)
+=== RUN   TestGCObjectStubRelocation
+--- PASS: TestGCObjectStubRelocation (0.00s)
+PASS

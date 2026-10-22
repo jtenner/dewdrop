@@ -1,0 +1,23 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "0-15",
+    "/tmp/wago-gc-deferred-evidence/gc-execution-bench.test",
+    "-test.run",
+    "^$",
+    "-test.bench",
+    "^BenchmarkParallelFullMark/n262144/workers16$",
+    "-test.benchtime",
+    "5x",
+    "-test.count",
+    "3"
+  ],
+  "seconds": 0.7399474220001139,
+  "exit": 0,
+  "user_seconds": 4.299799,
+  "system_seconds": 0.062733,
+  "peak_rss_kib": 42264,
+  "minor_faults": 20939,
+  "major_faults": 0
+}

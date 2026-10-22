@@ -1,0 +1,504 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: jtenner <tenner.joshua@gmail.com>
+Date: Thu, 22 Oct 2026 00:28:49 +0000
+Subject: [PATCH 02/20] gc: bind handle bases directly to native instance views
+
+---
+ .../deferred-gc-implementation-2026-10-22.md  | 31 +++++++
+ .../backend/railshot/amd64/gc_direct.go       |  4 +-
+ .../backend/railshot/arm64/gc_object_stub.go  |  2 +-
+ .../arm64/gc_object_stub_arm64_test.go        |  1 +
+ .../runtime/gc/native/card_driven_test.go     |  2 +-
+ src/core/runtime/gc/native/collector.go       |  5 ++
+ .../gc/native/major_blocks_coverage_test.go   |  2 +-
+ src/core/runtime/gc/native/native_bindings.go | 77 ++++++++++++++++
+ .../runtime/gc/native/native_bindings_test.go | 87 +++++++++++++++++++
+ src/core/runtime/gc/native/native_view.go     | 30 +++++--
+ .../runtime/gc/native/native_view_test.go     |  4 +-
+ src/wago/gc_native_view_amd64_test.go         |  2 +-
+ src/wago/instance_lifecycle.go                |  2 +
+ src/wago/instantiate.go                       |  5 ++
+ 14 files changed, 238 insertions(+), 16 deletions(-)
+ create mode 100644 src/core/runtime/gc/native/native_bindings.go
+ create mode 100644 src/core/runtime/gc/native/native_bindings_test.go
+
+diff --git a/docs/research/deferred-gc-implementation-2026-10-22.md b/docs/research/deferred-gc-implementation-2026-10-22.md
+index b73aca793..f025ce401 100644
+--- a/docs/research/deferred-gc-implementation-2026-10-22.md
++++ b/docs/research/deferred-gc-implementation-2026-10-22.md
+@@ -57,3 +57,34 @@ Raw logs and command/timing JSON are in `/tmp/wago-gc-deferred-evidence` and are
+ mirrored into Dewdrop research evidence when the series is finalized. The
+ remaining native binding, compact layout, region collector and worker stages
+ are still in progress.
++
++## Stable backing: native handle bindings
++
++Native ABI 10 adds the handle base to the instance view at offset 32 (native
++prefix 40 bytes). The common AMD64 checked resolver, final-cast resolver, and
++ARM64 checked-object leaf load it directly. Instruction counts and guarded
++handle/type/extent checks stay the same; one collector-pointer dependency is
++removed. Space backing/counts remain dynamically checked. The preceding ABI 9
++artifact is rejected rather than read with a different instance layout.
++
++Mapped handles never move. The portable comparison path updates every live
++instance binding when Go growth moves its table. A collector-local binding list
++is released on physical instance teardown (after retained importers are gone),
++not logical Close. Failed instantiation also releases its binding. A separate
++small mutex protects physical release against another instance's Go allocation.
++No mutex or new branch is emitted into native reads. Collector Close revokes all
++bindings before unmapping. This adds a lazy binding-list owner, one pointer to
++Collector (+8 bytes), and 24 bytes per native instance view. Binding storage is
++bounded by the peak number of live instances and is not a reference cache.
++
++Red/green tests cover portable relocation with multiple instances, idempotent
++release, no retained binding accumulation, and concurrent physical release while
++portable growth occurs. Race checks pass (4.19 s including build). Complete
++AMD64 backend/runtime/Wago tests pass again (53.30 s including build;
++5.12/0.48/26.95 s test time). Native instruction/whole-compiler timing remains to
++be measured after the layout and collector stages. No speed factor is claimed
++from this load-order change.
++
++The ARM64 physical-guard test passes under QEMU after rebuilding its raw ABI
++fixture with the bound handle base (7.12 s cross-build, 0.087 s execution).
++The focused native ABI loader/refresh tests reject the preceding version too.
+diff --git a/src/core/compiler/backend/railshot/amd64/gc_direct.go b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+index 291d27f2f..0e18a73b0 100644
+--- a/src/core/compiler/backend/railshot/amd64/gc_direct.go
++++ b/src/core/compiler/backend/railshot/amd64/gc_direct.go
+@@ -466,6 +466,7 @@ func emitModuleGCResolveObjectStub(a *x64.Asm, subtype, bounded, arrayOperand bo
+ 		a.ImulRI(RDX, 4, true)
+ 		a.LoadIdx(RDX, R10, RDX, 0, 4, false, false)
+ 	}
++	a.Load64(R9, R8, gc.NativeInstanceViewHandlesOffset)
+ 	a.Load64(R8, R8, gc.NativeInstanceViewCollectorOffset)
+ 
+ 	// Validate handle range/liveness, space, backing extent, object extent,
+@@ -473,7 +474,6 @@ func emitModuleGCResolveObjectStub(a *x64.Asm, subtype, bounded, arrayOperand bo
+ 	a.ShiftImm(5, RAX, 1, false)
+ 	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewHandleCountOffset, false)
+ 	castFailures = append(castFailures, a.JccPlaceholder(condAE))
+-	a.Load64(R9, R8, gc.NativeViewHandlesOffset)
+ 	a.ShiftImm(4, RAX, 4, true)
+ 	a.Add64(R9, RAX)
+ 
+@@ -2610,11 +2610,11 @@ func (f *fn) emitNativeFinalCastStructRefResolverStub(returnLimit ...bool) {
+ 	a.ImulRI(RDX, 4, true)
+ 	a.LoadIdx(RDX, R10, RDX, 0, 4, false, false)
+ 
++	a.Load64(R9, R8, gc.NativeInstanceViewHandlesOffset)
+ 	a.Load64(R8, R8, gc.NativeInstanceViewCollectorOffset)
+ 	a.ShiftImm(5, RAX, 1, false)
+ 	a.AluRM(cmpRMcode, RAX, R8, gc.NativeViewHandleCountOffset, false)
+ 	castFailure(condAE)
+-	a.Load64(R9, R8, gc.NativeViewHandlesOffset)
+ 	a.ShiftImm(4, RAX, 4, true)
+ 	a.Add64(R9, RAX)
+ 
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_object_stub.go b/src/core/compiler/backend/railshot/arm64/gc_object_stub.go
+index f676b994b..377dd7906 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_object_stub.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_object_stub.go
+@@ -62,11 +62,11 @@ func emitGCObjectStub(code []byte) []byte {
+ 	a.LsrImm(X16, X16, 1, true)
+ 	a.SubImm64(X9, linMemReg, abi.GCNativeViewPtrOffset)
+ 	a.Load64(X9, X9, 0)
++	a.Load64(X10, X9, gc.NativeInstanceViewHandlesOffset)
+ 	a.Load64(X9, X9, gc.NativeInstanceViewCollectorOffset)
+ 	a.Load32(X17, X9, gc.NativeViewHandleCountOffset)
+ 	a.CmpReg32(X16, X17)
+ 	cold(a.Bcond(condAE))
+-	a.Load64(X10, X9, gc.NativeViewHandlesOffset)
+ 	a.AddShifted(X10, X10, X16, 4, false)
+ 	a.Load32(X17, X10, gc.NativeHandleMetadataOffset)
+ 	a.LsrImm(X17, X17, 16, true)
+diff --git a/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go b/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go
+index 883e53668..eb0174ca1 100644
+--- a/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go
++++ b/src/core/compiler/backend/railshot/arm64/gc_object_stub_arm64_test.go
+@@ -57,6 +57,7 @@ func TestGCObjectStubPhysicalGuards(t *testing.T) {
+ 	}
+ 	defer pinned.Unpin()
+ 	instance.Collector = uintptr(unsafe.Pointer(&collector))
++	instance.Handles = uintptr(unsafe.Pointer(&handles[0]))
+ 	binary.LittleEndian.PutUint64(basedata[:], uint64(uintptr(unsafe.Pointer(&instance))))
+ 	handle := handles[gc.NativeHandleStride:]
+ 	for _, name := range []string{"nursery", "old", "large", "tiny", "null", "i31", "high bits", "count", "free", "unknown space", "offset", "size", "short handle", "short header", "long header", "space bytes"} {
+diff --git a/src/core/runtime/gc/native/card_driven_test.go b/src/core/runtime/gc/native/card_driven_test.go
+index 509c18efa..a9ee144e8 100644
+--- a/src/core/runtime/gc/native/card_driven_test.go
++++ b/src/core/runtime/gc/native/card_driven_test.go
+@@ -462,7 +462,7 @@ func TestCardMetadataFootprint(t *testing.T) {
+ 	}
+ 	// Bounds, lazy major-block state, and one large-array list-index hint have
+ 	// fixed descriptor costs. Promotion sorting adds one bounded scratch descriptor.
+-	wantCollector := uintptr(1200) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
++	wantCollector := uintptr(1208) + unsafe.Sizeof((*[]uint64)(nil)) + unsafe.Sizeof(objectCardBounds{}) + uintptr(nativeStructHandleBatch-32)*4 + unsafe.Sizeof([]uint64(nil)) + unsafe.Sizeof(int(0)) + unsafe.Sizeof([]plannedPromotion(nil))
+ 	if got := unsafe.Sizeof(Collector{}); got != wantCollector {
+ 		t.Fatalf("Collector size=%d, want %d", got, wantCollector)
+ 	}
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index 5757f1097..905f6130e 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -178,6 +178,7 @@ type Collector struct {
+ 	nativeLargeArrayNurseryIndex int
+ 	promotionSortScratch         []plannedPromotion // bounded stable counting-sort workspace
+ 	backing                      *collectorBacking
++	bindings                     *nativeBindings
+ }
+ 
+ const defaultNursery = 64 << 10
+@@ -255,6 +256,10 @@ func (c *Collector) Close() {
+ 	c.discardNativeLargeArrayAllocation()
+ 	c.stats.LiveObjects = 0
+ 	c.closed = true
++	if c.bindings != nil {
++		c.bindings.close()
++		c.bindings = nil
++	}
+ 	// Revoke published native addresses before releasing the mapped owners.
+ 	if c.nativeView != nil {
+ 		*c.nativeView = NativeCollectorView{Version: NativeABIVersion, HandleStride: NativeHandleStride,
+diff --git a/src/core/runtime/gc/native/major_blocks_coverage_test.go b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+index f645e5870..8cbaaf59a 100644
+--- a/src/core/runtime/gc/native/major_blocks_coverage_test.go
++++ b/src/core/runtime/gc/native/major_blocks_coverage_test.go
+@@ -105,7 +105,7 @@ func TestMajorBlocksFlagUsesExistingPadding(t *testing.T) {
+ 	if unsafe.Offsetof(Collector{}.checkedHandles) != 3112-batchBytes || unsafe.Offsetof(Collector{}.majorBlocks) != 3128-batchBytes {
+ 		t.Fatal("native index changed existing collector offsets")
+ 	}
+-	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3152-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3152-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3152-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil)) {
++	if unsafe.Offsetof(Collector{}.nativeLargeArrayNurseryIndex) != 3152-batchBytes || unsafe.Offsetof(Collector{}.promotionSortScratch) != 3152-batchBytes+unsafe.Sizeof(int(0)) || unsafe.Sizeof(Collector{}) != 3152-batchBytes+unsafe.Sizeof(int(0))+unsafe.Sizeof([]plannedPromotion(nil))+unsafe.Sizeof((*collectorBacking)(nil))+unsafe.Sizeof((*nativeBindings)(nil)) {
+ 		t.Fatal("large-array hint and promotion scratch must follow the existing collector state")
+ 	}
+ 	if unsafe.Offsetof(Collector{}.majorYoungDirty) >= unsafe.Offsetof(Collector{}.checkedHandles) {
+diff --git a/src/core/runtime/gc/native/native_bindings.go b/src/core/runtime/gc/native/native_bindings.go
+new file mode 100644
+index 000000000..b26b70f49
+--- /dev/null
++++ b/src/core/runtime/gc/native/native_bindings.go
+@@ -0,0 +1,77 @@
++package gc
++
++import "sync"
++
++// Binding metadata never enters guest memory or persisted native artifacts.
++// The mutex covers physical release racing another instance's Go allocation.
++// Collector mutation/native execution retains the existing invocation lease.
++type nativeBindings struct {
++	mu    sync.Mutex
++	base  uintptr
++	views []*NativeInstanceView
++}
++
++func (c *Collector) bindInstanceView(v *NativeInstanceView) {
++	if c.bindings == nil {
++		c.bindings = &nativeBindings{base: v.Handles}
++	}
++	b := c.bindings
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	v.bindings = b
++	v.bindingSlot = len(b.views)
++	b.views = append(b.views, v)
++}
++
++func (c *Collector) refreshInstanceHandles(base uintptr) {
++	b := c.bindings
++	if b == nil || b.base == base {
++		return
++	}
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	for _, v := range b.views {
++		v.Handles = base
++	}
++	b.base = base
++}
++
++func (b *nativeBindings) close() {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	for _, v := range b.views {
++		v.revoke()
++	}
++	b.views = nil
++	b.base = 0
++}
++
++func (v *NativeInstanceView) revoke() {
++	v.Version = 0
++	v.Collector = 0
++	v.LocalTypes = 0
++	v.LocalTypeCount = 0
++	v.Handles = 0
++	v.keepTypes = nil
++}
++
++// Close releases a native binding after its instance is physically quiescent.
++// Logical Close alone is insufficient when imported code/context is retained.
++func (v *NativeInstanceView) Close() {
++	if v == nil || v.bindings == nil {
++		return
++	}
++	b := v.bindings
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	i := v.bindingSlot
++	if i >= len(b.views) || b.views[i] != v {
++		return
++	}
++	last := len(b.views) - 1
++	b.views[i] = b.views[last]
++	b.views[i].bindingSlot = i
++	b.views[last] = nil
++	b.views = b.views[:last]
++	v.revoke()
++}
+diff --git a/src/core/runtime/gc/native/native_bindings_test.go b/src/core/runtime/gc/native/native_bindings_test.go
+new file mode 100644
+index 000000000..57ef5e6f2
+--- /dev/null
++++ b/src/core/runtime/gc/native/native_bindings_test.go
+@@ -0,0 +1,87 @@
++package gc
++
++import (
++	"sync"
++	"testing"
++)
++
++func TestInstanceHandleBindingsFollowPortableGrowth(t *testing.T) {
++	c, err := NewCollector(Config{DisableVirtualBacking: true}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	a, err := BuildNativeInstanceView(c, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	b, err := BuildNativeInstanceView(c, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	before := a.Handles
++	for range 1024 {
++		c.newHandle(handleEntry{})
++	}
++	c.refreshNativeHandles()
++	if a.Handles == before || a.Handles != sliceData(c.handles) || b.Handles != a.Handles {
++		t.Fatal("instance bindings retain relocated handles")
++	}
++	b.Close()
++	if b.Handles != 0 || b.Collector != 0 {
++		t.Fatal("closed instance binding retains native addresses")
++	}
++	for range 1024 {
++		c.newHandle(handleEntry{})
++	}
++	c.refreshNativeView()
++	if a.Handles != sliceData(c.handles) || b.Handles != 0 {
++		t.Fatal("growth lost live binding or revived closed binding")
++	}
++	c.Close()
++	if a.Handles != 0 || a.Collector != 0 {
++		t.Fatal("collector close retained native binding")
++	}
++	a.Close()
++}
++
++func TestInstanceBindingReleaseDoesNotAccumulate(t *testing.T) {
++	c, err := NewCollector(Config{}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	for range 1024 {
++		v, err := BuildNativeInstanceView(c, nil)
++		if err != nil {
++			t.Fatal(err)
++		}
++		v.Close()
++	}
++	if len(c.bindings.views) != 0 || cap(c.bindings.views) > 4 {
++		t.Fatal("released instance bindings accumulated")
++	}
++}
++
++func TestInstanceBindingReleaseDuringPortableGrowth(t *testing.T) {
++	c, err := NewCollector(Config{DisableVirtualBacking: true}, nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer c.Close()
++	var wg sync.WaitGroup
++	for range 512 {
++		v, err := BuildNativeInstanceView(c, nil)
++		if err != nil {
++			t.Fatal(err)
++		}
++		wg.Add(1)
++		go func() { defer wg.Done(); v.Close() }()
++		c.newHandle(handleEntry{})
++		c.refreshNativeHandles()
++	}
++	wg.Wait()
++	if len(c.bindings.views) != 0 {
++		t.Fatal("physical release left native bindings registered")
++	}
++}
+diff --git a/src/core/runtime/gc/native/native_view.go b/src/core/runtime/gc/native/native_view.go
+index ad1c3bee4..4d07fc4fa 100644
+--- a/src/core/runtime/gc/native/native_view.go
++++ b/src/core/runtime/gc/native/native_view.go
+@@ -7,12 +7,12 @@ import (
+ 
+ // NativeABIVersion identifies the checked collector metadata layout consumed by
+ // generated code. Artifact loading and instantiation must validate it before
+-// publishing the basedata pointer; generated operations then trust that immutable
+-// contract while reloading every mutable backing pointer/count they consume. The
+-// view is refreshed in place whenever growable backing can relocate, and callers
+-// must still serialize access with collector mutation.
+-// Version 8 also gates the dead-reservation/native-preparation helper dispatch.
+-const NativeABIVersion uint32 = 9
++// publishing the basedata pointer. Version 10 binds the handle base directly to
++// each native instance view, removing one dependent collector-view load. Stable
++// mappings keep it fixed; portable Go growth updates live instance bindings.
++// Generated operations still reload mutable counts/extents and callers must
++// serialize native execution with collector mutation.
++const NativeABIVersion uint32 = 10
+ 
+ // SubtypeEncoding is an optional extension in the existing ABI padding word.
+ // Encoding zero is legacy and must use the Go abstract-array cast fallback.
+@@ -130,10 +130,15 @@ type NativeInstanceView struct {
+ 	LocalTypes     uintptr
+ 	LocalTypeCount uint32
+ 	_              uint32
++	// Handles removes the collector-pointer dependency from checked resolution.
++	// Stable backing never changes it; portable growth updates live bindings.
++	Handles uintptr
+ 
+ 	// keepTypes is outside the native ABI prefix. It gives Go's collector a typed
+ 	// reference to the immutable backing array whose address LocalTypes publishes.
+-	keepTypes []TypeID
++	keepTypes   []TypeID
++	bindings    *nativeBindings
++	bindingSlot int
+ }
+ 
+ const (
+@@ -141,7 +146,8 @@ const (
+ 	NativeInstanceViewCollectorOffset      = 8
+ 	NativeInstanceViewLocalTypesOffset     = 16
+ 	NativeInstanceViewLocalTypeCountOffset = 24
+-	NativeInstanceViewABISize              = 32
++	NativeInstanceViewHandlesOffset        = 32
++	NativeInstanceViewABISize              = 40
+ )
+ 
+ func sliceData[T any](s []T) uintptr {
+@@ -242,6 +248,7 @@ func ValidateNativeABI() error {
+ 		unsafe.Offsetof(instance.Version) != NativeInstanceViewVersionOffset ||
+ 		unsafe.Offsetof(instance.Collector) != NativeInstanceViewCollectorOffset ||
+ 		unsafe.Offsetof(instance.LocalTypes) != NativeInstanceViewLocalTypesOffset ||
++		unsafe.Offsetof(instance.Handles) != NativeInstanceViewHandlesOffset ||
+ 		unsafe.Offsetof(instance.LocalTypeCount) != NativeInstanceViewLocalTypeCountOffset {
+ 		return fmt.Errorf("gc: native instance ABI layout mismatch")
+ 	}
+@@ -271,6 +278,9 @@ func ValidateNativeInstanceView(view *NativeInstanceView, collector *Collector,
+ 	if view.LocalTypes != sliceData(view.keepTypes) {
+ 		return fmt.Errorf("gc: native local type map pointer does not match immutable backing")
+ 	}
++	if view.Handles != sliceData(collector.handles) {
++		return fmt.Errorf("gc: native instance handle binding does not match collector backing")
++	}
+ 	collectorPointer := uintptr(unsafe.Pointer(collector.nativeView))
+ 	if view.Collector != collectorPointer {
+ 		return fmt.Errorf("gc: native collector view pointer does not match instance collector")
+@@ -305,6 +315,7 @@ func (c *Collector) refreshNativeView() {
+ 	v.Version = NativeABIVersion
+ 	v.HandleStride = NativeHandleStride
+ 	v.Handles = sliceData(c.handles)
++	c.refreshInstanceHandles(v.Handles)
+ 	v.HandleCount = uint32(len(c.handles))
+ 	v.SubtypeEncoding = NativeSubtypeEncodingKindBit
+ 	v.Spaces[NativeSpaceNursery] = NativeSpaceView{Base: sliceData(c.nursery), Bytes: uint32(len(c.nursery))}
+@@ -360,6 +371,7 @@ func (c *Collector) refreshNativeHandles() {
+ 	}
+ 	v := c.nativeView
+ 	v.Handles = sliceData(c.handles)
++	c.refreshInstanceHandles(v.Handles)
+ 	v.HandleCount = uint32(len(c.handles))
+ 	v.RefreshGeneration++
+ }
+@@ -396,10 +408,12 @@ func BuildNativeInstanceView(c *Collector, localTypes []TypeID) (*NativeInstance
+ 		Collector:      uintptr(unsafe.Pointer(c.nativeView)),
+ 		LocalTypes:     sliceData(localTypes),
+ 		LocalTypeCount: uint32(len(localTypes)),
++		Handles:        sliceData(c.handles),
+ 		keepTypes:      localTypes,
+ 	}
+ 	if err := ValidateNativeInstanceView(view, c, uint32(len(localTypes))); err != nil {
+ 		return nil, err
+ 	}
++	c.bindInstanceView(view)
+ 	return view, nil
+ }
+diff --git a/src/core/runtime/gc/native/native_view_test.go b/src/core/runtime/gc/native/native_view_test.go
+index efe62f88a..ba75444fc 100644
+--- a/src/core/runtime/gc/native/native_view_test.go
++++ b/src/core/runtime/gc/native/native_view_test.go
+@@ -6,8 +6,8 @@ import (
+ )
+ 
+ func TestNativeCollectorViewLayoutAndRefresh(t *testing.T) {
+-	if NativeABIVersion != 9 {
+-		t.Fatalf("native collector ABI version = %d, want version 9", NativeABIVersion)
++	if NativeABIVersion != 10 {
++		t.Fatalf("native collector ABI version = %d, want version 10", NativeABIVersion)
+ 	}
+ 	if got := unsafe.Sizeof(handleEntry{}); got != NativeHandleStride {
+ 		t.Fatalf("handle entry size = %d, want %d", got, NativeHandleStride)
+diff --git a/src/wago/gc_native_view_amd64_test.go b/src/wago/gc_native_view_amd64_test.go
+index 6315af390..ff1dfc447 100644
+--- a/src/wago/gc_native_view_amd64_test.go
++++ b/src/wago/gc_native_view_amd64_test.go
+@@ -19,7 +19,7 @@ func TestCompiledGenericGCArtifactRejectsNativeABIMismatch(t *testing.T) {
+ 	if got := compiled.nativeGCABIRequirement(); got != gc.NativeABIVersion {
+ 		t.Fatalf("compiled native GC ABI = %d, want %d", got, gc.NativeABIVersion)
+ 	}
+-	for _, version := range []uint32{0, gc.NativeABIVersion + 1} {
++	for _, version := range []uint32{0, gc.NativeABIVersion - 1, gc.NativeABIVersion + 1} {
+ 		compiled.codeCache.setNativeGCABIVersion(version)
+ 		blob, err := marshalCompiled(compiled)
+ 		compiled.codeCache.setNativeGCABIVersion(gc.NativeABIVersion)
+diff --git a/src/wago/instance_lifecycle.go b/src/wago/instance_lifecycle.go
+index 70f2dd670..709d5a4a2 100644
+--- a/src/wago/instance_lifecycle.go
++++ b/src/wago/instance_lifecycle.go
+@@ -469,6 +469,8 @@ func (in *Instance) constructionReservationSnapshot() *pluginOperationReservatio
+ // releaseResources performs the physical teardown after tryFinalize has claimed
+ // it by setting resourcesClosed under lifeMu.
+ func (in *Instance) releaseResources() {
++	// Retained importers are gone and the invocation count is zero here.
++	in.gcNativeView.Close()
+ 	if codeProfileEnabled && in.lifecycleProfile() != nil {
+ 		span := in.beginProfileLifecycle("physical-release")
+ 		defer finishProfileBoundary(span, nil)
+diff --git a/src/wago/instantiate.go b/src/wago/instantiate.go
+index a8d0cdead..d6574773b 100644
+--- a/src/wago/instantiate.go
++++ b/src/wago/instantiate.go
+@@ -1669,6 +1669,11 @@ func (b *instanceBuilder) instantiate() (result *Instance, err error) {
+ 	}
+ 	var gcNativeTypes []gc.TypeID
+ 	var gcNativeView *gc.NativeInstanceView
++	defer func() {
++		if err != nil {
++			gcNativeView.Close()
++		}
++	}()
+ 	if b.collector != nil && c.needsNativeGCABI() {
+ 		gcNativeTypes = make([]gc.TypeID, len(c.Types))
+ 		for local := range gcNativeTypes {

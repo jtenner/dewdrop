@@ -1,0 +1,117 @@
+--- FAIL: TestCompactObjectLayoutAndVectorAlignment (0.00s)
+    compact_layout_test.go:26: gc: struct 1: invalid field layout
+--- FAIL: TestPrevalidatedConstructorsPreserveInitializerRoots (0.00s)
+    constructor_edge_test.go:45: gc: struct 1: invalid field layout
+--- FAIL: TestReconstructionAndPrevalidatedDefaultConstructors (0.00s)
+    constructor_edge_test.go:115: gc: struct 1: invalid field layout
+--- FAIL: TestPrevalidatedConstructorShapeAndScratchErrorsAreTransactional (0.00s)
+    constructor_edge_test.go:159: gc: struct 1: invalid field layout
+--- FAIL: TestDescriptorsAndLayout (0.00s)
+    desc_layout_test.go:156: bad v128 struct layout {ID:6 Kind:2 Fields:[{Kind:1 nextRef:0 Offset:0} {Kind:13 nextRef:0 Offset:8} {Kind:3 nextRef:0 Offset:24}] Elem:0 Size:40 ElemSize:0 Align:16 HasRefs:false Final:true Super:0 HasSuper:false firstRef:0}
+--- FAIL: TestDefaultNurseryGrowthRelocatesLiveSurvivors (0.00s)
+    --- FAIL: TestDefaultNurseryGrowthRelocatesLiveSurvivors/0 (0.00s)
+        nursery_live_growth_native_test.go:190: gc: struct 0: invalid field layout
+    --- FAIL: TestDefaultNurseryGrowthRelocatesLiveSurvivors/1 (0.00s)
+        nursery_live_growth_native_test.go:190: gc: struct 0: invalid field layout
+--- FAIL: TestStructFieldAlignmentAdmission (0.00s)
+    --- FAIL: TestStructFieldAlignmentAdmission/kind=13/align=16 (0.00s)
+        struct_layout_validation_test.go:59: ValidateTypeDescs = gc: struct 0: invalid field layout, want accepted=true
+        struct_layout_validation_test.go:59: NewCollector profile 0 = gc: struct 0: invalid field layout, want accepted=true
+        struct_layout_validation_test.go:59: AddTypes profile 0 = gc: struct 0: invalid field layout, want accepted=true
+        struct_layout_validation_test.go:59: NewCollector profile 1 = gc: struct 0: invalid field layout, want accepted=true
+        struct_layout_validation_test.go:59: AddTypes profile 1 = gc: struct 0: invalid field layout, want accepted=true
+--- FAIL: TestValidateSubtypeLayouts (0.00s)
+    --- FAIL: TestValidateSubtypeLayouts/append_aligned_field (0.00s)
+        subtype_layout_validation_test.go:81: ValidateTypeDescs = gc: struct 1: invalid field layout, want accepted=true
+        --- FAIL: TestValidateSubtypeLayouts/append_aligned_field/profile=0 (0.00s)
+            subtype_layout_validation_test.go:22: NewCollector = gc: struct 1: invalid field layout, want accepted=true
+            subtype_layout_validation_test.go:32: AddTypes = gc: struct 1: invalid field layout, want accepted=true
+            subtype_layout_validation_test.go:39: AddTypes left 1 descriptors, want 2
+        --- FAIL: TestValidateSubtypeLayouts/append_aligned_field/profile=1 (0.00s)
+            subtype_layout_validation_test.go:22: NewCollector = gc: struct 1: invalid field layout, want accepted=true
+            subtype_layout_validation_test.go:32: AddTypes = gc: struct 1: invalid field layout, want accepted=true
+            subtype_layout_validation_test.go:39: AddTypes left 1 descriptors, want 2
+--- FAIL: TestValidateSubtypeStorageKinds (0.01s)
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=1 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=1/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=1/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=2 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=2/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=2/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=3 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=3/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=3/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=4 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=4/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=4/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=5 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=5/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=5/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=6 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=6/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=6/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=13 (0.00s)
+        subtype_layout_validation_test.go:111: ValidateTypeDescs = gc: struct 0: invalid field layout, want accepted=true
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=13/profile=0 (0.00s)
+            subtype_layout_validation_test.go:22: NewCollector = gc: struct 0: invalid field layout, want accepted=true
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=13/profile=1 (0.00s)
+            subtype_layout_validation_test.go:22: NewCollector = gc: struct 0: invalid field layout, want accepted=true
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=7 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=7/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=7/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=8 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=8/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=8/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=9 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=9/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=9/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=10 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=10/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=10/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=11 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=11/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=11/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=12 (0.00s)
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=12/profile=0 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+        --- FAIL: TestValidateSubtypeStorageKinds/array=false/parent=13/child=12/profile=1 (0.00s)
+            subtype_layout_validation_test.go:28: gc: struct 0: invalid field layout
+--- FAIL: TestValidateSubtypeChains (0.00s)
+    --- FAIL: TestValidateSubtypeChains/reverse=false/kind=2 (0.00s)
+        subtype_layout_validation_test.go:125: gc: struct 0: invalid field layout
+    --- FAIL: TestValidateSubtypeChains/reverse=true/kind=2 (0.00s)
+        subtype_layout_validation_test.go:125: gc: struct 0: invalid field layout
+--- FAIL: TestThroughputSurvivorCapacityFallsBackToPromotion (0.00s)
+    survivor_test.go:146: survivor overflow result young/old=0/3 entries={off:0 size:24 typeID:0 class:2048 space:2 remembered:false}/{off:32 size:24 typeID:0 class:2048 space:2 remembered:false}/{off:64 size:24 typeID:0 class:2048 space:2 remembered:false}, want 1/2
+--- FAIL: TestTinyPayloadByteBudgetLimitsWideStruct (0.00s)
+    tiny_scan_test.go:315: gc: struct 1: invalid field layout
+--- FAIL: FuzzTypeDescLayoutAndValidation (0.00s)
+    --- FAIL: FuzzTypeDescLayoutAndValidation/seed#4 (0.00s)
+        desc_fuzz_test.go:59: ValidateTypeDescs(struct): gc: struct 0: invalid field layout
+FAIL
+FAIL	github.com/wago-org/wago/src/core/runtime/gc/native	1.677s
+FAIL

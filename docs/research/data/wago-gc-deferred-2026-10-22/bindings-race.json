@@ -1,0 +1,12 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-race",
+    "-count=1",
+    "-run=TestInstance",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 4.343388348002918,
+  "exit_code": 0
+}

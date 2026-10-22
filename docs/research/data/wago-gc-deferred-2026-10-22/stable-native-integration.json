@@ -1,0 +1,12 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/core/runtime",
+    "./src/wago"
+  ],
+  "seconds": 55.19244286901085,
+  "exit_code": 0
+}

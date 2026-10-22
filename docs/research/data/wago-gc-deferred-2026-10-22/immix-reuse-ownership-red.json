@@ -1,0 +1,19 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-tags",
+    "wagodebug",
+    "-run",
+    "TestImmixLargeReuseFailure",
+    "./src/core/runtime/gc/native"
+  ],
+  "seconds": 2.3742167739983415,
+  "exit": 1,
+  "user_seconds": 3.8766119999999997,
+  "system_seconds": 0.16103,
+  "peak_rss_kib": 322220,
+  "minor_faults": 19897,
+  "major_faults": 4
+}

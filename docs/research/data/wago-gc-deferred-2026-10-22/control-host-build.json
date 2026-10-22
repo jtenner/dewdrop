@@ -1,0 +1,18 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X=main.runtimePatchIdentity=deferred-base-9d846",
+    "-o",
+    "/tmp/wago-gc-deferred-evidence/control-host",
+    "."
+  ],
+  "seconds": 7.999769472997286,
+  "exit": 0,
+  "user_seconds": 14.962043,
+  "system_seconds": 0.731414,
+  "peak_rss_kib": 518756,
+  "minor_faults": 83986,
+  "major_faults": 5
+}

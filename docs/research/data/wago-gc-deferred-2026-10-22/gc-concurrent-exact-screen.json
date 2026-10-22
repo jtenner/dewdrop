@@ -1,0 +1,25 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "12,14",
+    "/tmp/wago-gc-deferred-evidence/gc-concurrent-exact-bench.test",
+    "-test.run",
+    "^$",
+    "-test.bench",
+    "^BenchmarkConcurrentCollection$",
+    "-test.benchtime",
+    "10x",
+    "-test.count",
+    "5"
+  ],
+  "seconds": 3.137632740996196,
+  "exit": 0,
+  "user_seconds": 2.976978,
+  "system_seconds": 0.214498,
+  "peak_rss_kib": 50036,
+  "minor_faults": 103040,
+  "major_faults": 0,
+  "voluntary_context_switches": 2035,
+  "involuntary_context_switches": 606
+}

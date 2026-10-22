@@ -1,0 +1,17 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-count=1",
+    "-run",
+    "TestGCImmix|TestCollectGC",
+    "./src/wago"
+  ],
+  "seconds": 27.054558522999287,
+  "exit": 0,
+  "user_seconds": 45.621836,
+  "system_seconds": 2.031082,
+  "peak_rss_kib": 3446128,
+  "minor_faults": 689315,
+  "major_faults": 4
+}
