@@ -1,0 +1,20 @@
+  },
+  "lint": {
+    "result": "failure",
+    "outputs": {}
+  },
+  "regression-integrity": {
+  },
+  "platform-test": {
+    "result": "failure",
+    "outputs": {}
+  },
+  "corpus-correctness": {
+}
+2026-10-22T06:44:14.8541932Z ##[endgroup]
+2026-10-22T06:44:14.9383373Z ci-plan: expected CI job lint did not succeed: failure
+2026-10-22T06:44:14.9384644Z exit status 1
+2026-10-22T06:44:14.9529879Z ##[error]Process completed with exit code 1.
+2026-10-22T06:44:15.1347888Z Post job cleanup.
+2026-10-22T06:44:15.2229709Z [command]/usr/bin/git version
+2026-10-22T06:44:15.2278072Z git version 2.55.0

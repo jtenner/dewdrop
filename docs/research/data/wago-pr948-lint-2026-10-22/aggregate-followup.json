@@ -1,0 +1,10 @@
+{
+  "job_id": 119680353445,
+  "run_id": 39732958160,
+  "failed_head": "72e684df38cef599be936dbed3229a5a5b85999e",
+  "current_head": "1d9fbd47205e4d1686f868074a1fcd5aebbee01d",
+  "aggregate_failure": "lint did not succeed; platform-test also reports failure",
+  "new_compiler_failure_in_aggregate": false,
+  "known_failures_already_fixed": true,
+  "old_run_retried": false
+}

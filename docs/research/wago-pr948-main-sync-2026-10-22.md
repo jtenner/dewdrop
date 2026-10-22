@@ -86,3 +86,13 @@ No additional source change or retry of the old run is needed. Existing green
 combined stats/register-check and complete lint results validate the fix.
 The Linux failure excerpt and classification are retained in the same evidence
 folder. T3 remains assigned to the new head's CI.
+
+
+The later [aggregate CI job](https://github.com/wago-org/wago/actions/runs/39732958160/job/119680353445)
+fails on the same old `72e684d` run because lint did not succeed. Its input also
+reports the known platform-test failure. It reports no new compiler error.
+Both detailed failures were the four stale stats fixture calls already fixed
+by current head `1d9fbd47205e4d1686f868074a1fcd5aebbee01d`. Keep monitoring the
+new head; do not retry or change source for the superseded aggregate result.
+The aggregate failure excerpt and classification are saved beside the lint
+and Linux evidence.
