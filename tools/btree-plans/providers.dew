@@ -1,0 +1,45 @@
+// Ordinary test providers: optional evidence must not be test-only.
+struct BTreeTestWidth {
+  width: BTreeInlineWidth
+}
+impl<k> Comparator<k> for BTreeTestWidth {
+  fn compare(self, left: k, right: k) -> Ordering {
+    Ordering::Equal
+  }
+}
+impl<k> InlineKey<k> for BTreeTestWidth {
+  fn inline_key_at(self, key: k, offset: U32) -> U64 {
+    0u64
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    self.width
+  }
+}
+impl<k> InlineKeyHash<k> for BTreeTestWidth {
+  fn inline_hash_tag(self, key: k) -> U8 {
+    0u8
+  }
+}
+struct BTreeStoragePlain {
+}
+impl<k> Comparator<k> for BTreeStoragePlain {
+  fn compare(self, left: k, right: k) -> Ordering {
+    Ordering::Equal
+  }
+}
+struct BTreeStorageInline {
+  private width: BTreeInlineWidth
+}
+impl<k> Comparator<k> for BTreeStorageInline {
+  fn compare(self, left: k, right: k) -> Ordering {
+    Ordering::Equal
+  }
+}
+impl<k> InlineKey<k> for BTreeStorageInline {
+  fn inline_key_at(self, key: k, offset: U32) -> U64 {
+    0u64
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    self.width
+  }
+}

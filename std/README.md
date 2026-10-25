@@ -78,6 +78,7 @@ dew.std.collections.priority_queue  priority/value heap wrapper
 dew.std.collections.red_black_tree  ordered balanced-tree core
 dew.std.collections.ordered_map     comparator-ordered map
 dew.std.collections.ordered_set     comparator-ordered set
+dew.std.collections.btree           B-tree config, plans, inline providers, private storage
 dew.std.string                      String and StringView
 dew.std.string_builder              consuming StringBuilder
 dew.std.bytes                       immutable Bytes ranges and search
@@ -89,6 +90,31 @@ dew.std.wasi                        Preview 1 Bytes I/O
 dew.std.wasm.wasi                   raw complete Preview 1 imports
 dew.std.wasm.intrinsics             explicit compiler-known WebAssembly intrinsics
 ```
+
+`dew.std.collections.btree` is the step-2 foundation. The map and set facades
+are not implemented yet. `btree_config(leaf_bytes, inline_branch_bytes,
+plain_branch_bytes)` validates immutable payload budgets; the defaults are
+1024/512/1024. These budgets do not specify GC heap page sizes or alignment.
+`btree_plan<k,v,c>` derives capacities, widths, tags, clear-slot costs, and
+occupancy thresholds. `BTreePlan` exposes read-only getters; node storage
+and prefix mutation remain private.
+
+Inline evidence belongs to the comparator. Standard providers cover U64/I64
+with NaturalComparator and String/StringView/Bytes with their byte comparators.
+Other keys stay plain unless their comparator implements `InlineKey<k>`.
+Optional hash, suffix comparison, prefix comparison, and length evidence
+require that trait. Provider methods must be pure and stable while keys are
+stored. Equal keys must have equal windows and tags. Padded windows do not
+prove full key equality. Custom widths are read once when the plan is made.
+Regenerate the bootstrap mirror with `python3 tools/generate_btree_std.py`.
+See [step-2 evidence](../docs/research/btree-step-2-plans-providers.md).
+
+The B-tree storage tests use the exact common source in a separate ordinary
+test module. This gives them access to private storage without a public test
+API. Their providers are normal source declarations because optional trait
+queries exclude test-only implementations. `tools/dew-test/run.sh` includes
+that test module. The focused measured probe is
+`tools/test-btree-plans-providers.py`.
 
 The ambient `Debug` trait and `debug(value)` facade stream deterministic output through bounded partial-write-safe WASI stdout. Integer decimal formatting is ordinary Dew code with fixed scratch storage, exact narrow-width normalization, and signed-minimum handling; it performs no GC allocation. Float formatting also runs in Dew and emits exact lowercase IEEE bits, including signed zero and NaN payloads, using only one-to-one reinterpret instructions to read those bits. V128 formatting uses the same Dew digit writer with two one-to-one lane reads, high lane first. Primitive implementations cover Unit, Bool, all fixed-width numeric types, String, Bytes, SWAR carriers, and V128. Structs and enums may use postfix `derive(Debug)`; `derive(Eq)`, `derive(Hash)`, and `derive(Show)` are also implemented with conditional generic prerequisites and ordinary coherence/import rules. `Show` remains non-ambient and side-effect free: `show(value) -> String` and builder-backed composition use explicit evidence with deterministic depth and byte limits. Array, FixedArray, Option, and Result have structural deterministic Show forms. `render_compiler_diagnostic` produces bounded `path:line:column: level[code]: message (byte offset)` output without ambient Debug.
 

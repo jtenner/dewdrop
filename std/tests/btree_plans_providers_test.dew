@@ -1,0 +1,82 @@
+open dew.std.collections.btree
+open dew.std.ordering
+open dew.std.types
+struct BTreePlainComparator {
+}
+impl Comparator<U64> for BTreePlainComparator {
+  fn compare(self, left: U64, right: U64) -> Ordering {
+    natural_comparator().compare(left, right)
+  }
+}
+test "B-tree plans derive default capacities and thresholds" {
+  let config = btree_default_config()
+  assert(config.leaf_bytes() == 1024u32, "default leaf budget")
+  assert(config.inline_branch_bytes() == 512u32, "default inline branch budget")
+  assert(config.plain_branch_bytes() == 1024u32, "default plain branch budget")
+  let plain = btree_plan::<U64, U64, BTreePlainComparator>(BTreePlainComparator::{
+  }, config)
+  assert(plain.leaf_capacity() == 61u32 && plain.branch_capacity() == 61u32, "plain U64 capacities")
+  let integers = btree_plan::<U64, U64, NaturalComparator>(natural_comparator(), config)
+  assert(integers.leaf_width() == 2u32 && integers.branch_width() == 2u32, "integer widths")
+  assert(integers.leaf_capacity() == 54u32 && integers.branch_capacity() == 48u32, "inline U64 capacities")
+  assert(integers.leaf_minimum() == 6u32 && integers.leaf_edge_half() == 12u32, "derived leaf thresholds")
+  assert(integers.batch_cutoff() == 38912u64, "integer batch cutoff")
+  let text = btree_plan::<String, U64, StringComparator>(string_comparator(), config)
+  assert(text.leaf_width() == 8u32 && text.branch_width() == 4u32, "text widths")
+  assert(text.leaf_capacity() == 39u32 && text.branch_capacity() == 40u32, "text capacities")
+  assert(text.has_tags() && text.pair_bytes() == 0u32, "text columns with tags")
+  assert(text.batch_cutoff() == 28672u64, "text batch cutoff")
+}
+test "B-tree standard windows use ordered big-endian bytes and zero padding" {
+  let natural = natural_comparator()
+  assert(natural.inline_key_at(72623859790382856u64, 0u32) == 72623859790382856u64, "integer word")
+  assert(natural.inline_key_at(72623859790382856u64, 7u32) == 576460752303423488u64, "last integer byte")
+  assert(natural.inline_key_at(18446744073709551615u64, 8u32) == 0u64, "integer shift by 64 guard")
+  assert(natural.inline_key_at(-9223372036854775808i64, 0u32) == 0u64, "signed minimum")
+  assert(natural.inline_key_at(0i64, 0u32) == 9223372036854775808u64, "signed zero")
+  let text = string_comparator()
+  assert(text.inline_key_at("abc", 0u32) == 7017280021047803904u64, "text big endian")
+  assert(text.inline_key_at("abc", 3u32) == 0u64, "text end padding")
+  assert(text.inline_key_at("", 4294967295u32) == 0u64, "text offset overflow guard")
+  assert(text.inline_hash_tag("abc") == 3u8, "text length tag")
+  assert(ordering_is_less(text.compare_from("a", "a\x00", 8u32)), "padded tie uses real length")
+  assert(ordering_is_less(bytes_comparator().compare_from(b"\x00", b"\x00\x00", 8u32)), "byte padded tie")
+  static_assert(!implements::<NaturalComparator, InlineKey<U32>>(), "narrow integer remains plain")
+}
+test "B-tree config accepts large budgets and grows small branch multiples" {
+  let large = btree_plan::<U64, U64, NaturalComparator>(natural_comparator(), btree_config(2147483648u32, 2147483648u32, 2147483648u32))
+  assert(large.leaf_capacity() == 1023u32 && large.branch_capacity() == 1023u32, "large budgets cap capacity without U32 overflow")
+  let small = btree_plan::<U64, U64, NaturalComparator>(natural_comparator(), btree_config(1024u32, 64u32, 64u32))
+  assert(small.branch_budget() == 192u64 && small.branch_capacity() == 16u32, "smallest branch budget multiple")
+  let signed = btree_plan::<I64, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  assert(signed.leaf_width() == 2u32 && signed.pair_bytes() == 0u32, "signed integer Unit plan")
+  let view = btree_plan::<StringView, Unit, StringViewComparator>(string_view_comparator(), btree_default_config())
+  let bytes = btree_plan::<Bytes, Unit, BytesComparator>(bytes_comparator(), btree_default_config())
+  assert(view.leaf_width() == 8u32 && bytes.branch_width() == 4u32, "view and bytes standard plans")
+}
+test "B-tree config rejects zero leaf budget" expect_trap "unreachable" {
+  btree_config(0u32, 512u32, 1024u32)
+}
+test "B-tree config rejects small leaf budget" expect_trap "unreachable" {
+  btree_config(512u32, 512u32, 1024u32)
+}
+test "B-tree config rejects non-power branch budget" expect_trap "unreachable" {
+  btree_config(1024u32, 96u32, 1024u32)
+}
+test "B-tree config rejects small plain branch budget" expect_trap "unreachable" {
+  btree_config(1024u32, 512u32, 32u32)
+}
+test "B-tree byte providers keep view limits UTF8 zeros and saturated tags" {
+  let text = string_comparator()
+  let views = string_view_comparator()
+  let bytes = bytes_comparator()
+  let view = "xπz".view(1u32, 2u32)
+  assert(views.inline_key_at(view, 0u32) == 14951950762870046720u64, "UTF8 view word")
+  assert(views.inline_key_at(view, 2u32) == 0u64, "view does not read the backing suffix")
+  assert(views.inline_hash_tag(view) == 2u8, "view tag uses view length")
+  assert(text.inline_key_at("xπz", 1u32) == 14952084903288635392u64, "unaligned UTF8 word")
+  assert(bytes.inline_key_at(b"\x00\xFF\x80", 0u32) == 71916856549572608u64, "arbitrary byte word")
+  assert(bytes.inline_key_at(b"\x00", 0u32) == bytes.inline_key_at(b"\x00\x00", 0u32), "padded windows do not imply equality")
+  assert(text.inline_hash_tag("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") == 255u8, "length tag saturates")
+  assert(natural_comparator().inline_key_at(9223372036854775807i64, 0u32) == 18446744073709551615u64, "signed maximum")
+}

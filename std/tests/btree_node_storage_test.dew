@@ -1,0 +1,203 @@
+// These tests share the common module to check private physical storage.
+open dew.std.ordering
+open dew.std.wasm.intrinsics
+open dew.std.types
+fn btree_test_roundtrip<k, v>(key: k, value: v) -> v {
+  let slots = btree_leaf_storage::<k, v>(12u32)
+  btree_inline_key_set(slots, 0u32, key)
+  btree_inline_value_set(slots, 0u32, value)
+  btree_inline_value_get(slots, 0u32)
+}
+fn btree_test_key_roundtrip<k, v>(key: k, value: v) -> k {
+  let slots = btree_leaf_storage::<k, v>(12u32)
+  btree_inline_key_set(slots, 0u32, key)
+  btree_inline_value_set(slots, 0u32, value)
+  btree_inline_key_get(slots, 0u32)
+}
+test "B-tree paired scalar and reference values preserve their bits" {
+  static_assert(can_bitcast::<Bool, U32>(), "Bool shares the U32 carrier")
+  let bits = btree_leaf_storage::<Bool, U8>(12u32)
+  btree_inline_key_set(bits, 0u32, true)
+  btree_inline_value_set(bits, 0u32, 255u8)
+  match bits {
+    BTreeLeafStorage::Pair32(slots) => {
+      assert(wasm_array_get(slots, 0u32) == 1u32 && wasm_array_get(slots, 1u32) == 255u32, "Bool common pair uses 0/1 bits")
+    }
+    _ => assert(false, "Bool/U8 must use the common U32 carrier")
+  }
+  assert(wasm_f32_to_bits(btree_test_key_roundtrip(wasm_f32_from_bits(2147483648u32), 1u64)) == 2147483648u32, "F32 key negative zero")
+  assert(wasm_f64_to_bits(btree_test_key_roundtrip(wasm_f64_from_bits(9223372036854775808u64), 1u32)) == 9223372036854775808u64, "F64 key negative zero")
+  assert(wasm_f32_to_bits(btree_test_roundtrip(1u32, wasm_f32_from_bits(2139095041u32))) == 2139095041u32, "F32 signaling NaN bits")
+  assert(wasm_f64_to_bits(btree_test_roundtrip(1u32, wasm_f64_from_bits(9218868437227405313u64))) == 9218868437227405313u64, "F64 signaling NaN bits")
+  assert(btree_test_key_roundtrip(-128i8, 255u8) == -128i8, "signed I8 normalization")
+  assert(btree_test_key_roundtrip(-32768i16, 255u8) == -32768i16, "signed I16 normalization")
+  assert(btree_test_roundtrip(1u8, 65535u16) == 65535u16, "U16 normalization")
+  assert(btree_test_roundtrip(1u64, 42u64) == 42u64, "same scalar pair")
+  assert(btree_test_roundtrip("key", "value") == "value", "same reference pair")
+  assert(btree_test_roundtrip(1i32, 4294967295u32) == 4294967295u32, "common U32 pair")
+  assert(btree_test_roundtrip(1i64, 18446744073709551615u64) == 18446744073709551615u64, "common U64 pair")
+  assert(btree_test_roundtrip(true, 255u8) == 255u8, "Bool and narrow pair")
+  assert(btree_test_roundtrip(1u8, -32768i16) == -32768i16, "narrow signed load")
+  assert(wasm_f32_to_bits(btree_test_roundtrip(1i32, wasm_f32_from_bits(2147483648u32))) == 2147483648u32, "F32 negative zero")
+  assert(wasm_f32_to_bits(btree_test_roundtrip(1u64, wasm_f32_from_bits(2143363909u32))) == 2143363909u32, "F32 NaN")
+  assert(wasm_f64_to_bits(btree_test_roundtrip(1u32, wasm_f64_from_bits(9223372036854775808u64))) == 9223372036854775808u64, "F64 negative zero")
+  assert(wasm_f64_to_bits(btree_test_roundtrip(1u32, wasm_f64_from_bits(9221120237041090629u64))) == 9221120237041090629u64, "F64 NaN")
+  assert(btree_test_roundtrip("key", 42u64) == 42u64, "reference scalar columns")
+  let block = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(7u64), 9u64))
+  let found = btree_test_roundtrip(42u64, block)
+  assert(btree_extract64(found, 0u32) == 7u64 && btree_extract64(found, 1u32) == 9u64, "two-block vector pair")
+  assert(btree_test_roundtrip(block, 42u64) == 42u64, "vector key pair")
+  let ignored = btree_test_roundtrip("key", ())
+  let nested = btree_test_roundtrip("key", Option::Some(Option::Some(42i64)))
+  assert(match nested {
+    Option::Some(Option::Some(42i64)) => true
+    _ => false
+  }, "nested Option column")
+}
+struct BTreeOtherReference {
+  private value: U64
+}
+builtin btree_test_same_node<k, v>(left: BTreeNode<k, v>, right: BTreeNode<k, v>) -> Bool = "ref.eq"
+fn btree_test_node<k, v, c: Comparator<k>>(comparator: c, key: k, value: v) -> Unit {
+  let plan = btree_plan::<k, v, c>(comparator, btree_default_config())
+  let leaf = btree_node_new::<k, v>(plan, false)
+  match leaf.body {
+    BTreeBody::PlainLeaf(body) => {
+      assert(wasm_array_len(body.keys) == plan.leaf_capacity + 1u32, "plain keys include clear slot")
+      assert(wasm_array_len(body.values) == plan.leaf_capacity + 2u32, "plain values include head and clear slot")
+      wasm_array_set(body.keys, 0u32, key)
+      wasm_array_set(body.values, 0u32, value)
+      wasm_array_set(body.values, 1u32, value)
+    }
+    BTreeBody::PlainKeys(body) => {
+      assert(is_unit::<v>(), "plain key-only body requires Unit")
+      assert(wasm_array_len(body.keys) == plan.leaf_capacity + 1u32, "plain Unit keys include clear slot")
+      wasm_array_set(body.keys, 0u32, key)
+    }
+    BTreeBody::InlineLeaf(body) => {
+      btree_inline_key_set(body.entries, 0u32, key)
+      btree_inline_value_set(body.entries, 0u32, value)
+      btree_inline_key_set(body.entries, 1u32, key)
+      btree_inline_value_set(body.entries, 1u32, value)
+    }
+    _ => assert(false, "leaf constructor selected a branch")
+  }
+  leaf.count = 1u32
+  leaf.head = true
+  let regular_key = btree_node_key(leaf, 0u32, false)
+  let regular_value = btree_node_value(leaf, 0u32, false)
+  let head_value = btree_node_value(leaf, 0u32, true)
+  let branch = btree_node_new::<k, v>(plan, true)
+  match branch.body {
+    BTreeBody::PlainBranch(body) => {
+      assert(wasm_array_len(body.keys) == plan.branch_capacity + 1u32, "plain separators include clear slot")
+      assert(wasm_array_len(body.children) == plan.branch_capacity + 2u32, "plain edges include clear slot")
+      wasm_array_set(body.keys, 0u32, key)
+      wasm_array_set(body.children, 0u32, leaf)
+      wasm_array_set(body.children, 1u32, leaf)
+    }
+    BTreeBody::InlineBranch(body) => {
+      assert(wasm_array_len(body.children) == plan.branch_capacity + 2u32, "inline edges include clear slot")
+      wasm_array_set(body.children, 0u32, leaf)
+      wasm_array_set(body.children, 1u32, leaf)
+    }
+    _ => assert(false, "branch constructor selected a leaf")
+  }
+  branch.count = 1u32
+  assert(btree_test_same_node(btree_node_child(branch, 0u32), leaf), "child identity")
+  btree_node_clear(branch, plan)
+  btree_node_clear(leaf, plan)
+  assert(branch.count == 0u32 && !branch.head && branch.prefix == 0u32, "branch control clear")
+  assert(leaf.count == 0u32 && !leaf.head && leaf.prefix == 0u32, "leaf control clear")
+}
+test "B-tree nodes allocate and clear every storage form" {
+  btree_test_node(BTreeStoragePlain::{
+  }, (), 42u64)
+  btree_test_node(BTreeStorageInline::{
+    width: BTreeInlineWidth::Two
+  }, (), ())
+  btree_test_node(BTreeStorageInline::{
+    width: BTreeInlineWidth::Eight
+  }, "key", BTreeOtherReference::{
+    value: 42u64
+  })
+  btree_test_node(BTreeStorageInline::{
+    width: BTreeInlineWidth::Four
+  }, b"key", "value")
+  btree_test_node(BTreeStoragePlain::{
+  }, 1i32, 42i32)
+  btree_test_node(BTreeStoragePlain::{
+  }, "key", ())
+  let inline = BTreeStorageInline::{
+    width: BTreeInlineWidth::Two
+  }
+  btree_test_node(inline, 1i32, 42i32)
+  btree_test_node(inline, 1i32, 42u32)
+  btree_test_node(inline, 1i64, 42u64)
+  btree_test_node(inline, 1i32, 42.5f32)
+  btree_test_node(inline, 1i32, 42.5f64)
+  btree_test_node(inline, true, 255u8)
+  btree_test_node(inline, "key", "value")
+  btree_test_node(inline, "key", 42u64)
+  btree_test_node(inline, "key", Option::Some(42i64))
+  btree_test_node(inline, "key", Option::Some(Option::Some(42i64)))
+  btree_test_node(inline, "key", ())
+  let vector = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(42u64))
+  btree_test_node(inline, 42u64, vector)
+  btree_test_node(inline, vector, 42u64)
+}
+test "B-tree clear slots keep the default pair and clear moved runs" {
+  let storage = btree_leaf_storage::<U64, U64>(12u32)
+  btree_inline_key_set(storage, 0u32, 7u64)
+  btree_inline_value_set(storage, 0u32, 9u64)
+  btree_inline_key_set(storage, 1u32, 11u64)
+  btree_inline_value_set(storage, 1u32, 13u64)
+  btree_leaf_storage_move(storage, 1u32, 0u32, 2u32)
+  assert(btree_inline_key_get(storage, 0u32) == 0u64, "vacated scalar source cleared")
+  assert(btree_inline_key_get(storage, 1u32) == 7u64 && btree_inline_value_get(storage, 2u32) == 13u64, "right overlap keeps both components")
+  btree_leaf_storage_move(storage, 0u32, 1u32, 2u32)
+  assert(btree_inline_key_get(storage, 2u32) == 0u64, "left overlap clears vacated source")
+  btree_leaf_storage_clear(storage, 0u32, 13u32)
+  match storage {
+    BTreeLeafStorage::Same(slots) => {
+      while 0u32 {
+        i if i < 28u32 => {
+          assert(wasm_array_get(slots, i) == 0u64, "all slots and permanent default pair remain zero")
+          continue i + 1u32
+        }
+        _ => break ()
+      }
+    }
+    _ => assert(false, "same-type pair storage")
+  }
+}
+test "B-tree live key read rejects a clear slot" expect_trap "unreachable" {
+  let plan = btree_plan::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+  let node = btree_node_new::<U64, U64>(plan, false)
+  btree_node_key(node, 0u32, false)
+}
+test "B-tree head value read rejects an absent head" expect_trap "unreachable" {
+  let plan = btree_plan::<U64, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  let node = btree_node_new::<U64, Unit>(plan, false)
+  btree_node_value(node, 0u32, true)
+}
+test "B-tree raw move cannot write the permanent default pair" expect_trap "unreachable" {
+  let slots = wasm_array_new_default::<U64>(28u32)
+  btree_move_slots(slots, 26u32, 0u32, 2u32, 2u32)
+}
+test "B-tree paired writes cannot overwrite the permanent default pair" expect_trap "unreachable" {
+  btree_inline_key_set(btree_leaf_storage::<U64, U64>(12u32), 13u32, 42u64)
+}
+struct BTreeUnitEffects {
+  private mut count: U32
+}
+fn btree_unit_value(effects: BTreeUnitEffects) -> Unit {
+  effects.count = effects.count + 1u32
+}
+test "B-tree Unit storage keeps the caller value effect" {
+  let effects = BTreeUnitEffects::{
+    count: 0u32
+  }
+  let ignored = btree_test_roundtrip("key", btree_unit_value(effects))
+  assert(effects.count == 1u32, "erased value expression runs once")
+}

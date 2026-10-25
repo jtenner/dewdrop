@@ -9,7 +9,7 @@ pub fn standard_source_paths() -> Array[String] {
     "std/set.dew", "std/collections/stack.dew", "std/queue.dew", "std/collections/circular_buffer.dew",
     "std/collections/deque.dew", "std/ordering.dew", "std/collections/binary_heap.dew",
     "std/collections/priority_queue.dew", "std/collections/red_black_tree.dew", "std/collections/ordered_map.dew",
-    "std/collections/ordered_set.dew", "std/show.dew", "std/disposable.dew", "std/iter.dew",
+    "std/collections/ordered_set.dew", "std/collections/btree.dew", "std/show.dew", "std/disposable.dew", "std/iter.dew",
     "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/encode.dew",
     "std/decode.dew", "std/format.dew", "std/semver.dew", "std/package.dew", "std/package/artifact.dew",
     "std/bloom_filter.dew", "std/blake3.dew", "std/integrity/sha256.dew", "std/path.dew",
@@ -68,6 +68,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
       Some(standard_red_black_tree_source())
     "std/collections/ordered_map.dew" => Some(standard_ordered_map_source())
     "std/collections/ordered_set.dew" => Some(standard_ordered_set_source())
+    "std/collections/btree.dew" => Some(standard_btree_source())
     "std/show.dew" => Some(standard_show_source())
     "std/disposable.dew" => Some(standard_disposable_source())
     "std/math.dew" => Some(standard_math_source())

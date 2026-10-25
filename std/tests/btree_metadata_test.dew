@@ -1,0 +1,92 @@
+open dew.std.wasm.intrinsics
+open dew.std.types
+fn btree_test_metadata(width: U32) -> Unit {
+  let capacity = 19u32
+  let slots = btree_metadata_new(capacity, width, true)
+  while 0u32 {
+    i if i < capacity => {
+      btree_window_set(slots, width, i, if i < 7u32 {
+        0u64
+      } else if i < 13u32 {
+        9223372036854775808u64
+      } else {
+        18446744073709551615u64
+      })
+      btree_tag_set(slots, capacity, width, i, i.into())
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    length if length <= capacity => {
+      let middle = btree_rank(slots, capacity, width, length, 9223372036854775808u64)
+      let less = if length < 7u32 {
+        length
+      } else {
+        7u32
+      }
+      let equal = if length <= 7u32 {
+        0u32
+      } else if length < 13u32 {
+        length - 7u32
+      } else {
+        6u32
+      }
+      assert(middle == (btree_widen(less) | (btree_widen(equal) << 32u64)), "SIMD middle rank agrees with live scalar oracle")
+      let maximum = btree_rank(slots, capacity, width, length, 18446744073709551615u64)
+      let less = if length < 13u32 {
+        length
+      } else {
+        13u32
+      }
+      let equal = if length <= 13u32 {
+        0u32
+      } else {
+        length - 13u32
+      }
+      assert(maximum == (btree_widen(less) | (btree_widen(equal) << 32u64)), "SIMD maximum rank excludes tags and padding")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  btree_metadata_move(slots, capacity, width, true, 1u32, 0u32, 18u32)
+  assert(btree_tag_get(slots, capacity, width, 18u32) == 17u8, "overlap right keeps last tag")
+  btree_metadata_move(slots, capacity, width, true, 0u32, 1u32, 18u32)
+  assert(btree_tag_get(slots, capacity, width, 17u32) == 17u8, "overlap left keeps last tag")
+  btree_metadata_clear(slots, capacity, width, true, 0u32, capacity)
+  assert(btree_rank(slots, capacity, width, 0u32, 18446744073709551615u64) == 0u64, "empty live mask")
+  assert(btree_window_get(slots, width, 18u32) == (if width == 2u32 {
+    18446462598732840960u64
+  } else if width == 4u32 {
+    18446744069414584320u64
+  } else {
+    18446744073709551615u64
+  }), "cleared sentinel")
+}
+test "B-tree packed metadata covers Two Four Eight and live masks" {
+  btree_test_metadata(2u32)
+  btree_test_metadata(4u32)
+  btree_test_metadata(8u32)
+}
+test "B-tree packed prefix supports every byte offset and finite padding" {
+  let key = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!?"
+  let comparator = string_comparator()
+  let prefix = btree_prefix_new(comparator, key)
+  assert(prefix.byte_length() == 64u32, "four-field prefix length")
+  while 0u32 {
+    offset if offset < 80u32 => {
+      assert(prefix.window_at(offset) == comparator.inline_key_at(key, offset), "prefix unaligned word and tail padding")
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  assert(prefix.window_at(4294967295u32) == 0u64, "prefix huge offset does not wrap")
+  let short = btree_prefix_new(comparator, "abc")
+  assert(short.byte_length() == 3u32, "finite provider initial prefix")
+  assert(ordering_is_equal(btree_compare_prefix(comparator, "abc\x00", short)), "prefix compare ignores real key length")
+  assert(ordering_is_less(btree_compare_prefix(comparator, "abb", short)), "prefix compare lower")
+  assert(ordering_is_greater(btree_compare_prefix(comparator, "abd", short)), "prefix compare greater")
+}
+test "B-tree packed metadata rejects live counts above capacity" expect_trap "unreachable" {
+  btree_rank2(btree_metadata_new(12u32, 2u32, false), 12u32, 13u32, 0u64)
+}

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -54,7 +55,9 @@ PROBE_MODULES = [
 
 
 def main() -> None:
-    paths = sorted((ROOT / "std/tests").glob("*_test.dew"))
+    private_btree_tests = [ROOT / "std/tests" / name for name in (
+        "btree_node_storage_test.dew", "btree_metadata_test.dew", "btree_capacity_matrix_test.dew")]
+    paths = sorted(p for p in (ROOT / "std/tests").glob("*_test.dew") if p not in private_btree_tests)
     if not paths:
         raise SystemExit("no std/tests/*_test.dew tests found")
     command = [
@@ -73,6 +76,19 @@ def main() -> None:
             raise SystemExit(f"unsupported test path: {logical!r}")
         command.extend(("dew.std", logical, str(path)))
     subprocess.run(command, cwd=ROOT, check=True)
+    # Use the exact common source in an ordinary module for private storage tests.
+    # The providers must be ordinary declarations for optional associated evidence.
+    private_command = command[:5] + ["--", "tools/dew-test/btree_storage_tests.wasm", "probe.btree_storage"]
+    for path in [ROOT / "std/collections/btree.dew", ROOT / "tools/btree-plans/providers.dew", *private_btree_tests]:
+        private_command.extend(("probe.btree_storage", path.relative_to(ROOT).as_posix(), str(path)))
+    private_start = time.monotonic()
+    try:
+        subprocess.run(private_command, cwd=ROOT, check=True)
+    finally:
+        elapsed = time.monotonic() - private_start
+        print(f"B-tree private test compile: {elapsed:.3f} seconds", flush=True)
+        if elapsed > 30:
+            print("PERFORMANCE BUG: B-tree private test compile exceeded 30 seconds", flush=True)
     (ROOT / ".tmp").mkdir(exist_ok=True)
     repeat_output = ROOT / ".tmp/stdlib_tests_repeat.wasm"
     repeat_command = command.copy()

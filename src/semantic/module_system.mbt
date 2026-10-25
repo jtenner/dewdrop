@@ -445,6 +445,9 @@ pub fn direct_standard_library_source_paths(
   if standard_types_requested(files) || include_map {
     required.push("std/types.dew")
   }
+  if (collection_mask & 536870912) != 0 {
+    required.push("std/collections/btree.dew")
+  }
   required
 }
 
@@ -828,6 +831,22 @@ pub fn collect_program_manifest_with_standard_sources(
         module_id,
         standard_library_program_files(
           module_id, "std/collections/ordered_set.dew", standard_sources, false,
+          false,
+        ),
+      ),
+    )
+  }
+  if (selected_collection_mask & 536870912) != 0 &&
+    !first_module.contains("dew.std.collections.btree") {
+    let module_id = standard_library_module_id(80)
+    let module_index = modules.length()
+    first_module["dew.std.collections.btree"] = module_index
+    module_paths.push("dew.std.collections.btree")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/collections/btree.dew", standard_sources, false,
           false,
         ),
       ),

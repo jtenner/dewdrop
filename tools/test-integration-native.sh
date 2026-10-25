@@ -7,6 +7,7 @@ source tools/self-host-common.sh
 # time so that the lane has steady progress and bounded memory use.
 files=(
   src/backend/btree_storage_primitives_wbtest.mbt
+  src/backend/btree_plans_providers_wbtest.mbt
   src/backend/starshine_lane_types_wbtest.mbt
   src/backend/starshine_packed_primitives_wbtest.mbt
   src/backend/starshine_program_link_wbtest.mbt

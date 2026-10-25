@@ -1,0 +1,1589 @@
+open dew.std.ordering
+open dew.std.types
+open dew.std.wasm.intrinsics
+open dew.std.string_builder
+// Modeled payload budgets, not GC heap page sizes.
+pub struct BTreeConfig {
+  private leaf_bytes: U32
+  private inline_branch_bytes: U32
+  private plain_branch_bytes: U32
+}
+fn btree_budget_valid(bytes: U32, minimum: U32) -> Bool {
+  bytes >= minimum && (bytes & (bytes - 1u32)) == 0u32
+}
+pub fn btree_config(leaf_bytes: U32, inline_branch_bytes: U32, plain_branch_bytes: U32) -> BTreeConfig {
+  if !(btree_budget_valid(leaf_bytes, 1024u32)) {
+    assert(false, "BTreeConfig: leaf budget must be a power of two >= 1024")
+  }
+  if !(btree_budget_valid(inline_branch_bytes, 64u32)) {
+    assert(false, "BTreeConfig: inline branch budget must be a power of two >= 64")
+  }
+  if !(btree_budget_valid(plain_branch_bytes, 64u32)) {
+    assert(false, "BTreeConfig: plain branch budget must be a power of two >= 64")
+  }
+  BTreeConfig::{
+    leaf_bytes: leaf_bytes
+    inline_branch_bytes: inline_branch_bytes
+    plain_branch_bytes: plain_branch_bytes
+  }
+}
+pub fn btree_default_config() -> BTreeConfig {
+  btree_config(1024u32, 512u32, 1024u32)
+}
+impl BTreeConfig {
+  fn leaf_bytes(self) -> U32 {
+    self.leaf_bytes
+  }
+  fn inline_branch_bytes(self) -> U32 {
+    self.inline_branch_bytes
+  }
+  fn plain_branch_bytes(self) -> U32 {
+    self.plain_branch_bytes
+  }
+}
+pub enum BTreeInlineWidth {
+  Two
+  Four
+  Eight
+}
+pub trait InlineKey<k> {
+  fn inline_key_at(self, key: k, offset: U32) -> U64
+  fn inline_width(self) -> BTreeInlineWidth
+}
+pub trait InlineKeyHash<k> {
+  fn inline_hash_tag(self, key: k) -> U8
+}
+pub trait InlineKeyCompareFrom<k> {
+  fn compare_from(self, left: k, right: k, equal_bytes: U32) -> Ordering
+}
+pub trait InlineKeyPrefix<k> {
+  fn compare_prefix(self, key: k, prefix: BTreeInlinePrefix) -> Ordering
+}
+pub trait InlineKeyLength<k> {
+  fn inline_encoding_length(self, key: k) -> U32
+}
+// One object. Provider callbacks get this object without a new byte view.
+pub struct BTreeInlinePrefix {
+  private mut first: V128
+  private mut second: V128
+  private mut third: V128
+  private mut fourth: V128
+  private mut length: U32
+}
+impl BTreeInlinePrefix {
+  fn byte_length(self) -> U32 {
+    self.length
+  }
+  fn window_at(self, offset: U32) -> U64 {
+    if offset >= self.length {
+      0u64
+    } else {
+      let index = offset / 8u32
+      let shift = btree_widen(offset % 8u32) * 8u64
+      let first = btree_prefix_word(self, index)
+      let word = if shift == 0u64 {
+        first
+      } else {
+        let second = if index < 7u32 {
+          btree_prefix_word(self, index + 1u32)
+        } else {
+          0u64
+        }
+        (first << shift) | (second >> (64u64 - shift))
+      }
+      let remaining = self.length - offset
+      if remaining >= 8u32 {
+        word
+      } else {
+        word & (18446744073709551615u64 << ((8u64 - btree_widen(remaining)) * 8u64))
+      }
+    }
+  }
+}
+fn btree_prefix_word(prefix: BTreeInlinePrefix, index: U32) -> U64 {
+  if !(index < 8u32) {
+    assert(false, "BTree prefix word: index exceeds four V128 fields")
+  }
+  let block = if index < 2u32 {
+    prefix.first
+  } else if index < 4u32 {
+    prefix.second
+  } else if index < 6u32 {
+    prefix.third
+  } else {
+    prefix.fourth
+  }
+  btree_extract64(block, index % 2u32)
+}
+fn btree_prefix_new<k, c: InlineKey<k>>(comparator: c, key: k) -> BTreeInlinePrefix {
+  BTreeInlinePrefix::{
+    first: unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(comparator.inline_key_at(key, 0u32)), comparator.inline_key_at(key, 8u32)))
+    second: unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(comparator.inline_key_at(key, 16u32)), comparator.inline_key_at(key, 24u32)))
+    third: unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(comparator.inline_key_at(key, 32u32)), comparator.inline_key_at(key, 40u32)))
+    fourth: unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(comparator.inline_key_at(key, 48u32)), comparator.inline_key_at(key, 56u32)))
+    length: btree_initial_prefix_length(comparator, key)
+  }
+}
+fn btree_width_bytes(width: BTreeInlineWidth) -> U32 {
+  match width {
+    BTreeInlineWidth::Two => 2u32
+    BTreeInlineWidth::Four => 4u32
+    BTreeInlineWidth::Eight => 8u32
+  }
+}
+fn btree_optional_evidence<k, c>() -> Unit {
+  static_assert(!(implements::<c, InlineKeyHash<k>>() || implements::<c, InlineKeyCompareFrom<k>>() || implements::<c, InlineKeyPrefix<k>>() || implements::<c, InlineKeyLength<k>>()) || implements::<c, InlineKey<k>>(), "BTree: optional inline evidence requires InlineKey")
+}
+pub struct BTreePlan {
+  private leaf_capacity: U32
+  private branch_capacity: U32
+  private leaf_budget: U64
+  private branch_budget: U64
+  private leaf_width: U32
+  private branch_width: U32
+  private tags: Bool
+  private pair_bytes: U32
+}
+impl BTreePlan {
+  fn leaf_capacity(self) -> U32 {
+    self.leaf_capacity
+  }
+  fn branch_capacity(self) -> U32 {
+    self.branch_capacity
+  }
+  fn leaf_budget(self) -> U64 {
+    self.leaf_budget
+  }
+  fn branch_budget(self) -> U64 {
+    self.branch_budget
+  }
+  fn leaf_width(self) -> U32 {
+    self.leaf_width
+  }
+  fn branch_width(self) -> U32 {
+    self.branch_width
+  }
+  fn has_tags(self) -> Bool {
+    self.tags
+  }
+  fn pair_bytes(self) -> U32 {
+    self.pair_bytes
+  }
+  fn leaf_minimum(self) -> U32 {
+    btree_minimum(self.leaf_capacity)
+  }
+  fn branch_minimum(self) -> U32 {
+    btree_minimum(self.branch_capacity)
+  }
+  fn leaf_edge_half(self) -> U32 {
+    btree_edge_half(self.leaf_capacity)
+  }
+  fn branch_edge_half(self) -> U32 {
+    btree_edge_half(self.branch_capacity)
+  }
+  fn batch_cutoff(self) -> U64 {
+    let pages = 1048576u64 / self.leaf_budget
+    (if pages > 0u64 {
+      pages
+    } else {
+      1u64
+    }) * ((7u64 * btree_widen(self.leaf_capacity)) / 10u64 + 1u64)
+  }
+}
+fn btree_minimum(capacity: U32) -> U32 {
+  if capacity / 8u32 > 4u32 {
+    capacity / 8u32
+  } else {
+    4u32
+  }
+}
+fn btree_edge_half(capacity: U32) -> U32 {
+  let twice = 2u32 * btree_minimum(capacity)
+  if twice < capacity / 2u32 {
+    twice
+  } else {
+    capacity / 2u32
+  }
+}
+fn btree_slot_bytes<t>() -> U32 {
+  if is_unit::<t>() || type_equal::<t, Bool>() {
+    4u32
+  } else if is_integer::<t>() || is_float::<t>() {
+    if bit_width::<t>() <= 32u32 {
+      4u32
+    } else {
+      8u32
+    }
+  } else if can_bitcast::<t, U32>() {
+    4u32
+  } else if can_bitcast::<t, U64>() {
+    8u32
+  } else if can_bitcast::<t, V128>() {
+    16u32
+  } else {
+    8u32
+  }
+}
+fn btree_pair_bytes<k, v>() -> U32 {
+  if is_unit::<v>() {
+    0u32
+  } else if type_equal::<k, v>() {
+    2u32 * btree_slot_bytes::<k>()
+  } else if (type_equal::<k, Bool>() || is_integer::<k>() || is_float::<k>() || can_bitcast::<k, U32>() || can_bitcast::<k, U64>() || can_bitcast::<k, V128>()) && (type_equal::<v, Bool>() || is_integer::<v>() || is_float::<v>() || can_bitcast::<v, U32>() || can_bitcast::<v, U64>() || can_bitcast::<v, V128>()) {
+    if can_bitcast::<k, U32>() && can_bitcast::<v, U32>() {
+      8u32
+    } else if can_bitcast::<k, U64>() && can_bitcast::<v, U64>() {
+      16u32
+    } else if can_bitcast::<k, V128>() && can_bitcast::<v, V128>() {
+      32u32
+    } else if !can_bitcast::<k, V128>() && !can_bitcast::<v, V128>() {
+      16u32
+    } else {
+      32u32
+    }
+  } else {
+    0u32
+  }
+}
+fn btree_metadata_bytes(capacity: U32, width: U32, tags: Bool) -> U64 {
+  let stride = btree_widen(width)
+  ((btree_widen(capacity) * (stride + (if tags {
+    1u64
+  } else {
+    0u64
+  })) + 15u64) / 16u64) * 16u64
+}
+fn btree_payload(capacity: U32, width: U32, tags: Bool, key_bytes: U32, trailing_bytes: U32, pair_bytes: U32, branch: Bool) -> U64 {
+  let count = btree_widen(capacity)
+  let key = btree_widen(key_bytes)
+  let trailing = btree_widen(trailing_bytes)
+  if width == 0u32 {
+    16u64 + (count + 1u64) * key + (count + 2u64) * trailing
+  } else {
+    let entries = if branch {
+      8u64
+    } else if pair_bytes > 0u32 {
+      btree_widen(pair_bytes)
+    } else {
+      key + trailing
+    }
+    16u64 + (count + 2u64) * entries + btree_metadata_bytes(capacity, width, tags)
+  }
+}
+fn btree_capacity(budget: U64, configured: U32, width: U32, tags: Bool, key: U32, trailing: U32, pair: U32, branch: Bool) -> U32 {
+  let strip = if configured > 1024u32 {
+    configured
+  } else {
+    1024u32
+  }
+  let limit = if width == 0u32 || strip / width > 1023u32 {
+    1023u32
+  } else {
+    strip / width
+  }
+  let mut low = 0u32
+  let mut high = limit + 1u32
+  while true {
+    true if low + 1u32 < high => {
+      let middle = low + (high - low) / 2u32
+      if btree_payload(middle, width, tags, key, trailing, pair, branch) <= budget {
+        low = middle
+      } else {
+        high = middle
+      }
+      continue true
+    }
+    _ => break low
+  }
+}
+pub fn btree_plan<k, v, c: Comparator<k>>(comparator: c, config: BTreeConfig) -> BTreePlan {
+  btree_optional_evidence::<k, c>()
+  // Every config has private immutable fields and comes through validation.
+  let width = if implements::<c, InlineKey<k>>() {
+    btree_width_bytes(comparator.inline_width())
+  } else {
+    0u32
+  }
+  let branch_width = if width == 8u32 && implements::<c, InlineKeyCompareFrom<k>>() {
+    4u32
+  } else {
+    width
+  }
+  let key = btree_slot_bytes::<k>()
+  let value = if is_unit::<v>() {
+    0u32
+  } else {
+    btree_slot_bytes::<v>()
+  }
+  let pair = if width > 0u32 {
+    btree_pair_bytes::<k, v>()
+  } else {
+    0u32
+  }
+  let leaf_base = btree_widen(config.leaf_bytes)
+  let leaf_need = btree_payload(12u32, width, false, key, value, pair, false)
+  let leaf_budget = ((leaf_need + leaf_base - 1u64) / leaf_base) * leaf_base
+  let leaf = btree_capacity(leaf_budget, config.leaf_bytes, width, false, key, value, pair, false)
+  let tagged = if width > 0u32 && implements::<c, InlineKeyHash<k>>() {
+    btree_capacity(leaf_budget, config.leaf_bytes, width, true, key, value, pair, false)
+  } else {
+    0u32
+  }
+  let tags = tagged >= 12u32 && tagged + 1u32 >= leaf
+  let branch_configured = if width == 0u32 {
+    config.plain_branch_bytes
+  } else {
+    config.inline_branch_bytes
+  }
+  let branch_base = btree_widen(branch_configured)
+  let branch_need = btree_payload(12u32, branch_width, false, key, 8u32, 0u32, true)
+  let branch_budget = ((branch_need + branch_base - 1u64) / branch_base) * branch_base
+  let branch = btree_capacity(branch_budget, branch_configured, branch_width, false, key, 8u32, 0u32, true)
+  if !(leaf >= 12u32 && branch >= 12u32) {
+    assert(false, "BTree plan: minimum capacity 12 must fit")
+  }
+  BTreePlan::{
+    leaf_capacity: if tags {
+      tagged
+    } else {
+      leaf
+    }
+    branch_capacity: branch
+    leaf_budget: leaf_budget
+    branch_budget: branch_budget
+    leaf_width: width
+    branch_width: branch_width
+    tags: tags
+    pair_bytes: pair
+  }
+}
+fn btree_integer_window(word: U64, offset: U32) -> U64 {
+  if offset >= 8u32 {
+    0u64
+  } else {
+    word << (btree_widen(offset) * 8u64)
+  }
+}
+impl InlineKey<U64> for NaturalComparator {
+  fn inline_key_at(self, key: U64, offset: U32) -> U64 {
+    btree_integer_window(key, offset)
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    BTreeInlineWidth::Two
+  }
+}
+impl InlineKey<I64> for NaturalComparator {
+  fn inline_key_at(self, key: I64, offset: U32) -> U64 {
+    btree_integer_window(unsafe_bitcast::<I64, U64>(key) ^ 9223372036854775808u64, offset)
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    BTreeInlineWidth::Two
+  }
+}
+impl InlineKeyLength<U64> for NaturalComparator {
+  fn inline_encoding_length(self, key: U64) -> U32 {
+    8u32
+  }
+}
+impl InlineKeyLength<I64> for NaturalComparator {
+  fn inline_encoding_length(self, key: I64) -> U32 {
+    8u32
+  }
+}
+impl InlineKey<String> for StringComparator {
+  fn inline_key_at(self, key: String, offset: U32) -> U64 {
+    let length = ordering_string_byte_length(key)
+    let mut word = 0u64
+    while 0u32 {
+      i if i < 8u32 => {
+        let byte = if offset < length && i < length - offset {
+          ordering_string_byte_at(key, offset + i).into()
+        } else {
+          0u64
+        }
+        word = (word << 8u64) | byte
+        continue i + 1u32
+      }
+      _ => break word
+    }
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    BTreeInlineWidth::Eight
+  }
+}
+impl InlineKeyHash<String> for StringComparator {
+  fn inline_hash_tag(self, key: String) -> U8 {
+    let length = ordering_string_byte_length(key)
+    (if length < 255u32 {
+      length
+    } else {
+      255u32
+    }).into()
+  }
+}
+impl InlineKeyLength<String> for StringComparator {
+  fn inline_encoding_length(self, key: String) -> U32 {
+    ordering_string_byte_length(key)
+  }
+}
+impl InlineKeyCompareFrom<String> for StringComparator {
+  fn compare_from(self, left: String, right: String, equal_bytes: U32) -> Ordering {
+    let left_length = ordering_string_byte_length(left)
+    let right_length = ordering_string_byte_length(right)
+    let limit = if left_length < right_length {
+      left_length
+    } else {
+      right_length
+    }
+    while equal_bytes {
+      i if i < limit => {
+        let a = ordering_string_byte_at(left, i)
+        let b = ordering_string_byte_at(right, i)
+        if a < b {
+          break Ordering::Less
+        } else if a > b {
+          break Ordering::Greater
+        } else {
+          continue i + 1u32
+        }
+      }
+      _ => break if left_length < right_length {
+        Ordering::Less
+      } else if left_length > right_length {
+        Ordering::Greater
+      } else {
+        Ordering::Equal
+      }
+    }
+  }
+}
+impl InlineKeyPrefix<String> for StringComparator {
+  fn compare_prefix(self, key: String, prefix: BTreeInlinePrefix) -> Ordering {
+    btree_compare_padded_prefix(self, key, prefix)
+  }
+}
+impl InlineKey<StringView> for StringViewComparator {
+  fn inline_key_at(self, key: StringView, offset: U32) -> U64 {
+    let length = ordering_string_view_byte_length(key)
+    let mut word = 0u64
+    while 0u32 {
+      i if i < 8u32 => {
+        let byte = if offset < length && i < length - offset {
+          ordering_string_view_byte_at(key, offset + i).into()
+        } else {
+          0u64
+        }
+        word = (word << 8u64) | byte
+        continue i + 1u32
+      }
+      _ => break word
+    }
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    BTreeInlineWidth::Eight
+  }
+}
+impl InlineKeyHash<StringView> for StringViewComparator {
+  fn inline_hash_tag(self, key: StringView) -> U8 {
+    let length = ordering_string_view_byte_length(key)
+    (if length < 255u32 {
+      length
+    } else {
+      255u32
+    }).into()
+  }
+}
+impl InlineKeyLength<StringView> for StringViewComparator {
+  fn inline_encoding_length(self, key: StringView) -> U32 {
+    ordering_string_view_byte_length(key)
+  }
+}
+impl InlineKeyCompareFrom<StringView> for StringViewComparator {
+  fn compare_from(self, left: StringView, right: StringView, equal_bytes: U32) -> Ordering {
+    let left_length = ordering_string_view_byte_length(left)
+    let right_length = ordering_string_view_byte_length(right)
+    let limit = if left_length < right_length {
+      left_length
+    } else {
+      right_length
+    }
+    while equal_bytes {
+      i if i < limit => {
+        let a = ordering_string_view_byte_at(left, i)
+        let b = ordering_string_view_byte_at(right, i)
+        if a < b {
+          break Ordering::Less
+        } else if a > b {
+          break Ordering::Greater
+        } else {
+          continue i + 1u32
+        }
+      }
+      _ => break if left_length < right_length {
+        Ordering::Less
+      } else if left_length > right_length {
+        Ordering::Greater
+      } else {
+        Ordering::Equal
+      }
+    }
+  }
+}
+impl InlineKeyPrefix<StringView> for StringViewComparator {
+  fn compare_prefix(self, key: StringView, prefix: BTreeInlinePrefix) -> Ordering {
+    btree_compare_padded_prefix(self, key, prefix)
+  }
+}
+impl InlineKey<Bytes> for BytesComparator {
+  fn inline_key_at(self, key: Bytes, offset: U32) -> U64 {
+    let length = ordering_bytes_byte_length(key)
+    let mut word = 0u64
+    while 0u32 {
+      i if i < 8u32 => {
+        let byte = if offset < length && i < length - offset {
+          ordering_bytes_byte_at(key, offset + i).into()
+        } else {
+          0u64
+        }
+        word = (word << 8u64) | byte
+        continue i + 1u32
+      }
+      _ => break word
+    }
+  }
+  fn inline_width(self) -> BTreeInlineWidth {
+    BTreeInlineWidth::Eight
+  }
+}
+impl InlineKeyHash<Bytes> for BytesComparator {
+  fn inline_hash_tag(self, key: Bytes) -> U8 {
+    let length = ordering_bytes_byte_length(key)
+    (if length < 255u32 {
+      length
+    } else {
+      255u32
+    }).into()
+  }
+}
+impl InlineKeyLength<Bytes> for BytesComparator {
+  fn inline_encoding_length(self, key: Bytes) -> U32 {
+    ordering_bytes_byte_length(key)
+  }
+}
+impl InlineKeyCompareFrom<Bytes> for BytesComparator {
+  fn compare_from(self, left: Bytes, right: Bytes, equal_bytes: U32) -> Ordering {
+    let left_length = ordering_bytes_byte_length(left)
+    let right_length = ordering_bytes_byte_length(right)
+    let limit = if left_length < right_length {
+      left_length
+    } else {
+      right_length
+    }
+    while equal_bytes {
+      i if i < limit => {
+        let a = ordering_bytes_byte_at(left, i)
+        let b = ordering_bytes_byte_at(right, i)
+        if a < b {
+          break Ordering::Less
+        } else if a > b {
+          break Ordering::Greater
+        } else {
+          continue i + 1u32
+        }
+      }
+      _ => break if left_length < right_length {
+        Ordering::Less
+      } else if left_length > right_length {
+        Ordering::Greater
+      } else {
+        Ordering::Equal
+      }
+    }
+  }
+}
+impl InlineKeyPrefix<Bytes> for BytesComparator {
+  fn compare_prefix(self, key: Bytes, prefix: BTreeInlinePrefix) -> Ordering {
+    btree_compare_padded_prefix(self, key, prefix)
+  }
+}
+fn btree_compare_padded_prefix<k, c: InlineKey<k>>(comparator: c, key: k, prefix: BTreeInlinePrefix) -> Ordering {
+  while 0u32 {
+    offset if offset < prefix.byte_length() => {
+      let remaining = prefix.byte_length() - offset
+      let mask = if remaining >= 8u32 {
+        18446744073709551615u64
+      } else {
+        18446744073709551615u64 << ((8u64 - btree_widen(remaining)) * 8u64)
+      }
+      let left = comparator.inline_key_at(key, offset) & mask
+      let right = prefix.window_at(offset)
+      if left < right {
+        break Ordering::Less
+      } else if left > right {
+        break Ordering::Greater
+      } else {
+        continue offset + 8u32
+      }
+    }
+    _ => break Ordering::Equal
+  }
+}
+fn btree_compare_from<k, c: Comparator<k>>(comparator: c, left: k, right: k, equal_bytes: U32) -> Ordering {
+  if implements::<c, InlineKeyCompareFrom<k>>() {
+    comparator.compare_from(left, right, equal_bytes)
+  } else {
+    comparator.compare(left, right)
+  }
+}
+fn btree_compare_prefix<k, c: InlineKey<k>>(comparator: c, key: k, prefix: BTreeInlinePrefix) -> Ordering {
+  if implements::<c, InlineKeyPrefix<k>>() {
+    comparator.compare_prefix(key, prefix)
+  } else {
+    btree_compare_padded_prefix(comparator, key, prefix)
+  }
+}
+fn btree_initial_prefix_length<k, c: InlineKey<k>>(comparator: c, key: k) -> U32 {
+  if implements::<c, InlineKeyLength<k>>() {
+    let length = comparator.inline_encoding_length(key)
+    if length < 64u32 {
+      length
+    } else {
+      64u32
+    }
+  } else {
+    64u32
+  }
+}
+fn btree_extract_byte(block: V128, lane: U32) -> U8 {
+  let view = unsafe_bitcast::<V128, U8x16>(block)
+  match lane {
+    0u32 => wasm_u8x16_extract_0(view)
+    1u32 => wasm_u8x16_extract_1(view)
+    2u32 => wasm_u8x16_extract_2(view)
+    3u32 => wasm_u8x16_extract_3(view)
+    4u32 => wasm_u8x16_extract_4(view)
+    5u32 => wasm_u8x16_extract_5(view)
+    6u32 => wasm_u8x16_extract_6(view)
+    7u32 => wasm_u8x16_extract_7(view)
+    8u32 => wasm_u8x16_extract_8(view)
+    9u32 => wasm_u8x16_extract_9(view)
+    10u32 => wasm_u8x16_extract_10(view)
+    11u32 => wasm_u8x16_extract_11(view)
+    12u32 => wasm_u8x16_extract_12(view)
+    13u32 => wasm_u8x16_extract_13(view)
+    14u32 => wasm_u8x16_extract_14(view)
+    15u32 => wasm_u8x16_extract_15(view)
+    _ => unreachable()
+  }
+}
+fn btree_replacebyte(block: V128, lane: U32, value: U8) -> V128 {
+  let view = unsafe_bitcast::<V128, U8x16>(block)
+  unsafe_bitcast::<U8x16, V128>(match lane {
+    0u32 => wasm_u8x16_replace_0(view, value)
+    1u32 => wasm_u8x16_replace_1(view, value)
+    2u32 => wasm_u8x16_replace_2(view, value)
+    3u32 => wasm_u8x16_replace_3(view, value)
+    4u32 => wasm_u8x16_replace_4(view, value)
+    5u32 => wasm_u8x16_replace_5(view, value)
+    6u32 => wasm_u8x16_replace_6(view, value)
+    7u32 => wasm_u8x16_replace_7(view, value)
+    8u32 => wasm_u8x16_replace_8(view, value)
+    9u32 => wasm_u8x16_replace_9(view, value)
+    10u32 => wasm_u8x16_replace_10(view, value)
+    11u32 => wasm_u8x16_replace_11(view, value)
+    12u32 => wasm_u8x16_replace_12(view, value)
+    13u32 => wasm_u8x16_replace_13(view, value)
+    14u32 => wasm_u8x16_replace_14(view, value)
+    15u32 => wasm_u8x16_replace_15(view, value)
+    _ => unreachable()
+  })
+}
+fn btree_extract16(block: V128, lane: U32) -> U16 {
+  let view = unsafe_bitcast::<V128, U16x8>(block)
+  match lane {
+    0u32 => wasm_u16x8_extract_0(view)
+    1u32 => wasm_u16x8_extract_1(view)
+    2u32 => wasm_u16x8_extract_2(view)
+    3u32 => wasm_u16x8_extract_3(view)
+    4u32 => wasm_u16x8_extract_4(view)
+    5u32 => wasm_u16x8_extract_5(view)
+    6u32 => wasm_u16x8_extract_6(view)
+    7u32 => wasm_u16x8_extract_7(view)
+    _ => unreachable()
+  }
+}
+fn btree_replace16(block: V128, lane: U32, value: U16) -> V128 {
+  let view = unsafe_bitcast::<V128, U16x8>(block)
+  unsafe_bitcast::<U16x8, V128>(match lane {
+    0u32 => wasm_u16x8_replace_0(view, value)
+    1u32 => wasm_u16x8_replace_1(view, value)
+    2u32 => wasm_u16x8_replace_2(view, value)
+    3u32 => wasm_u16x8_replace_3(view, value)
+    4u32 => wasm_u16x8_replace_4(view, value)
+    5u32 => wasm_u16x8_replace_5(view, value)
+    6u32 => wasm_u16x8_replace_6(view, value)
+    7u32 => wasm_u16x8_replace_7(view, value)
+    _ => unreachable()
+  })
+}
+fn btree_extract32(block: V128, lane: U32) -> U32 {
+  let view = unsafe_bitcast::<V128, U32x4>(block)
+  match lane {
+    0u32 => wasm_u32x4_extract_0(view)
+    1u32 => wasm_u32x4_extract_1(view)
+    2u32 => wasm_u32x4_extract_2(view)
+    3u32 => wasm_u32x4_extract_3(view)
+    _ => unreachable()
+  }
+}
+fn btree_replace32(block: V128, lane: U32, value: U32) -> V128 {
+  let view = unsafe_bitcast::<V128, U32x4>(block)
+  unsafe_bitcast::<U32x4, V128>(match lane {
+    0u32 => wasm_u32x4_replace_0(view, value)
+    1u32 => wasm_u32x4_replace_1(view, value)
+    2u32 => wasm_u32x4_replace_2(view, value)
+    3u32 => wasm_u32x4_replace_3(view, value)
+    _ => unreachable()
+  })
+}
+fn btree_extract64(block: V128, lane: U32) -> U64 {
+  let view = unsafe_bitcast::<V128, U64x2>(block)
+  match lane {
+    0u32 => wasm_u64x2_extract_0(view)
+    1u32 => wasm_u64x2_extract_1(view)
+    _ => unreachable()
+  }
+}
+fn btree_replace64(block: V128, lane: U32, value: U64) -> V128 {
+  let view = unsafe_bitcast::<V128, U64x2>(block)
+  unsafe_bitcast::<U64x2, V128>(match lane {
+    0u32 => wasm_u64x2_replace_0(view, value)
+    1u32 => wasm_u64x2_replace_1(view, value)
+    _ => unreachable()
+  })
+}
+fn btree_metadata_new(capacity: U32, width: U32, tags: Bool) -> WasmArray<V128> {
+  let blocks = (btree_metadata_bytes(capacity, width, tags) / 16u64).into()
+  let slots = wasm_array_new_default::<V128>(blocks)
+  let sentinel = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(18446744073709551615u64))
+  while 0u32 {
+    i if i < blocks => {
+      wasm_array_set(slots, i, sentinel)
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  slots
+}
+fn btree_window_set(slots: WasmArray<V128>, width: U32, index: U32, word: U64) -> Unit {
+  let byte = index * width
+  let block = wasm_array_get(slots, byte / 16u32)
+  let changed = if width == 2u32 {
+    btree_replace16(block, (byte % 16u32) / 2u32, (word >> 48u64).into())
+  } else if width == 4u32 {
+    btree_replace32(block, (byte % 16u32) / 4u32, (word >> 32u64).into())
+  } else {
+    btree_replace64(block, (byte % 16u32) / 8u32, word)
+  }
+  wasm_array_set(slots, byte / 16u32, changed)
+}
+fn btree_window_get(slots: WasmArray<V128>, width: U32, index: U32) -> U64 {
+  let byte = index * width
+  let block = wasm_array_get(slots, byte / 16u32)
+  if width == 2u32 {
+    btree_u16_word(btree_extract16(block, (byte % 16u32) / 2u32)) << 48u64
+  } else if width == 4u32 {
+    btree_widen(btree_extract32(block, (byte % 16u32) / 4u32)) << 32u64
+  } else {
+    btree_extract64(block, (byte % 16u32) / 8u32)
+  }
+}
+fn btree_tag_set(slots: WasmArray<V128>, capacity: U32, width: U32, index: U32, tag: U8) -> Unit {
+  if !(index < capacity) {
+    assert(false, "BTree tag write: index must be below capacity")
+  }
+  let byte = capacity * width + index
+  wasm_array_set(slots, byte / 16u32, btree_replacebyte(wasm_array_get(slots, byte / 16u32), byte % 16u32, tag))
+}
+fn btree_tag_get(slots: WasmArray<V128>, capacity: U32, width: U32, index: U32) -> U8 {
+  if !(index < capacity) {
+    assert(false, "BTree tag read: index must be below capacity")
+  }
+  let byte = capacity * width + index
+  btree_extract_byte(wasm_array_get(slots, byte / 16u32), byte % 16u32)
+}
+fn btree_metadata_move(slots: WasmArray<V128>, capacity: U32, width: U32, tags: Bool, destination: U32, source: U32, count: U32) -> Unit {
+  if !(source <= capacity && count <= capacity - source && destination <= capacity && count <= capacity - destination) {
+    assert(false, "BTree metadata move: run exceeds capacity")
+  }
+  while 0u32 {
+    step if step < count => {
+      let i = if destination > source {
+        count - step - 1u32
+      } else {
+        step
+      }
+      btree_window_set(slots, width, destination + i, btree_window_get(slots, width, source + i))
+      if tags {
+        btree_tag_set(slots, capacity, width, destination + i, btree_tag_get(slots, capacity, width, source + i))
+      }
+      continue step + 1u32
+    }
+    _ => break ()
+  }
+  if destination > source {
+    let gap = destination - source
+    btree_metadata_clear(slots, capacity, width, tags, source, if gap < count {
+      gap
+    } else {
+      count
+    })
+  } else if source > destination {
+    let gap = source - destination
+    let clear = if gap < count {
+      gap
+    } else {
+      count
+    }
+    btree_metadata_clear(slots, capacity, width, tags, source + count - clear, clear)
+  }
+}
+fn btree_metadata_clear(slots: WasmArray<V128>, capacity: U32, width: U32, tags: Bool, start: U32, count: U32) -> Unit {
+  if !(start <= capacity && count <= capacity - start) {
+    assert(false, "BTree metadata clear: run exceeds capacity")
+  }
+  while 0u32 {
+    i if i < count => {
+      btree_window_set(slots, width, start + i, 18446744073709551615u64)
+      if tags {
+        btree_tag_set(slots, capacity, width, start + i, 0u8)
+      }
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+}
+fn btree_widen(value: U32) -> U64 {
+  value.into()
+}
+fn btree_u16_word(value: U16) -> U64 {
+  value.into()
+}
+// Array references are immutable. Counts and head state guard all live reads.
+struct BTreePlainLeaf<k, v> {
+  private keys: WasmArray<k>
+  private values: WasmArray<v>
+}
+struct BTreeKeyLeaf<k> {
+  private keys: WasmArray<k>
+}
+enum BTreeLeafStorage<k, v> {
+  Same(WasmArray<k>)
+  Pair32(WasmArray<U32>)
+  Pair64(WasmArray<U64>)
+  Pair128(WasmArray<V128>)
+  Columns(BTreePlainLeaf<k, v>)
+  Keys(BTreeKeyLeaf<k>)
+}
+struct BTreeInlineLeaf<k, v> {
+  private entries: BTreeLeafStorage<k, v>
+  private metadata: WasmArray<V128>
+}
+struct BTreePlainBranch<k, v> {
+  private keys: WasmArray<k>
+  private children: WasmArray<BTreeNode<k, v>>
+}
+struct BTreeInlineBranch<k, v> {
+  private children: WasmArray<BTreeNode<k, v>>
+  private metadata: WasmArray<V128>
+}
+enum BTreeBody<k, v> {
+  PlainLeaf(BTreePlainLeaf<k, v>)
+  PlainKeys(BTreeKeyLeaf<k>)
+  InlineLeaf(BTreeInlineLeaf<k, v>)
+  PlainBranch(BTreePlainBranch<k, v>)
+  InlineBranch(BTreeInlineBranch<k, v>)
+}
+struct BTreeNode<k, v> {
+  private mut count: U32
+  private mut prefix: U32
+  private mut head: Bool
+  private body: BTreeBody<k, v>
+}
+fn btree_leaf_storage<k, v>(capacity: U32) -> BTreeLeafStorage<k, v> {
+  if is_unit::<v>() {
+    BTreeLeafStorage::Keys(BTreeKeyLeaf::{
+      keys: wasm_array_new_default::<k>(capacity + 2u32)
+    })
+  } else if type_equal::<k, v>() {
+    BTreeLeafStorage::Same(wasm_array_new_default::<k>(2u32 * (capacity + 2u32)))
+  } else if can_bitcast::<k, U32>() && can_bitcast::<v, U32>() {
+    BTreeLeafStorage::Pair32(wasm_array_new_default::<U32>(2u32 * (capacity + 2u32)))
+  } else if can_bitcast::<k, U64>() && can_bitcast::<v, U64>() {
+    BTreeLeafStorage::Pair64(wasm_array_new_default::<U64>(2u32 * (capacity + 2u32)))
+  } else if can_bitcast::<k, V128>() && can_bitcast::<v, V128>() {
+    BTreeLeafStorage::Pair128(wasm_array_new_default::<V128>(2u32 * (capacity + 2u32)))
+  } else if (type_equal::<k, Bool>() || is_integer::<k>() || is_float::<k>() || can_bitcast::<k, U32>() || can_bitcast::<k, U64>() || can_bitcast::<k, V128>()) && (type_equal::<v, Bool>() || is_integer::<v>() || is_float::<v>() || can_bitcast::<v, U32>() || can_bitcast::<v, U64>() || can_bitcast::<v, V128>()) {
+    let stride = if can_bitcast::<k, V128>() || can_bitcast::<v, V128>() {
+      2u32
+    } else {
+      1u32
+    }
+    BTreeLeafStorage::Pair128(wasm_array_new_default::<V128>(stride * (capacity + 2u32)))
+  } else {
+    BTreeLeafStorage::Columns(BTreePlainLeaf::{
+      keys: wasm_array_new_default::<k>(capacity + 2u32)
+      values: wasm_array_new_default::<v>(capacity + 2u32)
+    })
+  }
+}
+fn btree_node_new<k, v>(plan: BTreePlan, branch: Bool) -> BTreeNode<k, v> {
+  let body = if branch {
+    let children = wasm_array_new_default::<BTreeNode<k, v>>(plan.branch_capacity + 2u32)
+    if plan.branch_width > 0u32 {
+      BTreeBody::InlineBranch(BTreeInlineBranch::{
+        children: children
+        metadata: btree_metadata_new(plan.branch_capacity, plan.branch_width, false)
+      })
+    } else {
+      BTreeBody::PlainBranch(BTreePlainBranch::{
+        keys: wasm_array_new_default::<k>(plan.branch_capacity + 1u32)
+        children: children
+      })
+    }
+  } else if plan.leaf_width > 0u32 {
+    BTreeBody::InlineLeaf(BTreeInlineLeaf::{
+      entries: btree_leaf_storage::<k, v>(plan.leaf_capacity)
+      metadata: btree_metadata_new(plan.leaf_capacity, plan.leaf_width, plan.tags)
+    })
+  } else if is_unit::<v>() {
+    BTreeBody::PlainKeys(BTreeKeyLeaf::{
+      keys: wasm_array_new_default::<k>(plan.leaf_capacity + 1u32)
+    })
+  } else {
+    BTreeBody::PlainLeaf(BTreePlainLeaf::{
+      keys: wasm_array_new_default::<k>(plan.leaf_capacity + 1u32)
+      values: wasm_array_new_default::<v>(plan.leaf_capacity + 2u32)
+    })
+  }
+  BTreeNode::{
+    count: 0u32
+    prefix: 0u32
+    head: false
+    body: body
+  }
+}
+fn btree_raw_block<t>(value: t) -> V128 {
+  let zero = wasm_u64x2_splat(0u64)
+  if type_equal::<t, Bool>() {
+    unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_0(zero, if value {
+      1u64
+    } else {
+      0u64
+    }))
+  } else if can_bitcast::<t, U32>() {
+    unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_0(zero, btree_widen(unsafe_bitcast::<t, U32>(value))))
+  } else if can_bitcast::<t, U64>() {
+    unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_0(zero, unsafe_bitcast::<t, U64>(value)))
+  } else if can_bitcast::<t, V128>() {
+    unsafe_bitcast::<t, V128>(value)
+  } else if type_equal::<t, F32>() {
+    static_assert(can_bitcast::<U64x2, F32x4>() && can_bitcast::<F32x4, V128>(), "BTree scalar pair: F32 vector views")
+    unsafe_bitcast::<F32x4, V128>(wasm_f32x4_replace_0(unsafe_bitcast::<U64x2, F32x4>(zero), value))
+  } else if type_equal::<t, F64>() {
+    static_assert(can_bitcast::<U64x2, F64x2>() && can_bitcast::<F64x2, V128>(), "BTree scalar pair: F64 vector views")
+    unsafe_bitcast::<F64x2, V128>(wasm_f64x2_replace_0(unsafe_bitcast::<U64x2, F64x2>(zero), value))
+  } else {
+    assert(false, "BTree raw pair: a reference or Unit cannot enter raw storage")
+    unreachable()
+  }
+}
+fn btree_raw_value<t>(block: V128) -> t {
+  if type_equal::<t, F32>() {
+    static_assert(can_bitcast::<V128, F32x4>(), "BTree scalar pair: F32 load view")
+    wasm_f32x4_extract_0(unsafe_bitcast::<V128, F32x4>(block))
+  } else if type_equal::<t, F64>() {
+    static_assert(can_bitcast::<V128, F64x2>(), "BTree scalar pair: F64 load view")
+    wasm_f64x2_extract_0(unsafe_bitcast::<V128, F64x2>(block))
+  } else if type_equal::<t, Bool>() {
+    btree_extract64(block, 0u32) != 0u64
+  } else if type_equal::<t, I8>() {
+    btree_extract32(block, 0u32).into()
+  } else if type_equal::<t, U8>() {
+    btree_extract32(block, 0u32).into()
+  } else if type_equal::<t, I16>() {
+    btree_extract32(block, 0u32).into()
+  } else if type_equal::<t, U16>() {
+    btree_extract32(block, 0u32).into()
+  } else if can_bitcast::<U32, t>() {
+    unsafe_bitcast::<U32, t>(btree_extract32(block, 0u32))
+  } else if can_bitcast::<U64, t>() {
+    unsafe_bitcast::<U64, t>(btree_extract64(block, 0u32))
+  } else if can_bitcast::<V128, t>() {
+    unsafe_bitcast::<V128, t>(block)
+  } else {
+    assert(false, "BTree raw pair load: unsupported logical type")
+    unreachable()
+  }
+}
+fn btree_pair_stride<k, v>() -> U32 {
+  if can_bitcast::<k, V128>() || can_bitcast::<v, V128>() {
+    2u32
+  } else {
+    1u32
+  }
+}
+fn btree_inline_key_set<k, v>(storage: BTreeLeafStorage<k, v>, position: U32, key: k) -> Unit {
+  if is_unit::<v>() {
+    let selected_slots = btree_unit_keys(storage).keys
+    let selected_index = btree_pair_position(selected_slots, position, 1u32)
+    wasm_array_set(selected_slots, selected_index, key)
+  } else if type_equal::<k, v>() {
+    let selected_slots = btree_same_pairs(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_set(selected_slots, selected_index, key)
+  } else if can_bitcast::<k, U32>() && can_bitcast::<v, U32>() {
+    let selected_slots = btree_pairs32(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_set(selected_slots, selected_index, btree_bits32(key))
+  } else if can_bitcast::<k, U64>() && can_bitcast::<v, U64>() {
+    let selected_slots = btree_pairs64(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_set(selected_slots, selected_index, unsafe_bitcast::<k, U64>(key))
+  } else if (type_equal::<k, Bool>() || is_integer::<k>() || is_float::<k>() || can_bitcast::<k, U32>() || can_bitcast::<k, U64>() || can_bitcast::<k, V128>()) && (type_equal::<v, Bool>() || is_integer::<v>() || is_float::<v>() || can_bitcast::<v, U32>() || can_bitcast::<v, U64>() || can_bitcast::<v, V128>()) {
+    let slots = btree_pairs128(storage)
+    let stride = btree_pair_stride::<k, v>()
+    let index = btree_pair_position(slots, position, stride)
+    let block = btree_raw_block(key)
+    wasm_array_set(slots, index, if stride == 2u32 {
+      block
+    } else {
+      btree_replace64(block, 1u32, btree_extract64(wasm_array_get(slots, index), 1u32))
+    })
+  } else {
+    let selected_slots = btree_columns(storage).keys
+    let selected_index = btree_pair_position(selected_slots, position, 1u32)
+    wasm_array_set(selected_slots, selected_index, key)
+  }
+}
+fn btree_inline_value_set<k, v>(storage: BTreeLeafStorage<k, v>, position: U32, value: v) -> Unit {
+  if is_unit::<v>() {
+    ()
+  } else if type_equal::<k, v>() {
+    let selected_slots = btree_same_pairs(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_set(selected_slots, selected_index + 1u32, value)
+  } else if can_bitcast::<k, U32>() && can_bitcast::<v, U32>() {
+    let selected_slots = btree_pairs32(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_set(selected_slots, selected_index + 1u32, btree_bits32(value))
+  } else if can_bitcast::<k, U64>() && can_bitcast::<v, U64>() {
+    let selected_slots = btree_pairs64(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_set(selected_slots, selected_index + 1u32, unsafe_bitcast::<v, U64>(value))
+  } else if (type_equal::<k, Bool>() || is_integer::<k>() || is_float::<k>() || can_bitcast::<k, U32>() || can_bitcast::<k, U64>() || can_bitcast::<k, V128>()) && (type_equal::<v, Bool>() || is_integer::<v>() || is_float::<v>() || can_bitcast::<v, U32>() || can_bitcast::<v, U64>() || can_bitcast::<v, V128>()) {
+    let slots = btree_pairs128(storage)
+    let stride = btree_pair_stride::<k, v>()
+    let index = btree_pair_position(slots, position, stride)
+    let block = btree_raw_block(value)
+    if stride == 2u32 {
+      wasm_array_set(slots, index + 1u32, block)
+    } else {
+      wasm_array_set(slots, index, btree_replace64(wasm_array_get(slots, index), 1u32, btree_extract64(block, 0u32)))
+    }
+  } else {
+    let selected_slots = btree_columns(storage).values
+    let selected_index = btree_pair_position(selected_slots, position, 1u32)
+    wasm_array_set(selected_slots, selected_index, value)
+  }
+}
+fn btree_inline_key_get<k, v>(storage: BTreeLeafStorage<k, v>, position: U32) -> k {
+  if is_unit::<v>() {
+    let selected_slots = btree_unit_keys(storage).keys
+    let selected_index = btree_pair_position(selected_slots, position, 1u32)
+    wasm_array_get(selected_slots, selected_index)
+  } else if type_equal::<k, v>() {
+    let selected_slots = btree_same_pairs(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_get(selected_slots, selected_index)
+  } else if can_bitcast::<k, U32>() && can_bitcast::<v, U32>() {
+    let selected_slots = btree_pairs32(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    btree_raw_value::<k>(btree_replace32(unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(0u64)), 0u32, wasm_array_get(selected_slots, selected_index)))
+  } else if can_bitcast::<k, U64>() && can_bitcast::<v, U64>() {
+    let selected_slots = btree_pairs64(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    btree_raw_value::<k>(unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_0(wasm_u64x2_splat(0u64), wasm_array_get(selected_slots, selected_index))))
+  } else if (type_equal::<k, Bool>() || is_integer::<k>() || is_float::<k>() || can_bitcast::<k, U32>() || can_bitcast::<k, U64>() || can_bitcast::<k, V128>()) && (type_equal::<v, Bool>() || is_integer::<v>() || is_float::<v>() || can_bitcast::<v, U32>() || can_bitcast::<v, U64>() || can_bitcast::<v, V128>()) {
+    let slots = btree_pairs128(storage)
+    let stride = btree_pair_stride::<k, v>()
+    let index = btree_pair_position(slots, position, stride)
+    btree_raw_value::<k>(wasm_array_get(slots, index))
+  } else {
+    let selected_slots = btree_columns(storage).keys
+    let selected_index = btree_pair_position(selected_slots, position, 1u32)
+    wasm_array_get(selected_slots, selected_index)
+  }
+}
+fn btree_inline_value_get<k, v>(storage: BTreeLeafStorage<k, v>, position: U32) -> v {
+  if is_unit::<v>() {
+    ()
+  } else if type_equal::<k, v>() {
+    let selected_slots = btree_same_pairs(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    wasm_array_get(selected_slots, selected_index + 1u32)
+  } else if can_bitcast::<k, U32>() && can_bitcast::<v, U32>() {
+    let selected_slots = btree_pairs32(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    btree_raw_value::<v>(btree_replace32(unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(0u64)), 0u32, wasm_array_get(selected_slots, selected_index + 1u32)))
+  } else if can_bitcast::<k, U64>() && can_bitcast::<v, U64>() {
+    let selected_slots = btree_pairs64(storage)
+    let selected_index = btree_pair_position(selected_slots, position, 2u32)
+    btree_raw_value::<v>(unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_0(wasm_u64x2_splat(0u64), wasm_array_get(selected_slots, selected_index + 1u32))))
+  } else if (type_equal::<k, Bool>() || is_integer::<k>() || is_float::<k>() || can_bitcast::<k, U32>() || can_bitcast::<k, U64>() || can_bitcast::<k, V128>()) && (type_equal::<v, Bool>() || is_integer::<v>() || is_float::<v>() || can_bitcast::<v, U32>() || can_bitcast::<v, U64>() || can_bitcast::<v, V128>()) {
+    let slots = btree_pairs128(storage)
+    let stride = btree_pair_stride::<k, v>()
+    let index = btree_pair_position(slots, position, stride)
+    let block = wasm_array_get(slots, index + (if stride == 2u32 {
+      1u32
+    } else {
+      0u32
+    }))
+    btree_raw_value::<v>(if stride == 2u32 {
+      block
+    } else {
+      btree_replace64(block, 0u32, btree_extract64(block, 1u32))
+    })
+  } else {
+    let selected_slots = btree_columns(storage).values
+    let selected_index = btree_pair_position(selected_slots, position, 1u32)
+    wasm_array_get(selected_slots, selected_index)
+  }
+}
+fn btree_rank2(slots: WasmArray<V128>, capacity: U32, length: U32, query: U64) -> U64 {
+  if !(length <= capacity) {
+    assert(false, "BTree SIMD rank: live count exceeds capacity")
+  }
+  let wanted = wasm_u16x8_splat((query >> 48u64).into())
+  let mut less = 0u32
+  let mut equal = 0u32
+  while 0u32 {
+    base if base < capacity => {
+      let live = if base >= length {
+        0u32
+      } else if length - base < 8u32 {
+        length - base
+      } else {
+        8u32
+      }
+      let mask = (1u32 << live) - 1u32
+      let block = unsafe_bitcast::<V128, U16x8>(wasm_array_get(slots, base / 8u32))
+      let lt = wasm_u16x8_bitmask(wasm_u16x8_lt_u(block, wanted)) & mask
+      let eq = wasm_u16x8_bitmask(wasm_u16x8_eq(block, wanted)) & mask
+      less = less + wasm_u32_popcnt(lt)
+      equal = equal + wasm_u32_popcnt(eq)
+      continue base + 8u32
+    }
+    _ => break btree_widen(less) | (btree_widen(equal) << 32u64)
+  }
+}
+// Low 32 bits count less-than lanes; high 32 bits count equal lanes.
+fn btree_rank4(slots: WasmArray<V128>, capacity: U32, length: U32, query: U64) -> U64 {
+  if !(length <= capacity) {
+    assert(false, "BTree SIMD rank: live count exceeds capacity")
+  }
+  let wanted = wasm_u32x4_splat((query >> 32u64).into())
+  let mut less = 0u32
+  let mut equal = 0u32
+  while 0u32 {
+    base if base < capacity => {
+      let live = if base >= length {
+        0u32
+      } else if length - base < 4u32 {
+        length - base
+      } else {
+        4u32
+      }
+      let mask = (1u32 << live) - 1u32
+      let block = unsafe_bitcast::<V128, U32x4>(wasm_array_get(slots, base / 4u32))
+      let lt = wasm_u32x4_bitmask(wasm_u32x4_lt_u(block, wanted)) & mask
+      let eq = wasm_u32x4_bitmask(wasm_u32x4_eq(block, wanted)) & mask
+      less = less + wasm_u32_popcnt(lt)
+      equal = equal + wasm_u32_popcnt(eq)
+      continue base + 4u32
+    }
+    _ => break btree_widen(less) | (btree_widen(equal) << 32u64)
+  }
+}
+// Low 32 bits count less-than lanes; high 32 bits count equal lanes.
+fn btree_rank8(slots: WasmArray<V128>, capacity: U32, length: U32, query: U64) -> U64 {
+  if !(length <= capacity) {
+    assert(false, "BTree SIMD rank: live count exceeds capacity")
+  }
+  let wanted = wasm_u64x2_splat(query)
+  let sign = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(9223372036854775808u64))
+  let mut less = 0u32
+  let mut equal = 0u32
+  while 0u32 {
+    base if base < capacity => {
+      let live = if base >= length {
+        0u32
+      } else if length - base < 2u32 {
+        length - base
+      } else {
+        2u32
+      }
+      let mask = (1u32 << live) - 1u32
+      let block = unsafe_bitcast::<V128, U64x2>(wasm_array_get(slots, base / 2u32))
+      let lt = wasm_u64x2_bitmask(unsafe_bitcast::<V128, U64x2>(wasm_v128_lt_s_i64(wasm_v128_xor(unsafe_bitcast::<U64x2, V128>(block), sign), wasm_v128_xor(unsafe_bitcast::<U64x2, V128>(wanted), sign)))) & mask
+      let eq = wasm_u64x2_bitmask(wasm_u64x2_eq(block, wanted)) & mask
+      less = less + wasm_u32_popcnt(lt)
+      equal = equal + wasm_u32_popcnt(eq)
+      continue base + 2u32
+    }
+    _ => break btree_widen(less) | (btree_widen(equal) << 32u64)
+  }
+}
+fn btree_rank(slots: WasmArray<V128>, capacity: U32, width: U32, length: U32, query: U64) -> U64 {
+  if width == 2u32 {
+    btree_rank2(slots, capacity, length, query)
+  } else if width == 4u32 {
+    btree_rank4(slots, capacity, length, query)
+  } else {
+    btree_rank8(slots, capacity, length, query)
+  }
+}
+fn btree_clear_slots<t>(slots: WasmArray<t>, start: U32, count: U32, stride: U32) -> Unit {
+  if !(stride > 0u32 && stride <= wasm_array_len(slots)) {
+    assert(false, "BTree column clear: invalid default stride")
+  }
+  let end = wasm_array_len(slots) - stride
+  if !(start <= end && count <= end - start) {
+    assert(false, "BTree column clear: permanent default slots must remain untouched")
+  }
+  if !(start % stride == 0u32 && count % stride == 0u32) {
+    assert(false, "BTree column clear: invalid pair stride")
+  }
+  if count > 0u32 {
+    wasm_array_copy(slots, start, slots, end, stride)
+    while stride {
+      copied if copied < count => {
+        let next = if copied < count - copied {
+          copied
+        } else {
+          count - copied
+        }
+        wasm_array_copy(slots, start + copied, slots, start, next)
+        continue copied + next
+      }
+      _ => break ()
+    }
+  }
+}
+fn btree_move_slots<t>(slots: WasmArray<t>, destination: U32, source: U32, count: U32, stride: U32) -> Unit {
+  if !(stride > 0u32 && stride <= wasm_array_len(slots)) {
+    assert(false, "BTree column move: invalid default stride")
+  }
+  let end = wasm_array_len(slots) - stride
+  if !(source <= end && count <= end - source && destination <= end && count <= end - destination) {
+    assert(false, "BTree column move: run reaches permanent default slots")
+  }
+  if !(source % stride == 0u32 && destination % stride == 0u32 && count % stride == 0u32) {
+    assert(false, "BTree column move: invalid pair stride")
+  }
+  wasm_array_copy(slots, destination, slots, source, count)
+  if destination > source {
+    let gap = destination - source
+    btree_clear_slots(slots, source, if gap < count {
+      gap
+    } else {
+      count
+    }, stride)
+  } else if source > destination {
+    let gap = source - destination
+    let clear = if gap < count {
+      gap
+    } else {
+      count
+    }
+    btree_clear_slots(slots, source + count - clear, clear, stride)
+  }
+}
+fn btree_leaf_storage_clear<k, v>(storage: BTreeLeafStorage<k, v>, position: U32, count: U32) -> Unit {
+  if is_unit::<v>() {
+    match storage {
+      BTreeLeafStorage::Keys(columns) => btree_clear_slots(columns.keys, position, count, 1u32)
+      _ => {
+        assert(false, "BTree Unit leaf: expected key-only storage")
+      }
+    }
+  } else {
+    match storage {
+      BTreeLeafStorage::Same(slots) => btree_clear_slots(slots, 2u32 * position, 2u32 * count, 2u32)
+      BTreeLeafStorage::Pair32(slots) => btree_clear_slots(slots, 2u32 * position, 2u32 * count, 2u32)
+      BTreeLeafStorage::Pair64(slots) => btree_clear_slots(slots, 2u32 * position, 2u32 * count, 2u32)
+      BTreeLeafStorage::Pair128(slots) => {
+        let stride = btree_pair_stride::<k, v>()
+        btree_clear_slots(slots, stride * position, stride * count, stride)
+      }
+      BTreeLeafStorage::Columns(columns) => {
+        btree_clear_slots(columns.keys, position, count, 1u32)
+        btree_clear_slots(columns.values, position, count, 1u32)
+      }
+      BTreeLeafStorage::Keys(columns) => btree_clear_slots(columns.keys, position, count, 1u32)
+    }
+  }
+}
+fn btree_leaf_storage_move<k, v>(storage: BTreeLeafStorage<k, v>, destination: U32, source: U32, count: U32) -> Unit {
+  if is_unit::<v>() {
+    match storage {
+      BTreeLeafStorage::Keys(columns) => btree_move_slots(columns.keys, destination, source, count, 1u32)
+      _ => {
+        assert(false, "BTree Unit leaf: expected key-only storage")
+      }
+    }
+  } else {
+    match storage {
+      BTreeLeafStorage::Same(slots) => btree_move_slots(slots, destination * 2u32, source * 2u32, count * 2u32, 2u32)
+      BTreeLeafStorage::Pair32(slots) => btree_move_slots(slots, destination * 2u32, source * 2u32, count * 2u32, 2u32)
+      BTreeLeafStorage::Pair64(slots) => btree_move_slots(slots, destination * 2u32, source * 2u32, count * 2u32, 2u32)
+      BTreeLeafStorage::Pair128(slots) => {
+        let stride = btree_pair_stride::<k, v>()
+        btree_move_slots(slots, destination * stride, source * stride, count * stride, stride)
+      }
+      BTreeLeafStorage::Columns(columns) => {
+        btree_move_slots(columns.keys, destination, source, count, 1u32)
+        btree_move_slots(columns.values, destination, source, count, 1u32)
+      }
+      BTreeLeafStorage::Keys(columns) => btree_move_slots(columns.keys, destination, source, count, 1u32)
+    }
+  }
+}
+fn btree_node_key<k, v>(node: BTreeNode<k, v>, index: U32, head: Bool) -> k {
+  if !(if head {
+    node.head
+  } else {
+    index < node.count
+  }) {
+    btree_node_failure(node, index, "key read: slot is not live")
+  }
+  match node.body {
+    BTreeBody::PlainLeaf(leaf) => {
+      if !(!head) {
+        assert(false, "BTree plain leaf key read: head key belongs to an ancestor")
+      }
+      wasm_array_get(leaf.keys, index)
+    }
+    BTreeBody::PlainKeys(leaf) => {
+      if !(!head) {
+        assert(false, "BTree plain Unit leaf key read: head key belongs to an ancestor")
+      }
+      wasm_array_get(leaf.keys, index)
+    }
+    BTreeBody::InlineLeaf(leaf) => btree_inline_key_get(leaf.entries, if head {
+      0u32
+    } else {
+      index + 1u32
+    })
+    BTreeBody::PlainBranch(branch) => {
+      if !(!head) {
+        assert(false, "BTree plain branch key read: branch has no head")
+      }
+      wasm_array_get(branch.keys, index)
+    }
+    BTreeBody::InlineBranch(_) => {
+      assert(false, "BTree inline branch key read: no full keys are stored")
+      unreachable()
+    }
+  }
+}
+fn btree_node_value<k, v>(node: BTreeNode<k, v>, index: U32, head: Bool) -> v {
+  if !(if head {
+    node.head
+  } else {
+    index < node.count
+  }) {
+    btree_node_failure(node, index, "value read: slot is not live")
+  }
+  let position = if head {
+    0u32
+  } else {
+    index + 1u32
+  }
+  match node.body {
+    BTreeBody::PlainLeaf(leaf) => {
+      if is_unit::<v>() {
+        ()
+      } else {
+        wasm_array_get(leaf.values, position)
+      }
+    }
+    BTreeBody::PlainKeys(_) => {
+      if is_unit::<v>() {
+        ()
+      } else {
+        assert(false, "BTree plain Unit leaf load: logical type mismatch")
+        unreachable()
+      }
+    }
+    BTreeBody::InlineLeaf(leaf) => btree_inline_value_get(leaf.entries, position)
+    _ => {
+      assert(false, "BTree value read: branch has no value column")
+      unreachable()
+    }
+  }
+}
+fn btree_node_child<k, v>(node: BTreeNode<k, v>, index: U32) -> BTreeNode<k, v> {
+  if !(index <= node.count) {
+    btree_node_failure(node, index, "child read: edge exceeds separator count")
+  }
+  match node.body {
+    BTreeBody::PlainBranch(branch) => wasm_array_get(branch.children, index)
+    BTreeBody::InlineBranch(branch) => wasm_array_get(branch.children, index)
+    _ => {
+      assert(false, "BTree child read: leaf has no children")
+      unreachable()
+    }
+  }
+}
+fn btree_node_clear<k, v>(node: BTreeNode<k, v>, plan: BTreePlan) -> Unit {
+  match node.body {
+    BTreeBody::PlainLeaf(leaf) => {
+      btree_clear_slots(leaf.keys, 0u32, plan.leaf_capacity, 1u32)
+      if !is_unit::<v>() {
+        btree_clear_slots(leaf.values, 0u32, plan.leaf_capacity + 1u32, 1u32)
+      }
+    }
+    BTreeBody::PlainKeys(leaf) => btree_clear_slots(leaf.keys, 0u32, plan.leaf_capacity, 1u32)
+    BTreeBody::InlineLeaf(leaf) => {
+      btree_leaf_storage_clear(leaf.entries, 0u32, plan.leaf_capacity + 1u32)
+      btree_metadata_clear(leaf.metadata, plan.leaf_capacity, plan.leaf_width, plan.tags, 0u32, plan.leaf_capacity)
+    }
+    BTreeBody::PlainBranch(branch) => {
+      btree_clear_slots(branch.keys, 0u32, plan.branch_capacity, 1u32)
+      btree_clear_slots(branch.children, 0u32, plan.branch_capacity + 1u32, 1u32)
+    }
+    BTreeBody::InlineBranch(branch) => {
+      btree_clear_slots(branch.children, 0u32, plan.branch_capacity + 1u32, 1u32)
+      btree_metadata_clear(branch.metadata, plan.branch_capacity, plan.branch_width, false, 0u32, plan.branch_capacity)
+    }
+  }
+  node.count = 0u32
+  node.head = false
+  node.prefix = 0u32
+}
+// This path runs only on failure. Good reads do not build message objects.
+fn btree_node_failure<k, v>(node: BTreeNode<k, v>, index: U32, operation: String) -> Never {
+  let kind = match node.body {
+    BTreeBody::PlainLeaf(_) => "plain leaf"
+    BTreeBody::PlainKeys(_) => "plain Unit leaf"
+    BTreeBody::InlineLeaf(_) => "inline leaf"
+    BTreeBody::PlainBranch(_) => "plain branch"
+    BTreeBody::InlineBranch(_) => "inline branch"
+  }
+  let capacity = match node.body {
+    BTreeBody::PlainLeaf(body) => wasm_array_len(body.keys) - 1u32
+    BTreeBody::PlainKeys(body) => wasm_array_len(body.keys) - 1u32
+    BTreeBody::PlainBranch(body) => wasm_array_len(body.keys) - 1u32
+    BTreeBody::InlineBranch(body) => wasm_array_len(body.children) - 2u32
+    BTreeBody::InlineLeaf(body) => match body.entries {
+      BTreeLeafStorage::Same(slots) => wasm_array_len(slots) / 2u32 - 2u32
+      BTreeLeafStorage::Pair32(slots) => wasm_array_len(slots) / 2u32 - 2u32
+      BTreeLeafStorage::Pair64(slots) => wasm_array_len(slots) / 2u32 - 2u32
+      BTreeLeafStorage::Pair128(slots) => wasm_array_len(slots) / btree_pair_stride::<k, v>() - 2u32
+      BTreeLeafStorage::Columns(columns) => wasm_array_len(columns.keys) - 2u32
+      BTreeLeafStorage::Keys(columns) => wasm_array_len(columns.keys) - 2u32
+    }
+  }
+  let message = StringBuilder::new()
+  message.append("BTree ")
+  message.append(kind)
+  message.append(" ")
+  message.append(operation)
+  message.append("; count=")
+  message.append_u32(node.count)
+  message.append(" capacity=")
+  message.append_u32(capacity)
+  message.append(" index=")
+  message.append_u32(index)
+  message.append(" head=")
+  message.append(if node.head {
+    "true"
+  } else {
+    "false"
+  })
+  assert(false, message.finish())
+  unreachable()
+}
+fn btree_same_pairs<k, v>(storage: BTreeLeafStorage<k, v>) -> WasmArray<k> {
+  match storage {
+    BTreeLeafStorage::Same(slots) => slots
+    _ => {
+      assert(false, "BTree leaf storage: selected carrier/body mismatch")
+      unreachable()
+    }
+  }
+}
+fn btree_pairs32<k, v>(storage: BTreeLeafStorage<k, v>) -> WasmArray<U32> {
+  match storage {
+    BTreeLeafStorage::Pair32(slots) => slots
+    _ => {
+      assert(false, "BTree leaf storage: selected carrier/body mismatch")
+      unreachable()
+    }
+  }
+}
+fn btree_pairs64<k, v>(storage: BTreeLeafStorage<k, v>) -> WasmArray<U64> {
+  match storage {
+    BTreeLeafStorage::Pair64(slots) => slots
+    _ => {
+      assert(false, "BTree leaf storage: selected carrier/body mismatch")
+      unreachable()
+    }
+  }
+}
+fn btree_pairs128<k, v>(storage: BTreeLeafStorage<k, v>) -> WasmArray<V128> {
+  match storage {
+    BTreeLeafStorage::Pair128(slots) => slots
+    _ => {
+      assert(false, "BTree leaf storage: selected carrier/body mismatch")
+      unreachable()
+    }
+  }
+}
+fn btree_columns<k, v>(storage: BTreeLeafStorage<k, v>) -> BTreePlainLeaf<k, v> {
+  match storage {
+    BTreeLeafStorage::Columns(slots) => slots
+    _ => {
+      assert(false, "BTree leaf storage: selected carrier/body mismatch")
+      unreachable()
+    }
+  }
+}
+fn btree_unit_keys<k, v>(storage: BTreeLeafStorage<k, v>) -> BTreeKeyLeaf<k> {
+  match storage {
+    BTreeLeafStorage::Keys(slots) => slots
+    _ => {
+      assert(false, "BTree leaf storage: selected carrier/body mismatch")
+      unreachable()
+    }
+  }
+}
+fn btree_pair_position<t>(slots: WasmArray<t>, position: U32, stride: U32) -> U32 {
+  if !(stride > 0u32 && position < wasm_array_len(slots) / stride - 1u32) {
+    assert(false, "BTree leaf pair access: permanent default pair is not live")
+  }
+  position * stride
+}
+fn btree_bits32<t>(value: t) -> U32 {
+  static_assert(can_bitcast::<t, U32>(), "BTree common pair: U32 carrier required")
+  if type_equal::<t, Bool>() {
+    if value {
+      1u32
+    } else {
+      0u32
+    }
+  } else {
+    unsafe_bitcast::<t, U32>(value)
+  }
+}

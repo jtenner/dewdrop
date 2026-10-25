@@ -111,7 +111,7 @@ fn selected_standard_modules(
             array = true
             map = true
             set = true
-            collection_mask = 531611647
+            collection_mask = 1068482559
             facet_mask = 511
             show = true
             disposable = true
@@ -155,6 +155,7 @@ fn selected_standard_modules(
               "red_black_tree" => collection_mask = collection_mask | 144
               "ordered_map" => collection_mask = collection_mask | 400
               "ordered_set" => collection_mask = collection_mask | 656
+              "btree" => collection_mask = collection_mask | 536870912
               _ => ()
             }
           } else if import_.path.length() == 4 &&
