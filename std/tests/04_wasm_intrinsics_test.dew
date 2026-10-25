@@ -17,6 +17,58 @@ test "generated scalar Wasm intrinsics execute directly" {
   assert(@wasm.wasm_f32_sqrt(81.0f32) == 9.0f32, "f32 sqrt intrinsic failed")
 }
 
+test "catalog scalar Wasm intrinsics preserve their instruction results" {
+  assert(@wasm.wasm_i32_eqz(0i32), "i32 eqz failed")
+  assert(!@wasm.wasm_i64_eqz(1i64), "i64 eqz failed")
+  assert(@wasm.wasm_i32_clz(1i32) == 31i32, "i32 clz failed")
+  assert(@wasm.wasm_i64_clz(1i64) == 63i64, "i64 clz failed")
+  assert(@wasm.wasm_i64_ctz(8i64) == 3i64, "i64 ctz failed")
+  assert(@wasm.wasm_i64_popcnt(-1i64) == 64i64, "i64 popcnt failed")
+  assert(@wasm.wasm_i64_extend8_s(255i64) == -1i64, "i64 extend8 failed")
+  assert(@wasm.wasm_i64_extend16_s(65535i64) == -1i64, "i64 extend16 failed")
+  assert(@wasm.wasm_i64_extend32_s(4294967295i64) == -1i64, "i64 extend32 failed")
+  assert(@wasm.wasm_i32_rotl(-2147483648i32, 1i32) == 1i32, "i32 rotl failed")
+  assert(@wasm.wasm_i32_rotr(1i32, 1i32) == -2147483648i32, "i32 rotr failed")
+  assert(@wasm.wasm_i64_rotl(-9223372036854775808i64, 1i64) == 1i64, "i64 rotl failed")
+  assert(@wasm.wasm_i64_rotr(1i64, 1i64) == -9223372036854775808i64, "i64 rotr failed")
+  assert(@wasm.wasm_f32_min(3.0f32, 7.0f32) == 3.0f32, "f32 min failed")
+  assert(@wasm.wasm_f32_max(3.0f32, 7.0f32) == 7.0f32, "f32 max failed")
+  assert(@wasm.wasm_f32_copysign(3.0f32, -7.0f32) == -3.0f32, "f32 copysign failed")
+  assert(@wasm.wasm_f64_min(3.0f64, 7.0f64) == 3.0f64, "f64 min failed")
+  assert(@wasm.wasm_f64_max(3.0f64, 7.0f64) == 7.0f64, "f64 max failed")
+  assert(@wasm.wasm_f64_copysign(3.0f64, -7.0f64) == -3.0f64, "f64 copysign failed")
+  assert(@wasm.wasm_i32_trunc_sat_f32_s(1.5f32) == 1i32, "i32 f32 signed trunc failed")
+  assert(@wasm.wasm_i32_trunc_sat_f32_u(-1.5f32) == 0i32, "i32 f32 unsigned saturation failed")
+  assert(@wasm.wasm_i32_trunc_sat_f64_s(-1.5f64) == -1i32, "i32 f64 signed trunc failed")
+  assert(@wasm.wasm_i32_trunc_sat_f64_u(-1.5f64) == 0i32, "i32 f64 unsigned saturation failed")
+  assert(@wasm.wasm_i64_trunc_sat_f32_s(1.5f32) == 1i64, "i64 f32 signed trunc failed")
+  assert(@wasm.wasm_i64_trunc_sat_f32_u(-1.5f32) == 0i64, "i64 f32 unsigned saturation failed")
+  assert(@wasm.wasm_i64_trunc_sat_f64_s(-1.5f64) == -1i64, "i64 f64 signed trunc failed")
+  assert(@wasm.wasm_i64_trunc_sat_f64_u(-1.5f64) == 0i64, "i64 f64 unsigned saturation failed")
+}
+
+struct IntrinsicIdentityLeft {
+  value: I32
+}
+struct IntrinsicIdentityRight {
+  value: I32
+}
+
+test "generic reference intrinsic preserves private reference identity" {
+  let left = IntrinsicIdentityLeft::{
+    value: 1i32
+  }
+  let other = IntrinsicIdentityLeft::{
+    value: 1i32
+  }
+  let right = IntrinsicIdentityRight::{
+    value: 1i32
+  }
+  assert(@wasm.wasm_ref_eq(left, left), "same reference must compare equal")
+  assert(!@wasm.wasm_ref_eq(left, other), "separate references must compare unequal")
+  assert(!@wasm.wasm_ref_eq(left, right), "different reference types must compare unequal")
+}
+
 test "generated memory and SIMD Wasm intrinsics execute directly" {
   @wasm.wasm_u32_store(3u32, 305419896u32)
   assert(@wasm.wasm_u32_load(3u32) == 305419896u32, "u32 memory intrinsic failed")
