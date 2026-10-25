@@ -26,7 +26,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
-| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | in flight; report received; parent checks pending |
+| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | integrated |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | queued |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
@@ -68,8 +68,18 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   no measured phase cause. No self-host/heap-pause/throughput claim.
 - Worker evidence: [step-1 note](btree-step-1-storage-primitives.md).
   Raw artifacts: `/home/dev/.t3/worktrees/dewdrop/t3-de40f005/.tmp/btree-step-1/`.
-- Worker reports no design-fact blocker. Parent source review and focused
-  tests are pending; this step is not integrated.
+- Worker reports no design-fact blocker. Parent reviewed all changed probes,
+  tests and runner code. No source change was needed.
+- Integration merge: `03b9a148dfc168d48ed011f9070faab6f33c0b4f`.
+- Parent focused tests on that merge: privacy 9 passed (11.285 s), type-query
+  1 passed (0.032 s), raw casts 3 passed (13.920 s), carrier integration
+  1 test / 8 cases passed (2.432 s). Probe compiles 0.205–0.259 s;
+  all 1,450 SIMD masks and 2 ordinary Dew tests passed.
+- Parent probe run used the worker's native compiler/generator, whose compiler
+  source is unchanged in the merge. Parent logs and emission are in
+  `.tmp/btree-integration/step-1/`. Each command is timed. No parent focused
+  compiler command exceeded 30 seconds.
+- Step 1 is integrated. The full native stage gate is pending.
 
 ## Stage landings
 
