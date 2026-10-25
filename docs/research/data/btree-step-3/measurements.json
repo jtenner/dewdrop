@@ -1,0 +1,4525 @@
+{
+  "identity": {
+    "base": "bee17cd481a4d48f2ed02d895119ee05192defee",
+    "design": "5922ea1a12ede3913f97b9b7bdac1f90343240f1",
+    "upstream": "8adae97a0ed97e5c98fa2790312eb0aec9719846",
+    "head": "9fa305061d1e4209816503116e2ded9a6df2420e",
+    "platform": "Linux-6.12.113+deb13-amd64-x86_64-with-glibc2.41",
+    "machine": "x86_64",
+    "cpu": "AMD Ryzen 7 8845HS w/ Radeon 780M Graphics",
+    "gc": "Node default WasmGC; no custom flags; native host execution",
+    "DEW_STD_ROOT": "/home/dev/.t3/worktrees/dewdrop/t3-38b925be",
+    "DEW_PROGRAM_CACHE": "0",
+    "tools": {
+      "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe": "fc009a79bd5547d625ca222d32b9dfec85aa17ca651e277559fa58a139ec8e07",
+      "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "eb239ce2bb5cb150117a9889ae969113f3b4312a1402455697cb62f9e336b8fc",
+      "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-btree-build/_build/native/release/build/jtenner/starshine/cmd/cmd.exe": "7b00526a1d7774e9860b45bac6e68035e6d4c20698c6e396896fa4aacb23d790"
+    },
+    "node": "v24.21.0",
+    "moon": "moon 0.1.20261012 (748b63c 2026-10-12)\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+    "wasm_tools": "wasm-tools 1.262.0 (e22db44da 2026-10-13)",
+    "starshine_pin": "1b237952167f582abd492aec27adf10c5a6c9e60",
+    "sources": {
+      "std/collections/btree.dew": "04c428f1551367f587203f2187aa866d95bddc7415b82a054af435e07a271fc0",
+      "tools/btree-plans/providers.dew": "f6c73fca11d30623bb58ede1dcd2ea7c2c406a3ca21735dfe2096e98d04ad4b6",
+      "std/tests/btree_node_storage_test.dew": "8d7eae8eede3508d6c10e72664fd3b191a307bd4ea588a4346da6d86ca56ab27",
+      "std/tests/btree_metadata_test.dew": "8f93272bcd63a6ef66b377e64fb90c9696519b36d1d3b8f23513279575a8e11d",
+      "std/tests/btree_capacity_matrix_test.dew": "8d8e1595e74e184f340b43dd7949036b4851fe40ed9bdc40b22a07f298936a26",
+      "std/tests/btree_plain_fit_test.dew": "890890ec19454c9ec73c8bd9c0575c86ad33bada83e444a195e0f6206fe2e455",
+      "std/tests/btree_plans_providers_test.dew": "f45890982cc36f2ec60d067f7791a4eee762082f7cd979fa2abf6235a8274e40",
+      "tools/btree-fit/carriers.dew": "335592ad983202491b37b23a3f26ba9547322948fed9e3345c7d7ec5b7d2521b",
+      "tools/btree-fit/diagnostics.mjs": "9348e41b80e7d1e21b6399c772cc47d5b8bae30147b6b175a5eb42a4d3318625",
+      "tools/btree-fit/generic-option-valid.dew": "e723f0f9ef23f29bbe71ab6d7f259801e867c38095d16bcdbcbc9e477571bec0",
+      "tools/btree-fit/generic-option.dew": "a89fd38942b96c599a644b1013015e7628148b5879edaeeb1a80276268a71483",
+      "tools/btree-fit/physical.dew": "240cbd467e2d8a5d39d9b03c405ea60ec7d3c1cb4ed3d43fa040431546f53202",
+      "tools/btree-fit/run.mjs": "09c38b987a13f34c94b4a882b7d7f9ccf712f17d0b4a3682408a865ffe40f67c",
+      "tools/test-btree-plain-fit.py": "a1f17d530dbb770f26d57c79f32955ffb94dbe5624d2da39b4606ca28ecf2238"
+    },
+    "modules": {
+      "O4s-inspect.wasm": {
+        "bytes": 53026,
+        "code_section_bytes": 47183,
+        "sha256": "48ef5b22666e88d4ac8b8f25c7883191d1414354a7f2f64e503eff86a65ff565"
+      },
+      "O4s-stripped.wasm": {
+        "bytes": 47654,
+        "code_section_bytes": 43484,
+        "sha256": "b83b748350975cb86d852fa5d40f5b9a6040d4bad877ff50f675bb93cd077d68"
+      },
+      "O4s.wasm": {
+        "bytes": 48403,
+        "code_section_bytes": 43484,
+        "sha256": "765a880a450e1d0addbc2f7311db127ce1e1b9ea7f73aa45375e9855c9cd3ef4"
+      },
+      "private-O4s.wasm": {
+        "bytes": 114374,
+        "code_section_bytes": 105796,
+        "sha256": "81ea023b453c201eccc595a65215ec1e0478b17351aeb4a71efbc6496bc55d9a"
+      },
+      "private.wasm": {
+        "bytes": 609338,
+        "code_section_bytes": 240318,
+        "sha256": "dacf5ae7b7484f465d4ae1f99d51a3d268828d8d6871908a4cb16eda04ec76db"
+      },
+      "public.wasm": {
+        "bytes": 35887,
+        "code_section_bytes": 9925,
+        "sha256": "f920261e654b52d3f79e6e6e8a1fdf362c3b072ece47f38ebd4cdb0e9d84ab56"
+      },
+      "raw-inspect.wasm": {
+        "bytes": 210664,
+        "code_section_bytes": 81822,
+        "sha256": "fc92eb525ac84421b42bb0dae394f89d5e9dec21866f3468ff47c3393526dc92"
+      },
+      "raw-stripped.wasm": {
+        "bytes": 82568,
+        "code_section_bytes": 74956,
+        "sha256": "901ddad5308fe84542c09c08846c6d59fdec6b932a53b29f35ce53cd418af60a"
+      },
+      "raw.wasm": {
+        "bytes": 202690,
+        "code_section_bytes": 74956,
+        "sha256": "3dc500b1e8171068bcd3ecb94a1a29290c341b9b358a03f9cac605b0d1bf5870"
+      }
+    }
+  },
+  "commands": [
+    {
+      "name": "node-version",
+      "command": [
+        "node",
+        "--version"
+      ],
+      "seconds": 0.014286534002167173,
+      "exit": 0
+    },
+    {
+      "name": "moon-version",
+      "command": [
+        "moon",
+        "version"
+      ],
+      "seconds": 0.011091665001004003,
+      "exit": 0
+    },
+    {
+      "name": "wasm-tools-version",
+      "command": [
+        "wasm-tools",
+        "--version"
+      ],
+      "seconds": 0.011578359000850469,
+      "exit": 0
+    },
+    {
+      "name": "starshine-pin",
+      "command": [
+        "git",
+        "-C",
+        "starshine-mb",
+        "rev-parse",
+        "HEAD"
+      ],
+      "seconds": 0.002102087004459463,
+      "exit": 0
+    },
+    {
+      "name": "public-compile",
+      "command": [
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/public.wasm",
+        "probe.public",
+        "probe.public",
+        "std/tests/btree_plans_providers_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_plans_providers_test.dew"
+      ],
+      "seconds": 0.5501513790077297,
+      "exit": 0
+    },
+    {
+      "name": "public-runtime",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/dew-test/run.mjs",
+        "--wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/public.wasm",
+        "--label",
+        "B-tree public plan/provider tests"
+      ],
+      "seconds": 0.03407812399382237,
+      "exit": 0
+    },
+    {
+      "name": "private-compile",
+      "command": [
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "probe.fit",
+        "probe.fit",
+        "std/collections/btree.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/collections/btree.dew",
+        "probe.fit",
+        "tools/btree-plans/providers.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-plans/providers.dew",
+        "probe.fit",
+        "std/tests/btree_node_storage_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_node_storage_test.dew",
+        "probe.fit",
+        "std/tests/btree_metadata_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_metadata_test.dew",
+        "probe.fit",
+        "std/tests/btree_capacity_matrix_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_capacity_matrix_test.dew",
+        "probe.fit",
+        "std/tests/btree_plain_fit_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_plain_fit_test.dew"
+      ],
+      "seconds": 7.361483729007887,
+      "exit": 0
+    },
+    {
+      "name": "private-runtime",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/dew-test/run.mjs",
+        "--wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "--label",
+        "B-tree step-3 private tests"
+      ],
+      "seconds": 0.05246181999973487,
+      "exit": 0
+    },
+    {
+      "name": "private-O4s",
+      "command": [
+        "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-btree-build/_build/native/release/build/jtenner/starshine/cmd/cmd.exe",
+        "--optimize-level",
+        "4",
+        "--shrink-level",
+        "1",
+        "--optimize",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private-O4s.wasm"
+      ],
+      "seconds": 0.10535445000277832,
+      "exit": 0
+    },
+    {
+      "name": "private-O4s-validate",
+      "command": [
+        "wasm-tools",
+        "validate",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private-O4s.wasm"
+      ],
+      "seconds": 0.01576309600204695,
+      "exit": 0
+    },
+    {
+      "name": "private-O4s-runtime",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/dew-test/run.mjs",
+        "--wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private-O4s.wasm",
+        "--label",
+        "B-tree step-3 O4s private tests"
+      ],
+      "seconds": 0.0552502079954138,
+      "exit": 0
+    },
+    {
+      "name": "diagnostics",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/diagnostics.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/diagnostics.json"
+      ],
+      "seconds": 0.035059345987974666,
+      "exit": 0
+    },
+    {
+      "name": "physical-compile",
+      "command": [
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe",
+        "build",
+        "--root",
+        "probe.fit",
+        "--module",
+        "probe.fit",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/collections/btree.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/physical.dew",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/carriers.dew",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm"
+      ],
+      "seconds": 1.6566531509888591,
+      "exit": 0
+    },
+    {
+      "name": "physical-O4s",
+      "command": [
+        "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-btree-build/_build/native/release/build/jtenner/starshine/cmd/cmd.exe",
+        "--optimize-level",
+        "4",
+        "--shrink-level",
+        "1",
+        "--optimize",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm"
+      ],
+      "seconds": 0.04591794600128196,
+      "exit": 0
+    },
+    {
+      "name": "raw-validate",
+      "command": [
+        "wasm-tools",
+        "validate",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm"
+      ],
+      "seconds": 0.015200249006738886,
+      "exit": 0
+    },
+    {
+      "name": "raw-print",
+      "command": [
+        "wasm-tools",
+        "print",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm"
+      ],
+      "seconds": 0.0422490250057308,
+      "exit": 0
+    },
+    {
+      "name": "raw-strip",
+      "command": [
+        "wasm-tools",
+        "strip",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-stripped.wasm"
+      ],
+      "seconds": 0.012659358006203547,
+      "exit": 0
+    },
+    {
+      "name": "raw-instrument",
+      "command": [
+        "wasm-tools",
+        "parse",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-inspect.wat",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-inspect.wasm"
+      ],
+      "seconds": 0.024883359990781173,
+      "exit": 0
+    },
+    {
+      "name": "raw-inspect-validate",
+      "command": [
+        "wasm-tools",
+        "validate",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-inspect.wasm"
+      ],
+      "seconds": 0.0146646039938787,
+      "exit": 0
+    },
+    {
+      "name": "raw-allocations",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "raw",
+        "inspect"
+      ],
+      "seconds": 0.03811623599904124,
+      "exit": 0
+    },
+    {
+      "name": "raw-cost-0",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "raw",
+        "cost",
+        "0"
+      ],
+      "seconds": 2.5132514860015363,
+      "exit": 0
+    },
+    {
+      "name": "raw-cost-1",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "raw",
+        "cost",
+        "1"
+      ],
+      "seconds": 2.5813433889998123,
+      "exit": 0
+    },
+    {
+      "name": "raw-cost-2",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "raw",
+        "cost",
+        "2"
+      ],
+      "seconds": 2.498128157996689,
+      "exit": 0
+    },
+    {
+      "name": "raw-cost-3",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "raw",
+        "cost",
+        "3"
+      ],
+      "seconds": 2.5471400980022736,
+      "exit": 0
+    },
+    {
+      "name": "O4s-validate",
+      "command": [
+        "wasm-tools",
+        "validate",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm"
+      ],
+      "seconds": 0.014155057011521421,
+      "exit": 0
+    },
+    {
+      "name": "O4s-print",
+      "command": [
+        "wasm-tools",
+        "print",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm"
+      ],
+      "seconds": 0.02720744500402361,
+      "exit": 0
+    },
+    {
+      "name": "O4s-strip",
+      "command": [
+        "wasm-tools",
+        "strip",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-stripped.wasm"
+      ],
+      "seconds": 0.014044389012269676,
+      "exit": 0
+    },
+    {
+      "name": "O4s-instrument",
+      "command": [
+        "wasm-tools",
+        "parse",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-inspect.wat",
+        "-o",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-inspect.wasm"
+      ],
+      "seconds": 0.02091791400744114,
+      "exit": 0
+    },
+    {
+      "name": "O4s-inspect-validate",
+      "command": [
+        "wasm-tools",
+        "validate",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-inspect.wasm"
+      ],
+      "seconds": 0.014250156003981829,
+      "exit": 0
+    },
+    {
+      "name": "O4s-allocations",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "O4s",
+        "inspect"
+      ],
+      "seconds": 0.04200150399992708,
+      "exit": 0
+    },
+    {
+      "name": "O4s-cost-0",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "O4s",
+        "cost",
+        "0"
+      ],
+      "seconds": 2.7055516190011986,
+      "exit": 0
+    },
+    {
+      "name": "O4s-cost-1",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "O4s",
+        "cost",
+        "1"
+      ],
+      "seconds": 2.6480854130059015,
+      "exit": 0
+    },
+    {
+      "name": "O4s-cost-2",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "O4s",
+        "cost",
+        "2"
+      ],
+      "seconds": 2.6695711209904402,
+      "exit": 0
+    },
+    {
+      "name": "O4s-cost-3",
+      "command": [
+        "node",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "O4s",
+        "cost",
+        "3"
+      ],
+      "seconds": 2.66939262500091,
+      "exit": 0
+    }
+  ],
+  "variants": {
+    "raw": {
+      "allocations": {
+        "empty": {
+          "arrays": 0,
+          "structs": 5,
+          "sites": {
+            "alloc_15": {
+              "opcode": "struct.new",
+              "type": 124,
+              "count": 1
+            },
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 1
+            },
+            "alloc_27": {
+              "opcode": "struct.new",
+              "type": 64,
+              "count": 1
+            },
+            "alloc_30": {
+              "opcode": "struct.new",
+              "type": 86,
+              "count": 1
+            },
+            "alloc_32": {
+              "opcode": "struct.new",
+              "type": 89,
+              "count": 1
+            }
+          }
+        },
+        "numeric-construction": {
+          "arrays": 2,
+          "structs": 9,
+          "sites": {
+            "alloc_0": {
+              "opcode": "array.new_default",
+              "type": 0,
+              "count": 1
+            },
+            "alloc_1": {
+              "opcode": "array.new_default",
+              "type": 1,
+              "count": 1
+            },
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 103,
+              "count": 1
+            },
+            "alloc_14": {
+              "opcode": "struct.new",
+              "type": 123,
+              "count": 1
+            },
+            "alloc_15": {
+              "opcode": "struct.new",
+              "type": 124,
+              "count": 1
+            },
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 1
+            },
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            },
+            "alloc_27": {
+              "opcode": "struct.new",
+              "type": 64,
+              "count": 1
+            },
+            "alloc_30": {
+              "opcode": "struct.new",
+              "type": 86,
+              "count": 1
+            },
+            "alloc_32": {
+              "opcode": "struct.new",
+              "type": 89,
+              "count": 1
+            },
+            "alloc_33": {
+              "opcode": "struct.new",
+              "type": 90,
+              "count": 1
+            }
+          }
+        },
+        "unit-construction": {
+          "arrays": 1,
+          "structs": 9,
+          "sites": {
+            "alloc_0": {
+              "opcode": "array.new_default",
+              "type": 0,
+              "count": 1
+            },
+            "alloc_10": {
+              "opcode": "struct.new",
+              "type": 107,
+              "count": 1
+            },
+            "alloc_14": {
+              "opcode": "struct.new",
+              "type": 123,
+              "count": 1
+            },
+            "alloc_15": {
+              "opcode": "struct.new",
+              "type": 124,
+              "count": 1
+            },
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 1
+            },
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            },
+            "alloc_27": {
+              "opcode": "struct.new",
+              "type": 64,
+              "count": 1
+            },
+            "alloc_30": {
+              "opcode": "struct.new",
+              "type": 86,
+              "count": 1
+            },
+            "alloc_32": {
+              "opcode": "struct.new",
+              "type": 89,
+              "count": 1
+            },
+            "alloc_34": {
+              "opcode": "struct.new",
+              "type": 91,
+              "count": 1
+            }
+          }
+        },
+        "numeric-search-hit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "numeric-search-miss": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "lookup-hit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 26,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "lookup-miss": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "contains-hit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "contains-miss": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-bool": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-consumed-old": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 26,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-escaping-old": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 26,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "fit-bool": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "fit-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "consumed-compare": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-contains-hit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-contains-miss": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-search-hit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-search-miss": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-hit": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 26,
+              "count": 1
+            },
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-miss": {
+          "arrays": 0,
+          "structs": 3,
+          "sites": {
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 1
+            },
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-replace": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-fit": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_26": {
+              "opcode": "struct.new",
+              "type": 63,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "clear": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 1
+            }
+          }
+        },
+        "carrier-replace-i32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-i32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-i32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_19": {
+              "opcode": "struct.new",
+              "type": 28,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-i32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_19": {
+              "opcode": "struct.new",
+              "type": 28,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-f32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-f32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-f32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_20": {
+              "opcode": "struct.new",
+              "type": 29,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-f32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_20": {
+              "opcode": "struct.new",
+              "type": 29,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-f64": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-f64": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-f64": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_21": {
+              "opcode": "struct.new",
+              "type": 30,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-f64": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_21": {
+              "opcode": "struct.new",
+              "type": 30,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-vector": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-vector": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-vector": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_22": {
+              "opcode": "struct.new",
+              "type": 31,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-vector": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_22": {
+              "opcode": "struct.new",
+              "type": 31,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-reference": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-reference": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-reference": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-reference": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-option": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-option": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-option": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-option": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-nested": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-nested": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-nested": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-nested": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 27,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-unit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_23": {
+              "opcode": "struct.new",
+              "type": 32,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-unit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_23": {
+              "opcode": "struct.new",
+              "type": 32,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "lookup-loop": {
+          "arrays": 0,
+          "structs": 1024,
+          "sites": {
+            "alloc_16": {
+              "opcode": "struct.new",
+              "type": 25,
+              "count": 528
+            },
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 26,
+              "count": 496
+            }
+          },
+          "categories": {
+            "public_results": 1024,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "contains-loop": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-loop": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "fit-loop": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        }
+      },
+      "gc_shapes": {
+        "unit_body": "(struct (field eqref)))",
+        "plain_tree": "(struct (field (mut (ref 25))) (field (mut i32)) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref) (field (ref 89))))"
+      },
+      "search_branches": {
+        "search_numeric": {
+          "function": 236,
+          "static_opcodes": {
+            "loop": 1,
+            "if": 4,
+            "br_if": 0,
+            "br_table": 0,
+            "call": 3,
+            "call_ref": 0,
+            "i32.lt_s": 1,
+            "i32.shr_u": 1,
+            "i32.mul": 2
+          }
+        },
+        "search_text": {
+          "function": 237,
+          "static_opcodes": {
+            "loop": 1,
+            "if": 3,
+            "br_if": 0,
+            "br_table": 1,
+            "call": 3,
+            "call_ref": 0,
+            "i32.lt_s": 0,
+            "i32.shr_u": 0,
+            "i32.mul": 2
+          }
+        }
+      },
+      "summary": {
+        "lookup": {
+          "samples": 24,
+          "median_ns": 15.807191666666654,
+          "minimum_ns": 15.174985666666696,
+          "maximum_ns": 16.772031666666635
+        },
+        "direct-control": {
+          "samples": 24,
+          "median_ns": 7.232122333333261,
+          "minimum_ns": 6.945236999999907,
+          "maximum_ns": 7.897114000000026
+        },
+        "contains": {
+          "samples": 24,
+          "median_ns": 17.328325000000028,
+          "minimum_ns": 16.812794333333386,
+          "maximum_ns": 18.596276999999947
+        },
+        "replace-unit": {
+          "samples": 24,
+          "median_ns": 14.389433833333328,
+          "minimum_ns": 13.895145666666622,
+          "maximum_ns": 15.612693999999996
+        },
+        "fit-bool": {
+          "samples": 24,
+          "median_ns": 34.99734290322584,
+          "minimum_ns": 34.07568645161299,
+          "maximum_ns": 36.85477258064515
+        }
+      },
+      "processes": [
+        {
+          "variant": "raw",
+          "process": 0,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 45.84434699999997,
+              "ns_per_operation": 15.28144899999999,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 22.857236000000057,
+              "ns_per_operation": 7.619078666666685,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 52.42343800000003,
+              "ns_per_operation": 17.474479333333342,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 43.91478499999994,
+              "ns_per_operation": 14.638261666666647,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 105.99961299999995,
+              "ns_per_operation": 34.19342354838708,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 105.82545400000004,
+              "ns_per_operation": 34.13724322580646,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 42.476183999999876,
+              "ns_per_operation": 14.158727999999957,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 51.717713,
+              "ns_per_operation": 17.239237666666668,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 21.313266999999996,
+              "ns_per_operation": 7.104422333333332,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 45.601019999999835,
+              "ns_per_operation": 15.200339999999946,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 45.69029699999987,
+              "ns_per_operation": 15.230098999999958,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 20.98759599999994,
+              "ns_per_operation": 6.995865333333313,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 51.19078599999989,
+              "ns_per_operation": 17.063595333333296,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 46.838081999999986,
+              "ns_per_operation": 15.612693999999996,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 108.2849940000001,
+              "ns_per_operation": 34.930643225806485,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 106.58260800000016,
+              "ns_per_operation": 34.38148645161296,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 42.513102999999774,
+              "ns_per_operation": 14.171034333333258,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 51.98507500000005,
+              "ns_per_operation": 17.32835833333335,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 22.108349999999973,
+              "ns_per_operation": 7.369449999999992,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 47.39981899999998,
+              "ns_per_operation": 15.79993966666666,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 47.51394000000005,
+              "ns_per_operation": 15.837980000000014,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 21.73576099999991,
+              "ns_per_operation": 7.2452536666666365,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 51.667952000000014,
+              "ns_per_operation": 17.22265066666667,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 43.22605999999996,
+              "ns_per_operation": 14.408686666666654,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 114.02177599999959,
+              "ns_per_operation": 36.781218064516,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 110.42563299999983,
+              "ns_per_operation": 35.621171935483815,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 43.53524200000038,
+              "ns_per_operation": 14.51174733333346,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 52.57331900000008,
+              "ns_per_operation": 17.524439666666694,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 21.69405199999983,
+              "ns_per_operation": 7.23135066666661,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 48.62195299999985,
+              "ns_per_operation": 16.20731766666662,
+              "checksum": "20250000"
+            }
+          ]
+        },
+        {
+          "variant": "raw",
+          "process": 1,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 110.45627999999999,
+              "ns_per_operation": 35.631058064516125,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 44.97288000000003,
+              "ns_per_operation": 14.99096000000001,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 51.746317999999974,
+              "ns_per_operation": 17.248772666666657,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 22.30043999999998,
+              "ns_per_operation": 7.433479999999994,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 47.91768999999999,
+              "ns_per_operation": 15.972563333333332,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 47.72308300000009,
+              "ns_per_operation": 15.907694333333364,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 21.997172999999975,
+              "ns_per_operation": 7.332390999999991,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 51.9848750000001,
+              "ns_per_operation": 17.3282916666667,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 44.571517000000085,
+              "ns_per_operation": 14.857172333333361,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 111.7233799999999,
+              "ns_per_operation": 36.03979999999997,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 111.82772499999987,
+              "ns_per_operation": 36.073459677419315,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 44.28155300000003,
+              "ns_per_operation": 14.760517666666676,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 51.141783999999916,
+              "ns_per_operation": 17.047261333333307,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 22.057996000000003,
+              "ns_per_operation": 7.352665333333334,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 47.042044999999916,
+              "ns_per_operation": 15.68068166666664,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 47.29307799999992,
+              "ns_per_operation": 15.764359333333308,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 21.600255999999945,
+              "ns_per_operation": 7.200085333333314,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 53.223964000000024,
+              "ns_per_operation": 17.741321333333342,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 44.172947999999906,
+              "ns_per_operation": 14.724315999999968,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 108.07351900000003,
+              "ns_per_operation": 34.86242548387098,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 108.05632500000002,
+              "ns_per_operation": 34.85687903225807,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 42.52074700000003,
+              "ns_per_operation": 14.173582333333343,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 51.0759079999998,
+              "ns_per_operation": 17.0253026666666,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 21.698681999999735,
+              "ns_per_operation": 7.232893999999912,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 46.95740599999999,
+              "ns_per_operation": 15.652468666666664,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 46.36413300000004,
+              "ns_per_operation": 15.454711000000012,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 20.83571099999972,
+              "ns_per_operation": 6.945236999999907,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 50.43838300000016,
+              "ns_per_operation": 16.812794333333386,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 42.34726999999975,
+              "ns_per_operation": 14.115756666666584,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 106.04509000000007,
+              "ns_per_operation": 34.20809354838712,
+              "checksum": "3100000"
+            }
+          ]
+        },
+        {
+          "variant": "raw",
+          "process": 2,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 45.82042100000001,
+              "ns_per_operation": 15.27347366666667,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 21.045004999999946,
+              "ns_per_operation": 7.01500166666665,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 50.96063199999992,
+              "ns_per_operation": 16.986877333333307,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 42.27826199999993,
+              "ns_per_operation": 14.092753999999974,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 107.91588200000001,
+              "ns_per_operation": 34.81157483870968,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 109.8248860000001,
+              "ns_per_operation": 35.427382580645194,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 43.792056,
+              "ns_per_operation": 14.597352,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 51.418762000000015,
+              "ns_per_operation": 17.13958733333334,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 21.784300999999914,
+              "ns_per_operation": 7.261433666666638,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 45.81437099999994,
+              "ns_per_operation": 15.27145699999998,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 45.524957000000086,
+              "ns_per_operation": 15.174985666666696,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 21.114935999999943,
+              "ns_per_operation": 7.038311999999982,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 50.840946999999915,
+              "ns_per_operation": 16.946982333333306,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 42.997213999999985,
+              "ns_per_operation": 14.332404666666662,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 106.57304999999997,
+              "ns_per_operation": 34.378403225806444,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 105.78770699999995,
+              "ns_per_operation": 34.125066774193535,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 42.400870999999825,
+              "ns_per_operation": 14.133623666666606,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 54.032080999999835,
+              "ns_per_operation": 18.01069366666661,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 22.156550000000152,
+              "ns_per_operation": 7.385516666666717,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 47.87480000000005,
+              "ns_per_operation": 15.958266666666685,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 46.04890999999998,
+              "ns_per_operation": 15.34963666666666,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 21.114076999999952,
+              "ns_per_operation": 7.03802566666665,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 53.52170000000024,
+              "ns_per_operation": 17.840566666666746,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 44.043705000000045,
+              "ns_per_operation": 14.681235000000015,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 106.56530799999973,
+              "ns_per_operation": 34.37590580645153,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 105.63462800000025,
+              "ns_per_operation": 34.07568645161299,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 42.09899399999995,
+              "ns_per_operation": 14.032997999999983,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 51.981059999999616,
+              "ns_per_operation": 17.32701999999987,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 23.173060000000078,
+              "ns_per_operation": 7.72435333333336,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 47.91894100000036,
+              "ns_per_operation": 15.972980333333453,
+              "checksum": "20250000"
+            }
+          ]
+        },
+        {
+          "variant": "raw",
+          "process": 3,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 109.13961100000006,
+              "ns_per_operation": 35.20632612903228,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 42.01397399999996,
+              "ns_per_operation": 14.004657999999987,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 52.636261000000104,
+              "ns_per_operation": 17.545420333333368,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 21.061234000000013,
+              "ns_per_operation": 7.020411333333338,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 50.01594900000009,
+              "ns_per_operation": 16.67198300000003,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 50.316094999999905,
+              "ns_per_operation": 16.772031666666635,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 23.691342000000077,
+              "ns_per_operation": 7.897114000000026,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 54.52402299999994,
+              "ns_per_operation": 18.174674333333314,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 43.996891000000005,
+              "ns_per_operation": 14.665630333333336,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 108.8315520000001,
+              "ns_per_operation": 35.10695225806455,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 108.76196200000004,
+              "ns_per_operation": 35.08450387096776,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 41.685436999999865,
+              "ns_per_operation": 13.895145666666622,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 52.450562999999875,
+              "ns_per_operation": 17.483520999999957,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 21.41160200000013,
+              "ns_per_operation": 7.13720066666671,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 47.65908300000001,
+              "ns_per_operation": 15.886361000000003,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 50.06012399999986,
+              "ns_per_operation": 16.686707999999953,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 22.3541909999999,
+              "ns_per_operation": 7.451396999999966,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 53.70207299999993,
+              "ns_per_operation": 17.900690999999973,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 43.11054300000001,
+              "ns_per_operation": 14.370181000000002,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 114.24979499999995,
+              "ns_per_operation": 36.85477258064515,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 108.69853200000011,
+              "ns_per_operation": 35.0640425806452,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 41.8025389999998,
+              "ns_per_operation": 13.9341796666666,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 53.00276000000031,
+              "ns_per_operation": 17.667586666666768,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 20.93163000000004,
+              "ns_per_operation": 6.977210000000014,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 47.46491900000001,
+              "ns_per_operation": 15.82163966666667,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 47.443330999999944,
+              "ns_per_operation": 15.814443666666646,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 21.241422000000057,
+              "ns_per_operation": 7.080474000000018,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 55.788830999999846,
+              "ns_per_operation": 18.596276999999947,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 43.792553000000225,
+              "ns_per_operation": 14.597517666666741,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 111.05712100000028,
+              "ns_per_operation": 35.82487774193557,
+              "checksum": "3100000"
+            }
+          ]
+        }
+      ]
+    },
+    "O4s": {
+      "allocations": {
+        "empty": {
+          "arrays": 0,
+          "structs": 5,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            },
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 36,
+              "count": 1
+            },
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 42,
+              "count": 1
+            },
+            "alloc_19": {
+              "opcode": "struct.new",
+              "type": 44,
+              "count": 1
+            },
+            "alloc_32": {
+              "opcode": "struct.new",
+              "type": 59,
+              "count": 1
+            }
+          }
+        },
+        "numeric-construction": {
+          "arrays": 2,
+          "structs": 9,
+          "sites": {
+            "alloc_0": {
+              "opcode": "array.new_default",
+              "type": 0,
+              "count": 1
+            },
+            "alloc_1": {
+              "opcode": "array.new_default",
+              "type": 1,
+              "count": 1
+            },
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            },
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            },
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 36,
+              "count": 1
+            },
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 42,
+              "count": 1
+            },
+            "alloc_19": {
+              "opcode": "struct.new",
+              "type": 44,
+              "count": 1
+            },
+            "alloc_20": {
+              "opcode": "struct.new",
+              "type": 45,
+              "count": 1
+            },
+            "alloc_23": {
+              "opcode": "struct.new",
+              "type": 50,
+              "count": 1
+            },
+            "alloc_31": {
+              "opcode": "struct.new",
+              "type": 58,
+              "count": 1
+            },
+            "alloc_32": {
+              "opcode": "struct.new",
+              "type": 59,
+              "count": 1
+            }
+          }
+        },
+        "unit-construction": {
+          "arrays": 1,
+          "structs": 9,
+          "sites": {
+            "alloc_0": {
+              "opcode": "array.new_default",
+              "type": 0,
+              "count": 1
+            },
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            },
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            },
+            "alloc_17": {
+              "opcode": "struct.new",
+              "type": 36,
+              "count": 1
+            },
+            "alloc_18": {
+              "opcode": "struct.new",
+              "type": 42,
+              "count": 1
+            },
+            "alloc_19": {
+              "opcode": "struct.new",
+              "type": 44,
+              "count": 1
+            },
+            "alloc_21": {
+              "opcode": "struct.new",
+              "type": 46,
+              "count": 1
+            },
+            "alloc_24": {
+              "opcode": "struct.new",
+              "type": 51,
+              "count": 1
+            },
+            "alloc_31": {
+              "opcode": "struct.new",
+              "type": 58,
+              "count": 1
+            },
+            "alloc_32": {
+              "opcode": "struct.new",
+              "type": 59,
+              "count": 1
+            }
+          }
+        },
+        "numeric-search-hit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "numeric-search-miss": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "lookup-hit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_8": {
+              "opcode": "struct.new",
+              "type": 16,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "lookup-miss": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "contains-hit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "contains-miss": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-bool": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-consumed-old": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_8": {
+              "opcode": "struct.new",
+              "type": 16,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-escaping-old": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_8": {
+              "opcode": "struct.new",
+              "type": 16,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "fit-bool": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "fit-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "consumed-compare": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-contains-hit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-contains-miss": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-search-hit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-search-miss": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-hit": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            },
+            "alloc_8": {
+              "opcode": "struct.new",
+              "type": 16,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-miss": {
+          "arrays": 0,
+          "structs": 3,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 3
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-replace": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 1,
+            "private_tree_path_search": 0
+          }
+        },
+        "text-fit": {
+          "arrays": 0,
+          "structs": 2,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 2
+            }
+          },
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 2,
+            "private_tree_path_search": 0
+          }
+        },
+        "clear": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 1
+            }
+          }
+        },
+        "carrier-replace-i32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-i32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-i32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_10": {
+              "opcode": "struct.new",
+              "type": 18,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-i32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_10": {
+              "opcode": "struct.new",
+              "type": 18,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-f32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-f32": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-f32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_11": {
+              "opcode": "struct.new",
+              "type": 19,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-f32": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_11": {
+              "opcode": "struct.new",
+              "type": 19,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-f64": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-f64": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-f64": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_12": {
+              "opcode": "struct.new",
+              "type": 20,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-f64": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_12": {
+              "opcode": "struct.new",
+              "type": 20,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-vector": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-vector": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-vector": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_13": {
+              "opcode": "struct.new",
+              "type": 21,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-vector": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_13": {
+              "opcode": "struct.new",
+              "type": 21,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-reference": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-reference": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-reference": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-reference": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-option": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-option": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-option": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-option": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-nested": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-nested": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-nested": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-nested": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_9": {
+              "opcode": "struct.new",
+              "type": 17,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-replace-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-fit-unit": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-get-unit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_14": {
+              "opcode": "struct.new",
+              "type": 22,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "carrier-put-unit": {
+          "arrays": 0,
+          "structs": 1,
+          "sites": {
+            "alloc_14": {
+              "opcode": "struct.new",
+              "type": 22,
+              "count": 1
+            }
+          },
+          "categories": {
+            "public_results": 1,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "lookup-loop": {
+          "arrays": 0,
+          "structs": 1024,
+          "sites": {
+            "alloc_7": {
+              "opcode": "struct.new",
+              "type": 15,
+              "count": 528
+            },
+            "alloc_8": {
+              "opcode": "struct.new",
+              "type": 16,
+              "count": 496
+            }
+          },
+          "categories": {
+            "public_results": 1024,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "contains-loop": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "replace-loop": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        },
+        "fit-loop": {
+          "arrays": 0,
+          "structs": 0,
+          "sites": {},
+          "categories": {
+            "public_results": 0,
+            "comparator_results": 0,
+            "private_tree_path_search": 0
+          }
+        }
+      },
+      "gc_shapes": {
+        "unit_body": "(struct (field eqref)))",
+        "plain_tree": "(struct (field (mut (ref 15))) (field (mut i32)) (field i32) (field i64) (field f32) (field f64) (field v128) (field eqref) (field (ref 44))))"
+      },
+      "search_branches": {
+        "search_numeric": {
+          "function": 225,
+          "static_opcodes": {
+            "loop": 0,
+            "if": 0,
+            "br_if": 0,
+            "br_table": 0,
+            "call": 0,
+            "call_ref": 0,
+            "i32.lt_s": 0,
+            "i32.shr_u": 0,
+            "i32.mul": 0
+          }
+        },
+        "search_text": {
+          "function": 226,
+          "static_opcodes": {
+            "loop": 1,
+            "if": 1,
+            "br_if": 0,
+            "br_table": 1,
+            "call": 3,
+            "call_ref": 0,
+            "i32.lt_s": 0,
+            "i32.shr_u": 0,
+            "i32.mul": 2
+          }
+        }
+      },
+      "summary": {
+        "lookup": {
+          "samples": 24,
+          "median_ns": 16.410863666666653,
+          "minimum_ns": 15.815115333333324,
+          "maximum_ns": 17.527393333333368
+        },
+        "direct-control": {
+          "samples": 24,
+          "median_ns": 7.331897833333263,
+          "minimum_ns": 6.897784333333372,
+          "maximum_ns": 8.279678999999987
+        },
+        "contains": {
+          "samples": 24,
+          "median_ns": 20.366395499999953,
+          "minimum_ns": 19.767174333333287,
+          "maximum_ns": 21.54111966666672
+        },
+        "replace-unit": {
+          "samples": 24,
+          "median_ns": 15.055801000000049,
+          "minimum_ns": 14.845354333333338,
+          "maximum_ns": 15.948308666666625
+        },
+        "fit-bool": {
+          "samples": 24,
+          "median_ns": 35.99601758064514,
+          "minimum_ns": 35.222288064516114,
+          "maximum_ns": 38.397685806451655
+        }
+      },
+      "processes": [
+        {
+          "variant": "O4s",
+          "process": 0,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 47.44534599999997,
+              "ns_per_operation": 15.815115333333324,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 21.042147999999997,
+              "ns_per_operation": 7.0140493333333325,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 59.91782000000012,
+              "ns_per_operation": 19.972606666666707,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 44.69907000000012,
+              "ns_per_operation": 14.89969000000004,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 115.02909799999998,
+              "ns_per_operation": 37.10616064516128,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 115.78301299999998,
+              "ns_per_operation": 37.34935903225806,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 44.71541000000002,
+              "ns_per_operation": 14.905136666666674,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 64.62335900000016,
+              "ns_per_operation": 21.54111966666672,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 24.839036999999962,
+              "ns_per_operation": 8.279678999999987,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 51.645088000000214,
+              "ns_per_operation": 17.215029333333405,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 49.90592599999991,
+              "ns_per_operation": 16.63530866666664,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 22.825796999999966,
+              "ns_per_operation": 7.608598999999989,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 60.900799000000006,
+              "ns_per_operation": 20.300266333333337,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 45.884219999999914,
+              "ns_per_operation": 15.29473999999997,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 116.36298699999998,
+              "ns_per_operation": 37.53644741935483,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 116.30590499999994,
+              "ns_per_operation": 37.51803387096772,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 45.43258199999991,
+              "ns_per_operation": 15.14419399999997,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 63.47986100000003,
+              "ns_per_operation": 21.159953666666677,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 22.37405899999999,
+              "ns_per_operation": 7.458019666666663,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 48.524061000000074,
+              "ns_per_operation": 16.174687000000024,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 47.83967199999961,
+              "ns_per_operation": 15.946557333333205,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 21.25246700000025,
+              "ns_per_operation": 7.084155666666751,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 60.404133,
+              "ns_per_operation": 20.134711,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 45.14332300000024,
+              "ns_per_operation": 15.047774333333413,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 116.23680599999989,
+              "ns_per_operation": 37.4957438709677,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 119.03282600000011,
+              "ns_per_operation": 38.397685806451655,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 46.10362600000008,
+              "ns_per_operation": 15.367875333333359,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 63.01068099999975,
+              "ns_per_operation": 21.003560333333247,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 22.41285199999993,
+              "ns_per_operation": 7.470950666666643,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 48.5236789999999,
+              "ns_per_operation": 16.174559666666635,
+              "checksum": "20250000"
+            }
+          ]
+        },
+        {
+          "variant": "O4s",
+          "process": 1,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 109.61063899999999,
+              "ns_per_operation": 35.358270645161284,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 44.736436000000026,
+              "ns_per_operation": 14.91214533333334,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 63.10680100000013,
+              "ns_per_operation": 21.035600333333377,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 22.318655000000035,
+              "ns_per_operation": 7.439551666666678,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 48.588021000000026,
+              "ns_per_operation": 16.19600700000001,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 47.792393000000175,
+              "ns_per_operation": 15.930797666666724,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 21.108126000000084,
+              "ns_per_operation": 7.0360420000000286,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 59.30152299999986,
+              "ns_per_operation": 19.767174333333287,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 44.973383999999896,
+              "ns_per_operation": 14.991127999999966,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 109.18909299999996,
+              "ns_per_operation": 35.222288064516114,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 110.26218199999994,
+              "ns_per_operation": 35.56844580645159,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 44.75303699999995,
+              "ns_per_operation": 14.917678999999982,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 62.40480200000002,
+              "ns_per_operation": 20.801600666666673,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 22.00870299999997,
+              "ns_per_operation": 7.336234333333324,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 48.898242999999866,
+              "ns_per_operation": 16.29941433333329,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 48.12812800000006,
+              "ns_per_operation": 16.042709333333352,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 21.353984000000082,
+              "ns_per_operation": 7.117994666666694,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 59.59297300000003,
+              "ns_per_operation": 19.864324333333343,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 44.587837000000036,
+              "ns_per_operation": 14.862612333333345,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 110.26314400000001,
+              "ns_per_operation": 35.568756129032266,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 110.33083699999997,
+              "ns_per_operation": 35.59059258064515,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 45.19148300000006,
+              "ns_per_operation": 15.063827666666686,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 59.92309100000011,
+              "ns_per_operation": 19.974363666666704,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 23.88007000000016,
+              "ns_per_operation": 7.960023333333386,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 50.08069000000023,
+              "ns_per_operation": 16.69356333333341,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 51.79624399999966,
+              "ns_per_operation": 17.26541466666655,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 22.355935000000045,
+              "ns_per_operation": 7.451978333333348,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 60.87486099999978,
+              "ns_per_operation": 20.29162033333326,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 45.810865999999805,
+              "ns_per_operation": 15.270288666666602,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 113.04907099999991,
+              "ns_per_operation": 36.46744225806449,
+              "checksum": "3100000"
+            }
+          ]
+        },
+        {
+          "variant": "O4s",
+          "process": 2,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 48.53307500000005,
+              "ns_per_operation": 16.177691666666686,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 21.14139799999998,
+              "ns_per_operation": 7.04713266666666,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 61.97226799999987,
+              "ns_per_operation": 20.657422666666623,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 46.52086899999995,
+              "ns_per_operation": 15.506956333333315,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 109.56632599999989,
+              "ns_per_operation": 35.34397612903222,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 109.19340199999988,
+              "ns_per_operation": 35.22367806451609,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 44.78002100000003,
+              "ns_per_operation": 14.926673666666677,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 60.428151999999955,
+              "ns_per_operation": 20.14271733333332,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 23.820804999999837,
+              "ns_per_operation": 7.940268333333279,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 49.4761289999999,
+              "ns_per_operation": 16.492042999999967,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 48.784525999999914,
+              "ns_per_operation": 16.26150866666664,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 21.30295000000001,
+              "ns_per_operation": 7.100983333333337,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 60.39193100000011,
+              "ns_per_operation": 20.130643666666703,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 45.49081500000011,
+              "ns_per_operation": 15.163605000000038,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 110.993244,
+              "ns_per_operation": 35.804272258064515,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 113.64916700000003,
+              "ns_per_operation": 36.661021612903234,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 46.909799999999905,
+              "ns_per_operation": 15.636599999999968,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 60.52018399999997,
+              "ns_per_operation": 20.173394666666656,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 22.027648,
+              "ns_per_operation": 7.342549333333333,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 52.58218000000011,
+              "ns_per_operation": 17.527393333333368,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 50.10857599999963,
+              "ns_per_operation": 16.702858666666543,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 22.27936099999988,
+              "ns_per_operation": 7.426453666666627,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 61.01964199999975,
+              "ns_per_operation": 20.33988066666658,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 45.3267450000003,
+              "ns_per_operation": 15.1089150000001,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 112.03855599999997,
+              "ns_per_operation": 36.141469677419344,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 111.30531100000007,
+              "ns_per_operation": 35.90493903225809,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 45.757412999999815,
+              "ns_per_operation": 15.252470999999938,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 60.230069000000185,
+              "ns_per_operation": 20.076689666666727,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 21.050337000000127,
+              "ns_per_operation": 7.016779000000042,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 51.57537599999978,
+              "ns_per_operation": 17.191791999999925,
+              "checksum": "20250000"
+            }
+          ]
+        },
+        {
+          "variant": "O4s",
+          "process": 3,
+          "warmups": 3,
+          "repetitions": 6,
+          "order": "alternating forward/reverse; initial order varies by process",
+          "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+          "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+          "samples": [
+            {
+              "name": "fit-bool",
+              "repetition": 0,
+              "operations": 3100000,
+              "milliseconds": 111.51680799999997,
+              "ns_per_operation": 35.97316387096773,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 47.84492599999987,
+              "ns_per_operation": 15.948308666666625,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 61.85551200000009,
+              "ns_per_operation": 20.61850400000003,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 23.32950199999982,
+              "ns_per_operation": 7.776500666666607,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 0,
+              "operations": 3000000,
+              "milliseconds": 49.22895399999993,
+              "ns_per_operation": 16.40965133333331,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 48.71134200000006,
+              "ns_per_operation": 16.23711400000002,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 21.621445999999878,
+              "ns_per_operation": 7.207148666666626,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 61.357215,
+              "ns_per_operation": 20.452405,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 1,
+              "operations": 3000000,
+              "milliseconds": 44.53606300000001,
+              "ns_per_operation": 14.845354333333338,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 1,
+              "operations": 3100000,
+              "milliseconds": 111.21507700000006,
+              "ns_per_operation": 35.8758312903226,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 2,
+              "operations": 3100000,
+              "milliseconds": 112.09346000000005,
+              "ns_per_operation": 36.15918064516131,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 44.55552999999986,
+              "ns_per_operation": 14.851843333333289,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 61.32975499999998,
+              "ns_per_operation": 20.443251666666658,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 20.700667000000067,
+              "ns_per_operation": 6.900222333333356,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 2,
+              "operations": 3000000,
+              "milliseconds": 50.563338999999814,
+              "ns_per_operation": 16.85444633333327,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 49.23622799999998,
+              "ns_per_operation": 16.412075999999995,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 21.862839000000122,
+              "ns_per_operation": 7.287613000000041,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 61.88009800000009,
+              "ns_per_operation": 20.626699333333363,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 3,
+              "operations": 3000000,
+              "milliseconds": 46.868793000000096,
+              "ns_per_operation": 15.622931000000031,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 3,
+              "operations": 3100000,
+              "milliseconds": 115.26941199999987,
+              "ns_per_operation": 37.18368129032254,
+              "checksum": "3100000"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 4,
+              "operations": 3100000,
+              "milliseconds": 111.65850099999989,
+              "ns_per_operation": 36.018871290322544,
+              "checksum": "3100000"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 44.62380800000028,
+              "ns_per_operation": 14.87460266666676,
+              "checksum": "2999994"
+            },
+            {
+              "name": "contains",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 61.17873099999997,
+              "ns_per_operation": 20.392910333333322,
+              "checksum": "1453125"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 20.693353000000116,
+              "ns_per_operation": 6.897784333333372,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 4,
+              "operations": 3000000,
+              "milliseconds": 49.92091300000038,
+              "ns_per_operation": 16.64030433333346,
+              "checksum": "20250000"
+            },
+            {
+              "name": "lookup",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 49.39395400000012,
+              "ns_per_operation": 16.46465133333337,
+              "checksum": "20250000"
+            },
+            {
+              "name": "direct-control",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 21.982683999999608,
+              "ns_per_operation": 7.327561333333203,
+              "checksum": "20250000"
+            },
+            {
+              "name": "contains",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 61.3472969999998,
+              "ns_per_operation": 20.449098999999933,
+              "checksum": "1453125"
+            },
+            {
+              "name": "replace-unit",
+              "repetition": 5,
+              "operations": 3000000,
+              "milliseconds": 44.66819099999975,
+              "ns_per_operation": 14.889396999999917,
+              "checksum": "2999994"
+            },
+            {
+              "name": "fit-bool",
+              "repetition": 5,
+              "operations": 3100000,
+              "milliseconds": 111.19293000000016,
+              "ns_per_operation": 35.868687096774245,
+              "checksum": "3100000"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "diagnostics": {
+    "B-tree new key at U32 max is diagnostic": "BTree plain leaf insert: U32 length overflow; count=4294967295 capacity=61",
+    "B-tree full root has a diagnostic checkpoint boundary": "BTree plain Unit leaf insert: full root leaf; step-3 checkpoint requires split support; count=251 capacity=251 index=251 head=false"
+  },
+  "notes": [
+    "Wasm constructor executions in an instrumented copy, not exact JIT heap bytes.",
+    "Requested Option and comparator Ordering results are separate from private scratch.",
+    "O4s is the unchanged control, not a scalar-replacement promise.",
+    "Source HEAD precedes the engine commit; all recorded source hashes match its inputs."
+  ],
+  "extra_environment": {
+    "v8": "13.6.233.17-node.53",
+    "cc": "cc (Debian 14.2.0-19) 14.2.0"
+  }
+}

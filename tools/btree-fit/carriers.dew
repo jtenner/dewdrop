@@ -1,0 +1,161 @@
+// Concrete probe boundaries expose every value carrier without a Default bound.
+pub fn carrier_make_i32() -> BTree<I32, I32, NaturalComparator> {
+  let tree = btree_plain_new::<I32, I32, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, 7i32)
+  tree
+}
+pub fn carrier_value_i32() -> I32 {
+  9i32
+}
+pub fn carrier_replace_i32(tree: BTree<I32, I32, NaturalComparator>, value: I32) -> Unit {
+  btree_set(tree, 1i32, value)
+}
+pub fn carrier_fit_i32(tree: BTree<I32, I32, NaturalComparator>, value: I32) -> Bool {
+  btree_insert(tree, 2i32, value)
+}
+pub fn carrier_get_i32(tree: BTree<I32, I32, NaturalComparator>) -> Option<I32> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_i32(tree: BTree<I32, I32, NaturalComparator>, value: I32) -> Option<I32> {
+  btree_put(tree, 1i32, value)
+}
+pub fn carrier_make_f32() -> BTree<I32, F32, NaturalComparator> {
+  let tree = btree_plain_new::<I32, F32, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, wasm_f32_from_bits(2147483648u32))
+  tree
+}
+pub fn carrier_value_f32() -> F32 {
+  wasm_f32_from_bits(2143289345u32)
+}
+pub fn carrier_replace_f32(tree: BTree<I32, F32, NaturalComparator>, value: F32) -> Unit {
+  btree_set(tree, 1i32, value)
+}
+pub fn carrier_fit_f32(tree: BTree<I32, F32, NaturalComparator>, value: F32) -> Bool {
+  btree_insert(tree, 2i32, value)
+}
+pub fn carrier_get_f32(tree: BTree<I32, F32, NaturalComparator>) -> Option<F32> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_f32(tree: BTree<I32, F32, NaturalComparator>, value: F32) -> Option<F32> {
+  btree_put(tree, 1i32, value)
+}
+pub fn carrier_make_f64() -> BTree<I32, F64, NaturalComparator> {
+  let tree = btree_plain_new::<I32, F64, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, wasm_f64_from_bits(9223372036854775808u64))
+  tree
+}
+pub fn carrier_value_f64() -> F64 {
+  wasm_f64_from_bits(9221120237041090561u64)
+}
+pub fn carrier_replace_f64(tree: BTree<I32, F64, NaturalComparator>, value: F64) -> Unit {
+  btree_set(tree, 1i32, value)
+}
+pub fn carrier_fit_f64(tree: BTree<I32, F64, NaturalComparator>, value: F64) -> Bool {
+  btree_insert(tree, 2i32, value)
+}
+pub fn carrier_get_f64(tree: BTree<I32, F64, NaturalComparator>) -> Option<F64> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_f64(tree: BTree<I32, F64, NaturalComparator>, value: F64) -> Option<F64> {
+  btree_put(tree, 1i32, value)
+}
+pub fn carrier_make_vector() -> BTree<I32, V128, NaturalComparator> {
+  let tree = btree_plain_new::<I32, V128, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(7u64)))
+  tree
+}
+pub fn carrier_value_vector() -> V128 {
+  unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(9u64))
+}
+pub fn carrier_replace_vector(tree: BTree<I32, V128, NaturalComparator>) -> Unit {
+  btree_set(tree, 1i32, unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(9u64)))
+}
+pub fn carrier_fit_vector(tree: BTree<I32, V128, NaturalComparator>) -> Bool {
+  btree_insert(tree, 2i32, unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(9u64)))
+}
+pub fn carrier_get_vector(tree: BTree<I32, V128, NaturalComparator>) -> Option<V128> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_vector(tree: BTree<I32, V128, NaturalComparator>) -> Option<V128> {
+  btree_put(tree, 1i32, unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(9u64)))
+}
+pub fn carrier_make_reference() -> BTree<I32, String, NaturalComparator> {
+  let tree = btree_plain_new::<I32, String, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, "first")
+  tree
+}
+pub fn carrier_value_reference() -> String {
+  "second"
+}
+pub fn carrier_replace_reference(tree: BTree<I32, String, NaturalComparator>, value: String) -> Unit {
+  btree_set(tree, 1i32, value)
+}
+pub fn carrier_fit_reference(tree: BTree<I32, String, NaturalComparator>, value: String) -> Bool {
+  btree_insert(tree, 2i32, value)
+}
+pub fn carrier_get_reference(tree: BTree<I32, String, NaturalComparator>) -> Option<String> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_reference(tree: BTree<I32, String, NaturalComparator>, value: String) -> Option<String> {
+  btree_put(tree, 1i32, value)
+}
+pub fn carrier_make_option() -> BTree<I32, Option<I64>, NaturalComparator> {
+  let tree = btree_plain_new::<I32, Option<I64>, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, Option::None)
+  tree
+}
+pub fn carrier_value_option() -> Option<I64> {
+  Option::Some(9i64)
+}
+pub fn carrier_replace_option(tree: BTree<I32, Option<I64>, NaturalComparator>, value: Option<I64>) -> Unit {
+  btree_set(tree, 1i32, value)
+}
+pub fn carrier_fit_option(tree: BTree<I32, Option<I64>, NaturalComparator>, value: Option<I64>) -> Bool {
+  btree_insert(tree, 2i32, value)
+}
+pub fn carrier_get_option(tree: BTree<I32, Option<I64>, NaturalComparator>) -> Option<Option<I64>> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_option(tree: BTree<I32, Option<I64>, NaturalComparator>, value: Option<I64>) -> Option<Option<I64>> {
+  btree_put(tree, 1i32, value)
+}
+pub fn carrier_make_nested() -> BTree<I32, Option<Option<I64>>, NaturalComparator> {
+  let tree = btree_plain_new::<I32, Option<Option<I64>>, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, Option::Some(Option::None))
+  tree
+}
+pub fn carrier_value_nested() -> Option<Option<I64>> {
+  Option::Some(Option::Some(9i64))
+}
+pub fn carrier_replace_nested(tree: BTree<I32, Option<Option<I64>>, NaturalComparator>, value: Option<Option<I64>>) -> Unit {
+  btree_set(tree, 1i32, value)
+}
+pub fn carrier_fit_nested(tree: BTree<I32, Option<Option<I64>>, NaturalComparator>, value: Option<Option<I64>>) -> Bool {
+  btree_insert(tree, 2i32, value)
+}
+pub fn carrier_get_nested(tree: BTree<I32, Option<Option<I64>>, NaturalComparator>) -> Option<Option<Option<I64>>> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_nested(tree: BTree<I32, Option<Option<I64>>, NaturalComparator>, value: Option<Option<I64>>) -> Option<Option<Option<I64>>> {
+  btree_put(tree, 1i32, value)
+}
+pub fn carrier_make_unit() -> BTree<I32, Unit, NaturalComparator> {
+  let tree = btree_plain_new::<I32, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, ())
+  tree
+}
+pub fn carrier_value_unit() -> Unit {
+  ()
+}
+pub fn carrier_replace_unit(tree: BTree<I32, Unit, NaturalComparator>) -> Unit {
+  btree_set(tree, 1i32, ())
+}
+pub fn carrier_fit_unit(tree: BTree<I32, Unit, NaturalComparator>) -> Bool {
+  btree_insert(tree, 2i32, ())
+}
+pub fn carrier_get_unit(tree: BTree<I32, Unit, NaturalComparator>) -> Option<Unit> {
+  btree_get(tree, 1i32)
+}
+pub fn carrier_put_unit(tree: BTree<I32, Unit, NaturalComparator>) -> Option<Unit> {
+  btree_put(tree, 1i32, ())
+}

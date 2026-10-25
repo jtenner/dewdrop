@@ -103,7 +103,7 @@ def main():
     assert types[unit_key_type].count("(field ") == 1, "Unit body has only its key array"
     assert types[prefix_type].count("(mut v128)") == 4 and types[prefix_type].count("(mut i32)") == 1
     assert types[node_type].count("(field ") == 4 and types[node_type].count("(mut i32)") == 3
-    plan_source = (ROOT / "std/collections/btree.dew").read_text().split("pub fn btree_plan", 1)[1].split("\nfn ", 1)[0]
+    plan_source = (ROOT / "std/collections/btree.dew").read_text().split("fn btree_plan_policy", 1)[1].split("\nfn ", 1)[0]
     assert plan_source.count(".inline_width()") == 1, "custom width is read once per plan"
     (output / "gc-shapes.json").write_text(json.dumps(dict(
         inline_branch=dict(type=branch_type, shape=types[branch_type]),

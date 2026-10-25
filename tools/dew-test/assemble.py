@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 PRIVATE_BTREE_TESTS = (
     "btree_node_storage_test.dew", "btree_metadata_test.dew", "btree_capacity_matrix_test.dew",
+    "btree_plain_fit_test.dew",
 )
 
 # Shared by the normal suite and the Starshine execution experiments.

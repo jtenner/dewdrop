@@ -297,9 +297,15 @@ fn btree_capacity(budget: U64, configured: U32, width: U32, tags: Bool, key: U32
   }
 }
 pub fn btree_plan<k, v, c: Comparator<k>>(comparator: c, config: BTreeConfig) -> BTreePlan {
+  btree_plan_policy::<k, v, c>(comparator, config, false)
+}
+// Internal control for plain checkpoints and matched performance controls.
+fn btree_plan_policy<k, v, c: Comparator<k>>(comparator: c, config: BTreeConfig, force_plain: Bool) -> BTreePlan {
   btree_optional_evidence::<k, c>()
   // Every config has private immutable fields and comes through validation.
-  let width = if implements::<c, InlineKey<k>>() {
+  let width = if force_plain {
+    0u32
+  } else if implements::<c, InlineKey<k>>() {
     btree_width_bytes(comparator.inline_width())
   } else {
     0u32
@@ -909,6 +915,249 @@ struct BTreeNode<k, v> {
   private mut prefix: U32
   private mut head: Bool
   private body: BTreeBody<k, v>
+}
+// Step-3 engine state. Only forced-plain construction is wired at this checkpoint.
+// No path, hint, or shared-prefix object is needed by a plain root leaf.
+struct BTree<k, v, c> {
+  private mut root: Option<BTreeNode<k, v>>
+  private mut length: U32
+  private comparator: c
+  private plan: BTreePlan
+}
+struct BTreeSnapshot<k, v> {
+  private key: k
+  private value: v
+}
+fn btree_plain_new<k, v, c: Comparator<k>>(comparator: c, config: BTreeConfig) -> BTree<k, v, c> {
+  BTree::{
+    root: Option::None
+    length: 0u32
+    comparator: comparator
+    plan: btree_plan_policy::<k, v, c>(comparator, config, true)
+  }
+}
+// Private search result: twice the gap index, plus one for an equal key.
+// This scalar representation has no GC allocation in raw or optimized code.
+fn btree_search_index(result: U32) -> U32 {
+  result >> 1u32
+}
+fn btree_search_found(result: U32) -> Bool {
+  (result & 1u32) != 0u32
+}
+// Read the body once per node search. Each key read still checks the live count.
+fn btree_plain_search_keys<k, v>(node: BTreeNode<k, v>) -> WasmArray<k> {
+  match node.body {
+    BTreeBody::PlainLeaf(body) => body.keys
+    BTreeBody::PlainKeys(body) => body.keys
+    BTreeBody::PlainBranch(body) => body.keys
+    _ => btree_node_failure(node, 0u32, "search: expected plain key column")
+  }
+}
+fn btree_plain_search_key<k, v>(node: BTreeNode<k, v>, keys: WasmArray<k>, index: U32) -> k {
+  if index >= node.count {
+    btree_node_failure(node, index, "search key read: slot is not live")
+  }
+  wasm_array_get(keys, index)
+}
+fn btree_plain_search<k, v, c: Comparator<k>>(node: BTreeNode<k, v>, comparator: c, key: k) -> U32 {
+  let keys = btree_plain_search_keys(node)
+  if type_equal::<c, NaturalComparator>() && (is_integer::<k>() || is_float::<k>()) && implements::<k, Lt>() && implements::<k, Eq>() {
+    // The standard numeric comparator is exactly these scalar operations.
+    // Keep the lower-bound descent branchless and avoid an Ordering result.
+    let mut base = 0u32
+    let mut size = node.count
+    while true {
+      true if size > 0u32 => {
+        let half = size >> 1u32
+        let middle = base + half
+        let less = btree_plain_search_key(node, keys, middle) < key
+        let bit = unsafe_bitcast::<Bool, U32>(less)
+        base = base + bit * (half + 1u32)
+        size = half - (bit & (1u32 - (size & 1u32)))
+        continue true
+      }
+      _ => break ()
+    }
+    let found = base < node.count && btree_plain_search_key(node, keys, base) == key
+    2u32 * base + unsafe_bitcast::<Bool, U32>(found)
+  } else {
+    // Reference and custom comparisons stop as soon as equality is known.
+    let mut low = 0u32
+    let mut high = node.count
+    while true {
+      true if low < high => {
+        let middle = low + (high - low) / 2u32
+        match comparator.compare(btree_plain_search_key(node, keys, middle), key) {
+          Ordering::Less => {
+            low = middle + 1u32
+          }
+          Ordering::Greater => {
+            high = middle
+          }
+          Ordering::Equal => break 2u32 * middle + 1u32
+        }
+        continue true
+      }
+      _ => break 2u32 * low
+    }
+  }
+}
+fn btree_contains<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Bool {
+  match tree.root {
+    Option::None => false
+    Option::Some(node) => btree_search_found(btree_plain_search(node, tree.comparator, key))
+  }
+}
+fn btree_get<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Option<v> {
+  match tree.root {
+    Option::None => Option::None
+    Option::Some(node) => {
+      let result = btree_plain_search(node, tree.comparator, key)
+      if btree_search_found(result) {
+        Option::Some(btree_node_value(node, btree_search_index(result), false))
+      } else {
+        Option::None
+      }
+    }
+  }
+}
+fn btree_get_entry<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Option<BTreeSnapshot<k, v>> {
+  match tree.root {
+    Option::None => Option::None
+    Option::Some(node) => {
+      let result = btree_plain_search(node, tree.comparator, key)
+      if btree_search_found(result) {
+        let index = btree_search_index(result)
+        Option::Some(BTreeSnapshot::{
+          key: btree_node_key(node, index, false)
+          value: btree_node_value(node, index, false)
+        })
+      } else {
+        Option::None
+      }
+    }
+  }
+}
+fn btree_checked_growth(length: U32, capacity: U32) -> U32 {
+  if length == 4294967295u32 {
+    let message = StringBuilder::new()
+    message.append("BTree plain leaf insert: U32 length overflow; count=")
+    message.append_u32(length)
+    message.append(" capacity=")
+    message.append_u32(capacity)
+    assert(false, message.finish())
+  }
+  length + 1u32
+}
+// Shared write policies read an old value only when the caller asks for it.
+trait BTreeWritePolicy<k, v, r> {
+  fn inserted(self) -> r
+  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> r
+}
+// Unit is the policy token. The explicit result type selects the impl.
+impl<k, v> BTreeWritePolicy<k, v, Bool> for Unit {
+  fn inserted(self) -> Bool {
+    true
+  }
+  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> Bool {
+    false
+  }
+}
+impl<k, v> BTreeWritePolicy<k, v, Unit> for Unit {
+  fn inserted(self) -> Unit {
+    ()
+  }
+  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> Unit {
+    ()
+  }
+}
+impl<k, v> BTreeWritePolicy<k, v, Option<v>> for Unit {
+  fn inserted(self) -> Option<v> {
+    Option::None
+  }
+  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> Option<v> {
+    Option::Some(btree_node_value(node, index, false))
+  }
+}
+fn btree_plain_value_set<k, v>(node: BTreeNode<k, v>, index: U32, value: v) -> Unit {
+  if index >= node.count {
+    btree_node_failure(node, index, "replace: slot is not live")
+  }
+  if is_unit::<v>() {
+    ()
+  } else {
+    match node.body {
+      BTreeBody::PlainLeaf(body) => wasm_array_set(body.values, index + 1u32, value)
+      _ => btree_node_failure(node, index, "replace: expected plain value column")
+    }
+  }
+}
+fn btree_plain_fit_insert<k, v>(node: BTreeNode<k, v>, capacity: U32, index: U32, key: k, value: v) -> Unit {
+  if node.count >= capacity {
+    btree_node_failure(node, index, "insert: full root leaf; step-3 checkpoint requires split support")
+  }
+  if index > node.count {
+    btree_node_failure(node, index, "insert: gap exceeds live count")
+  }
+  let moved = node.count - index
+  match node.body {
+    BTreeBody::PlainLeaf(body) => {
+      btree_move_slots(body.keys, index + 1u32, index, moved, 1u32)
+      btree_move_slots(body.values, index + 2u32, index + 1u32, moved, 1u32)
+      wasm_array_set(body.keys, index, key)
+      wasm_array_set(body.values, index + 1u32, value)
+    }
+    BTreeBody::PlainKeys(body) => {
+      if is_unit::<v>() {
+        btree_move_slots(body.keys, index + 1u32, index, moved, 1u32)
+        wasm_array_set(body.keys, index, key)
+      } else {
+        btree_node_failure(node, index, "insert: Unit storage/type mismatch")
+      }
+    }
+    _ => btree_node_failure(node, index, "insert: expected plain leaf")
+  }
+  node.count = node.count + 1u32
+}
+fn btree_write<k, v, c: Comparator<k>, r, p: BTreeWritePolicy<k, v, r>>(tree: BTree<k, v, c>, key: k, value: v, policy: p) -> r {
+  match tree.root {
+    Option::None => {
+      let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
+      let node = btree_node_new::<k, v>(tree.plan, false)
+      btree_plain_fit_insert(node, tree.plan.leaf_capacity, 0u32, key, value)
+      tree.root = Option::Some(node)
+      tree.length = length
+      policy.inserted()
+    }
+    Option::Some(node) => {
+      let result = btree_plain_search(node, tree.comparator, key)
+      let index = btree_search_index(result)
+      if btree_search_found(result) {
+        let old = policy.replaced(node, index)
+        btree_plain_value_set(node, index, value)
+        old
+      } else {
+        let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
+        btree_plain_fit_insert(node, tree.plan.leaf_capacity, index, key, value)
+        tree.length = length
+        policy.inserted()
+      }
+    }
+  }
+}
+fn btree_insert<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k, value: v) -> Bool {
+  btree_write::<k, v, c, Bool, Unit>(tree, key, value, ())
+}
+fn btree_set<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k, value: v) -> Unit {
+  btree_write::<k, v, c, Unit, Unit>(tree, key, value, ())
+}
+fn btree_put<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k, value: v) -> Option<v> {
+  btree_write::<k, v, c, Option<v>, Unit>(tree, key, value, ())
+}
+fn btree_clear<k, v, c>(tree: BTree<k, v, c>) -> Unit {
+  // Root detachment releases all map-held entry references in constant time.
+  tree.root = Option::None
+  tree.length = 0u32
 }
 fn btree_leaf_storage<k, v>(capacity: U32) -> BTreeLeafStorage<k, v> {
   if is_unit::<v>() {
