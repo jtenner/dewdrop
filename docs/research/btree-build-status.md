@@ -25,7 +25,7 @@ Initial local master: `2698dff678cda71f8ef505e3a53d768af0bda73e`.
 
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
-| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | — | queued |
+| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | — | in flight |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | queued |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
@@ -44,7 +44,16 @@ Initial local master: `2698dff678cda71f8ef505e3a53d768af0bda73e`.
 
 ## Workers and reports
 
-No worker has started.
+### Step 1
+
+- Base: `274ea5873deb4b239914ac76e89b6679ba34ac84`.
+- Provider/model/options checked: `codex`, `gpt-6.1-sol`,
+  `reasoningEffort=high`.
+- Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-1-storage-primitives-r1`.
+- Child thread ID:
+  `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-1-storage-primitives-r1`.
+- State: running; no report or test result yet.
 
 ## Stage landings
 
