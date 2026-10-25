@@ -169,7 +169,14 @@ let is_missing = @wasm.wasm_ref_is_null(missing)
 let value = @wasm.wasm_ref_as_non_null(maybe_value)
 ```
 
-These operations lower directly to `ref.null`, `ref.is_null`, and `ref.as_non_null`. Other general GC, table, and host-boundary operations remain absent until Dew exposes corresponding safe carrier types and signatures.
+These operations lower directly to `ref.null`, `ref.is_null`, and `ref.as_non_null`.
+`wasm_ref_eq<a,b>(left: a, right: b) -> Bool` exposes `ref.eq` for equality
+references, including distinct private nominal types. It compares reference
+identity. Scalar operands are rejected by the normal raw-instruction check.
+The generator uses the scalar instruction catalog to cover numeric opcodes
+that have no public source binding. Private helpers do not become public
+aliases. Other general GC, table, and host-boundary operations remain absent
+until Dew exposes corresponding safe carrier types and signatures.
 
 All public standard modules may be selected explicitly:
 

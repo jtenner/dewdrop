@@ -14,6 +14,7 @@ python3 tools/generate_simd_intrinsics.py --check
 python3 tools/test_simd_builtin_policy.py
 python3 tools/test_packed_builtin_policy.py
 python3 tools/test_scalar_builtin_policy.py
+python3 tools/test_wasm_intrinsics_std.py
 python3 tools/test_memory_builtin_policy.py
 python3 tools/test_wasi_foreign_policy.py
 python3 tools/test_debug_dispatch_policy.py
