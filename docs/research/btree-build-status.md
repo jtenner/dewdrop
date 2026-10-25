@@ -26,7 +26,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
-| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | — | in flight |
+| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | in flight; report received; parent checks pending |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | queued |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
@@ -54,7 +54,22 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-1-storage-primitives-r1`.
 - Child thread ID:
   `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-1-storage-primitives-r1`.
-- State: running; no report or test result yet.
+- Report received: worker head `341e653bd4be5a042bd9d1f80370c07e555d7fc9`,
+  clean worktree, 13 changed files, no compiler changes.
+- Worker checks: privacy 9 passed (9.574 s); type query 1 passed (8.526 s);
+  raw casts 3 passed (1.509 s); carrier integration 8 cases passed (10.341 s);
+  four probe compiles 0.153–0.197 s; ordinary Dew 2 passed (0.030 s);
+  SIMD 1,450 masks passed.
+- Physical evidence: paired backing arrays have no entry boxes; Unit has no
+  value array; reference clears leave null slots; SIMD has no allocations.
+  These are emitted-code checks, not dynamic heap-byte measurements.
+- Cold CLI build: 40.114 s, open tool-build performance issue. Warm: 0.030 s.
+  Investigation: 42 cold tasks and an 80,984,071-byte generated C file;
+  no measured phase cause. No self-host/heap-pause/throughput claim.
+- Worker evidence: [step-1 note](btree-step-1-storage-primitives.md).
+  Raw artifacts: `/home/dev/.t3/worktrees/dewdrop/t3-de40f005/.tmp/btree-step-1/`.
+- Worker reports no design-fact blocker. Parent source review and focused
+  tests are pending; this step is not integrated.
 
 ## Stage landings
 
