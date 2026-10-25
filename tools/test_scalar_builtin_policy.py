@@ -4,6 +4,8 @@ import unittest
 import re
 from pathlib import Path
 
+from wasm_scalar_intrinsics import CONVERSION_INSTRUCTIONS
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -26,9 +28,22 @@ class ScalarBuiltinPolicyTests(unittest.TestCase):
         native = (ROOT / "src/backend/starshine_conversion_builtins.mbt").read_text()
         source = (ROOT / "std/preamble/70-into-builtins.dew").read_text()
         branches = re.findall(r'name == b"([^"]+)" \{\s+Some\(\[(.*?)\]\)', native, re.S)
-        self.assertEqual(len(branches), 23)
+        self.assertEqual(len(branches), 34)
+        self.assertEqual(len({name for name, _ in branches}), 34)
+        self.assertEqual(
+            [(name, body.strip()) for name, body in branches],
+            [(name, f"@lib.Instruction::{method}()")
+             for name, method, _, _ in CONVERSION_INSTRUCTIONS],
+        )
         targets = re.findall(r'^(?:pub )?builtin .* = "([^"]+)"$', source, re.M)
-        self.assertEqual(set(targets), {name for name, _ in branches})
+        # The scalar Into library uses a subset of the native conversion table.
+        native_only = {"i64.extend8_s", "i64.extend16_s", "i64.extend32_s"} | {
+            f"{integer}.trunc_sat_{floating}_{sign}"
+            for integer in ("i32", "i64")
+            for floating in ("f32", "f64")
+            for sign in ("s", "u")
+        }
+        self.assertEqual(set(targets), {name for name, _ in branches} - native_only)
         self.assertEqual(len(targets), 23)
         for name, body in branches:
             with self.subTest(opcode=name):
