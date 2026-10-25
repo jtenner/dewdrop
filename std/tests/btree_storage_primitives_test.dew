@@ -1,0 +1,54 @@
+open dew.std.wasm.intrinsics
+open dew.std.types
+
+fn btree_probe_shift<t>(first: t, second: t) -> t {
+  let slots = wasm_array_new_default::<t>(6u32)
+  wasm_array_set(slots, 0u32, first)
+  wasm_array_set(slots, 1u32, second)
+  wasm_array_copy(slots, 1u32, slots, 0u32, 2u32)
+  wasm_array_copy(slots, 0u32, slots, 1u32, 2u32)
+  wasm_array_copy(slots, 2u32, slots, 5u32, 1u32)
+  wasm_array_get(slots, 1u32)
+}
+
+test "B-tree primitive typed arrays shift with overlap in both directions" {
+  assert(btree_probe_shift(1i32, -42i32) == -42i32, "i32 overlap")
+  assert(btree_probe_shift(1i64, -4294967297i64) == -4294967297i64, "i64 overlap")
+  assert(btree_probe_shift(1.0f32, -1.5f32) == -1.5f32, "f32 overlap")
+  assert(btree_probe_shift(1.0f64, -1.5f64) == -1.5f64, "f64 overlap")
+  assert(btree_probe_shift("key", "value") == "value", "reference overlap")
+  assert(btree_probe_shift(false, true), "bool overlap")
+  assert(btree_probe_shift(0u8, 255u8) == 255u8, "narrow unsigned")
+  assert(btree_probe_shift(0i16, -32768i16) == -32768i16, "narrow signed")
+  let vector = wasm_u64x2_replace_1(wasm_u64x2_splat(7u64), 42u64)
+  let read = btree_probe_shift(unsafe_bitcast::<U64x2, V128>(vector), unsafe_bitcast::<U64x2, V128>(vector))
+  assert(wasm_u64x2_extract_1(unsafe_bitcast::<V128, U64x2>(read)) == 42u64, "vector overlap")
+  let nested = btree_probe_shift(Option::None, Option::Some(Option::Some(42i64)))
+  assert(match nested {
+    Option::Some(Option::Some(42i64)) => true
+    _ => false
+  }, "nested Option remains a reference")
+}
+
+struct BTreeProbeEffects {
+  private mut count: U32
+}
+fn btree_probe_effect(log: BTreeProbeEffects) -> Unit {
+  log.count = log.count + 1u32
+}
+fn btree_probe_discard<v>(value: v) -> U32 {
+  if is_unit::<v>() {
+    42u32
+  } else {
+    let slots = wasm_array_new_default::<v>(2u32)
+    wasm_array_set(slots, 0u32, value)
+    0u32
+  }
+}
+test "B-tree primitive Unit specialization keeps value effects" {
+  let log = BTreeProbeEffects::{
+    count: 0u32
+  }
+  assert(btree_probe_discard(btree_probe_effect(log)) == 42u32, "Unit selected branch")
+  assert(log.count == 1u32, "value expression executes once")
+}

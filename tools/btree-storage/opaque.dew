@@ -1,0 +1,33 @@
+open dew.std.wasm.intrinsics
+open dew.std.types
+
+pub struct Opaque<t> {
+  private slots: WasmArray<t>
+  private mut count: U32
+}
+pub fn make<t>(value: t) -> Opaque<t> {
+  let slots = wasm_array_new_default::<t>(3u32)
+  wasm_array_set(slots, 0u32, value)
+  Opaque::{
+    slots: slots
+    count: 1u32
+  }
+}
+pub fn read<t>(value: Opaque<t>) -> t {
+  assert(value.count == 1u32, "opaque probe count")
+  wasm_array_get(value.slots, 0u32)
+}
+builtin same<t>(left: Opaque<t>, right: Opaque<t>) -> Bool = "ref.eq"
+pub fn identity<t>(left: Opaque<t>, right: Opaque<t>) -> Bool {
+  same(left, right)
+}
+pub trait Window<k> {
+  fn window(self, key: k) -> U64
+}
+pub fn optional<k, c>(provider: c, key: k) -> U64 {
+  if implements::<c, Window<k>>() {
+    provider.window(key)
+  } else {
+    0u64
+  }
+}

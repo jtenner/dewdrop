@@ -1,0 +1,145 @@
+open dew.std.wasm.intrinsics
+open dew.std.types
+
+struct KeyOnly<k> {
+  private keys: WasmArray<k>
+}
+struct Columns<k, v> {
+  private keys: WasmArray<k>
+  private values: WasmArray<v>
+}
+enum Storage<k, v> {
+  Keys(KeyOnly<k>)
+  Values(Columns<k, v>)
+}
+
+// A body with only the selected columns. This is not a tree node.
+fn storage<k, v>(key: k, value: v) -> Storage<k, v> {
+  let keys = wasm_array_new_default::<k>(3u32)
+  wasm_array_set(keys, 0u32, key)
+  if is_unit::<v>() {
+    Storage::Keys(KeyOnly::{
+      keys: keys
+    })
+  } else {
+    let values = wasm_array_new_default::<v>(3u32)
+    wasm_array_set(values, 0u32, value)
+    Storage::Values(Columns::{
+      keys: keys
+      values: values
+    })
+  }
+}
+pub fn unit_storage(key: I64, value: Unit) -> Storage<I64, Unit> {
+  storage(key, value)
+}
+pub fn value_storage(key: I64, value: F64) -> Storage<I64, F64> {
+  storage(key, value)
+}
+
+pub fn common_pair(key: I32, value: U32) -> WasmArray<U32> {
+  static_assert(can_bitcast::<I32, U32>(), "key fits U32")
+  let slots = wasm_array_new_default::<U32>(6u32)
+  wasm_array_set(slots, 0u32, unsafe_bitcast::<I32, U32>(key))
+  wasm_array_set(slots, 1u32, value)
+  slots
+}
+pub fn mixed_pair(key: U32, value: F64) -> WasmArray<V128> {
+  static_assert(can_bitcast::<U32x4, F64x2>(), "vector views share a carrier")
+  static_assert(can_bitcast::<F64x2, V128>(), "stored vector carrier")
+  let low = wasm_u32x4_replace_0(wasm_u32x4_splat(0u32), key)
+  let block = wasm_f64x2_replace_1(unsafe_bitcast::<U32x4, F64x2>(low), value)
+  let slots = wasm_array_new_default::<V128>(3u32)
+  wasm_array_set(slots, 0u32, unsafe_bitcast::<F64x2, V128>(block))
+  slots
+}
+pub fn float_pair(key: I32, value: F32) -> WasmArray<V128> {
+  static_assert(can_bitcast::<U64x2, F32x4>(), "vector views share a carrier")
+  static_assert(can_bitcast::<I32, U32>(), "key bits")
+  static_assert(can_bitcast::<F32x4, V128>(), "stored vector carrier")
+  let low = wasm_u64x2_replace_0(wasm_u64x2_splat(0u64), unsafe_bitcast::<I32, U32>(key).into())
+  let block = wasm_f32x4_replace_2(unsafe_bitcast::<U64x2, F32x4>(low), value)
+  let slots = wasm_array_new_default::<V128>(3u32)
+  wasm_array_set(slots, 0u32, unsafe_bitcast::<F32x4, V128>(block))
+  slots
+}
+pub fn vector_pair(key: V128, value: U64) -> WasmArray<V128> {
+  static_assert(can_bitcast::<U64x2, V128>(), "stored vector carrier")
+  let slots = wasm_array_new_default::<V128>(6u32)
+  wasm_array_set(slots, 0u32, key)
+  let zero = wasm_u64x2_splat(0u64)
+  wasm_array_set(slots, 1u32, unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_0(zero, value)))
+  slots
+}
+
+pub fn mixed_pair_bits(key: U32, bits: U64) -> WasmArray<V128> {
+  mixed_pair(key, wasm_f64_from_bits(bits))
+}
+pub fn float_pair_bits(key: I32, bits: U32) -> WasmArray<V128> {
+  float_pair(key, wasm_f32_from_bits(bits))
+}
+pub fn vector_pair_case() -> WasmArray<V128> {
+  vector_pair(unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(7u64), 9u64)), 42u64)
+}
+
+pub fn reference_columns(key: String, value: U64) -> Columns<String, U64> {
+  let keys = wasm_array_new_default::<String>(3u32)
+  let values = wasm_array_new_default::<U64>(3u32)
+  wasm_array_set(keys, 0u32, key)
+  wasm_array_set(values, 0u32, value)
+  Columns::{
+    keys: keys
+    values: values
+  }
+}
+
+fn pack32<k, v>(key: k, value: v) -> WasmArray<U32> {
+  static_assert(can_bitcast::<k, U32>(), "plain key carrier")
+  static_assert(can_bitcast::<v, U32>(), "plain value carrier")
+  let slots = wasm_array_new_default::<U32>(6u32)
+  wasm_array_set(slots, 0u32, unsafe_bitcast::<k, U32>(key))
+  wasm_array_set(slots, 1u32, unsafe_bitcast::<v, U32>(value))
+  slots
+}
+pub fn bool_narrow_pair(key: Bool, value: U8) -> WasmArray<U32> {
+  pack32(if key {
+    1u32
+  } else {
+    0u32
+  }, value)
+}
+pub fn signed_narrow_pair(key: I16, value: U8) -> WasmArray<U32> {
+  pack32(key, value)
+}
+pub fn signed_narrow_load(slots: WasmArray<U32>) -> I16 {
+  wasm_array_get(slots, 0u32).into()
+}
+
+struct OtherReference {
+  private value: U64
+}
+pub fn distinct_reference_columns(key: String, value: OtherReference) -> Columns<String, OtherReference> {
+  let keys = wasm_array_new_default::<String>(3u32)
+  let values = wasm_array_new_default::<OtherReference>(3u32)
+  wasm_array_set(keys, 0u32, key)
+  wasm_array_set(values, 0u32, value)
+  Columns::{
+    keys: keys
+    values: values
+  }
+}
+
+pub fn mixed_pair_value(slots: WasmArray<V128>) -> F64 {
+  static_assert(can_bitcast::<V128, F64x2>(), "float vector view")
+  wasm_f64x2_extract_1(unsafe_bitcast::<V128, F64x2>(wasm_array_get(slots, 0u32)))
+}
+pub fn float_pair_value(slots: WasmArray<V128>) -> F32 {
+  static_assert(can_bitcast::<V128, F32x4>(), "float vector view")
+  wasm_f32x4_extract_2(unsafe_bitcast::<V128, F32x4>(wasm_array_get(slots, 0u32)))
+}
+pub fn mixed_roundtrip(bits: U64) -> U64 {
+  wasm_f64_to_bits(mixed_pair_value(mixed_pair_bits(42u32, bits)))
+}
+pub fn float_roundtrip(bits: U32) -> U32 {
+  wasm_f32_to_bits(float_pair_value(float_pair_bits(42i32, bits)))
+}

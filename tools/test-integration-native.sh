@@ -6,6 +6,7 @@ source tools/self-host-common.sh
 # The combined semantic runner has severe contention. Run one owning file at a
 # time so that the lane has steady progress and bounded memory use.
 files=(
+  src/backend/btree_storage_primitives_wbtest.mbt
   src/backend/starshine_lane_types_wbtest.mbt
   src/backend/starshine_packed_primitives_wbtest.mbt
   src/backend/starshine_program_link_wbtest.mbt
@@ -24,6 +25,11 @@ files=(
   src/semantic/text_iteration_wbtest.mbt
   src/semantic/text_ordering_wbtest.mbt
 )
+
+# Select owning files for a focused integration run; keep the full list by default.
+if [[ -n "${DEW_INTEGRATION_TEST_FILES:-}" ]]; then
+  read -r -a files <<< "$DEW_INTEGRATION_TEST_FILES"
+fi
 
 test_status=0
 for test_file in "${files[@]}"; do

@@ -1,0 +1,5 @@
+open dew.std.wasm.intrinsics
+
+pub fn bits(value: F64) -> U64 {
+  unsafe_bitcast::<F64, U64>(value)
+}
