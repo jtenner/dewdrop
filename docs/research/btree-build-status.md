@@ -27,7 +27,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | integrated |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | queued |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | in flight |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
@@ -84,6 +84,31 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 ## Stage landings
 
 No stage has landed. No full-suite result is claimed.
+
+Stage 1 gate: `tools/test-native.sh` with no package override or filter,
+tested head `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`, running.
+Logs: `.tmp/btree-integration/stage-1/full-native.log`, `.head`, `.status`,
+and `.resources.json`. The first wrapper attempt could not start because
+`/usr/bin/time` was absent (exit 127); no native test ran in that attempt.
+The active run uses Python timing plus the script's per-command measurements.
+
+Master landing destination needs an owner answer. Local `master` is checked
+out in the protected main worktree. `origin/master` is its ancestor by 88
+commits. Asked whether to keep landings pending (recommended) or publish
+tested stages and those existing commits to `origin/master`. No master ref,
+main checkout file/index, or remote branch has been changed.
+
+### Step 2 launch
+
+- Base: `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`.
+- Dependency: step 1 integrated with parent focused checks green.
+- Provider/model/options checked: `codex`, `gpt-6.1-sol`,
+  `reasoningEffort=high`.
+- Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
+- Child thread ID:
+  `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
+- State: running; no report or test result yet.
 
 ## Design-fact blockers
 
