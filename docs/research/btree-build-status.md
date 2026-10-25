@@ -33,7 +33,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `8ac0ef46259275a9dd2d3ce468d7fdbee9647129` | stage-landed on master `484cfba12aa3664e1c06dcdcda706f0ec63272d6`; pushed |
-| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `441cf6cc1c23053919203461b3e623e6bb2fe9f3` | reported; independent review and parent checks pending |
+| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `8beddc761964613ec915a9f67d749c5826ecf3cf` | integrated; full stage gate pending |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
 | 6 | Inline search | `feat/btree-step-6-inline-search` | — | queued |
@@ -371,3 +371,23 @@ None reported.
   No files changed or builds/large benchmarks ran in that review.
 - Parent will transplant only the three step-3 commits, run focused checks
   on integration, then record acceptance before starting step 4.
+
+### Step 3 integration acceptance
+
+- Original three-commit worker head is pinned at
+  `refs/btree-build/step-3-original`. Only those three commits were replayed
+  onto current integration. Replayed worker head:
+  `8beddc761964613ec915a9f67d749c5826ecf3cf`.
+- Integration merge: `24b62868f29c9862f81b6721740652bcff0df65d`.
+  Parent focused checks on this merge passed: native identity 3 tests
+  (10.037 s), backend 2 tests (9.604 s), B-tree and identity mirrors
+  (0.025/0.019 s), public 8 and private raw/O4s 24 tests, exact diagnostic
+  assertions, physical shapes, every carrier allocation check and loop costs.
+- Complete measured runner took 33.609 s including all tests, instrumentation
+  and benchmarks. Its compiler/optimizer commands are separately timed;
+  none exceeded 30 seconds. Raw evidence is in
+  `.tmp/btree-integration/step-3/` and `probes/`, with current integration
+  source hashes and worker-native tool hashes. No heap-byte claim is made.
+- Step 3 meets the integration definition. Stage 3 remains off master until
+  a fresh full native gate passes after the current-master rebase.
+- Step 4 may now start from this committed, accepted integration point.
