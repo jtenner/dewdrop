@@ -1,0 +1,13 @@
+fn lookup<v>(value: v) -> Option<v> {
+  Option::Some(value)
+}
+fn read_value<v>(value: v) -> v {
+  let old = lookup(value)
+  match old {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+pub fn main() -> F32 {
+  read_value(2.0f32)
+}
