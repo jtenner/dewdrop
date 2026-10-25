@@ -3,7 +3,7 @@
     "base": "bee17cd481a4d48f2ed02d895119ee05192defee",
     "design": "5922ea1a12ede3913f97b9b7bdac1f90343240f1",
     "upstream": "8adae97a0ed97e5c98fa2790312eb0aec9719846",
-    "head": "9fa305061d1e4209816503116e2ded9a6df2420e",
+    "head": "bbcf48129fb1a5a49c6bfbfc723819a5ff7f40d9",
     "platform": "Linux-6.12.113+deb13-amd64-x86_64-with-glibc2.41",
     "machine": "x86_64",
     "cpu": "AMD Ryzen 7 8845HS w/ Radeon 780M Graphics",
@@ -33,7 +33,7 @@
       "tools/btree-fit/generic-option.dew": "a89fd38942b96c599a644b1013015e7628148b5879edaeeb1a80276268a71483",
       "tools/btree-fit/physical.dew": "240cbd467e2d8a5d39d9b03c405ea60ec7d3c1cb4ed3d43fa040431546f53202",
       "tools/btree-fit/run.mjs": "09c38b987a13f34c94b4a882b7d7f9ccf712f17d0b4a3682408a865ffe40f67c",
-      "tools/test-btree-plain-fit.py": "a1f17d530dbb770f26d57c79f32955ffb94dbe5624d2da39b4606ca28ecf2238"
+      "tools/test-btree-plain-fit.py": "36a8b16bc45fd6c637ad207184468c6fdc7688abac4b65f2fefb7c804cd180ba"
     },
     "modules": {
       "O4s-inspect.wasm": {
@@ -90,7 +90,7 @@
         "node",
         "--version"
       ],
-      "seconds": 0.014286534002167173,
+      "seconds": 0.016456341996672563,
       "exit": 0
     },
     {
@@ -99,7 +99,7 @@
         "moon",
         "version"
       ],
-      "seconds": 0.011091665001004003,
+      "seconds": 0.013256823003757745,
       "exit": 0
     },
     {
@@ -108,7 +108,7 @@
         "wasm-tools",
         "--version"
       ],
-      "seconds": 0.011578359000850469,
+      "seconds": 0.01694895800028462,
       "exit": 0
     },
     {
@@ -120,20 +120,20 @@
         "rev-parse",
         "HEAD"
       ],
-      "seconds": 0.002102087004459463,
+      "seconds": 0.001854393005487509,
       "exit": 0
     },
     {
       "name": "public-compile",
       "command": [
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/public.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/public.wasm",
         "probe.public",
         "probe.public",
         "std/tests/btree_plans_providers_test.dew",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_plans_providers_test.dew"
       ],
-      "seconds": 0.5501513790077297,
+      "seconds": 0.5215164800029015,
       "exit": 0
     },
     {
@@ -142,18 +142,18 @@
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/dew-test/run.mjs",
         "--wasm",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/public.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/public.wasm",
         "--label",
         "B-tree public plan/provider tests"
       ],
-      "seconds": 0.03407812399382237,
+      "seconds": 0.035740987994358875,
       "exit": 0
     },
     {
       "name": "private-compile",
       "command": [
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private.wasm",
         "probe.fit",
         "probe.fit",
         "std/collections/btree.dew",
@@ -174,7 +174,7 @@
         "std/tests/btree_plain_fit_test.dew",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/std/tests/btree_plain_fit_test.dew"
       ],
-      "seconds": 7.361483729007887,
+      "seconds": 7.3067617019987665,
       "exit": 0
     },
     {
@@ -183,11 +183,11 @@
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/dew-test/run.mjs",
         "--wasm",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private.wasm",
         "--label",
         "B-tree step-3 private tests"
       ],
-      "seconds": 0.05246181999973487,
+      "seconds": 0.056924600998172536,
       "exit": 0
     },
     {
@@ -199,11 +199,11 @@
         "--shrink-level",
         "1",
         "--optimize",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private.wasm",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private-O4s.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private-O4s.wasm"
       ],
-      "seconds": 0.10535445000277832,
+      "seconds": 0.10501633300737012,
       "exit": 0
     },
     {
@@ -211,9 +211,9 @@
       "command": [
         "wasm-tools",
         "validate",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private-O4s.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private-O4s.wasm"
       ],
-      "seconds": 0.01576309600204695,
+      "seconds": 0.016129309005918913,
       "exit": 0
     },
     {
@@ -222,11 +222,11 @@
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/dew-test/run.mjs",
         "--wasm",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private-O4s.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private-O4s.wasm",
         "--label",
         "B-tree step-3 O4s private tests"
       ],
-      "seconds": 0.0552502079954138,
+      "seconds": 0.05498344500665553,
       "exit": 0
     },
     {
@@ -234,10 +234,10 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/diagnostics.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/private.wasm",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/diagnostics.json"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/private.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/diagnostics.json"
       ],
-      "seconds": 0.035059345987974666,
+      "seconds": 0.03426605799177196,
       "exit": 0
     },
     {
@@ -253,9 +253,9 @@
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/physical.dew",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/carriers.dew",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw.wasm"
       ],
-      "seconds": 1.6566531509888591,
+      "seconds": 1.5815825759927975,
       "exit": 0
     },
     {
@@ -267,11 +267,11 @@
         "--shrink-level",
         "1",
         "--optimize",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw.wasm",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s.wasm"
       ],
-      "seconds": 0.04591794600128196,
+      "seconds": 0.043544636995648034,
       "exit": 0
     },
     {
@@ -279,9 +279,9 @@
       "command": [
         "wasm-tools",
         "validate",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw.wasm"
       ],
-      "seconds": 0.015200249006738886,
+      "seconds": 0.013995453002280556,
       "exit": 0
     },
     {
@@ -289,9 +289,9 @@
       "command": [
         "wasm-tools",
         "print",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw.wasm"
       ],
-      "seconds": 0.0422490250057308,
+      "seconds": 0.04337613999086898,
       "exit": 0
     },
     {
@@ -299,11 +299,11 @@
       "command": [
         "wasm-tools",
         "strip",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw.wasm",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-stripped.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw-stripped.wasm"
       ],
-      "seconds": 0.012659358006203547,
+      "seconds": 0.013675198002601974,
       "exit": 0
     },
     {
@@ -311,11 +311,11 @@
       "command": [
         "wasm-tools",
         "parse",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-inspect.wat",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw-inspect.wat",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-inspect.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw-inspect.wasm"
       ],
-      "seconds": 0.024883359990781173,
+      "seconds": 0.02509369800100103,
       "exit": 0
     },
     {
@@ -323,9 +323,9 @@
       "command": [
         "wasm-tools",
         "validate",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/raw-inspect.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/raw-inspect.wasm"
       ],
-      "seconds": 0.0146646039938787,
+      "seconds": 0.015449942002305761,
       "exit": 0
     },
     {
@@ -333,11 +333,11 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "raw",
         "inspect"
       ],
-      "seconds": 0.03811623599904124,
+      "seconds": 0.04441738600144163,
       "exit": 0
     },
     {
@@ -345,12 +345,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "raw",
         "cost",
         "0"
       ],
-      "seconds": 2.5132514860015363,
+      "seconds": 2.468028602001141,
       "exit": 0
     },
     {
@@ -358,12 +358,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "raw",
         "cost",
         "1"
       ],
-      "seconds": 2.5813433889998123,
+      "seconds": 2.46921872299572,
       "exit": 0
     },
     {
@@ -371,12 +371,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "raw",
         "cost",
         "2"
       ],
-      "seconds": 2.498128157996689,
+      "seconds": 2.4696164630004205,
       "exit": 0
     },
     {
@@ -384,12 +384,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "raw",
         "cost",
         "3"
       ],
-      "seconds": 2.5471400980022736,
+      "seconds": 2.4942975390003994,
       "exit": 0
     },
     {
@@ -397,9 +397,9 @@
       "command": [
         "wasm-tools",
         "validate",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s.wasm"
       ],
-      "seconds": 0.014155057011521421,
+      "seconds": 0.014642155001638457,
       "exit": 0
     },
     {
@@ -407,9 +407,9 @@
       "command": [
         "wasm-tools",
         "print",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s.wasm"
       ],
-      "seconds": 0.02720744500402361,
+      "seconds": 0.026595770992571488,
       "exit": 0
     },
     {
@@ -417,11 +417,11 @@
       "command": [
         "wasm-tools",
         "strip",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s.wasm",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s.wasm",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-stripped.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s-stripped.wasm"
       ],
-      "seconds": 0.014044389012269676,
+      "seconds": 0.013090520995319821,
       "exit": 0
     },
     {
@@ -429,11 +429,11 @@
       "command": [
         "wasm-tools",
         "parse",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-inspect.wat",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s-inspect.wat",
         "-o",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-inspect.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s-inspect.wasm"
       ],
-      "seconds": 0.02091791400744114,
+      "seconds": 0.01908803600235842,
       "exit": 0
     },
     {
@@ -441,9 +441,9 @@
       "command": [
         "wasm-tools",
         "validate",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff/O4s-inspect.wasm"
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report/O4s-inspect.wasm"
       ],
-      "seconds": 0.014250156003981829,
+      "seconds": 0.014350668003316969,
       "exit": 0
     },
     {
@@ -451,11 +451,11 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "O4s",
         "inspect"
       ],
-      "seconds": 0.04200150399992708,
+      "seconds": 0.042011569006717764,
       "exit": 0
     },
     {
@@ -463,12 +463,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "O4s",
         "cost",
         "0"
       ],
-      "seconds": 2.7055516190011986,
+      "seconds": 2.6107371940015582,
       "exit": 0
     },
     {
@@ -476,12 +476,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "O4s",
         "cost",
         "1"
       ],
-      "seconds": 2.6480854130059015,
+      "seconds": 2.6292787410056917,
       "exit": 0
     },
     {
@@ -489,12 +489,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "O4s",
         "cost",
         "2"
       ],
-      "seconds": 2.6695711209904402,
+      "seconds": 2.628266629006248,
       "exit": 0
     },
     {
@@ -502,12 +502,12 @@
       "command": [
         "node",
         "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/tools/btree-fit/run.mjs",
-        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/handoff",
+        "/home/dev/.t3/worktrees/dewdrop/t3-38b925be/.tmp/btree-step-3/final-report",
         "O4s",
         "cost",
         "3"
       ],
-      "seconds": 2.66939262500091,
+      "seconds": 2.628668953999295,
       "exit": 0
     }
   ],
@@ -1446,6 +1446,7 @@
       "search_branches": {
         "search_numeric": {
           "function": 236,
+          "forwarders": [],
           "static_opcodes": {
             "loop": 1,
             "if": 4,
@@ -1460,6 +1461,7 @@
         },
         "search_text": {
           "function": 237,
+          "forwarders": [],
           "static_opcodes": {
             "loop": 1,
             "if": 3,
@@ -1476,33 +1478,33 @@
       "summary": {
         "lookup": {
           "samples": 24,
-          "median_ns": 15.807191666666654,
-          "minimum_ns": 15.174985666666696,
-          "maximum_ns": 16.772031666666635
+          "median_ns": 15.30419383333333,
+          "minimum_ns": 15.052513000000015,
+          "maximum_ns": 16.50528533333333
         },
         "direct-control": {
           "samples": 24,
-          "median_ns": 7.232122333333261,
-          "minimum_ns": 6.945236999999907,
-          "maximum_ns": 7.897114000000026
+          "median_ns": 7.042876833333329,
+          "minimum_ns": 6.933100333333338,
+          "maximum_ns": 7.55022599999999
         },
         "contains": {
           "samples": 24,
-          "median_ns": 17.328325000000028,
-          "minimum_ns": 16.812794333333386,
-          "maximum_ns": 18.596276999999947
+          "median_ns": 16.87797866666669,
+          "minimum_ns": 16.74407333333329,
+          "maximum_ns": 17.879774666666663
         },
         "replace-unit": {
           "samples": 24,
-          "median_ns": 14.389433833333328,
-          "minimum_ns": 13.895145666666622,
-          "maximum_ns": 15.612693999999996
+          "median_ns": 14.074964833333297,
+          "minimum_ns": 13.91433433333327,
+          "maximum_ns": 15.388303000000027
         },
         "fit-bool": {
           "samples": 24,
-          "median_ns": 34.99734290322584,
-          "minimum_ns": 34.07568645161299,
-          "maximum_ns": 36.85477258064515
+          "median_ns": 34.40638193548389,
+          "minimum_ns": 34.047183548387075,
+          "maximum_ns": 35.95853806451611
         }
       },
       "processes": [
@@ -1519,240 +1521,240 @@
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 45.84434699999997,
-              "ns_per_operation": 15.28144899999999,
+              "milliseconds": 47.92351600000006,
+              "ns_per_operation": 15.974505333333353,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 22.857236000000057,
-              "ns_per_operation": 7.619078666666685,
+              "milliseconds": 21.75390399999992,
+              "ns_per_operation": 7.251301333333307,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 52.42343800000003,
-              "ns_per_operation": 17.474479333333342,
+              "milliseconds": 50.28347599999995,
+              "ns_per_operation": 16.76115866666665,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 43.91478499999994,
-              "ns_per_operation": 14.638261666666647,
+              "milliseconds": 42.30460800000003,
+              "ns_per_operation": 14.10153600000001,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 105.99961299999995,
-              "ns_per_operation": 34.19342354838708,
+              "milliseconds": 105.54626899999994,
+              "ns_per_operation": 34.047183548387075,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 105.82545400000004,
-              "ns_per_operation": 34.13724322580646,
+              "milliseconds": 105.86136699999997,
+              "ns_per_operation": 34.14882806451612,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 42.476183999999876,
-              "ns_per_operation": 14.158727999999957,
+              "milliseconds": 42.12529100000006,
+              "ns_per_operation": 14.041763666666686,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 51.717713,
-              "ns_per_operation": 17.239237666666668,
+              "milliseconds": 50.64392299999986,
+              "ns_per_operation": 16.88130766666662,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 21.313266999999996,
-              "ns_per_operation": 7.104422333333332,
+              "milliseconds": 21.28978600000005,
+              "ns_per_operation": 7.096595333333349,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 45.601019999999835,
-              "ns_per_operation": 15.200339999999946,
+              "milliseconds": 45.908488000000034,
+              "ns_per_operation": 15.302829333333346,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 45.69029699999987,
-              "ns_per_operation": 15.230098999999958,
+              "milliseconds": 45.986274000000094,
+              "ns_per_operation": 15.328758000000033,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 20.98759599999994,
-              "ns_per_operation": 6.995865333333313,
+              "milliseconds": 20.83401600000002,
+              "ns_per_operation": 6.944672000000006,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 51.19078599999989,
-              "ns_per_operation": 17.063595333333296,
+              "milliseconds": 50.65048500000012,
+              "ns_per_operation": 16.88349500000004,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 46.838081999999986,
-              "ns_per_operation": 15.612693999999996,
+              "milliseconds": 42.489585000000034,
+              "ns_per_operation": 14.163195000000012,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 108.2849940000001,
-              "ns_per_operation": 34.930643225806485,
+              "milliseconds": 106.23239799999988,
+              "ns_per_operation": 34.26851548387093,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 106.58260800000016,
-              "ns_per_operation": 34.38148645161296,
+              "milliseconds": 105.82009000000016,
+              "ns_per_operation": 34.13551290322586,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 42.513102999999774,
-              "ns_per_operation": 14.171034333333258,
+              "milliseconds": 42.05750399999988,
+              "ns_per_operation": 14.01916799999996,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 51.98507500000005,
-              "ns_per_operation": 17.32835833333335,
+              "milliseconds": 53.63932399999999,
+              "ns_per_operation": 17.879774666666663,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 22.108349999999973,
-              "ns_per_operation": 7.369449999999992,
+              "milliseconds": 22.65067799999997,
+              "ns_per_operation": 7.55022599999999,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 47.39981899999998,
-              "ns_per_operation": 15.79993966666666,
+              "milliseconds": 47.464902000000166,
+              "ns_per_operation": 15.821634000000055,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 47.51394000000005,
-              "ns_per_operation": 15.837980000000014,
+              "milliseconds": 46.64871900000003,
+              "ns_per_operation": 15.54957300000001,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 21.73576099999991,
-              "ns_per_operation": 7.2452536666666365,
+              "milliseconds": 20.98640300000011,
+              "ns_per_operation": 6.995467666666703,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 51.667952000000014,
-              "ns_per_operation": 17.22265066666667,
+              "milliseconds": 50.32445599999983,
+              "ns_per_operation": 16.774818666666608,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 43.22605999999996,
-              "ns_per_operation": 14.408686666666654,
+              "milliseconds": 42.25086800000008,
+              "ns_per_operation": 14.083622666666693,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 114.02177599999959,
-              "ns_per_operation": 36.781218064516,
+              "milliseconds": 105.65660200000002,
+              "ns_per_operation": 34.08277483870968,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 110.42563299999983,
-              "ns_per_operation": 35.621171935483815,
+              "milliseconds": 108.38639300000023,
+              "ns_per_operation": 34.963352580645235,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 43.53524200000038,
-              "ns_per_operation": 14.51174733333346,
+              "milliseconds": 41.991619999999784,
+              "ns_per_operation": 13.997206666666594,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 52.57331900000008,
-              "ns_per_operation": 17.524439666666694,
+              "milliseconds": 50.99879099999998,
+              "ns_per_operation": 16.999596999999994,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 21.69405199999983,
-              "ns_per_operation": 7.23135066666661,
+              "milliseconds": 20.918994999999995,
+              "ns_per_operation": 6.972998333333332,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 48.62195299999985,
-              "ns_per_operation": 16.20731766666662,
+              "milliseconds": 45.382950000000164,
+              "ns_per_operation": 15.127650000000054,
               "checksum": "20250000"
             }
           ]
@@ -1770,240 +1772,240 @@
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 110.45627999999999,
-              "ns_per_operation": 35.631058064516125,
+              "milliseconds": 106.040438,
+              "ns_per_operation": 34.206592903225804,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 44.97288000000003,
-              "ns_per_operation": 14.99096000000001,
+              "milliseconds": 42.049938999999995,
+              "ns_per_operation": 14.01664633333333,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 51.746317999999974,
-              "ns_per_operation": 17.248772666666657,
+              "milliseconds": 50.43832699999996,
+              "ns_per_operation": 16.812775666666653,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 22.30043999999998,
-              "ns_per_operation": 7.433479999999994,
+              "milliseconds": 21.155559999999923,
+              "ns_per_operation": 7.051853333333307,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 47.91768999999999,
-              "ns_per_operation": 15.972563333333332,
+              "milliseconds": 45.941508999999996,
+              "ns_per_operation": 15.313836333333333,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 47.72308300000009,
-              "ns_per_operation": 15.907694333333364,
+              "milliseconds": 46.54375300000015,
+              "ns_per_operation": 15.514584333333383,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 21.997172999999975,
-              "ns_per_operation": 7.332390999999991,
+              "milliseconds": 21.13263699999993,
+              "ns_per_operation": 7.044212333333311,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 51.9848750000001,
-              "ns_per_operation": 17.3282916666667,
+              "milliseconds": 51.36925599999995,
+              "ns_per_operation": 17.123085333333314,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 44.571517000000085,
-              "ns_per_operation": 14.857172333333361,
+              "milliseconds": 43.07176000000004,
+              "ns_per_operation": 14.357253333333345,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 111.7233799999999,
-              "ns_per_operation": 36.03979999999997,
+              "milliseconds": 109.30736200000001,
+              "ns_per_operation": 35.26043935483872,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 111.82772499999987,
-              "ns_per_operation": 36.073459677419315,
+              "milliseconds": 106.64965000000007,
+              "ns_per_operation": 34.403112903225825,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 44.28155300000003,
-              "ns_per_operation": 14.760517666666676,
+              "milliseconds": 41.80606200000011,
+              "ns_per_operation": 13.935354000000038,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 51.141783999999916,
-              "ns_per_operation": 17.047261333333307,
+              "milliseconds": 50.63870500000007,
+              "ns_per_operation": 16.87956833333336,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 22.057996000000003,
-              "ns_per_operation": 7.352665333333334,
+              "milliseconds": 20.937009999999873,
+              "ns_per_operation": 6.979003333333291,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 47.042044999999916,
-              "ns_per_operation": 15.68068166666664,
+              "milliseconds": 46.11162000000013,
+              "ns_per_operation": 15.370540000000043,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 47.29307799999992,
-              "ns_per_operation": 15.764359333333308,
+              "milliseconds": 46.375786999999946,
+              "ns_per_operation": 15.45859566666665,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 21.600255999999945,
-              "ns_per_operation": 7.200085333333314,
+              "milliseconds": 20.92460600000004,
+              "ns_per_operation": 6.97486866666668,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 53.223964000000024,
-              "ns_per_operation": 17.741321333333342,
+              "milliseconds": 50.53575999999998,
+              "ns_per_operation": 16.84525333333333,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 44.172947999999906,
-              "ns_per_operation": 14.724315999999968,
+              "milliseconds": 42.28496300000006,
+              "ns_per_operation": 14.094987666666686,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 108.07351900000003,
-              "ns_per_operation": 34.86242548387098,
+              "milliseconds": 106.17042900000001,
+              "ns_per_operation": 34.24852548387097,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 108.05632500000002,
-              "ns_per_operation": 34.85687903225807,
+              "milliseconds": 105.95931299999984,
+              "ns_per_operation": 34.18042354838705,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 42.52074700000003,
-              "ns_per_operation": 14.173582333333343,
+              "milliseconds": 42.02891999999997,
+              "ns_per_operation": 14.00963999999999,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 51.0759079999998,
-              "ns_per_operation": 17.0253026666666,
+              "milliseconds": 50.39081899999974,
+              "ns_per_operation": 16.796939666666578,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 21.698681999999735,
-              "ns_per_operation": 7.232893999999912,
+              "milliseconds": 20.898275999999896,
+              "ns_per_operation": 6.966091999999965,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 46.95740599999999,
-              "ns_per_operation": 15.652468666666664,
+              "milliseconds": 45.30627600000025,
+              "ns_per_operation": 15.102092000000084,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 46.36413300000004,
-              "ns_per_operation": 15.454711000000012,
+              "milliseconds": 45.91667499999994,
+              "ns_per_operation": 15.305558333333314,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 20.83571099999972,
-              "ns_per_operation": 6.945236999999907,
+              "milliseconds": 21.203570000000127,
+              "ns_per_operation": 7.067856666666709,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 50.43838300000016,
-              "ns_per_operation": 16.812794333333386,
+              "milliseconds": 50.64128800000026,
+              "ns_per_operation": 16.88042933333342,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 42.34726999999975,
-              "ns_per_operation": 14.115756666666584,
+              "milliseconds": 42.1989209999997,
+              "ns_per_operation": 14.0663069999999,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 106.04509000000007,
-              "ns_per_operation": 34.20809354838712,
+              "milliseconds": 110.49365099999977,
+              "ns_per_operation": 35.64311322580638,
               "checksum": "3100000"
             }
           ]
@@ -2021,240 +2023,240 @@
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 45.82042100000001,
-              "ns_per_operation": 15.27347366666667,
+              "milliseconds": 48.272378,
+              "ns_per_operation": 16.090792666666665,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 21.045004999999946,
-              "ns_per_operation": 7.01500166666665,
+              "milliseconds": 22.32127200000002,
+              "ns_per_operation": 7.440424000000007,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 50.96063199999992,
-              "ns_per_operation": 16.986877333333307,
+              "milliseconds": 51.84246499999995,
+              "ns_per_operation": 17.28082166666665,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 42.27826199999993,
-              "ns_per_operation": 14.092753999999974,
+              "milliseconds": 43.75897199999997,
+              "ns_per_operation": 14.58632399999999,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 107.91588200000001,
-              "ns_per_operation": 34.81157483870968,
+              "milliseconds": 107.44660699999997,
+              "ns_per_operation": 34.660195806451604,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 109.8248860000001,
-              "ns_per_operation": 35.427382580645194,
+              "milliseconds": 106.13842999999997,
+              "ns_per_operation": 34.238203225806444,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 43.792056,
-              "ns_per_operation": 14.597352,
+              "milliseconds": 41.75890299999992,
+              "ns_per_operation": 13.919634333333306,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 51.418762000000015,
-              "ns_per_operation": 17.13958733333334,
+              "milliseconds": 51.08054500000003,
+              "ns_per_operation": 17.026848333333344,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 21.784300999999914,
-              "ns_per_operation": 7.261433666666638,
+              "milliseconds": 20.90951700000005,
+              "ns_per_operation": 6.969839000000017,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 45.81437099999994,
-              "ns_per_operation": 15.27145699999998,
+              "milliseconds": 45.5362889999999,
+              "ns_per_operation": 15.178762999999964,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 45.524957000000086,
-              "ns_per_operation": 15.174985666666696,
+              "milliseconds": 45.65664700000002,
+              "ns_per_operation": 15.21888233333334,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 21.114935999999943,
-              "ns_per_operation": 7.038311999999982,
+              "milliseconds": 21.072535000000016,
+              "ns_per_operation": 7.024178333333339,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 50.840946999999915,
-              "ns_per_operation": 16.946982333333306,
+              "milliseconds": 50.23221999999987,
+              "ns_per_operation": 16.74407333333329,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 42.997213999999985,
-              "ns_per_operation": 14.332404666666662,
+              "milliseconds": 41.83169100000009,
+              "ns_per_operation": 13.94389700000003,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 106.57304999999997,
-              "ns_per_operation": 34.378403225806444,
+              "milliseconds": 107.10827200000017,
+              "ns_per_operation": 34.55105548387102,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 105.78770699999995,
-              "ns_per_operation": 34.125066774193535,
+              "milliseconds": 107.26460499999985,
+              "ns_per_operation": 34.60148548387092,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 42.400870999999825,
-              "ns_per_operation": 14.133623666666606,
+              "milliseconds": 41.74300299999982,
+              "ns_per_operation": 13.91433433333327,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 54.032080999999835,
-              "ns_per_operation": 18.01069366666661,
+              "milliseconds": 50.54814499999998,
+              "ns_per_operation": 16.84938166666666,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 22.156550000000152,
-              "ns_per_operation": 7.385516666666717,
+              "milliseconds": 20.951146000000108,
+              "ns_per_operation": 6.983715333333369,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 47.87480000000005,
-              "ns_per_operation": 15.958266666666685,
+              "milliseconds": 49.515855999999985,
+              "ns_per_operation": 16.50528533333333,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 46.04890999999998,
-              "ns_per_operation": 15.34963666666666,
+              "milliseconds": 47.64249500000005,
+              "ns_per_operation": 15.880831666666683,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 21.114076999999952,
-              "ns_per_operation": 7.03802566666665,
+              "milliseconds": 21.725130000000036,
+              "ns_per_operation": 7.241710000000013,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 53.52170000000024,
-              "ns_per_operation": 17.840566666666746,
+              "milliseconds": 50.62916700000005,
+              "ns_per_operation": 16.876389000000017,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 44.043705000000045,
-              "ns_per_operation": 14.681235000000015,
+              "milliseconds": 41.90629899999999,
+              "ns_per_operation": 13.968766333333331,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 106.56530799999973,
-              "ns_per_operation": 34.37590580645153,
+              "milliseconds": 106.81597299999976,
+              "ns_per_operation": 34.45676548387089,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 105.63462800000025,
-              "ns_per_operation": 34.07568645161299,
+              "milliseconds": 107.09564799999998,
+              "ns_per_operation": 34.54698322580645,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 42.09899399999995,
-              "ns_per_operation": 14.032997999999983,
+              "milliseconds": 41.81941800000004,
+              "ns_per_operation": 13.939806000000015,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 51.981059999999616,
-              "ns_per_operation": 17.32701999999987,
+              "milliseconds": 50.39496599999984,
+              "ns_per_operation": 16.79832199999995,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 23.173060000000078,
-              "ns_per_operation": 7.72435333333336,
+              "milliseconds": 21.12462400000004,
+              "ns_per_operation": 7.041541333333347,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 47.91894100000036,
-              "ns_per_operation": 15.972980333333453,
+              "milliseconds": 45.47189800000024,
+              "ns_per_operation": 15.157299333333413,
               "checksum": "20250000"
             }
           ]
@@ -2272,240 +2274,240 @@
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 109.13961100000006,
-              "ns_per_operation": 35.20632612903228,
+              "milliseconds": 106.66991800000005,
+              "ns_per_operation": 34.40965096774195,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 42.01397399999996,
-              "ns_per_operation": 14.004657999999987,
+              "milliseconds": 43.800449999999955,
+              "ns_per_operation": 14.600149999999985,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 52.636261000000104,
-              "ns_per_operation": 17.545420333333368,
+              "milliseconds": 51.018657000000076,
+              "ns_per_operation": 17.006219000000026,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 21.061234000000013,
-              "ns_per_operation": 7.020411333333338,
+              "milliseconds": 21.3614970000001,
+              "ns_per_operation": 7.120499000000033,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 50.01594900000009,
-              "ns_per_operation": 16.67198300000003,
+              "milliseconds": 45.15753900000004,
+              "ns_per_operation": 15.052513000000015,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 50.316094999999905,
-              "ns_per_operation": 16.772031666666635,
+              "milliseconds": 45.45991500000014,
+              "ns_per_operation": 15.153305000000044,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 23.691342000000077,
-              "ns_per_operation": 7.897114000000026,
+              "milliseconds": 20.799301000000014,
+              "ns_per_operation": 6.933100333333338,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 54.52402299999994,
-              "ns_per_operation": 18.174674333333314,
+              "milliseconds": 50.741808999999876,
+              "ns_per_operation": 16.91393633333329,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 43.996891000000005,
-              "ns_per_operation": 14.665630333333336,
+              "milliseconds": 46.16490900000008,
+              "ns_per_operation": 15.388303000000027,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 108.8315520000001,
-              "ns_per_operation": 35.10695225806455,
+              "milliseconds": 106.36915500000009,
+              "ns_per_operation": 34.31263064516132,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 108.76196200000004,
-              "ns_per_operation": 35.08450387096776,
+              "milliseconds": 111.47146799999996,
+              "ns_per_operation": 35.95853806451611,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 41.685436999999865,
-              "ns_per_operation": 13.895145666666622,
+              "milliseconds": 45.04171999999994,
+              "ns_per_operation": 15.013906666666648,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 52.450562999999875,
-              "ns_per_operation": 17.483520999999957,
+              "milliseconds": 50.49413299999992,
+              "ns_per_operation": 16.83137766666664,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 21.41160200000013,
-              "ns_per_operation": 7.13720066666671,
+              "milliseconds": 21.457597000000078,
+              "ns_per_operation": 7.152532333333359,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 47.65908300000001,
-              "ns_per_operation": 15.886361000000003,
+              "milliseconds": 45.469262999999955,
+              "ns_per_operation": 15.156420999999986,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 50.06012399999986,
-              "ns_per_operation": 16.686707999999953,
+              "milliseconds": 45.499250000000075,
+              "ns_per_operation": 15.166416666666692,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 22.3541909999999,
-              "ns_per_operation": 7.451396999999966,
+              "milliseconds": 21.137947000000167,
+              "ns_per_operation": 7.045982333333389,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 53.70207299999993,
-              "ns_per_operation": 17.900690999999973,
+              "milliseconds": 50.41624700000011,
+              "ns_per_operation": 16.805415666666704,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 43.11054300000001,
-              "ns_per_operation": 14.370181000000002,
+              "milliseconds": 44.58130500000016,
+              "ns_per_operation": 14.860435000000052,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 114.24979499999995,
-              "ns_per_operation": 36.85477258064515,
+              "milliseconds": 106.71422099999995,
+              "ns_per_operation": 34.4239422580645,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 108.69853200000011,
-              "ns_per_operation": 35.0640425806452,
+              "milliseconds": 106.62114799999995,
+              "ns_per_operation": 34.39391870967741,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 41.8025389999998,
-              "ns_per_operation": 13.9341796666666,
+              "milliseconds": 43.88277300000004,
+              "ns_per_operation": 14.627591000000015,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 53.00276000000031,
-              "ns_per_operation": 17.667586666666768,
+              "milliseconds": 50.713806000000204,
+              "ns_per_operation": 16.904602000000068,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 20.93163000000004,
-              "ns_per_operation": 6.977210000000014,
+              "milliseconds": 20.861397000000125,
+              "ns_per_operation": 6.953799000000041,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 47.46491900000001,
-              "ns_per_operation": 15.82163966666667,
+              "milliseconds": 45.47630600000002,
+              "ns_per_operation": 15.158768666666674,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 47.443330999999944,
-              "ns_per_operation": 15.814443666666646,
+              "milliseconds": 45.39482399999997,
+              "ns_per_operation": 15.13160799999999,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 21.241422000000057,
-              "ns_per_operation": 7.080474000000018,
+              "milliseconds": 21.265356000000338,
+              "ns_per_operation": 7.088452000000113,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 55.788830999999846,
-              "ns_per_operation": 18.596276999999947,
+              "milliseconds": 50.41834999999992,
+              "ns_per_operation": 16.80611666666664,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 43.792553000000225,
-              "ns_per_operation": 14.597517666666741,
+              "milliseconds": 44.08457199999975,
+              "ns_per_operation": 14.694857333333252,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 111.05712100000028,
-              "ns_per_operation": 35.82487774193557,
+              "milliseconds": 110.58365000000003,
+              "ns_per_operation": 35.67214516129033,
               "checksum": "3100000"
             }
           ]
@@ -3440,21 +3442,32 @@
       },
       "search_branches": {
         "search_numeric": {
-          "function": 225,
+          "function": 385,
+          "forwarders": [
+            {
+              "function": 225,
+              "body": "  (func (;225;) (type 174) (param (ref 58) eqref i32) (result i32)\n    local.get 0\n    local.get 1\n    local.get 2\n    ref.func 271\n    ref.func 270\n    return_call 385\n  )",
+              "fixed_ref_targets": [
+                271,
+                270
+              ]
+            }
+          ],
           "static_opcodes": {
-            "loop": 0,
-            "if": 0,
+            "loop": 1,
+            "if": 2,
             "br_if": 0,
             "br_table": 0,
             "call": 0,
-            "call_ref": 0,
-            "i32.lt_s": 0,
-            "i32.shr_u": 0,
-            "i32.mul": 0
+            "call_ref": 3,
+            "i32.lt_s": 1,
+            "i32.shr_u": 1,
+            "i32.mul": 2
           }
         },
         "search_text": {
           "function": 226,
+          "forwarders": [],
           "static_opcodes": {
             "loop": 1,
             "if": 1,
@@ -3471,33 +3484,33 @@
       "summary": {
         "lookup": {
           "samples": 24,
-          "median_ns": 16.410863666666653,
-          "minimum_ns": 15.815115333333324,
-          "maximum_ns": 17.527393333333368
+          "median_ns": 15.817310333333353,
+          "minimum_ns": 15.58126900000002,
+          "maximum_ns": 17.152009666666725
         },
         "direct-control": {
           "samples": 24,
-          "median_ns": 7.331897833333263,
-          "minimum_ns": 6.897784333333372,
-          "maximum_ns": 8.279678999999987
+          "median_ns": 6.9743911666666545,
+          "minimum_ns": 6.885675333333362,
+          "maximum_ns": 7.325768000000001
         },
         "contains": {
           "samples": 24,
-          "median_ns": 20.366395499999953,
-          "minimum_ns": 19.767174333333287,
-          "maximum_ns": 21.54111966666672
+          "median_ns": 19.965410666666763,
+          "minimum_ns": 19.674651333333333,
+          "maximum_ns": 20.880587666666695
         },
         "replace-unit": {
           "samples": 24,
-          "median_ns": 15.055801000000049,
-          "minimum_ns": 14.845354333333338,
-          "maximum_ns": 15.948308666666625
+          "median_ns": 14.996709333333342,
+          "minimum_ns": 14.832704999999995,
+          "maximum_ns": 16.53524633333336
         },
         "fit-bool": {
           "samples": 24,
-          "median_ns": 35.99601758064514,
-          "minimum_ns": 35.222288064516114,
-          "maximum_ns": 38.397685806451655
+          "median_ns": 35.60284919354841,
+          "minimum_ns": 35.17892354838706,
+          "maximum_ns": 36.793611935483874
         }
       },
       "processes": [
@@ -3514,240 +3527,240 @@
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 47.44534599999997,
-              "ns_per_operation": 15.815115333333324,
+              "milliseconds": 47.90165300000001,
+              "ns_per_operation": 15.967217666666668,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 21.042147999999997,
-              "ns_per_operation": 7.0140493333333325,
+              "milliseconds": 20.953480000000013,
+              "ns_per_operation": 6.984493333333338,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 59.91782000000012,
-              "ns_per_operation": 19.972606666666707,
+              "milliseconds": 60.16855599999997,
+              "ns_per_operation": 20.056185333333325,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 44.69907000000012,
-              "ns_per_operation": 14.89969000000004,
+              "milliseconds": 44.741986,
+              "ns_per_operation": 14.913995333333334,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 115.02909799999998,
-              "ns_per_operation": 37.10616064516128,
+              "milliseconds": 109.82542200000012,
+              "ns_per_operation": 35.427555483871004,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 115.78301299999998,
-              "ns_per_operation": 37.34935903225806,
+              "milliseconds": 109.4658179999999,
+              "ns_per_operation": 35.31155419354835,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 44.71541000000002,
-              "ns_per_operation": 14.905136666666674,
+              "milliseconds": 44.76496799999995,
+              "ns_per_operation": 14.921655999999984,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 64.62335900000016,
-              "ns_per_operation": 21.54111966666672,
+              "milliseconds": 60.25223700000015,
+              "ns_per_operation": 20.08407900000005,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 24.839036999999962,
-              "ns_per_operation": 8.279678999999987,
+              "milliseconds": 20.744638000000123,
+              "ns_per_operation": 6.914879333333374,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 51.645088000000214,
-              "ns_per_operation": 17.215029333333405,
+              "milliseconds": 47.28667399999995,
+              "ns_per_operation": 15.762224666666649,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 49.90592599999991,
-              "ns_per_operation": 16.63530866666664,
+              "milliseconds": 47.71562700000004,
+              "ns_per_operation": 15.905209000000012,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 22.825796999999966,
-              "ns_per_operation": 7.608598999999989,
+              "milliseconds": 21.170720000000074,
+              "ns_per_operation": 7.056906666666691,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 60.900799000000006,
-              "ns_per_operation": 20.300266333333337,
+              "milliseconds": 60.71302300000002,
+              "ns_per_operation": 20.23767433333334,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 45.884219999999914,
-              "ns_per_operation": 15.29473999999997,
+              "milliseconds": 44.58507000000009,
+              "ns_per_operation": 14.86169000000003,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 116.36298699999998,
-              "ns_per_operation": 37.53644741935483,
+              "milliseconds": 112.6312210000001,
+              "ns_per_operation": 36.3326519354839,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 116.30590499999994,
-              "ns_per_operation": 37.51803387096772,
+              "milliseconds": 110.39956900000016,
+              "ns_per_operation": 35.612764193548436,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 45.43258199999991,
-              "ns_per_operation": 15.14419399999997,
+              "milliseconds": 44.55268699999988,
+              "ns_per_operation": 14.850895666666627,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 63.47986100000003,
-              "ns_per_operation": 21.159953666666677,
+              "milliseconds": 61.580682000000024,
+              "ns_per_operation": 20.526894000000006,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 22.37405899999999,
-              "ns_per_operation": 7.458019666666663,
+              "milliseconds": 20.801956999999902,
+              "ns_per_operation": 6.933985666666635,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 48.524061000000074,
-              "ns_per_operation": 16.174687000000024,
+              "milliseconds": 47.2141630000001,
+              "ns_per_operation": 15.738054333333366,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 47.83967199999961,
-              "ns_per_operation": 15.946557333333205,
+              "milliseconds": 47.64127200000007,
+              "ns_per_operation": 15.880424000000025,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 21.25246700000025,
-              "ns_per_operation": 7.084155666666751,
+              "milliseconds": 20.826260000000275,
+              "ns_per_operation": 6.942086666666759,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 60.404133,
-              "ns_per_operation": 20.134711,
+              "milliseconds": 60.919858000000204,
+              "ns_per_operation": 20.3066193333334,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 45.14332300000024,
-              "ns_per_operation": 15.047774333333413,
+              "milliseconds": 44.57409499999994,
+              "ns_per_operation": 14.858031666666648,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 116.23680599999989,
-              "ns_per_operation": 37.4957438709677,
+              "milliseconds": 109.05466299999989,
+              "ns_per_operation": 35.17892354838706,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 119.03282600000011,
-              "ns_per_operation": 38.397685806451655,
+              "milliseconds": 109.22338800000034,
+              "ns_per_operation": 35.23335096774205,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 46.10362600000008,
-              "ns_per_operation": 15.367875333333359,
+              "milliseconds": 44.87125100000003,
+              "ns_per_operation": 14.957083666666676,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 63.01068099999975,
-              "ns_per_operation": 21.003560333333247,
+              "milliseconds": 60.80571400000008,
+              "ns_per_operation": 20.268571333333362,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 22.41285199999993,
-              "ns_per_operation": 7.470950666666643,
+              "milliseconds": 20.730119999999715,
+              "ns_per_operation": 6.910039999999905,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 48.5236789999999,
-              "ns_per_operation": 16.174559666666635,
+              "milliseconds": 47.14552499999991,
+              "ns_per_operation": 15.71517499999997,
               "checksum": "20250000"
             }
           ]
@@ -3765,240 +3778,240 @@
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 109.61063899999999,
-              "ns_per_operation": 35.358270645161284,
+              "milliseconds": 110.66495599999996,
+              "ns_per_operation": 35.698372903225795,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 44.736436000000026,
-              "ns_per_operation": 14.91214533333334,
+              "milliseconds": 44.498114999999984,
+              "ns_per_operation": 14.832704999999995,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 63.10680100000013,
-              "ns_per_operation": 21.035600333333377,
+              "milliseconds": 62.03341999999998,
+              "ns_per_operation": 20.67780666666666,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 22.318655000000035,
-              "ns_per_operation": 7.439551666666678,
+              "milliseconds": 21.977304000000004,
+              "ns_per_operation": 7.325768000000001,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 48.588021000000026,
-              "ns_per_operation": 16.19600700000001,
+              "milliseconds": 48.75839300000007,
+              "ns_per_operation": 16.252797666666687,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 47.792393000000175,
-              "ns_per_operation": 15.930797666666724,
+              "milliseconds": 47.856685999999854,
+              "ns_per_operation": 15.952228666666617,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 21.108126000000084,
-              "ns_per_operation": 7.0360420000000286,
+              "milliseconds": 20.93042700000001,
+              "ns_per_operation": 6.976809000000003,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 59.30152299999986,
-              "ns_per_operation": 19.767174333333287,
+              "milliseconds": 59.19006399999989,
+              "ns_per_operation": 19.730021333333298,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 44.973383999999896,
-              "ns_per_operation": 14.991127999999966,
+              "milliseconds": 44.7949900000001,
+              "ns_per_operation": 14.931663333333365,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 109.18909299999996,
-              "ns_per_operation": 35.222288064516114,
+              "milliseconds": 110.02843600000006,
+              "ns_per_operation": 35.49304387096776,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 110.26218199999994,
-              "ns_per_operation": 35.56844580645159,
+              "milliseconds": 110.60194999999999,
+              "ns_per_operation": 35.67804838709677,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 44.75303699999995,
-              "ns_per_operation": 14.917678999999982,
+              "milliseconds": 44.67151899999999,
+              "ns_per_operation": 14.890506333333331,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 62.40480200000002,
-              "ns_per_operation": 20.801600666666673,
+              "milliseconds": 59.50741500000004,
+              "ns_per_operation": 19.83580500000001,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 22.00870299999997,
-              "ns_per_operation": 7.336234333333324,
+              "milliseconds": 20.695447999999942,
+              "ns_per_operation": 6.898482666666647,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 48.898242999999866,
-              "ns_per_operation": 16.29941433333329,
+              "milliseconds": 47.40385900000001,
+              "ns_per_operation": 15.801286333333339,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 48.12812800000006,
-              "ns_per_operation": 16.042709333333352,
+              "milliseconds": 47.62438199999997,
+              "ns_per_operation": 15.87479399999999,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 21.353984000000082,
-              "ns_per_operation": 7.117994666666694,
+              "milliseconds": 20.794020000000046,
+              "ns_per_operation": 6.931340000000015,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 59.59297300000003,
-              "ns_per_operation": 19.864324333333343,
+              "milliseconds": 59.29701399999999,
+              "ns_per_operation": 19.76567133333333,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 44.587837000000036,
-              "ns_per_operation": 14.862612333333345,
+              "milliseconds": 45.19030900000007,
+              "ns_per_operation": 15.063436333333355,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 110.26314400000001,
-              "ns_per_operation": 35.568756129032266,
+              "milliseconds": 110.33809599999995,
+              "ns_per_operation": 35.59293419354837,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 110.33083699999997,
-              "ns_per_operation": 35.59059258064515,
+              "milliseconds": 114.06019700000002,
+              "ns_per_operation": 36.793611935483874,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 45.19148300000006,
-              "ns_per_operation": 15.063827666666686,
+              "milliseconds": 45.71373799999992,
+              "ns_per_operation": 15.23791266666664,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 59.92309100000011,
-              "ns_per_operation": 19.974363666666704,
+              "milliseconds": 59.454327999999805,
+              "ns_per_operation": 19.81810933333327,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 23.88007000000016,
-              "ns_per_operation": 7.960023333333386,
+              "milliseconds": 21.023991999999907,
+              "ns_per_operation": 7.007997333333302,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 50.08069000000023,
-              "ns_per_operation": 16.69356333333341,
+              "milliseconds": 47.40242699999999,
+              "ns_per_operation": 15.800808999999996,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 51.79624399999966,
-              "ns_per_operation": 17.26541466666655,
+              "milliseconds": 47.682742999999846,
+              "ns_per_operation": 15.894247666666615,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 22.355935000000045,
-              "ns_per_operation": 7.451978333333348,
+              "milliseconds": 20.762271000000055,
+              "ns_per_operation": 6.920757000000019,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 60.87486099999978,
-              "ns_per_operation": 20.29162033333326,
+              "milliseconds": 59.8587650000004,
+              "ns_per_operation": 19.9529216666668,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 45.810865999999805,
-              "ns_per_operation": 15.270288666666602,
+              "milliseconds": 45.27200500000026,
+              "ns_per_operation": 15.09066833333342,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 113.04907099999991,
-              "ns_per_operation": 36.46744225806449,
+              "milliseconds": 110.18964899999992,
+              "ns_per_operation": 35.5450480645161,
               "checksum": "3100000"
             }
           ]
@@ -4016,240 +4029,240 @@
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 48.53307500000005,
-              "ns_per_operation": 16.177691666666686,
+              "milliseconds": 47.35450000000003,
+              "ns_per_operation": 15.784833333333344,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 21.14139799999998,
-              "ns_per_operation": 7.04713266666666,
+              "milliseconds": 21.069827999999916,
+              "ns_per_operation": 7.023275999999972,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 61.97226799999987,
-              "ns_per_operation": 20.657422666666623,
+              "milliseconds": 59.023954,
+              "ns_per_operation": 19.674651333333333,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 46.52086899999995,
-              "ns_per_operation": 15.506956333333315,
+              "milliseconds": 46.482528,
+              "ns_per_operation": 15.494176,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 109.56632599999989,
-              "ns_per_operation": 35.34397612903222,
+              "milliseconds": 110.27482000000009,
+              "ns_per_operation": 35.57252258064519,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 109.19340199999988,
-              "ns_per_operation": 35.22367806451609,
+              "milliseconds": 109.55090799999994,
+              "ns_per_operation": 35.33900258064514,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 44.78002100000003,
-              "ns_per_operation": 14.926673666666677,
+              "milliseconds": 46.49202500000001,
+              "ns_per_operation": 15.49734166666667,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 60.428151999999955,
-              "ns_per_operation": 20.14271733333332,
+              "milliseconds": 60.084237999999914,
+              "ns_per_operation": 20.028079333333302,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 23.820804999999837,
-              "ns_per_operation": 7.940268333333279,
+              "milliseconds": 20.848184000000174,
+              "ns_per_operation": 6.949394666666725,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 49.4761289999999,
-              "ns_per_operation": 16.492042999999967,
+              "milliseconds": 46.74380700000006,
+              "ns_per_operation": 15.58126900000002,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 48.784525999999914,
-              "ns_per_operation": 16.26150866666664,
+              "milliseconds": 51.45602900000017,
+              "ns_per_operation": 17.152009666666725,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 21.30295000000001,
-              "ns_per_operation": 7.100983333333337,
+              "milliseconds": 21.81253700000002,
+              "ns_per_operation": 7.2708456666666725,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 60.39193100000011,
-              "ns_per_operation": 20.130643666666703,
+              "milliseconds": 59.814455999999836,
+              "ns_per_operation": 19.938151999999945,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 45.49081500000011,
-              "ns_per_operation": 15.163605000000038,
+              "milliseconds": 46.437805000000026,
+              "ns_per_operation": 15.47926833333334,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 110.993244,
-              "ns_per_operation": 35.804272258064515,
+              "milliseconds": 110.00842399999988,
+              "ns_per_operation": 35.48658838709674,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 113.64916700000003,
-              "ns_per_operation": 36.661021612903234,
+              "milliseconds": 109.68789600000014,
+              "ns_per_operation": 35.38319225806456,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 46.909799999999905,
-              "ns_per_operation": 15.636599999999968,
+              "milliseconds": 46.7641450000001,
+              "ns_per_operation": 15.588048333333365,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 60.52018399999997,
-              "ns_per_operation": 20.173394666666656,
+              "milliseconds": 59.32168200000001,
+              "ns_per_operation": 19.773894000000002,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 22.027648,
-              "ns_per_operation": 7.342549333333333,
+              "milliseconds": 20.722197999999935,
+              "ns_per_operation": 6.907399333333312,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 52.58218000000011,
-              "ns_per_operation": 17.527393333333368,
+              "milliseconds": 47.07207100000005,
+              "ns_per_operation": 15.69069033333335,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 50.10857599999963,
-              "ns_per_operation": 16.702858666666543,
+              "milliseconds": 47.25348100000019,
+              "ns_per_operation": 15.751160333333399,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 22.27936099999988,
-              "ns_per_operation": 7.426453666666627,
+              "milliseconds": 20.915919999999915,
+              "ns_per_operation": 6.971973333333305,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 61.01964199999975,
-              "ns_per_operation": 20.33988066666658,
+              "milliseconds": 59.41441500000019,
+              "ns_per_operation": 19.804805000000066,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 45.3267450000003,
-              "ns_per_operation": 15.1089150000001,
+              "milliseconds": 46.26990999999998,
+              "ns_per_operation": 15.423303333333328,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 112.03855599999997,
-              "ns_per_operation": 36.141469677419344,
+              "milliseconds": 110.06130299999995,
+              "ns_per_operation": 35.50364612903224,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 111.30531100000007,
-              "ns_per_operation": 35.90493903225809,
+              "milliseconds": 111.08081200000015,
+              "ns_per_operation": 35.832520000000045,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 45.757412999999815,
-              "ns_per_operation": 15.252470999999938,
+              "milliseconds": 49.605739000000085,
+              "ns_per_operation": 16.53524633333336,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 60.230069000000185,
-              "ns_per_operation": 20.076689666666727,
+              "milliseconds": 61.33013899999969,
+              "ns_per_operation": 20.443379666666562,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 21.050337000000127,
-              "ns_per_operation": 7.016779000000042,
+              "milliseconds": 21.74611300000015,
+              "ns_per_operation": 7.248704333333383,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 51.57537599999978,
-              "ns_per_operation": 17.191791999999925,
+              "milliseconds": 47.62186900000006,
+              "ns_per_operation": 15.873956333333354,
               "checksum": "20250000"
             }
           ]
@@ -4267,240 +4280,240 @@
               "name": "fit-bool",
               "repetition": 0,
               "operations": 3100000,
-              "milliseconds": 111.51680799999997,
-              "ns_per_operation": 35.97316387096773,
+              "milliseconds": 112.579294,
+              "ns_per_operation": 36.31590129032258,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 47.84492599999987,
-              "ns_per_operation": 15.948308666666625,
+              "milliseconds": 44.97522100000015,
+              "ns_per_operation": 14.991740333333382,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 61.85551200000009,
-              "ns_per_operation": 20.61850400000003,
+              "milliseconds": 59.33543000000009,
+              "ns_per_operation": 19.7784766666667,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 23.32950199999982,
-              "ns_per_operation": 7.776500666666607,
+              "milliseconds": 20.991632999999865,
+              "ns_per_operation": 6.997210999999956,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 0,
               "operations": 3000000,
-              "milliseconds": 49.22895399999993,
-              "ns_per_operation": 16.40965133333331,
+              "milliseconds": 47.15303300000005,
+              "ns_per_operation": 15.717677666666685,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 48.71134200000006,
-              "ns_per_operation": 16.23711400000002,
+              "milliseconds": 47.58296799999994,
+              "ns_per_operation": 15.860989333333313,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 21.621445999999878,
-              "ns_per_operation": 7.207148666666626,
+              "milliseconds": 20.722240000000056,
+              "ns_per_operation": 6.907413333333352,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 61.357215,
-              "ns_per_operation": 20.452405,
+              "milliseconds": 59.93369900000016,
+              "ns_per_operation": 19.977899666666723,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 1,
               "operations": 3000000,
-              "milliseconds": 44.53606300000001,
-              "ns_per_operation": 14.845354333333338,
+              "milliseconds": 44.72080600000004,
+              "ns_per_operation": 14.906935333333346,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 1,
               "operations": 3100000,
-              "milliseconds": 111.21507700000006,
-              "ns_per_operation": 35.8758312903226,
+              "milliseconds": 111.63746400000014,
+              "ns_per_operation": 36.012085161290365,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 2,
               "operations": 3100000,
-              "milliseconds": 112.09346000000005,
-              "ns_per_operation": 36.15918064516131,
+              "milliseconds": 111.90761900000007,
+              "ns_per_operation": 36.09923193548389,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 44.55552999999986,
-              "ns_per_operation": 14.851843333333289,
+              "milliseconds": 45.00503499999991,
+              "ns_per_operation": 15.001678333333304,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 61.32975499999998,
-              "ns_per_operation": 20.443251666666658,
+              "milliseconds": 60.26659300000006,
+              "ns_per_operation": 20.088864333333355,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 20.700667000000067,
-              "ns_per_operation": 6.900222333333356,
+              "milliseconds": 21.090666000000056,
+              "ns_per_operation": 7.030222000000019,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 2,
               "operations": 3000000,
-              "milliseconds": 50.563338999999814,
-              "ns_per_operation": 16.85444633333327,
+              "milliseconds": 47.19768799999997,
+              "ns_per_operation": 15.732562666666658,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 49.23622799999998,
-              "ns_per_operation": 16.412075999999995,
+              "milliseconds": 47.500003000000106,
+              "ns_per_operation": 15.833334333333369,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 21.862839000000122,
-              "ns_per_operation": 7.287613000000041,
+              "milliseconds": 20.657026000000087,
+              "ns_per_operation": 6.885675333333362,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 61.88009800000009,
-              "ns_per_operation": 20.626699333333363,
+              "milliseconds": 62.64176300000008,
+              "ns_per_operation": 20.880587666666695,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 3,
               "operations": 3000000,
-              "milliseconds": 46.868793000000096,
-              "ns_per_operation": 15.622931000000031,
+              "milliseconds": 46.17171900000017,
+              "ns_per_operation": 15.390573000000055,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 3,
               "operations": 3100000,
-              "milliseconds": 115.26941199999987,
-              "ns_per_operation": 37.18368129032254,
+              "milliseconds": 112.26471000000015,
+              "ns_per_operation": 36.21442258064521,
               "checksum": "3100000"
             },
             {
               "name": "fit-bool",
               "repetition": 4,
               "operations": 3100000,
-              "milliseconds": 111.65850099999989,
-              "ns_per_operation": 36.018871290322544,
+              "milliseconds": 112.19007999999985,
+              "ns_per_operation": 36.190348387096726,
               "checksum": "3100000"
             },
             {
               "name": "replace-unit",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 44.62380800000028,
-              "ns_per_operation": 14.87460266666676,
+              "milliseconds": 45.01394299999993,
+              "ns_per_operation": 15.004647666666642,
               "checksum": "2999994"
             },
             {
               "name": "contains",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 61.17873099999997,
-              "ns_per_operation": 20.392910333333322,
+              "milliseconds": 59.61619699999983,
+              "ns_per_operation": 19.87206566666661,
               "checksum": "1453125"
             },
             {
               "name": "direct-control",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 20.693353000000116,
-              "ns_per_operation": 6.897784333333372,
+              "milliseconds": 20.986411999999746,
+              "ns_per_operation": 6.9954706666665825,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 4,
               "operations": 3000000,
-              "milliseconds": 49.92091300000038,
-              "ns_per_operation": 16.64030433333346,
+              "milliseconds": 47.19539299999997,
+              "ns_per_operation": 15.731797666666656,
               "checksum": "20250000"
             },
             {
               "name": "lookup",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 49.39395400000012,
-              "ns_per_operation": 16.46465133333337,
+              "milliseconds": 47.52031299999999,
+              "ns_per_operation": 15.84010433333333,
               "checksum": "20250000"
             },
             {
               "name": "direct-control",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 21.982683999999608,
-              "ns_per_operation": 7.327561333333203,
+              "milliseconds": 20.96451100000013,
+              "ns_per_operation": 6.988170333333377,
               "checksum": "20250000"
             },
             {
               "name": "contains",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 61.3472969999998,
-              "ns_per_operation": 20.449098999999933,
+              "milliseconds": 59.33278599999994,
+              "ns_per_operation": 19.777595333333313,
               "checksum": "1453125"
             },
             {
               "name": "replace-unit",
               "repetition": 5,
               "operations": 3000000,
-              "milliseconds": 44.66819099999975,
-              "ns_per_operation": 14.889396999999917,
+              "milliseconds": 44.69210199999998,
+              "ns_per_operation": 14.897367333333326,
               "checksum": "2999994"
             },
             {
               "name": "fit-bool",
               "repetition": 5,
               "operations": 3100000,
-              "milliseconds": 111.19293000000016,
-              "ns_per_operation": 35.868687096774245,
+              "milliseconds": 112.32858899999974,
+              "ns_per_operation": 36.23502870967733,
               "checksum": "3100000"
             }
           ]

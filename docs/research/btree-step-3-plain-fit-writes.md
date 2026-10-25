@@ -109,7 +109,7 @@ python3 tools/test-btree-plain-fit.py \
   _build/native/release/build/jtenner/dewdrop/dew_cli/dew_cli.exe \
   _build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe \
   /home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-btree-build/_build/native/release/build/jtenner/starshine/cmd/cmd.exe \
-  --output .tmp/btree-step-3/handoff
+  --output .tmp/btree-step-3/final-report
 python3 tools/generate_btree_std.py --check
 python3 tools/generate_standard_module_identities.py --check
 ```
@@ -163,8 +163,10 @@ overhead, not per-entry boxes. There is no prefix/path field. Node storage
 keeps the selected step-2 bodies and clear slots.
 
 Raw calls use direct specialization. O4s can merge other helpers into fixed
-function-reference calls; that is not a source trait lookup. Both measured
-search bodies themselves have zero `call_ref` instructions. Numeric search
+function-reference calls; that is not a source trait lookup. Raw search bodies have zero `call_ref` instructions. The O4s numeric core
+has three calls through fixed key-array/key-read references supplied by its
+forwarding function; the text core has none. The report follows the O4s
+forwarder before it counts the core. Numeric search
 has one loop, one scalar less-than, one shift and two multiplies. Its raw/O4s
 body has four/two `if` instructions for control and live/final checks, with
 no br_table. Custom text search has one loop and one equality-dispatch
@@ -236,7 +238,7 @@ checked counts, result policies, snapshots, Unit effects, the root inspector,
 all carrier checks, exact negative boundaries, private allocation checks,
 raw/O4s controls, loop costs and mirror checks are complete for step 3.
 
-Raw artifacts are under `.tmp/btree-step-3/handoff/`: commands, stdout/stderr,
+Raw artifacts are under `.tmp/btree-step-3/final-report/`: commands, stdout/stderr,
 original/stripped/instrumented Wasm, WAT, shape/search reports, allocation
 sites, exact diagnostics and exactly four numbered sample files per variant.
 The script never reads a `cost-*.json` glob that can include a summary.
@@ -252,7 +254,7 @@ Committed machine records:
 * [Matched search tuning samples](data/btree-step-3/search-tuning.json).
 * [All 800 oracle operations](data/btree-step-3/oracle-operations.json).
 
-The recorded source HEAD precedes the implementation commit. Exact source
+The recorded source HEAD precedes the final report commit. Exact source
 hashes identify the tested working-tree inputs; the final commit contains
 those same inputs. The remaining tables give the final commands, identities,
 costs and size records.
@@ -263,15 +265,15 @@ costs and size records.
 | --- | --- | ---: |
 | Native module identities | 3 passed | 10.975 |
 | Final native backend cases | 2 passed | 10.636 |
-| Public Dew compile | passed | 0.550 |
-| Public plan/provider tests | 8 passed | 0.034 |
-| Private Dew compile | passed | 7.361 |
-| Private raw tests | 24 passed | 0.052 |
+| Public Dew compile | passed | 0.522 |
+| Public plan/provider tests | 8 passed | 0.036 |
+| Private Dew compile | passed | 7.307 |
+| Private raw tests | 24 passed | 0.057 |
 | Private O4s optimization | passed | 0.105 |
 | Private O4s tests | 24 passed | 0.055 |
-| Exact negative diagnostics | 2 passed | 0.035 |
-| Final raw carrier probe compile | passed | 1.657 |
-| Final carrier O4s optimization | passed | 0.046 |
+| Exact negative diagnostics | 2 passed | 0.034 |
+| Final raw carrier probe compile | passed | 1.582 |
+| Final carrier O4s optimization | passed | 0.044 |
 
 Both mirror checks and `git diff --check` pass. The initial red compile
 failed for the missing engine names in 0.382 seconds. Earlier malformed
@@ -291,8 +293,11 @@ Tool SHA-256:
 * `cmd.exe`: `7b00526a1d7774e9860b45bac6e68035e6d4c20698c6e396896fa4aacb23d790`.
 
 Final common-source SHA-256: `04c428f1551367f587203f2187aa866d95bddc7415b82a054af435e07a271fc0`.
-The complete source hash list, tool paths, options and pre-commit source
-HEAD (`9fa305061d1e4209816503116e2ded9a6df2420e`) are in the machine record.
+The complete source hash list, tool paths, options and pre-report source
+HEAD (`bbcf48129fb1a5a49c6bfbfc723819a5ff7f40d9`) are in the machine record.
+The final parser correction follows `return_call` forwarding and keeps
+its fixed reference targets. It does not change emitted code: the raw and
+O4s hashes equal the prior `handoff` run. All allocation checks still pass.
 
 | Final module | Bytes | Code-section payload bytes | SHA-256 |
 | --- | ---: | ---: | --- |
@@ -309,20 +314,41 @@ are controls; their small differences are not a speedup claim.
 
 | Output | Path | Median ns/op | Min–max ns/op | Median M ops/s |
 | --- | --- | ---: | --- | ---: |
-| raw | lookup | 15.807 | 15.175–16.772 | 63.262 |
-| raw | direct-control | 7.232 | 6.945–7.897 | 138.272 |
-| raw | contains | 17.328 | 16.813–18.596 | 57.709 |
-| raw | replace-unit | 14.389 | 13.895–15.613 | 69.495 |
-| raw | fit-bool | 34.997 | 34.076–36.855 | 28.574 |
-| O4s | lookup | 16.411 | 15.815–17.527 | 60.935 |
-| O4s | direct-control | 7.332 | 6.898–8.280 | 136.390 |
-| O4s | contains | 20.366 | 19.767–21.541 | 49.100 |
-| O4s | replace-unit | 15.056 | 14.845–15.948 | 66.420 |
-| O4s | fit-bool | 35.996 | 35.222–38.398 | 27.781 |
+| raw | lookup | 15.304 | 15.053–16.505 | 65.342 |
+| raw | direct-control | 7.043 | 6.933–7.550 | 141.987 |
+| raw | contains | 16.878 | 16.744–17.880 | 59.249 |
+| raw | replace-unit | 14.075 | 13.914–15.388 | 71.048 |
+| raw | fit-bool | 34.406 | 34.047–35.959 | 29.064 |
+| O4s | lookup | 15.817 | 15.581–17.152 | 63.222 |
+| O4s | direct-control | 6.974 | 6.886–7.326 | 143.382 |
+| O4s | contains | 19.965 | 19.675–20.881 | 50.087 |
+| O4s | replace-unit | 14.997 | 14.833–16.535 | 66.681 |
+| O4s | fit-bool | 35.603 | 35.179–36.794 | 28.088 |
 
-raw sample windows: 20.836–114.250 ms. O4s sample windows: 20.693–119.033 ms.
+raw sample windows: 20.799–111.471 ms. O4s sample windows: 20.657–114.060 ms.
 
 The committed JSON keeps every unrounded sample in process/run order.
 The `acceptance-repeat` control also passed with the earlier, smaller probe.
 No CPU affinity, peak/live heap, retained-byte, GC-pause, cold-code runtime,
 large-tree or map-versus-map result is established.
+
+## Changed files
+
+* `docs/research/btree-step-3-generic-option-layout.md`
+* `docs/research/btree-step-3-plain-fit-writes.md`
+* `docs/research/data/btree-step-3/measurements.json`
+* `docs/research/data/btree-step-3/oracle-operations.json`
+* `docs/research/data/btree-step-3/search-tuning.json`
+* `src/standard_sources/standard_btree_sources.mbt`
+* `std/README.md`
+* `std/collections/btree.dew`
+* `std/tests/btree_plain_fit_test.dew`
+* `tools/btree-fit/carriers.dew`
+* `tools/btree-fit/diagnostics.mjs`
+* `tools/btree-fit/generic-option-valid.dew`
+* `tools/btree-fit/generic-option.dew`
+* `tools/btree-fit/physical.dew`
+* `tools/btree-fit/run.mjs`
+* `tools/dew-test/assemble.py`
+* `tools/test-btree-plain-fit.py`
+* `tools/test-btree-plans-providers.py`

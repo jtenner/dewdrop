@@ -129,12 +129,23 @@ def main():
         search_bodies = {}
         for name in ("search_numeric", "search_text"):
             wrapper = functions[exports[name]]
-            calls = re.findall(r"\bcall (\d+)\b", wrapper)
+            calls = re.findall(r"\b(?:call|return_call) (\d+)\b", wrapper)
             assert calls, f"{name}: expected the source search call"
             index = int(calls[-1])
             body = functions[index]
+            forwarders = []
+            seen = set()
+            while not re.search(r"(?m)^\s*loop(?: |$)", body):
+                assert index not in seen, f"{name}: forwarding cycle"
+                seen.add(index)
+                forwarders.append(dict(function=index, body=body,
+                    fixed_ref_targets=[int(x) for x in re.findall(r"\bref\.func (\d+)\b", body)]))
+                targets = re.findall(r"\b(?:call|return_call) (\d+)\b", body)
+                assert targets, f"{name}: no search loop or direct forwarding target"
+                index = int(targets[-1])
+                body = functions[index]
             # Static Wasm branches, not CPU branch-counter measurements.
-            search_bodies[name] = dict(function=index, body=body, static_opcodes={
+            search_bodies[name] = dict(function=index, body=body, forwarders=forwarders, static_opcodes={
                 opcode: len(re.findall(rf"(?m)^\s*{re.escape(opcode)}(?: |$)", body))
                 for opcode in ("loop", "if", "br_if", "br_table", "call", "call_ref", "i32.lt_s", "i32.shr_u", "i32.mul")})
         (output / f"{variant}-search-bodies.json").write_text(json.dumps(search_bodies, indent=2) + "\n")
