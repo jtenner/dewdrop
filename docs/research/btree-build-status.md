@@ -79,7 +79,23 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   source is unchanged in the merge. Parent logs and emission are in
   `.tmp/btree-integration/step-1/`. Each command is timed. No parent focused
   compiler command exceeded 30 seconds.
+- Parent read both saved Claude reports and exit/stderr files. The follow-up
+  withdrew the design findings; its remaining source/test gaps are fixed in
+  the worker head and passed parent checks. Claude did not read binary Wasm
+  or run tests; physical/runtime checks are separate evidence.
 - Step 1 is integrated. The full native stage gate is pending.
+
+### Step 2 launch
+
+- Base: `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`.
+- Dependency: step 1 integrated with parent focused checks green.
+- Provider/model/options checked: `codex`, `gpt-6.1-sol`,
+  `reasoningEffort=high`.
+- Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
+- Child thread ID:
+  `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
+- State: running; no report or test result yet.
 
 ## Stage landings
 
@@ -97,18 +113,6 @@ out in the protected main worktree. `origin/master` is its ancestor by 88
 commits. Asked whether to keep landings pending (recommended) or publish
 tested stages and those existing commits to `origin/master`. No master ref,
 main checkout file/index, or remote branch has been changed.
-
-### Step 2 launch
-
-- Base: `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`.
-- Dependency: step 1 integrated with parent focused checks green.
-- Provider/model/options checked: `codex`, `gpt-6.1-sol`,
-  `reasoningEffort=high`.
-- Task ID:
-  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
-- Child thread ID:
-  `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
-- State: running; no report or test result yet.
 
 ## Design-fact blockers
 
