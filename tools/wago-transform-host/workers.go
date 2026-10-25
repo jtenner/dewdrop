@@ -83,18 +83,16 @@ func (p *workerPlugin) Register(reg *wago.Registrar) error {
 	if err != nil {
 		return err
 	}
-	module, err := imports.Module(workerModule)
-	if err != nil {
-		return err
-	}
-	module.Func("capacity", func(caller wago.HostModule, _, results []uint64) {
+	imports.HostFunc(workerModule, "capacity", func(caller wago.Caller, call wago.HostCall) {
+		results := call.ResultSlots()
 		if _, err := p.manager.ManagedCaller(caller); !p.enabled || err == nil {
 			results[0] = 0
 		} else {
 			results[0] = workerCount
 		}
 	}).Results(wago.ValI32).Capability(workerCapability)
-	module.Func("run_batch", func(caller wago.HostModule, args, results []uint64) {
+	imports.HostFunc(workerModule, "run_batch", func(caller wago.Caller, call wago.HostCall) {
+		args, results := call.ParamSlots(), call.ResultSlots()
 		if !p.enabled {
 			workerTrap(fmt.Errorf("transform workers are disabled"))
 		}
@@ -124,7 +122,8 @@ func (p *workerPlugin) Register(reg *wago.Registrar) error {
 		}
 		results[0] = uint64(len(result))
 	}).Params(wago.ValAnyRef, wago.ValAnyRef).Results(wago.ValI32).Capability(workerCapability)
-	module.Func("input_size", func(caller wago.HostModule, _, results []uint64) {
+	imports.HostFunc(workerModule, "input_size", func(caller wago.Caller, call wago.HostCall) {
+		results := call.ResultSlots()
 		slot, err := p.slot(caller)
 		if err != nil {
 			workerTrap(err)
@@ -137,7 +136,8 @@ func (p *workerPlugin) Register(reg *wago.Registrar) error {
 		}
 		results[0] = uint64(length)
 	}).Results(wago.ValI32).Capability(workerCapability)
-	module.Func("input", func(caller wago.HostModule, args, _ []uint64) {
+	imports.HostFunc(workerModule, "input", func(caller wago.Caller, call wago.HostCall) {
+		args := call.ParamSlots()
 		slot, err := p.slot(caller)
 		if err != nil {
 			workerTrap(err)
@@ -152,7 +152,8 @@ func (p *workerPlugin) Register(reg *wago.Registrar) error {
 			workerTrap(err)
 		}
 	}).Params(wago.ValAnyRef).Capability(workerCapability)
-	module.Func("output", func(caller wago.HostModule, args, _ []uint64) {
+	imports.HostFunc(workerModule, "output", func(caller wago.Caller, call wago.HostCall) {
+		args := call.ParamSlots()
 		slot, err := p.slot(caller)
 		if err != nil {
 			workerTrap(err)

@@ -8,23 +8,28 @@ mise exec go@1.27.2 wasm-tools@1.262.0 -- python3 tools/build-wago-transform-hos
 
 The helper downloads the checksum-verified pinned Wago module, extracts it into a
 new private directory, applies the local safety patches, runs
-the selected reference safety tests, and builds the existing Facet v0.1.0 host.
+the selected reference safety tests, and builds the Facet v0.1.0 host with a
+local callback API patch.
 It saves the build identity next to the executable. It does not change the Go
 module cache or a Wago checkout. Temporary build sources stay under
 `.tmp/wago-transform-host/` for inspection. `GOWORK=off` avoids the upstream
 workspace's nested modules, which Go module archives do not include.
 
-The patch backports the three root-tracking source changes from Wago commit
-`14e81db2a9a9e57ef5cba347f93474fdaa151378` to `2dd978ccda6f`. It keeps reference
+The host pins Wago `7997c86c36e05cfba4c4f39cabb026a318f55fc0`, fetched from
+`origin/main` on 2026-10-20. This includes the AMD64 GC update `7538462db`
+and the shared ARM64/AMD64 GC changes `a45a096e7`. The module version is
+`v0.1.0-beta.13.0.20261020170030-7997c86c36e0`.
+
+The patch retains the three root-tracking source changes from Wago commit
+`14e81db2a9a9e57ef5cba347f93474fdaa151378`. It keeps reference
 local types after exact frame liveness removes dead locals. A loaded reference
 can still be live on the operand stack. Losing its reference classification can
 let collection reclaim that object. The patch preserves the compact safepoint
-masks and adds no host API. It excludes the separate upstream direct-getter
-optimization, whose source context and API differ at this pin.
+masks and adds no host API. It does not add a separate direct-getter optimization.
 
 The shared footprint test and two runtime test files come from that upstream
 repair. Bad-reference tests accept only the exact helper errors used by this
-older pin or the specified typed trap; null still requires its typed trap.
+runtime or the specified typed trap; null still requires its typed trap.
 The tests cover fresh and serialized native code, small and normal heaps,
 decoder tuples, and live loaded child references across collection.
 
@@ -32,9 +37,26 @@ The plan grows from 136 to 160 bytes on 64-bit Go. If compaction removes locals,
 the original reference-local array also stays live. Lookup remains binary
 search. No ARM64 runtime measurement is available.
 
-The full patch-set hash is part of the native artifact cache identity. Use the
-build helper: the worker host requires the local `ForkIsolated` API. Use a new absolute
-`WAGO_HOME` for each measured compiler run to exclude native code cache reuse.
+`facet-patches/host-call-api.patch` adapts Facet v0.1.0 to the current Wago
+callback API. It uses flat `HostFunc` registration and scoped `Caller`/`HostCall`
+callbacks. Facet keeps its internal binding functions; borrowed slot slices are
+used only during the callback. The Facet wire format and grants stay the same.
+The builder applies this patch to a private checksum-verified Facet copy.
+
+The full Wago and Facet patch-set hash is part of the native artifact cache identity. Use the
+build helper: the worker host requires the local `ForkIsolated` API and the
+Facet callback patch. Use a new absolute `WAGO_HOME` for each measured cold
+compiler run. Reuse that home only when testing native artifact loading.
+
+## Current compiler check
+
+The 2026-10-20 current-main rebuild passes the reference safety tests, worker
+race tests, and a real compiler request with a fresh native cache. That request
+still reaches a compiler invariant trap when it loads the saved native artifact.
+Use a new absolute `WAGO_HOME` for each compiler invocation until that fault is
+fixed. This is a known failing check; do not treat it as a warm-cache speed gain.
+See the [runtime profile](../../docs/research/wago-runtime-profile-2026-10-20.md)
+for exact inputs, status, and measured time and memory use.
 
 ## Local worker plugin
 
@@ -98,8 +120,7 @@ its own execution lock under the existing runtime policy. Internal tests check
 store/collector identity, compiled-code reuse, independent execution, reference
 import rejection, and full close. Plugin race tests retain the triggering case.
 
-`patches/cli-module-lifetime.patch` keeps the CLI's module handle alive with a
-deferred close for the full run. Without that lease, Go could finalize the
-public compiled owner during a live instance call. A later worker fork then
-failed with `compiled module is closed`. Cleanup now closes the instance, module,
-and Runtime in that order. Public closed-code admission rules stay unchanged.
+The former `cli-module-lifetime.patch` is no longer needed. Current Wago keeps
+the CLI module handle alive and closes the instance, module, and Runtime in
+that order. The local patch is removed. Public closed-code admission rules
+stay unchanged.

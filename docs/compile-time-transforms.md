@@ -667,7 +667,7 @@ tools/test-transform-cache.sh .tmp/self-host-bootstrap/b/compiler.wasm
 
 The second command uses Node. For Wago, use the patched pinned host built by
 `tools/build-wago-transform-host.py`. Both cold and saved-result requests pass
-with the self-built compiler. The unpatched pin has a reference-root fault.
+with the self-built compiler. The local patch retains reference-local types that frame liveness can remove.
 See [cache evidence and limits](research/transform-result-cache-2026-10-20.md).
 
 ## Trait values in transforms

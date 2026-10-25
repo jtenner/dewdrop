@@ -1,7 +1,8 @@
 diff --git a/src/wago/managed_instances.go b/src/wago/managed_instances.go
+index c0c352a67..7accb6b67 100644
 --- a/src/wago/managed_instances.go
 +++ b/src/wago/managed_instances.go
-@@ -186,6 +186,17 @@
+@@ -186,6 +186,17 @@ func (m *InstanceManager) adopt(in *Instance, memoryBytes uint64) (*ManagedInsta
  // safe host functions, by-value globals, GC configuration, and runtime policy.
  // Borrowed memories, tables, globals, and cross-instance exports are rejected.
  func (m *InstanceManager) Fork(ctx context.Context, caller HostModule) (*ManagedInstance, error) {
@@ -19,125 +20,38 @@ diff --git a/src/wago/managed_instances.go b/src/wago/managed_instances.go
  	if ctx == nil {
  		ctx = context.Background()
  	}
-@@ -204,6 +215,13 @@
- 	imports, err := managedForkImports(parent)
+@@ -205,6 +216,13 @@ func (m *InstanceManager) Fork(ctx context.Context, caller HostModule) (*Managed
  	if err != nil {
  		return nil, err
-+	}
+ 	}
 +	if isolated {
 +		for _, imported := range parent.c.GlobalImports {
 +			if isReferenceValType(imported.Type) {
 +				return nil, fmt.Errorf("isolated managed fork cannot copy reference global: %w", ErrManagedImportLifetime)
 +			}
 +		}
- 	}
++	}
  	memoryBytes, err := managedMemoryReservation(&Module{c: parent.c})
  	if err != nil {
-@@ -241,7 +259,11 @@
+ 		return nil, fmt.Errorf("wago: plugin %s module memory limits: %v: %w", m.owner, err, ErrPermissionDenied)
+@@ -241,7 +259,11 @@ func (m *InstanceManager) Fork(ctx context.Context, caller HostModule) (*Managed
  	mod, err := buildModule(parent.c, bindings)
  	var child *Instance
  	if err == nil {
--		child, err = rt.instantiateWithHooksOrigin(ctx, mod, imports, pluginGCImports, gc, hasGC, parent.syncMode, InstantiateManaged, hooks, operation.reservation)
+-		child, err = rt.instantiateWithHooksOrigin(ctx, mod, imports, pluginGCImports, gc, hasGC, parent.syncMode, int(parent.invokeCacheSlotCount()), InstantiateManaged, hooks, operation.reservation)
 +		store := rt.refStore
 +		if isolated {
 +			store = newReferenceStore(true)
 +		}
-+		child, err = rt.instantiateWithHooksOriginStore(ctx, mod, imports, pluginGCImports, gc, hasGC, parent.syncMode, InstantiateManaged, hooks, operation.reservation, store)
++		child, err = rt.instantiateWithHooksOriginStore(ctx, mod, imports, pluginGCImports, gc, hasGC, parent.syncMode, int(parent.invokeCacheSlotCount()), InstantiateManaged, hooks, operation.reservation, store)
  	}
  	if err != nil {
  		m.mu.Lock()
-diff --git a/src/wago/runtime.go b/src/wago/runtime.go
---- a/src/wago/runtime.go
-+++ b/src/wago/runtime.go
-@@ -1095,6 +1095,12 @@
- // instantiateWithHooksOrigin runs the Runtime-aware instantiation path and emits
- // plugin lifecycle callbacks around the low-level instantiator.
- func (rt *Runtime) instantiateWithHooksOrigin(ctx context.Context, mod *Module, imports Imports, pluginGCImports map[uint32]struct{}, gc GCConfig, hasGC, forceSyncHost bool, origin InstantiateOrigin, hooks *hookRegistry, reservation *pluginOperationReservation) (*Instance, error) {
-+	return rt.instantiateWithHooksOriginStore(ctx, mod, imports, pluginGCImports, gc, hasGC, forceSyncHost, origin, hooks, reservation, rt.refStore)
-+}
-+
-+// The explicit store is used only by isolated managed forks. Normal runtime
-+// instances retain the runtime-wide reference store and collector domains.
-+func (rt *Runtime) instantiateWithHooksOriginStore(ctx context.Context, mod *Module, imports Imports, pluginGCImports map[uint32]struct{}, gc GCConfig, hasGC, forceSyncHost bool, origin InstantiateOrigin, hooks *hookRegistry, reservation *pluginOperationReservation, store *referenceStore) (*Instance, error) {
- 	if ctx == nil {
- 		ctx = context.Background()
- 	}
-@@ -1117,7 +1123,7 @@
- 	iopts := InstantiateOptions{
- 		startContext:             ctx,
- 		MaxCompiledMetadataBytes: rt.cfg.maxCompiledMetadataBytes,
--		Imports:                  imports, ownedImports: true, store: rt.refStore, runtime: rt, origin: origin, pluginGCImports: pluginGCImports,
-+		Imports:                  imports, ownedImports: true, store: store, runtime: rt, origin: origin, pluginGCImports: pluginGCImports,
- 		forceSyncHost:            forceSyncHost || rt.callerResolverActive.Load(),
- 		moduleIdentity:           mod.moduleIdentity(),
- 		operationReservation:     reservation,
-diff --git a/src/wago/managed_isolated_fork_amd64_test.go b/src/wago/managed_isolated_fork_amd64_test.go
-new file mode 100644
---- /dev/null
-+++ b/src/wago/managed_isolated_fork_amd64_test.go
-@@ -0,0 +1,58 @@
-+//go:build linux && amd64 && !tinygo && !wago_guardpage
-+
-+package wago
-+
-+import (
-+  "context"
-+  "strings"
-+  "testing"
-+)
-+
-+func TestManagedIsolatedForkHasPrivateCollectorAndExecution(t *testing.T) {
-+  rt := NewRuntime(WithRuntimeConfig(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3)))
-+  defer rt.Close()
-+  manager := newPendingInstanceManager("isolated-fork-test", AuthorityScope{MaxInstances: 2, MaxMemoryBytes: 65536})
-+  manager.activate(rt)
-+  defer manager.close()
-+  mod, err := rt.Compile(gcDecoderTupleReferenceModule(0))
-+  if err != nil { t.Fatal(err) }
-+  defer mod.Close()
-+  parent, err := rt.Instantiate(context.Background(), mod)
-+  if err != nil { t.Fatal(err) }
-+  defer parent.Close()
-+  caller := parent.beginHostCallScope()
-+  defer caller.scope.end(caller.generation, caller.parentGeneration)
-+  var children []*ManagedInstance
-+  for range 2 {
-+    child, err := manager.ForkIsolated(context.Background(), caller)
-+    if err != nil { t.Fatal(err) }
-+    children = append(children, child)
-+    in := child.Instance()
-+    if in.rt != rt || in.c != parent.c || in.refStore == parent.refStore || !in.refStore.private || in.gc == nil || in.gc == parent.gc || !in.usesIndependentExecution() {
-+      t.Fatal("isolated fork must retain compiled code and runtime policy, with private references, collector and native execution")
-+    }
-+    result, err := in.Invoke("run")
-+    if err != nil || len(result) != 1 || result[0] != 1 { t.Fatalf("isolated run=%v, %v", result, err) }
-+  }
-+  if children[0].Instance().gc == children[1].Instance().gc || children[0].Instance().refStore == children[1].Instance().refStore { t.Fatal("isolated children share state") }
-+  for _, child := range children {
-+    if err := child.Close(); err != nil { t.Fatal(err) }
-+    if err := child.WaitClosed(); err != nil { t.Fatal(err) }
-+  }
-+  manager.mu.Lock()
-+  live := manager.live
-+  manager.mu.Unlock()
-+  if live != 0 { t.Fatalf("isolated close retained %d reservations", live) }
-+}
-+
-+func TestManagedIsolatedForkRejectsReferenceGlobal(t *testing.T) {
-+  rt := NewRuntime()
-+  defer rt.Close()
-+  manager := newPendingInstanceManager("isolated-fork-test", AuthorityScope{MaxInstances: 1, MaxMemoryBytes: 65536})
-+  manager.activate(rt)
-+  defer manager.close()
-+  parent := &Instance{rt: rt, c: &Compiled{GlobalImports: []GlobalImportDef{{Module: "env", Name: "g", Type: ValAnyRef}}}, imports: Imports{"env.g": GlobalImport{Type: ValAnyRef}}}
-+  caller := parent.beginHostCallScope()
-+  defer caller.scope.end(caller.generation, caller.parentGeneration)
-+  if _, err := manager.ForkIsolated(context.Background(), caller); err == nil || !strings.Contains(err.Error(), "reference global") { t.Fatalf("reference global accepted: %v", err) }
-+}
 diff --git a/src/wago/reference_store.go b/src/wago/reference_store.go
+index 70109e616..0d36e40f4 100644
 --- a/src/wago/reference_store.go
 +++ b/src/wago/reference_store.go
-@@ -2347,7 +2347,12 @@
+@@ -2671,7 +2671,12 @@ func (in *Instance) rootGCHostArguments(token gcHostActivationToken, dispatch ui
  		if !ok {
  			return nil
  		}
@@ -151,3 +65,111 @@ diff --git a/src/wago/reference_store.go b/src/wago/reference_store.go
  			return fmt.Errorf("Runtime plugin GC host import is outside the calling instance's Runtime collector domain")
  		}
  		types = pluginSig.Params
+diff --git a/src/wago/runtime.go b/src/wago/runtime.go
+index d45b2e30b..7702e09c4 100644
+--- a/src/wago/runtime.go
++++ b/src/wago/runtime.go
+@@ -1119,6 +1119,12 @@ func applyInstantiateOptions(opts []InstantiateOption) instantiateConfig {
+ // instantiateWithHooksOrigin runs the Runtime-aware instantiation path and emits
+ // plugin lifecycle callbacks around the low-level instantiator.
+ func (rt *Runtime) instantiateWithHooksOrigin(ctx context.Context, mod *Module, imports resolvedImports, pluginGCImports map[uint32]struct{}, gc GCConfig, hasGC, forceSyncHost bool, invokeCacheSlots int, origin InstantiateOrigin, hooks *hookRegistry, reservation *pluginOperationReservation) (*Instance, error) {
++	return rt.instantiateWithHooksOriginStore(ctx, mod, imports, pluginGCImports, gc, hasGC, forceSyncHost, invokeCacheSlots, origin, hooks, reservation, rt.refStore)
++}
++
++// The explicit store is used only by isolated managed forks. Normal runtime
++// instances retain the runtime-wide reference store and collector domains.
++func (rt *Runtime) instantiateWithHooksOriginStore(ctx context.Context, mod *Module, imports resolvedImports, pluginGCImports map[uint32]struct{}, gc GCConfig, hasGC, forceSyncHost bool, invokeCacheSlots int, origin InstantiateOrigin, hooks *hookRegistry, reservation *pluginOperationReservation, store *referenceStore) (*Instance, error) {
+ 	if ctx == nil {
+ 		ctx = context.Background()
+ 	}
+@@ -1142,7 +1148,7 @@ func (rt *Runtime) instantiateWithHooksOrigin(ctx context.Context, mod *Module,
+ 		InvokeCacheSlots:         invokeCacheSlots,
+ 		startContext:             ctx,
+ 		MaxCompiledMetadataBytes: rt.cfg.maxCompiledMetadataBytes,
+-		resolvedImports:          imports, ownedImports: true, store: rt.refStore, runtime: rt, origin: origin, pluginGCImports: pluginGCImports,
++		resolvedImports:          imports, ownedImports: true, store: store, runtime: rt, origin: origin, pluginGCImports: pluginGCImports,
+ 		forceSyncHost:            forceSyncHost || rt.callerResolverActive.Load(),
+ 		moduleIdentity:           mod.moduleIdentity(),
+ 		operationReservation:     reservation,
+diff --git a/src/wago/managed_isolated_fork_amd64_test.go b/src/wago/managed_isolated_fork_amd64_test.go
+new file mode 100644
+index 0000000000..c18bba138b
+--- /dev/null
++++ b/src/wago/managed_isolated_fork_amd64_test.go
+@@ -0,0 +1,76 @@
++//go:build linux && amd64 && !tinygo && !wago_guardpage
++
++package wago
++
++import (
++	"context"
++	"strings"
++	"testing"
++)
++
++func TestManagedIsolatedForkHasPrivateCollectorAndExecution(t *testing.T) {
++	rt := NewRuntime(WithRuntimeConfig(NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3)))
++	defer rt.Close()
++	manager := newPendingInstanceManager("isolated-fork-test", AuthorityScope{MaxInstances: 2, MaxMemoryBytes: 65536})
++	manager.activate(rt)
++	defer manager.close()
++	mod, err := rt.Compile(gcDecoderTupleReferenceModule(0))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer mod.Close()
++	parent, err := rt.Instantiate(context.Background(), mod)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer parent.Close()
++	caller := parent.beginHostCallScope()
++	defer parent.pluginState.Load().hostScope.end(caller.generation, caller.parentGeneration)
++	var children []*ManagedInstance
++	for range 2 {
++		child, err := manager.ForkIsolated(context.Background(), caller)
++		if err != nil {
++			t.Fatal(err)
++		}
++		children = append(children, child)
++		in := child.Instance()
++		if in.rt != rt || in.c != parent.c || in.refStore == parent.refStore || !in.refStore.private || in.gc == nil || in.gc == parent.gc || !in.usesIndependentExecution() {
++			t.Fatal("isolated fork must retain compiled code and runtime policy, with private references, collector and native execution")
++		}
++		result, err := in.Invoke("run")
++		if err != nil || len(result) != 1 || result[0] != 1 {
++			t.Fatalf("isolated run=%v, %v", result, err)
++		}
++	}
++	if children[0].Instance().gc == children[1].Instance().gc || children[0].Instance().refStore == children[1].Instance().refStore {
++		t.Fatal("isolated children share state")
++	}
++	for _, child := range children {
++		if err := child.Close(); err != nil {
++			t.Fatal(err)
++		}
++		if err := child.WaitClosed(); err != nil {
++			t.Fatal(err)
++		}
++	}
++	manager.mu.Lock()
++	live := manager.live
++	manager.mu.Unlock()
++	if live != 0 {
++		t.Fatalf("isolated close retained %d reservations", live)
++	}
++}
++
++func TestManagedIsolatedForkRejectsReferenceGlobal(t *testing.T) {
++	rt := NewRuntime()
++	defer rt.Close()
++	manager := newPendingInstanceManager("isolated-fork-test", AuthorityScope{MaxInstances: 1, MaxMemoryBytes: 65536})
++	manager.activate(rt)
++	defer manager.close()
++	parent := &Instance{rt: rt, c: &Compiled{GlobalImports: []GlobalImportDef{{Module: "env", Name: "g", Type: ValAnyRef}}}, imports: testImports("env.g", GlobalImport{Type: ValAnyRef}).bindings}
++	caller := parent.beginHostCallScope()
++	defer parent.pluginState.Load().hostScope.end(caller.generation, caller.parentGeneration)
++	if _, err := manager.ForkIsolated(context.Background(), caller); err == nil || !strings.Contains(err.Error(), "reference global") {
++		t.Fatalf("reference global accepted: %v", err)
++	}
++}

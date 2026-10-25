@@ -54,6 +54,6 @@ func main() {
 	}
 	providers := append(facet.Providers(), provider)
 	selections = append(selections, selection)
-	fmt.Fprintln(os.Stderr, "Wago 2dd978ccda6f; patch "+runtimePatchIdentity+"; workers "+workerPluginIdentity+"; Facet v0.1.0; locked project bindings")
-	runtime.MainWithPluginSet("dewdrop-transform-check", "dewdrop-2dd978ccda6f-facet-v0.1.0-"+runtimePatchIdentity+"-"+workerPluginIdentity, wago.PluginSet{Providers: providers, Selections: selections})
+	fmt.Fprintln(os.Stderr, "Wago 7997c86c36e0; patch "+runtimePatchIdentity+"; workers "+workerPluginIdentity+"; Facet v0.1.0; locked project bindings")
+	runtime.MainWithPluginSet("dewdrop-transform-check", "dewdrop-7997c86c36e0-facet-v0.1.0-"+runtimePatchIdentity+"-"+workerPluginIdentity, wago.PluginSet{Providers: providers, Selections: selections})
 }

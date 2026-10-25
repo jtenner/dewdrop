@@ -69,11 +69,7 @@ func (b *workerBarrier) Register(reg *wago.Registrar) error {
 	if err != nil {
 		return err
 	}
-	module, err := imports.Module("worker.test")
-	if err != nil {
-		return err
-	}
-	module.Func("hold", func(_ wago.HostModule, _, _ []uint64) {
+	imports.HostFunc("worker.test", "hold", func(wago.HostCall) {
 		b.mu.Lock()
 		b.arrived++
 		if b.arrived == 2 {

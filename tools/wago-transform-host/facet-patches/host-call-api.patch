@@ -1,0 +1,512 @@
+diff --git a/dns.go b/dns.go
+index f86f85b..9c90a3f 100644
+--- a/dns.go
++++ b/dns.go
+@@ -88,7 +88,7 @@ func (p *Plugin) dnsResolveDecoded(m wago.HostModule, hostname string, family in
+ 	results[1] = uint64(uint32(code))
+ }
+ 
+-func (p *Plugin) dnsResolveMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) dnsResolveMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+@@ -114,7 +114,7 @@ func (p *Plugin) dnsResolveMemoryHost(width textWidth, addressType wago.GuestMem
+ 	}
+ }
+ 
+-func (p *Plugin) dnsResolveArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) dnsResolveArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+diff --git a/facet.go b/facet.go
+index ecf0049..9463f57 100644
+--- a/facet.go
++++ b/facet.go
+@@ -125,10 +125,6 @@ func (p *Plugin) Register(reg *wago.Registrar) error {
+ 	if err != nil {
+ 		return err
+ 	}
+-	module, err := imports.Module(Module)
+-	if err != nil {
+-		return err
+-	}
+ 	for _, capability := range guestCapabilities {
+ 		if err := reg.GuestCapability(capability.cap, wago.CapabilityDocs(capability.docs)); err != nil {
+ 			return err
+@@ -145,7 +141,9 @@ func (p *Plugin) Register(reg *wago.Registrar) error {
+ 	allBindings = append(allBindings, p.allocatingTextBindings()...)
+ 	allBindings = append(allBindings, p.allocatingReadlinkBindings()...)
+ 	for _, b := range allBindings {
+-		module.Func(b.name, b.fn).Params(b.params...).Results(b.results...).Capability(b.cap).Docs(b.docs)
++		imports.HostFunc(Module, b.name, func(caller wago.Caller, call wago.HostCall) {
++			b.fn(caller, call.ParamSlots(), call.ResultSlots())
++		}).Params(b.params...).Results(b.results...).Capability(b.cap).Docs(b.docs)
+ 	}
+ 	return reg.Lifecycle(wago.PluginLifecycle{Start: p.start, Stop: p.stop})
+ }
+@@ -247,9 +245,12 @@ var guestCapabilities = []guestCapability{
+ 	{CapPoll, "wait for descriptor and monotonic-timer readiness"},
+ }
+ 
++// facetHostFunc stays inside Facet. Public registration uses the scoped HostCall API.
++type facetHostFunc func(wago.HostModule, []uint64, []uint64)
++
+ type binding struct {
+ 	name            string
+-	fn              wago.HostFunc
++	fn              facetHostFunc
+ 	params, results []wago.ValType
+ 	cap             wago.Capability
+ 	docs            string
+diff --git a/guest_alloc_text.go b/guest_alloc_text.go
+index ad54d4e..e351b81 100644
+--- a/guest_alloc_text.go
++++ b/guest_alloc_text.go
+@@ -108,7 +108,7 @@ func allocateTextArray(m wago.HostModule, value string, width textWidth, wtf int
+ 	return token, ErrOK
+ }
+ 
+-func (p *Plugin) argsReadAllocatedArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) argsReadAllocatedArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 2 || len(results) < 2 {
+@@ -135,7 +135,7 @@ func (p *Plugin) argsReadAllocatedArrayHost(width textWidth) wago.HostFunc {
+ 	}
+ }
+ 
+-func (p *Plugin) envReadAllocatedArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) envReadAllocatedArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 3 || len(results) < 2 {
+@@ -170,7 +170,7 @@ func (p *Plugin) envReadAllocatedArrayHost(width textWidth) wago.HostFunc {
+ 	}
+ }
+ 
+-func (p *Plugin) preopenNameReadAllocatedArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) preopenNameReadAllocatedArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 2 || len(results) < 2 {
+@@ -197,7 +197,7 @@ func (p *Plugin) preopenNameReadAllocatedArrayHost(width textWidth) wago.HostFun
+ 	}
+ }
+ 
+-func (p *Plugin) dirIterNextAllocatedArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) dirIterNextAllocatedArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 2 || len(results) < 5 {
+diff --git a/guest_datagram_linux.go b/guest_datagram_linux.go
+index 045d434..e7978e1 100644
+--- a/guest_datagram_linux.go
++++ b/guest_datagram_linux.go
+@@ -83,7 +83,7 @@ func writeRecvResults(results []uint64, n uint64, address socketAddress, flags u
+ 	results[7] = uint64(uint32(ErrOK))
+ }
+ 
+-func (p *Plugin) socketRecvMemoryHost(addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) socketRecvMemoryHost(addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 8 {
+@@ -116,7 +116,7 @@ func (p *Plugin) socketRecvMemoryHost(addressType wago.GuestMemoryAddressType) w
+ 	}
+ }
+ 
+-func (p *Plugin) socketRecvArrayHost(storageClass wago.GuestGCArrayStorage) wago.HostFunc {
++func (p *Plugin) socketRecvArrayHost(storageClass wago.GuestGCArrayStorage) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 8 {
+@@ -151,7 +151,7 @@ func sendAddress(params []uint64, familyPos, hiPos, loPos, portPos, scopePos int
+ 	)
+ }
+ 
+-func (p *Plugin) socketSendMemoryHost(addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) socketSendMemoryHost(addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 10 || len(results) < 2 {
+@@ -195,7 +195,7 @@ func (p *Plugin) socketSendMemoryHost(addressType wago.GuestMemoryAddressType) w
+ 	}
+ }
+ 
+-func (p *Plugin) socketSendArrayHost(storageClass wago.GuestGCArrayStorage) wago.HostFunc {
++func (p *Plugin) socketSendArrayHost(storageClass wago.GuestGCArrayStorage) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 10 || len(results) < 2 {
+diff --git a/guest_fd_io.go b/guest_fd_io.go
+index 5718d9d..54373a7 100644
+--- a/guest_fd_io.go
++++ b/guest_fd_io.go
+@@ -102,7 +102,7 @@ func (p *Plugin) withSequentialFD(m wago.HostModule, raw uint64, op fdIOOperatio
+ 	return fn(h)
+ }
+ 
+-func (p *Plugin) fdMemoryIOHost(op fdIOOperation, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) fdMemoryIOHost(op fdIOOperation, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 4 || len(results) < 2 {
+@@ -142,7 +142,7 @@ func (p *Plugin) fdMemoryIOHost(op fdIOOperation, addressType wago.GuestMemoryAd
+ 	}
+ }
+ 
+-func (p *Plugin) fdArrayIOHost(op fdIOOperation, storageClass wago.GuestGCArrayStorage) wago.HostFunc {
++func (p *Plugin) fdArrayIOHost(op fdIOOperation, storageClass wago.GuestGCArrayStorage) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 4 || len(results) < 2 {
+diff --git a/guest_fd_positional.go b/guest_fd_positional.go
+index 2ddf9ab..30c0847 100644
+--- a/guest_fd_positional.go
++++ b/guest_fd_positional.go
+@@ -101,7 +101,7 @@ func (p *Plugin) withPositionalFD(m wago.HostModule, raw uint64, op fdIOOperatio
+ 	return transferred, code
+ }
+ 
+-func (p *Plugin) fdPositionalMemoryHost(op fdIOOperation, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) fdPositionalMemoryHost(op fdIOOperation, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 2 {
+@@ -136,7 +136,7 @@ func (p *Plugin) fdPositionalMemoryHost(op fdIOOperation, addressType wago.Guest
+ 	}
+ }
+ 
+-func (p *Plugin) fdPositionalArrayHost(op fdIOOperation, storage wago.GuestGCArrayStorage) wago.HostFunc {
++func (p *Plugin) fdPositionalArrayHost(op fdIOOperation, storage wago.GuestGCArrayStorage) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 2 {
+diff --git a/guest_fd_vectored.go b/guest_fd_vectored.go
+index c435681..ecc2a3e 100644
+--- a/guest_fd_vectored.go
++++ b/guest_fd_vectored.go
+@@ -208,7 +208,7 @@ func withStorageForIO(m wago.HostModule, fn func(wago.GuestStorage) (uint64, int
+ 	return n, code
+ }
+ 
+-func (p *Plugin) fdReadvMemoryHost(op fdIOOperation, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) fdReadvMemoryHost(op fdIOOperation, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 4 || len(results) < 2 {
+@@ -251,7 +251,7 @@ func (p *Plugin) fdReadvMemoryHost(op fdIOOperation, addressType wago.GuestMemor
+ 	}
+ }
+ 
+-func (p *Plugin) fdReadvArrayHost(op fdIOOperation, expected wago.GuestGCArrayStorage) wago.HostFunc {
++func (p *Plugin) fdReadvArrayHost(op fdIOOperation, expected wago.GuestGCArrayStorage) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 4 || len(results) < 2 {
+diff --git a/guest_links_linux.go b/guest_links_linux.go
+index 3c8f3c3..0754cfa 100644
+--- a/guest_links_linux.go
++++ b/guest_links_linux.go
+@@ -103,7 +103,7 @@ func (p *Plugin) linkDecoded(m wago.HostModule, srcDir uint64, src string, dstDi
+ 	return pathCode(unix.Linkat(srcParent, srcLeaf, dstParent, dstLeaf, 0))
+ }
+ 
+-func (p *Plugin) linkMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) linkMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 11 || len(results) < 1 {
+@@ -141,7 +141,7 @@ func (p *Plugin) linkMemoryHost(width textWidth, addressType wago.GuestMemoryAdd
+ 	}
+ }
+ 
+-func (p *Plugin) linkArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) linkArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 11 || len(results) < 1 {
+@@ -202,7 +202,7 @@ func (p *Plugin) symlinkDecoded(m wago.HostModule, target string, dstDir uint64,
+ 	return pathCode(unix.Symlinkat(target, parent, leaf))
+ }
+ 
+-func (p *Plugin) symlinkMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) symlinkMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 9 || len(results) < 1 {
+@@ -235,7 +235,7 @@ func (p *Plugin) symlinkMemoryHost(width textWidth, addressType wago.GuestMemory
+ 	}
+ }
+ 
+-func (p *Plugin) symlinkArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) symlinkArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 9 || len(results) < 1 {
+@@ -305,7 +305,7 @@ func readlinkEncode(value string, width textWidth, wtf int32) ([]byte, uint64, i
+ 	return encodeText(value, width, wtf)
+ }
+ 
+-func (p *Plugin) readlinkLenMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) readlinkLenMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+@@ -338,7 +338,7 @@ func (p *Plugin) readlinkLenMemoryHost(width textWidth, addressType wago.GuestMe
+ 	}
+ }
+ 
+-func (p *Plugin) readlinkLenArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) readlinkLenArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+@@ -399,7 +399,7 @@ func validateTextArrayDestination(m wago.HostModule, width textWidth, slot uint6
+ 	return arrayRange(m, slot, expected, byteOffset, byteLength, wago.GuestStorageWrite, func([]byte) int32 { return ErrOK })
+ }
+ 
+-func (p *Plugin) readlinkMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) readlinkMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 9 || len(results) < 2 {
+@@ -436,7 +436,7 @@ func (p *Plugin) readlinkMemoryHost(width textWidth, addressType wago.GuestMemor
+ 	}
+ }
+ 
+-func (p *Plugin) readlinkIntoArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) readlinkIntoArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 9 || len(results) < 2 {
+@@ -467,7 +467,7 @@ func (p *Plugin) readlinkIntoArrayHost(width textWidth) wago.HostFunc {
+ 	}
+ }
+ 
+-func (p *Plugin) readlinkAllocatedHost(width textWidth) wago.HostFunc {
++func (p *Plugin) readlinkAllocatedHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+diff --git a/guest_paths_linux.go b/guest_paths_linux.go
+index b08264f..0633199 100644
+--- a/guest_paths_linux.go
++++ b/guest_paths_linux.go
+@@ -223,7 +223,7 @@ func (p *Plugin) pathOpenDecoded(m wago.HostModule, directory uint64, value stri
+ 	results[1] = uint64(uint32(ErrOK))
+ }
+ 
+-func (p *Plugin) pathOpenMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) pathOpenMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 7 || len(results) < 2 {
+@@ -251,7 +251,7 @@ func (p *Plugin) pathOpenMemoryHost(width textWidth, addressType wago.GuestMemor
+ 	}
+ }
+ 
+-func (p *Plugin) pathOpenArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) pathOpenArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 7 || len(results) < 2 {
+@@ -346,7 +346,7 @@ func (p *Plugin) pathStatDecoded(m wago.HostModule, directory uint64, value stri
+ 	writeUnixStat(results, &st, ErrOK)
+ }
+ 
+-func (p *Plugin) pathStatMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) pathStatMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 10 {
+@@ -374,7 +374,7 @@ func (p *Plugin) pathStatMemoryHost(width textWidth, addressType wago.GuestMemor
+ 	}
+ }
+ 
+-func (p *Plugin) pathStatArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) pathStatArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 10 {
+@@ -414,7 +414,7 @@ func (p *Plugin) createDirDecoded(m wago.HostModule, directory uint64, value str
+ 	return errorCode(unix.Mkdirat(parent, leaf, 0o777))
+ }
+ 
+-func (p *Plugin) createDirMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) createDirMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 1 {
+@@ -441,7 +441,7 @@ func (p *Plugin) createDirMemoryHost(width textWidth, addressType wago.GuestMemo
+ 	}
+ }
+ 
+-func (p *Plugin) createDirArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) createDirArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 1 {
+@@ -484,7 +484,7 @@ func (p *Plugin) removeDecoded(m wago.HostModule, directory uint64, value string
+ 	return errorCode(unix.Unlinkat(parent, leaf, unlinkFlags))
+ }
+ 
+-func (p *Plugin) removeMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) removeMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 1 {
+@@ -511,7 +511,7 @@ func (p *Plugin) removeMemoryHost(width textWidth, addressType wago.GuestMemoryA
+ 	}
+ }
+ 
+-func (p *Plugin) removeArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) removeArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 1 {
+@@ -576,7 +576,7 @@ func (p *Plugin) renameDecoded(m wago.HostModule, srcDir uint64, src string, dst
+ 	return errorCode(unix.Renameat2(srcParent, srcLeaf, dstParent, dstLeaf, renameFlags))
+ }
+ 
+-func (p *Plugin) renameMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) renameMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 11 || len(results) < 1 {
+@@ -618,7 +618,7 @@ func (p *Plugin) renameMemoryHost(width textWidth, addressType wago.GuestMemoryA
+ 	}
+ }
+ 
+-func (p *Plugin) renameArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) renameArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 11 || len(results) < 1 {
+diff --git a/guest_random.go b/guest_random.go
+index 72ff9d9..ca4fae3 100644
+--- a/guest_random.go
++++ b/guest_random.go
+@@ -17,7 +17,7 @@ func randomFill(buf []byte) int32 {
+ 	return ErrOK
+ }
+ 
+-func (p *Plugin) randomFillMemoryHost(addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) randomFillMemoryHost(addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 3 || len(results) < 2 {
+@@ -40,7 +40,7 @@ func (p *Plugin) randomFillMemoryHost(addressType wago.GuestMemoryAddressType) w
+ 	}
+ }
+ 
+-func (p *Plugin) randomFillArrayHost(storageClass wago.GuestGCArrayStorage) wago.HostFunc {
++func (p *Plugin) randomFillArrayHost(storageClass wago.GuestGCArrayStorage) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 3 || len(results) < 2 {
+diff --git a/guest_text.go b/guest_text.go
+index bdfd1ce..5a5b74e 100644
+--- a/guest_text.go
++++ b/guest_text.go
+@@ -20,7 +20,7 @@ func memoryTextDestination(addressType wago.GuestMemoryAddressType, params []uin
+ 	return dst
+ }
+ 
+-func (p *Plugin) argsReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) argsReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 2 {
+@@ -47,7 +47,7 @@ func (p *Plugin) argsReadMemoryHost(width textWidth, addressType wago.GuestMemor
+ 	}
+ }
+ 
+-func (p *Plugin) argsReadArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) argsReadArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 2 {
+@@ -74,7 +74,7 @@ func (p *Plugin) argsReadArrayHost(width textWidth) wago.HostFunc {
+ 	}
+ }
+ 
+-func (p *Plugin) envReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) envReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+@@ -110,7 +110,7 @@ func (p *Plugin) envReadMemoryHost(width textWidth, addressType wago.GuestMemory
+ 	}
+ }
+ 
+-func (p *Plugin) envReadArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) envReadArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 6 || len(results) < 2 {
+@@ -146,7 +146,7 @@ func (p *Plugin) envReadArrayHost(width textWidth) wago.HostFunc {
+ 	}
+ }
+ 
+-func (p *Plugin) preopenNameReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) preopenNameReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 2 {
+@@ -173,7 +173,7 @@ func (p *Plugin) preopenNameReadMemoryHost(width textWidth, addressType wago.Gue
+ 	}
+ }
+ 
+-func (p *Plugin) preopenNameReadArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) preopenNameReadArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 2 {
+@@ -200,7 +200,7 @@ func (p *Plugin) preopenNameReadArrayHost(width textWidth) wago.HostFunc {
+ 	}
+ }
+ 
+-func (p *Plugin) dirIterNextReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) wago.HostFunc {
++func (p *Plugin) dirIterNextReadMemoryHost(width textWidth, addressType wago.GuestMemoryAddressType) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 5 {
+@@ -243,7 +243,7 @@ func (p *Plugin) dirIterNextReadMemoryHost(width textWidth, addressType wago.Gue
+ 	}
+ }
+ 
+-func (p *Plugin) dirIterNextReadArrayHost(width textWidth) wago.HostFunc {
++func (p *Plugin) dirIterNextReadArrayHost(width textWidth) facetHostFunc {
+ 	return func(m wago.HostModule, params, results []uint64) {
+ 		zeroResults(results)
+ 		if len(params) != 5 || len(results) < 5 {
+diff --git a/instance_imports.go b/instance_imports.go
+index b7987ff..a7dc799 100644
+--- a/instance_imports.go
++++ b/instance_imports.go
+@@ -11,7 +11,7 @@ import (
+ // resource that backs it. Close must be called when the guest instance is done.
+ // Provider remains the preferred integration because Wago drives its lifecycle.
+ type InstanceImports struct {
+-	Imports wago.Imports
++	Imports *wago.Imports
+ 
+ 	once       sync.Once
+ 	state      *instanceState
+@@ -28,9 +28,11 @@ func NewInstanceImports(cfg Config) (*InstanceImports, error) {
+ 	}
+ 	state := newInstanceState(cfg, preopenFDs)
+ 	p := &Plugin{cfg: cfg, raw: state, clockBase: time.Now()}
+-	imports := make(wago.Imports)
++	imports := wago.NewImports()
+ 	for _, b := range p.bindings() {
+-		imports[Module+"."+b.name] = b.fn
++		imports.HostFunc(Module, b.name, func(caller wago.Caller, call wago.HostCall) {
++			b.fn(caller, call.ParamSlots(), call.ResultSlots())
++		}).Params(b.params...).Results(b.results...)
+ 	}
+ 	return &InstanceImports{Imports: imports, state: state, preopenFDs: preopenFDs}, nil
+ }
