@@ -83,7 +83,8 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   withdrew the design findings; its remaining source/test gaps are fixed in
   the worker head and passed parent checks. Claude did not read binary Wasm
   or run tests; physical/runtime checks are separate evidence.
-- Step 1 is integrated. The full native stage gate is pending.
+- Step 1 is integrated. The full native stage gate passed; master landing is
+  pending the owner's destination choice.
 
 ### Step 2 launch
 
@@ -99,14 +100,24 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 
 ## Stage landings
 
-No stage has landed. No full-suite result is claimed.
+No stage has landed on master.
 
 Stage 1 gate: `tools/test-native.sh` with no package override or filter,
-tested head `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`, running.
+tested head `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`, passed (exit 0).
+All 1,925 tests passed across 303 owning-file/package commands. The suite took
+541.639 seconds. Every command stayed below 30 seconds; no performance flag
+was emitted. The default native lane reports 25 groups with zero active tests
+(integration/stress skips); step 1's new integration case was separately run
+with skipped tests enabled and passed as recorded above. This is a full
+routine native result, not a full integration or pinned Starshine result.
 Logs: `.tmp/btree-integration/stage-1/full-native.log`, `.head`, `.status`,
 and `.resources.json`. The first wrapper attempt could not start because
 `/usr/bin/time` was absent (exit 127); no native test ran in that attempt.
-The active run uses Python timing plus the script's per-command measurements.
+The completed run used Python timing plus the script's per-command measurements.
+
+| Stage | Tested integration head | Full native result | Master head | Landing state |
+| --- | --- | --- | --- | --- |
+| 1 | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | pending destination choice |
 
 Master landing destination needs an owner answer. Local `master` is checked
 out in the protected main worktree. `origin/master` is its ancestor by 88
