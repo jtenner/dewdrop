@@ -32,7 +32,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `4e5fa46fa9e208c47407a0abff07bdef684d1fab` | integrated; stage gate and policy repair pending |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `6b902057c4679414d43c1031320b4623e5250d44` | integrated; generated gate repair and stage gate pending |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | in flight |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
@@ -193,6 +193,23 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 - Step 2 meets the integration definition: merged, with focused B-tree tests
   green. Stage 2 is not landed on master. The policy repair and full native
   stage gate must pass before that landing.
+- Scalar-policy follow-up report: base `91a88912d6d0101d38e178857542f000339baa6a`,
+  head `6b902057c4679414d43c1031320b4623e5250d44`, clean worktree. Two files:
+  the policy test and [evidence](scalar-builtin-policy-gate-2026-10-25.md).
+  The inventory now checks 34 native branches and the exact 23 library targets,
+  retaining one-instruction and unique-name checks. Production source is
+  unchanged. Worker focused check: 2 passed (0.043 s). Read-only Claude found
+  no confirmed defect; its scope/limits are in the evidence note.
+- Parent reviewed that patch, merged it at
+  `47eb644b31737fdc46f060c1a3bc81cd5127808f`, and independently passed the
+  two focused policy tests. The full generated gate still fails (worker
+  0.669 s; direct failure 0.049 s) in `test_debug_float_policy.py`: the
+  intrinsic generator reports 28 missing declarations. Exact names and
+  diagnostics are preserved in the note. The generator/test/intrinsic source
+  files are unchanged from master. No generated-gate success is claimed.
+- Parent is assigning the missing-intrinsic declaration coverage repair to
+  the same step-2 worker. Stage 2 stays off master until this gate and the
+  full native gate pass. Step 3 owns the plain engine, not this tooling issue.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
