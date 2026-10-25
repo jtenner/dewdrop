@@ -235,6 +235,20 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   counts and inspector. No split, deletion or multi-level claim is permitted.
   The worker must measure actual hot-path allocation, including consumed
   comparator results, and carry the known cold tool-build costs forward.
+- Worker asked which exact production pass list to use: at this pin O4s has
+  no inlining/heap2local, and its probe retains consumed Ordering/Option
+  objects. Parent answered through the pending-request tool. The selected
+  design names no exact production pass list; the parent's earlier wording
+  was imprecise. Raw native output and unchanged O4s remain controls; no
+  experimental pass list is promoted to production.
+- Allocation scope remains section 13.2: no private tree/path/search
+  temporaries, and no discarded Options on Bool/Unit forms. Requested public
+  get/put Option results and comparator/provider results must be counted
+  separately, not hidden or confused with private scratch. No whole-call
+  object-free claim is permitted when provider/API costs remain. Continue
+  source policy specialization; isolate ordinary compiler issues under
+  section 14. A genuine new design departure still requires stopping with
+  exact evidence. No allocation rule or selected departure was waived.
 
 ## Stage landings
 
