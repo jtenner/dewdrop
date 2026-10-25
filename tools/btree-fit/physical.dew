@@ -1,0 +1,227 @@
+// Private source probes. No public facade or compiler tree rule is used.
+pub fn make_numeric() -> BTree<I32, I64, NaturalComparator> {
+  let tree = btree_plain_new::<I32, I64, NaturalComparator>(natural_comparator(), btree_default_config())
+  let mut i = 0u32
+  while true {
+    true if i < 31u32 => {
+      btree_set(tree, unsafe_bitcast::<U32, I32>(i * 2u32), unsafe_bitcast::<U64, I64>(btree_widen(i)))
+      i = i + 1u32
+      continue true
+    }
+    _ => break tree
+  }
+}
+pub fn make_empty() -> BTree<I32, I64, NaturalComparator> {
+  btree_plain_new::<I32, I64, NaturalComparator>(natural_comparator(), btree_default_config())
+}
+pub fn make_unit() -> BTree<I32, Unit, NaturalComparator> {
+  let tree = btree_plain_new::<I32, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 4i32, ())
+  tree
+}
+fn fit_root<k, v, c>(tree: BTree<k, v, c>) -> BTreeNode<k, v> {
+  match tree.root {
+    Option::Some(node) => node
+    Option::None => unreachable()
+  }
+}
+pub fn unit_body(tree: BTree<I32, Unit, NaturalComparator>) -> BTreeKeyLeaf<I32> {
+  match fit_root(tree).body {
+    BTreeBody::PlainKeys(body) => body
+    _ => unreachable()
+  }
+}
+pub fn numeric_keys(tree: BTree<I32, I64, NaturalComparator>) -> WasmArray<I32> {
+  match fit_root(tree).body {
+    BTreeBody::PlainLeaf(body) => body.keys
+    _ => unreachable()
+  }
+}
+pub fn lookup(tree: BTree<I32, I64, NaturalComparator>, key: I32) -> I64 {
+  match btree_get(tree, key) {
+    Option::Some(value) => value
+    Option::None => -1i64
+  }
+}
+pub fn contains(tree: BTree<I32, I64, NaturalComparator>, key: I32) -> Bool {
+  btree_contains(tree, key)
+}
+pub fn replace_bool(tree: BTree<I32, I64, NaturalComparator>, key: I32, value: I64) -> Bool {
+  btree_insert(tree, key, value)
+}
+pub fn replace_unit(tree: BTree<I32, I64, NaturalComparator>, key: I32, value: I64) -> Unit {
+  btree_set(tree, key, value)
+}
+pub fn replace_old(tree: BTree<I32, I64, NaturalComparator>, key: I32, value: I64) -> I64 {
+  match btree_put(tree, key, value) {
+    Option::Some(old) => old
+    Option::None => -1i64
+  }
+}
+pub fn old_snapshot(tree: BTree<I32, I64, NaturalComparator>, key: I32, value: I64) -> Option<I64> {
+  btree_put(tree, key, value)
+}
+pub fn fit_bool(tree: BTree<I32, I64, NaturalComparator>) -> Bool {
+  btree_insert(tree, 31i32, 777i64)
+}
+pub fn fit_unit(tree: BTree<I32, I64, NaturalComparator>) -> Unit {
+  btree_set(tree, 33i32, 778i64)
+}
+pub fn cost_lookup(tree: BTree<I32, I64, NaturalComparator>, count: U32) -> I64 {
+  let mut i = 0u32
+  let mut sum = 0i64
+  while true {
+    true if i < count => {
+      sum = sum + lookup(tree, unsafe_bitcast::<U32, I32>(i & 63u32))
+      i = i + 1u32
+      continue true
+    }
+    _ => break sum
+  }
+}
+pub fn cost_contains(tree: BTree<I32, I64, NaturalComparator>, count: U32) -> U32 {
+  let mut i = 0u32
+  let mut sum = 0u32
+  while true {
+    true if i < count => {
+      sum = sum + unsafe_bitcast::<Bool, U32>(btree_contains(tree, unsafe_bitcast::<U32, I32>(i & 63u32)))
+      i = i + 1u32
+      continue true
+    }
+    _ => break sum
+  }
+}
+pub fn cost_replace(tree: BTree<I32, I64, NaturalComparator>, count: U32) -> I64 {
+  let mut i = 0u32
+  while true {
+    true if i < count => {
+      btree_set(tree, unsafe_bitcast::<U32, I32>((i % 31u32) * 2u32), unsafe_bitcast::<U64, I64>(btree_widen(i)))
+      i = i + 1u32
+      continue true
+    }
+    _ => break btree_node_value(fit_root(tree), 0u32, false)
+  }
+}
+pub fn cost_fit(tree: BTree<I32, I64, NaturalComparator>, rounds: U32) -> U32 {
+  let node = fit_root(tree)
+  let mut round = 0u32
+  let mut sum = 0u32
+  while true {
+    true if round < rounds => {
+      // Reuse the same node. Clear old live slots before each fit-only fill.
+      btree_node_clear(node, tree.plan)
+      tree.length = 0u32
+      let mut i = 0u32
+      while true {
+        true if i < 31u32 => {
+          // A permutation of 0..30 gives front, middle, and end gaps.
+          let key = unsafe_bitcast::<U32, I32>((i * 17u32) % 31u32)
+          sum = sum + unsafe_bitcast::<Bool, U32>(btree_insert(tree, key, unsafe_bitcast::<U64, I64>(btree_widen(i))))
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      round = round + 1u32
+      continue true
+    }
+    _ => break sum
+  }
+}
+pub fn direct_lookup(keys: WasmArray<I32>, key: I32) -> U32 {
+  let mut base = 0u32
+  let mut size = 31u32
+  while true {
+    true if size > 0u32 => {
+      let half = size >> 1u32
+      let less = unsafe_bitcast::<Bool, U32>(wasm_array_get(keys, base + half) < key)
+      base = base + less * (half + 1u32)
+      size = half - (less & (1u32 - (size & 1u32)))
+      continue true
+    }
+    _ => break base
+  }
+}
+pub fn cost_control(keys: WasmArray<I32>, count: U32) -> I64 {
+  let mut i = 0u32
+  let mut sum = 0i64
+  while true {
+    true if i < count => {
+      let key = unsafe_bitcast::<U32, I32>(i & 63u32)
+      let index = direct_lookup(keys, key)
+      sum = sum + (if index < 31u32 && wasm_array_get(keys, index) == key {
+        unsafe_bitcast::<U64, I64>(btree_widen(index))
+      } else {
+        -1i64
+      })
+      i = i + 1u32
+      continue true
+    }
+    _ => break sum
+  }
+}
+pub fn make_text() -> BTree<String, I64, StringComparator> {
+  let tree = btree_plain_new::<String, I64, StringComparator>(string_comparator(), btree_default_config())
+  btree_set(tree, "a", 1i64)
+  btree_set(tree, "c", 3i64)
+  btree_set(tree, "e", 5i64)
+  tree
+}
+pub fn text_key() -> String { 
+  "c"
+}
+pub fn text_miss() -> String {
+  "d"
+}
+pub fn text_lookup(tree: BTree<String, I64, StringComparator>, key: String) -> I64 {
+  match btree_get(tree, key) {
+    Option::Some(value) => value
+    Option::None => -1i64
+  }
+}
+pub fn text_replace(tree: BTree<String, I64, StringComparator>, key: String) -> Unit {
+  btree_set(tree, key, 10i64)
+}
+pub fn text_fit(tree: BTree<String, I64, StringComparator>, key: String) -> Bool {
+  btree_insert(tree, key, 11i64)
+}
+pub fn text_keys(tree: BTree<String, I64, StringComparator>) -> WasmArray<String> {
+  match fit_root(tree).body {
+    BTreeBody::PlainLeaf(body) => body.keys
+    _ => unreachable()
+  }
+}
+pub fn text_values(tree: BTree<String, I64, StringComparator>) -> WasmArray<I64> {
+  match fit_root(tree).body {
+    BTreeBody::PlainLeaf(body) => body.values
+    _ => unreachable()
+  }
+}
+pub fn text_clear(tree: BTree<String, I64, StringComparator>) -> Unit {
+  btree_clear(tree)
+}
+pub fn text_has_root(tree: BTree<String, I64, StringComparator>) -> Bool {
+  match tree.root {
+    Option::Some(_) => true
+    Option::None => false
+  }
+}
+pub fn text_length(tree: BTree<String, I64, StringComparator>) -> U32 {
+  tree.length
+}
+pub fn text_contains(tree: BTree<String, I64, StringComparator>, key: String) -> Bool {
+  btree_contains(tree, key)
+}
+pub fn consumed_compare(tree: BTree<String, I64, StringComparator>, left: String, right: String) -> I32 {
+  match tree.comparator.compare(left, right) {
+    Ordering::Less => -1i32
+    Ordering::Equal => 0i32
+    Ordering::Greater => 1i32
+  }
+}
+pub fn search_numeric(tree: BTree<I32, I64, NaturalComparator>, key: I32) -> U32 {
+  btree_plain_search(fit_root(tree), tree.comparator, key)
+}
+pub fn search_text(tree: BTree<String, I64, StringComparator>, key: String) -> U32 {
+  btree_plain_search(fit_root(tree), tree.comparator, key)
+}

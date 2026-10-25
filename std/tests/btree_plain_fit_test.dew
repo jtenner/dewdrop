@@ -1,0 +1,391 @@
+// Compiled with the exact common source. This is not a public tree API.
+fn btree_test_root<k, v, c>(tree: BTree<k, v, c>) -> BTreeNode<k, v> {
+  match tree.root {
+    Option::Some(node) => node
+    Option::None => {
+      assert(false, "BTree test root: expected a live root")
+      unreachable()
+    }
+  }
+}
+fn btree_test_inspect<k, v, c: Comparator<k>>(tree: BTree<k, v, c>) -> Unit {
+  match tree.root {
+    Option::None => assert(tree.length == 0u32, "BTree empty inspector: count without a root")
+    Option::Some(node) => {
+      if node.count != tree.length || node.count > tree.plan.leaf_capacity || node.head || node.prefix != 0u32 || tree.plan.leaf_width != 0u32 {
+        btree_node_failure(node, 0u32, "inspect root: count/capacity/head/prefix/plan")
+      }
+      match node.body {
+        BTreeBody::PlainLeaf(body) => {
+          if is_unit::<v>() || wasm_array_len(body.keys) != tree.plan.leaf_capacity + 1u32 || wasm_array_len(body.values) != tree.plan.leaf_capacity + 2u32 {
+            btree_node_failure(node, 0u32, "inspect columns: carrier or capacity")
+          }
+        }
+        BTreeBody::PlainKeys(body) => {
+          if !is_unit::<v>() || wasm_array_len(body.keys) != tree.plan.leaf_capacity + 1u32 {
+            btree_node_failure(node, 0u32, "inspect Unit: carrier or capacity")
+          }
+        }
+        _ => btree_node_failure(node, 0u32, "inspect root: expected plain leaf")
+      }
+      let mut i = 1u32
+      while true {
+        true if i < node.count => {
+          if !ordering_is_less(tree.comparator.compare(btree_node_key(node, i - 1u32, false), btree_node_key(node, i, false))) {
+            btree_node_failure(node, i, "inspect order: keys are not strictly ordered")
+          }
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+    }
+  }
+}
+test "B-tree plain empty and result policies" {
+  let tree = btree_plain_new::<I32, I64, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_test_inspect(tree)
+  assert(match tree.root {
+    Option::None => true
+    _ => false
+  }, "new tree has no nodes")
+  assert(!btree_contains(tree, 7i32), "empty contains")
+  assert(match btree_get(tree, 7i32) {
+    Option::None => true
+    _ => false
+  }, "empty get")
+  assert(btree_insert(tree, 7i32, 10i64), "first insert")
+  btree_test_inspect(tree)
+  assert(!btree_insert(tree, 7i32, 11i64), "replace Bool")
+  assert(match btree_put(tree, 7i32, 12i64) {
+    Option::Some(11i64) => true
+    _ => false
+  }, "put previous value")
+  assert(match btree_put(tree, 3i32, 30i64) {
+    Option::None => true
+    _ => false
+  }, "put new key")
+  btree_set(tree, 9i32, 90i64)
+  assert(match btree_get(tree, 7i32) {
+    Option::Some(12i64) => true
+    _ => false
+  }, "get current value")
+  assert(tree.length == 3u32, "only new keys grow length")
+  btree_test_inspect(tree)
+}
+test "B-tree plain fit insert covers every gap and full-leaf replacement" {
+  let shape = btree_plain_new::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+  let capacity = shape.plan.leaf_capacity
+  let mut gap = 0u32
+  while true {
+    true if gap < capacity => {
+      let tree = btree_plain_new::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+      let mut i = 0u32
+      while true {
+        true if i < capacity => {
+          if i != gap {
+            btree_set(tree, btree_widen(i) * 2u64, btree_widen(i))
+          }
+          btree_test_inspect(tree)
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      assert(btree_insert(tree, btree_widen(gap) * 2u64, 999u64), "missing gap insert")
+      assert(!btree_insert(tree, btree_widen(gap) * 2u64, 1000u64), "full leaf still replaces")
+      btree_test_inspect(tree)
+      let root = btree_test_root(tree)
+      i = 0u32
+      while true {
+        true if i < capacity => {
+          assert(btree_node_key(root, i, false) == btree_widen(i) * 2u64, "gap order")
+          assert(btree_contains(tree, btree_widen(i) * 2u64), "all keys found")
+          assert(!btree_contains(tree, btree_widen(i) * 2u64 + 1u64), "all gaps miss")
+          let expected = if i == gap {
+            1000u64
+          } else {
+            btree_widen(i)
+          }
+          assert(match btree_get(tree, btree_widen(i) * 2u64) {
+            Option::Some(value) => value == expected
+            _ => false
+          }, "gap shifts keep every value")
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      gap = gap + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}
+test "B-tree count helpers reach U32 max without wrap" {
+  assert(btree_checked_growth(4294967294u32, 61u32) == 4294967295u32, "last valid growth")
+}
+test "B-tree Unit root fills exactly to capacity" {
+  let tree = btree_plain_new::<I32, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  let mut i = 0u32
+  while true {
+    true if i < tree.plan.leaf_capacity => {
+      assert(btree_insert(tree, unsafe_bitcast::<U32, I32>(i), ()), "Unit capacity fill inserts")
+      btree_test_inspect(tree)
+      i = i + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(tree.length == tree.plan.leaf_capacity, "Unit root reaches capacity")
+  assert(match btree_get(tree, 0i32) {
+    Option::Some(_) => true
+    _ => false
+  }, "Unit live read has Some")
+}
+test "B-tree new key at U32 max is diagnostic" expect_trap "unreachable" {
+  btree_checked_growth(4294967295u32, 61u32)
+}
+test "B-tree full root has a diagnostic checkpoint boundary" expect_trap "unreachable" {
+  let tree = btree_plain_new::<I32, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  let mut i = 0u32
+  while true {
+    true if i <= tree.plan.leaf_capacity => {
+      btree_set(tree, unsafe_bitcast::<U32, I32>(i), ())
+      i = i + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}
+// Linear model. It has its own search and shifts; it never calls tree search.
+test "B-tree plain deterministic writes match a sorted-array oracle" {
+  let comparator = natural_comparator()
+  let tree = btree_plain_new::<I32, I64, NaturalComparator>(comparator, btree_default_config())
+  let keys = wasm_array_new_default::<I32>(40u32)
+  let values = wasm_array_new_default::<I64>(40u32)
+  let mut length = 0u32
+  let mut seed = 137u32
+  let mut step = 0u32
+  while true {
+    true if step < 800u32 => {
+      seed = seed * 1664525u32 + 1013904223u32
+      let key = unsafe_bitcast::<U32, I32>((seed >> 16u32) % 32u32) - 16i32
+      let value = unsafe_bitcast::<U64, I64>(btree_widen(step))
+      if step % 97u32 == 0u32 {
+        btree_clear(tree)
+        length = 0u32
+      } else {
+        let mut index = 0u32
+        while true {
+          true if index < length && ordering_is_less(comparator.compare(wasm_array_get(keys, index), key)) => {
+            index = index + 1u32
+            continue true
+          }
+          _ => break ()
+        }
+        let found = index < length && ordering_is_equal(comparator.compare(wasm_array_get(keys, index), key))
+        let old = if found {
+          Option::Some(wasm_array_get(values, index))
+        } else {
+          Option::None
+        }
+        if step % 3u32 == 0u32 {
+          assert(btree_insert(tree, key, value) == !found, "oracle insert Bool; seed=137")
+        } else if step % 3u32 == 1u32 {
+          let result = btree_put(tree, key, value)
+          assert(match (old, result) {
+            (Option::None, Option::None) => true
+            (Option::Some(a), Option::Some(b)) => a == b
+            _ => false
+          }, "oracle old value; seed=137")
+        } else {
+          btree_set(tree, key, value)
+        }
+        if !found {
+          let mut destination = length
+          while true {
+            true if destination > index => {
+              wasm_array_set(keys, destination, wasm_array_get(keys, destination - 1u32))
+              wasm_array_set(values, destination, wasm_array_get(values, destination - 1u32))
+              destination = destination - 1u32
+              continue true
+            }
+            _ => break ()
+          }
+          wasm_array_set(keys, index, key)
+          length = length + 1u32
+        }
+        wasm_array_set(values, index, value)
+      }
+      btree_test_inspect(tree)
+      assert(tree.length == length, "oracle length; seed=137")
+      let mut query = 0u32
+      while true {
+        true if query <= 32u32 => {
+          let key = unsafe_bitcast::<U32, I32>(query) - 16i32
+          let mut index = 0u32
+          while true {
+            true if index < length && ordering_is_less(comparator.compare(wasm_array_get(keys, index), key)) => {
+              index = index + 1u32
+              continue true
+            }
+            _ => break ()
+          }
+          let found = index < length && ordering_is_equal(comparator.compare(wasm_array_get(keys, index), key))
+          assert(btree_contains(tree, key) == found, "oracle contains; seed=137")
+          if found {
+            match btree_get(tree, key) {
+              Option::Some(value) => assert(value == wasm_array_get(values, index), "oracle get value; seed=137")
+              Option::None => assert(false, "oracle get lost a key; seed=137")
+            }
+          } else {
+            match btree_get(tree, key) {
+              Option::Some(_) => assert(false, "oracle get added a key; seed=137")
+              Option::None => ()
+            }
+          }
+          if found {
+            let root = btree_test_root(tree)
+            assert(btree_node_key(root, index, false) == key, "oracle key position; seed=137")
+          }
+          query = query + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      step = step + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}
+struct BTreeIdentityKey {
+  private order: I32
+  private mark: I32
+}
+struct BTreeIdentityComparator {
+}
+impl Comparator<BTreeIdentityKey> for BTreeIdentityComparator {
+  fn compare(self, left: BTreeIdentityKey, right: BTreeIdentityKey) -> Ordering {
+    if left.order < right.order {
+      Ordering::Less
+    } else if left.order > right.order {
+      Ordering::Greater
+    } else {
+      Ordering::Equal
+    }
+  }
+}
+builtin btree_test_key_identity(left: BTreeIdentityKey, right: BTreeIdentityKey) -> Bool = "ref.eq"
+test "B-tree equal keys keep stored identity and snapshots keep old values" {
+  let tree = btree_plain_new::<BTreeIdentityKey, I64, BTreeIdentityComparator>(BTreeIdentityComparator::{
+  }, btree_default_config())
+  let alias = tree
+  let original = BTreeIdentityKey::{
+    order: 4i32
+    mark: 1i32
+  }
+  let query = BTreeIdentityKey::{
+    order: 4i32
+    mark: 2i32
+  }
+  btree_set(tree, original, 10i64)
+  let snapshot = btree_get_entry(tree, query)
+  assert(!btree_insert(alias, query, 11i64), "equal reference key replaces")
+  assert(match btree_get_entry(tree, query) {
+    Option::Some(entry) => btree_test_key_identity(entry.key, original) && entry.key.mark == 1i32 && entry.value == 11i64
+    _ => false
+  }, "stored key retained under comparator equality")
+  assert(match snapshot {
+    Option::Some(entry) => entry.value == 10i64 && btree_test_key_identity(entry.key, original)
+    _ => false
+  }, "snapshot keeps old scalar value")
+  btree_test_inspect(tree)
+  btree_clear(alias)
+  assert(tree.length == 0u32 && !btree_contains(tree, query), "clear through alias")
+  btree_set(tree, query, 12i64)
+  btree_test_inspect(tree)
+  assert(match btree_get_entry(alias, original) {
+    Option::Some(entry) => btree_test_key_identity(entry.key, query)
+    _ => false
+  }, "repopulate stores new key")
+}
+fn unwrap_option<v>(option: Option<v>) -> v {
+  match option {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+// No Default, Eq, or numeric bound is put on v. Each selected carrier runs.
+fn btree_test_plain_value_option<v>(first: v, second: v) -> Option<v> {
+  let tree = btree_plain_new::<I32, v, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 9i32, first)
+  btree_set(tree, 3i32, first)
+  btree_set(tree, 6i32, second)
+  let old = btree_put(tree, 6i32, first)
+  btree_test_inspect(tree)
+  old
+}
+test "B-tree plain values cover every required carrier" {
+  assert(unwrap_option(btree_test_plain_value_option(1i32, -7i32)) == -7i32, "I32 value")
+  assert(unwrap_option(btree_test_plain_value_option(1i64, -7i64)) == -7i64, "I64 value")
+  assert(wasm_f32_to_bits(unwrap_option(btree_test_plain_value_option(1.0f32, wasm_f32_from_bits(2143289345u32)))) == 2143289345u32, "F32 NaN bits")
+  assert(wasm_f64_to_bits(unwrap_option(btree_test_plain_value_option(1.0f64, wasm_f64_from_bits(9223372036854775808u64)))) == 9223372036854775808u64, "F64 negative zero bits")
+  let a = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(7u64))
+  let b = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(11u64), 13u64))
+  let vector = unwrap_option(btree_test_plain_value_option(a, b))
+  assert(btree_extract64(vector, 0u32) == 11u64 && btree_extract64(vector, 1u32) == 13u64, "V128 value")
+  let key = BTreeIdentityKey::{
+    order: 1i32
+    mark: 3i32
+  }
+  assert(btree_test_key_identity(unwrap_option(btree_test_plain_value_option(key, key)), key), "reference value without Default")
+  assert(match unwrap_option(btree_test_plain_value_option(Option::Some(1i64), Option::None)) {
+    Option::None => true
+    _ => false
+  }, "present None value")
+  assert(match unwrap_option(btree_test_plain_value_option(Option::Some(Option::None), Option::Some(Option::Some(7i64)))) {
+    Option::Some(Option::Some(7i64)) => true
+    _ => false
+  }, "nested Option value")
+  let unit = unwrap_option(btree_test_plain_value_option((), ()))
+}
+test "B-tree Unit writes preserve value expression effects" {
+  let effects = BTreeUnitEffects::{
+    count: 0u32
+  }
+  let tree = btree_plain_new::<I32, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 3i32, btree_unit_value(effects))
+  btree_insert(tree, 3i32, btree_unit_value(effects))
+  btree_put(tree, 1i32, btree_unit_value(effects))
+  assert(effects.count == 3u32, "Unit value expression runs once for each write")
+  btree_test_inspect(tree)
+}
+test "B-tree replacement at maximum global length remains valid" {
+  let tree = btree_plain_new::<I32, I64, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 4i32, 10i64)
+  tree.length = 4294967295u32
+  assert(!btree_insert(tree, 4i32, 11i64), "Bool replacement at U32 max")
+  btree_set(tree, 4i32, 12i64)
+  assert(match btree_put(tree, 4i32, 13i64) {
+    Option::Some(12i64) => true
+    _ => false
+  }, "old value replacement at U32 max")
+  assert(tree.length == 4294967295u32 && btree_test_root(tree).count == 1u32, "replacement does not grow counts")
+  tree.length = 1u32
+  btree_test_inspect(tree)
+}
+test "B-tree stored None is distinct from a missing key" {
+  let tree = btree_plain_new::<I32, Option<I64>, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1i32, Option::None)
+  assert(match btree_get(tree, 1i32) {
+    Option::Some(Option::None) => true
+    _ => false
+  }, "present None retains outer Some")
+  assert(match btree_get(tree, 2i32) {
+    Option::None => true
+    _ => false
+  }, "missing key has outer None")
+  btree_test_inspect(tree)
+}
