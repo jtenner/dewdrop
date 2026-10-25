@@ -58,7 +58,7 @@ if (mode === 'inspect') {
   }
   for (const [name, counts] of Object.entries(allocations)) {
     const arrays = Object.values(counts).filter(x => x.opcode.startsWith('array.')).reduce((sum, x) => sum + x.count, 0);
-    const structs = Object.values(counts).filter(x => x.opcode === 'struct.new').reduce((sum, x) => sum + x.count, 0);
+    const structs = Object.values(counts).filter(x => x.opcode.startsWith('struct.')).reduce((sum, x) => sum + x.count, 0);
     console.log(name, JSON.stringify({ arrays, structs }));
     if (name === 'compare_result') assert.equal(arrays + structs, 1, 'one escaping Ordering result');
     if (name.startsWith('clear_') || name.startsWith('cost_') || name.endsWith('_with')) assert.equal(arrays + structs, 0, name);
@@ -68,12 +68,12 @@ if (mode === 'inspect') {
 } else if (mode === 'cost') {
   const plan = e.plan_same(), node = e.make_same(plan), pairs = e.same_slots(node);
   const tests = [
-    ['pair', () => e.cost_pair(node, 200000), 'pair_control', () => e.cost_pair_control(pairs, 200000), 200000],
+    ['pair', () => e.cost_pair(node, 50000000), 'pair_control', () => e.cost_pair_control(pairs, 50000000), 50000000],
   ];
   for (const width of [2, 4, 8]) {
     const slots = e.packed_slots(width);
-    tests.push(['simd' + width, () => e['cost_simd' + width](slots, 20000),
-                'scalar' + width, () => e['cost_scalar' + width](slots, 20000), 20000]);
+    tests.push(['simd' + width, () => e['cost_simd' + width](slots, 1000000),
+                'scalar' + width, () => e['cost_scalar' + width](slots, 1000000), 1000000]);
   }
   const samples = [];
   for (const [a, first, b, second, operations] of tests) {

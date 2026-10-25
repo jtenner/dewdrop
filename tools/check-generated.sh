@@ -81,6 +81,7 @@ python3 tools/generate_priority_queue_std.py --check
 python3 tools/generate_red_black_tree_std.py --check
 python3 tools/generate_ordered_map_std.py --check
 python3 tools/generate_ordered_set_std.py --check
+python3 tools/generate_btree_std.py --check
 python3 tools/generate_show_std.py --check
 python3 tools/generate_disposable_std.py --check
 python3 tools/generate_iter_std.py --check

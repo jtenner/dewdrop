@@ -12,6 +12,8 @@ pub fn standard_blake3_source() -> Bytes
 
 pub fn standard_bloom_filter_source() -> Bytes
 
+pub fn standard_btree_source() -> Bytes
+
 pub fn standard_circular_buffer_source() -> Bytes
 
 pub fn standard_debug_preamble_source() -> Bytes

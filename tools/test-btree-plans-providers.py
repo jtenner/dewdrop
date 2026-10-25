@@ -115,12 +115,12 @@ def main():
     for opcode in ["i16x8.lt_u", "i32x4.lt_u", "i64x2.lt_s", "v128.xor"]:
         assert opcode in wat, opcode
     # Instrument a copy. No imports or existing indices change.
-    sites = sorted(set(re.findall(r"\b(array\.new_default|array\.new|struct\.new) (\d+)\b", wat)))
+    sites = sorted(set(re.findall(r"\b(array\.new_default|array\.new_fixed|array\.new_data|array\.new_elem|array\.new|struct\.new_default|struct\.new) (\d+)\b", wat)))
     extra = []
     for ordinal, (opcode, type_index) in enumerate(sites):
         extra += [f'  (global $alloc_{ordinal} (mut i64) (i64.const 0))',
                   f'  (export "alloc_{ordinal}" (global $alloc_{ordinal}))']
-        pattern = rf"^(\s*{re.escape(opcode)} {type_index})$"
+        pattern = rf"^(\s*{re.escape(opcode)} {type_index}(?: \d+)?)$"
         wat = re.sub(pattern, rf"\1\n    global.get $alloc_{ordinal}\n    i64.const 1\n    i64.add\n    global.set $alloc_{ordinal}", wat, flags=re.M)
     extra.append('  (func (export "reset_allocations")')
     for ordinal in range(len(sites)):
@@ -146,7 +146,7 @@ def main():
     run("physical-runtime", ["node", ROOT / "tools/btree-plans/run.mjs", output, "inspect"])
     for process in range(4):
         run(f"cost-{process}", ["node", ROOT / "tools/btree-plans/run.mjs", output, "cost", str(process)])
-    cost_samples = [sample for path in sorted(output.glob("cost-*.json"))
+    cost_samples = [sample for path in [output / f"cost-{process}.json" for process in range(4)]
                     for sample in json.loads(path.read_text())["samples"]]
     summary = {}
     for name in dict.fromkeys(sample["name"] for sample in cost_samples):

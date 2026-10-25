@@ -22,8 +22,15 @@ def cases():
     rows = []
     # Keep each source file visible if another standard test cannot compile.
     for path in sorted((ROOT / "std/tests").glob("*_test.dew")):
+        if path.name in ASSEMBLY.PRIVATE_BTREE_TESTS:
+            continue
         rows.append(("std/" + path.stem, "dew.std", [(path.as_posix(), path)],
                      ["node", "tools/dew-test/run.mjs", "--wasm"]))
+    private_sources = [ROOT / "std/collections/btree.dew", ROOT / "tools/btree-plans/providers.dew"]
+    private_sources += [ROOT / "std/tests" / name for name in ASSEMBLY.PRIVATE_BTREE_TESTS]
+    rows.append(("std/btree_private_storage", "probe.btree_storage",
+                 [(path.as_posix(), path) for path in private_sources],
+                 ["node", "tools/dew-test/run.mjs", "--wasm"]))
     for fixture, module in ASSEMBLY.PROBE_MODULES:
         path = ROOT / f"tools/dew-test/{fixture}.dew"
         rows.append(("probes/" + fixture, module, [(path.as_posix(), path)], checkers.pop(fixture)))

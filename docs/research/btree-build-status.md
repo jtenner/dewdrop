@@ -32,7 +32,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `59aab429906362eb62ace42989f65316ced9e6d9` | in flight; report received; parent review/checks pending |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `4e5fa46fa9e208c47407a0abff07bdef684d1fab` | in flight; parent fixes/checks pending |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
@@ -144,6 +144,28 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   Include this opcode in the committed recorder with the rerun fix.
   Source hashes and reported performance limits were independently checked
   by Sol. Claude's full review remains pending; step 2 is not integrated.
+- Claude review completed (exit 0). All changed source/diff files were in
+  scope; binary Wasm, hashes, Git HEAD and parts of raw evidence were outside
+  its verified coverage. The Git HEAD read was denied; there was no auth
+  failure. Parent/Sol identity and runtime checks are separate evidence.
+- Parent confirmed and fixed two further tooling gaps: `check-generated.sh`
+  now checks the B-tree source mirror, and the Starshine library experiment
+  shares the private test list and one combined private-source case with the
+  stdlib runner. The standard-sources interface was regenerated (0.375 s).
+- Parent also fixed numbered sample-file selection and extended allocation
+  counting to fixed/data/element arrays and default struct allocation.
+  Cost samples now use longer loops. The note labels the original mixed-JIT
+  short samples as smoke checks, counts the inline-width enum, and records
+  independent source evidence for C bytes and `-Og` without claiming a cause.
+- Inactive tag fill values need not match: live masks exclude them. No storage
+  change or new design departure is needed. Wrapper, move/clear and consumed
+  comparator costs remain explicit later-step measurements; no warm-lookup
+  allocation claim is made by the foundation.
+- Original worker head is preserved at `refs/btree-build/step-2-original`.
+  Only its single commit was rebased onto current integration. Replayed worker
+  head: `4e5fa46fa9e208c47407a0abff07bdef684d1fab`; provisional integration
+  merge: `b4410a710263c5d3a612bf203a8c0a4f34b2e18b`. Focused parent checks
+  and the same-folder rerun regression are pending. Step 2 is not integrated.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.

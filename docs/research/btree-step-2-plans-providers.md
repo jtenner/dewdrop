@@ -149,6 +149,8 @@ gc-shapes.json checks the actual emitted types:
 Allocation counts below are executed instructions in an instrumented copy,
 not just reachable allocation sites. Node calls receive an existing plan.
 Plan calls below also construct their probe comparator and default config.
+The fourth inline-plan object is the temporary `BTreeInlineWidth` enum returned
+by `inline_width()`. It is included in the count.
 
 | Operation | Arrays | Struct/enum objects |
 | --- | ---: | ---: |
@@ -197,7 +199,7 @@ random generator or hidden seed is used. Timers surround whole loops.
 The original module is timed; counters are used only in a separate copy.
 
 
-Final loop samples (24 per path; nanoseconds per operation):
+Original short-window smoke samples (24 per path; nanoseconds per operation):
 
 | Path | Median | Min | Max | Median M operations/s |
 | --- | ---: | ---: | ---: | ---: |
@@ -214,6 +216,11 @@ One rank operation scans all 54 windows. One pair operation writes and reads
 one value. The controls use the same counts and checksums. These rates are
 for the whole timed loops, not host calls around each key. Samples show noise,
 especially width Four; the full ranges are retained.
+Review found a JIT tier step in these samples, after repetition 2. Their
+sub-millisecond windows are too short for a steady-state speed claim. These
+historical numbers are smoke checks only. The scalar control reads the same
+packed strip with lane extraction; its ratio does not compare SIMD with a
+plain typed-array scan.
 
 This is primitive cost evidence, not a B-tree throughput comparison.
 The direct-array control can fold stores/loads and gives a lower bound.
@@ -293,6 +300,53 @@ Original physical module: 62,467 bytes; SHA-256
 Stripped physical module: 26,937 bytes.
 These sizes include the probe exports and selected standard helpers. They
 are not the cost of one tree instance. No matched code-size gain is claimed.
+
+## Parent integration review
+
+The original worker commit is `59aab429906362eb62ace42989f65316ced9e6d9`.
+Only that commit was rebased onto current integration. Its replay is
+`4e5fa46fa9e208c47407a0abff07bdef684d1fab`, merged for parent validation at
+`b4410a710263c5d3a612bf203a8c0a4f34b2e18b`.
+
+Independent Sol/high and Claude Code Opus/high reviews found no functional
+storage/provider defect or required design departure. The parent confirmed
+and fixed the repeated-output harness failure: raw samples now come only
+from `cost-0.json` through `cost-3.json`, never `cost-summary.json`.
+The allocation recorder now covers `array.new_fixed`, `array.new_data`,
+`array.new_elem` and `struct.new_default` too. A separate parent check counted
+all 44 fixed-array instruction sites; none ran on the measured success paths.
+The reported success-path counts were unchanged.
+
+The generated-source gate now checks the B-tree mirror. The stdlib and
+Starshine experiment runners share the private-test list and compile those
+tests as one ordinary module with the exact common source and providers.
+The generated standard-sources interface was refreshed.
+
+Parent cost runs use 50,000,000 pair operations and 1,000,000 rank operations
+per timed sample, with the same four processes, three warmups, six samples,
+alternating order, fixed inputs and checksums. The original short-window
+samples above remain historical evidence. Fresh parent raw files are kept
+under `.tmp/btree-integration/step-2/` and are not edited by hand.
+
+The `-Og` flags are visible at `src/dew_cli/moon.pkg:21`. The parent measured
+the worker's generated C file as 81,261,341 bytes and saved the paths/flags
+in `.tmp/btree-integration/step-2/build-cost-source.json`. Neither fact proves
+the phase cause of the slow builds.
+
+New and cleared inactive tag bytes need not have the same numeric value:
+live masks exclude them. They contain no GC references. Their differing fill
+values do not change a rank or key result. The selected layout is unchanged.
+Raw escaping Ordering results allocate. Non-escaping comparator consumption,
+wrapper cost, shift/clear speed and final production-pipeline behavior remain
+explicit measurement work for later engine steps; no zero-allocation warm
+lookup or production B-tree speed claim is made by this foundation.
+
+Claude read the changed source/diff and selected raw evidence. It could not
+read binary Wasm, compute hashes, or verify Git HEAD (that read was denied).
+Sol and the parent independently checked the exact diff, source hashes and
+runtime evidence. No authentication failure was reported. Claude's partial
+raw-file coverage is listed in its saved report at
+`/tmp/dewdrop-btree-step2-review-59aab429/claude.stdout`.
 
 ## Changed files
 

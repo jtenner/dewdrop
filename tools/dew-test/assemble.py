@@ -9,6 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+PRIVATE_BTREE_TESTS = (
+    "btree_node_storage_test.dew", "btree_metadata_test.dew", "btree_capacity_matrix_test.dew",
+)
+
 # Shared by the normal suite and the Starshine execution experiments.
 PROBE_MODULES = [
     ("scalar_conversions", "dew.std.conversions"),
@@ -55,8 +59,7 @@ PROBE_MODULES = [
 
 
 def main() -> None:
-    private_btree_tests = [ROOT / "std/tests" / name for name in (
-        "btree_node_storage_test.dew", "btree_metadata_test.dew", "btree_capacity_matrix_test.dew")]
+    private_btree_tests = [ROOT / "std/tests" / name for name in PRIVATE_BTREE_TESTS]
     paths = sorted(p for p in (ROOT / "std/tests").glob("*_test.dew") if p not in private_btree_tests)
     if not paths:
         raise SystemExit("no std/tests/*_test.dew tests found")
