@@ -210,6 +210,11 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 - Parent is assigning the missing-intrinsic declaration coverage repair to
   the same step-2 worker. Stage 2 stays off master until this gate and the
   full native gate pass. Step 3 owns the plain engine, not this tooling issue.
+- Intrinsic-coverage follow-up is running on the same worker branch. Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Athread-send%3Abtree-step-2-intrinsic-coverage-gate-fix-r1`.
+  Scope is ordinary source/declaration generation, directly related mirrors
+  and policy evidence, with read-only Claude review. No tree layout change or
+  compiler dispatch exception is permitted. No result is claimed yet.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
