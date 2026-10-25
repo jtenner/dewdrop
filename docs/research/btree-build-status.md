@@ -33,7 +33,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `4e5fa46fa9e208c47407a0abff07bdef684d1fab` | integrated; stage gate and policy repair pending |
-| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
+| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | in flight |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
 | 6 | Inline search | `feat/btree-step-6-inline-search` | — | queued |
@@ -197,6 +197,23 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
 
+### Step 3 launch
+
+- Base: `bee17cd481a4d48f2ed02d895119ee05192defee`.
+- Dependency: step 2 merged, with parent focused B-tree tests green. The old
+  scalar policy repair is separate tooling work; no engine dependency is
+  missing. No stage-2 master landing is claimed.
+- Provider/model/options checked: `codex`, `gpt-6.1-sol`,
+  `reasoningEffort=high`.
+- Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-3-plain-fit-writes-r1`.
+- Child thread ID:
+  `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-3-plain-fit-writes-r1`.
+- State: running. Scope is plain root-leaf lookup/fit writes, result policies,
+  counts and inspector. No split, deletion or multi-level claim is permitted.
+  The worker must measure actual hot-path allocation, including consumed
+  comparator results, and carry the known cold tool-build costs forward.
+
 ## Stage landings
 
 Stage 1 has landed on local and remote master at
@@ -219,6 +236,7 @@ The completed run used Python timing plus the script's per-command measurements.
 | --- | --- | --- | --- | --- |
 | 1, before master rebase | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | new gate required after rebase |
 | 1, after master rebase | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | 1,925 passed, 0 failed; 523.325 s | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | stage-landed; pushed to origin/master |
+| 2 | pending current-master rebase and gate | not run yet | — | integrated; old policy-check repair pending; not landed |
 
 ### Owner landing updates and stage-1 rebase
 
