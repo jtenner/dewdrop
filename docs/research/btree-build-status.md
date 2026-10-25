@@ -32,7 +32,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `4e5fa46fa9e208c47407a0abff07bdef684d1fab` | in flight; parent fixes/checks pending |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `4e5fa46fa9e208c47407a0abff07bdef684d1fab` | integrated; stage gate and policy repair pending |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
@@ -166,6 +166,33 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   head: `4e5fa46fa9e208c47407a0abff07bdef684d1fab`; provisional integration
   merge: `b4410a710263c5d3a612bf203a8c0a4f34b2e18b`. Focused parent checks
   and the same-folder rerun regression are pending. Step 2 is not integrated.
+- Parent fixes are committed at `91a88912d6d0101d38e178857542f000339baa6a`.
+  Focused checks on that integration head passed: identity 3 tests (11.774 s),
+  B-tree backend 2 tests (10.550 s), preamble/wildcard 24 tests (2.190 s).
+  Public 8 and private 12 Dew tests passed. The complete probe ran twice in
+  the same output folder; both reached all four expected negative-evidence
+  checks and passed. The second physical compile took 0.883 s.
+- The shared private Starshine case passed in raw and O4s forms (12 tests).
+  Its source compile took 3.689 s; optimization 0.076 s. Fresh allocation
+  instrumentation includes `array.new_fixed`; measured success-path counts
+  are unchanged. Long cost samples are at least 10.500 ms. Full raw ranges
+  retain visible outliers; no production-map speedup is claimed.
+- Fresh artifacts: `.tmp/btree-integration/step-2/`, with numbered cost JSON,
+  unedited identity files, both rerun logs and `starshine-private/report.json`.
+- Parent's cold Starshine CLI build took 269.899 s (26 tasks), another open
+  tool-build performance bug. Warm no-work control: 0.028 s. Its generated C
+  file is 124,819,868 bytes. `build-starshine-evidence.json` records these
+  facts; no measured phase cause is claimed. Other focused compiles stayed
+  below 30 seconds.
+- The broad generated-source gate exposed a pre-existing scalar conversion
+  policy test: 34 native branches versus an expected 23. Parent confirmed
+  all relevant files match master. The existing step-2 worker is repairing
+  this bounded test issue on its branch, without compiler or runtime changes.
+  Follow-up task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Athread-send%3Abtree-step-2-scalar-policy-gate-fix-r1`.
+- Step 2 meets the integration definition: merged, with focused B-tree tests
+  green. Stage 2 is not landed on master. The policy repair and full native
+  stage gate must pass before that landing.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
