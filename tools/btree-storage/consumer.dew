@@ -1,0 +1,23 @@
+open probe.opaque
+struct Present {}
+struct Absent {}
+impl Window<U64> for Present {
+  fn window(self, key: U64) -> U64 {
+    key
+  }
+}
+pub fn present(key: U64) -> U64 {
+  optional(Present::{}, key)
+}
+pub fn absent(key: U64) -> U64 {
+  optional(Absent::{}, key)
+}
+pub fn run() -> I32 {
+  let left = make(42i64)
+  let right = make(42i64)
+  if read(left) == 42i64 && identity(left, left) && !identity(left, right) && present(42u64) == 42u64 && absent(42u64) == 0u64 {
+    42i32
+  } else {
+    0i32
+  }
+}

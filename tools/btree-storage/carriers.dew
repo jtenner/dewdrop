@@ -1,0 +1,67 @@
+open dew.std.wasm.intrinsics
+
+// Probe only. The final slot is never read as a user value.
+fn shifted<t>(first: t, second: t) -> t {
+  let slots = wasm_array_new_default::<t>(6u32)
+  wasm_array_set(slots, 0u32, first)
+  wasm_array_set(slots, 1u32, second)
+  wasm_array_copy(slots, 1u32, slots, 0u32, 2u32)
+  wasm_array_copy(slots, 0u32, slots, 1u32, 2u32)
+  wasm_array_copy(slots, 2u32, slots, 5u32, 1u32)
+  wasm_array_get(slots, 1u32)
+}
+
+pub fn i32_pair(value: I32) -> I32 {
+  shifted(1i32, value)
+}
+pub fn i64_pair(value: I64) -> I64 {
+  shifted(1i64, value)
+}
+pub fn f32_pair(value: F32) -> F32 {
+  shifted(1.0f32, value)
+}
+pub fn f64_pair(value: F64) -> F64 {
+  shifted(1.0f64, value)
+}
+pub fn v128_pair(value: V128) -> V128 {
+  shifted(value, value)
+}
+pub fn string_pair(value: String) -> String {
+  shifted(value, value)
+}
+pub fn bool_pair(value: Bool) -> Bool {
+  shifted(false, value)
+}
+pub fn u8_pair(value: U8) -> U8 {
+  shifted(0u8, value)
+}
+pub fn i16_pair(value: I16) -> I16 {
+  shifted(0i16, value)
+}
+pub fn option_pair(value: Option<I64>) -> Option<I64> {
+  shifted(value, value)
+}
+pub fn nested_option_pair(value: Option<Option<I64>>) -> Option<Option<I64>> {
+  shifted(value, value)
+}
+
+pub fn reference_slots(value: String) -> WasmArray<String> {
+  let slots = wasm_array_new_default::<String>(8u32)
+  wasm_array_set(slots, 0u32, value)
+  wasm_array_set(slots, 1u32, value)
+  wasm_array_set(slots, 2u32, value)
+  wasm_array_set(slots, 3u32, value)
+  // Overlap right, then left, using a two-element pair stride.
+  wasm_array_copy(slots, 2u32, slots, 0u32, 4u32)
+  wasm_array_copy(slots, 0u32, slots, 2u32, 4u32)
+  wasm_array_copy(slots, 4u32, slots, 6u32, 2u32)
+  slots
+}
+
+pub fn reference_case() -> WasmArray<String> {
+  reference_slots("saved")
+}
+
+pub fn u64_pair(value: U64) -> U64 {
+  shifted(0u64, value)
+}
