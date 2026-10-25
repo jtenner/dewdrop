@@ -19,7 +19,12 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   other stage boundaries. Never land a failing stage.
 - Do not change the six selected departures. A worker must stop with evidence
   if it finds a wrong or missing design fact.
-- Do not write in the owner's main checkout. Keep all builds in worktrees.
+- Keep all implementation, test and build work in worktrees. The owner now
+  permits stage merges into the clean main checkout's local `master`.
+- Before each stage landing, rebase integration onto current local `master`,
+  then pass the full native gate on that combined head. Merge into local
+  `master`, then run `git push origin master`. If a push is rejected because
+  the remote moved, stop and report it. Never force-push.
 - Record each worker report and landing here, then commit the checkpoint.
 
 ## Steps
@@ -83,8 +88,9 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   withdrew the design findings; its remaining source/test gaps are fixed in
   the worker head and passed parent checks. Claude did not read binary Wasm
   or run tests; physical/runtime checks are separate evidence.
-- Step 1 is integrated. The full native stage gate passed; master landing is
-  pending the owner's destination choice.
+- Step 1 is integrated. The original full native gate passed. After the owner
+  committed new local-master work, integration was rebased and a fresh full
+  native gate is required before landing.
 
 ### Step 2 launch
 
@@ -97,6 +103,9 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 - Child thread ID:
   `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
 - State: running; no report or test result yet.
+- Parent told the worker to continue from its original base. After the report,
+  transplant only its step-2 commits onto current integration before merging;
+  do not replay the old integration history. No active worker edits were moved.
 
 ## Stage landings
 
@@ -117,13 +126,29 @@ The completed run used Python timing plus the script's per-command measurements.
 
 | Stage | Tested integration head | Full native result | Master head | Landing state |
 | --- | --- | --- | --- | --- |
-| 1 | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | pending destination choice |
+| 1, before master rebase | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | new gate required after rebase |
 
-Master landing destination needs an owner answer. Local `master` is checked
-out in the protected main worktree. `origin/master` is its ancestor by 88
-commits. Asked whether to keep landings pending (recommended) or publish
-tested stages and those existing commits to `origin/master`. No master ref,
-main checkout file/index, or remote branch has been changed.
+### Owner landing updates and stage-1 rebase
+
+The owner committed the former main-checkout edits. Local `master` is clean at
+`0744aea0c697fdfaa62688eabcecead6ee8a5ef0`, after tools commit `c57d355f99`
+and research-docs commit `0744aea0c6`. The landing-destination question is
+resolved. The latest instruction requires a normal push after each local
+stage merge; it replaces the preceding no-push instruction.
+
+Integration was rebased with merges preserved onto that local-master head.
+Pre-rebase integration is retained at
+`refs/btree-build/stage-1-before-master-rebase`
+(`53331ad848e4d043266a0a6d65484b212947437d`). Post-rebase head before this
+status update: `23ba5742cbd025a8f6e2028534018a7bbdc327df`.
+The original worker branch/head remains unchanged. Its integration replay is
+`b5c6029c78`, under integration merge `f04ab406de`.
+All 13 step-1 files have identical content before and after the rebase.
+The two owner commits do not change compiler/std/submodule source.
+
+The fresh full native gate will run from the rebased integration branch.
+Evidence belongs in `.tmp/btree-integration/stage-1-after-master-rebase/`.
+No stage merge or push has occurred yet.
 
 ## Design-fact blockers
 
