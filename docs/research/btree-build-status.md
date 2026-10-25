@@ -117,6 +117,19 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 - The guarded-return compiler reproducer has a tested valid source form used
   by storage. No design-fact blocker is reported.
 - Parent independent source reviews and focused checks are pending.
+- Parent import-only probe passed in 0.326 s using the exact worker compiler
+  and worker std sources. Importing `dew.std.collections.btree` alone loads
+  its dependencies. Evidence: `.tmp/btree-integration/step-2-pre-review/`.
+- Independent Sol/high read-only review is running. Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-review-sol-r1`.
+  The parent separately reviews registry, module IDs, generated mirrors and
+  std test integration.
+- Independent Claude Code Opus/high read-only review is running with normal
+  auth and Read/Glob/Grep only. Packet, full diff, prompt, stdout, stderr and
+  eventual exit status: `/tmp/dewdrop-btree-step2-review-59aab429/`.
+  Scope is all 26 changed files plus relevant source and raw performance
+  evidence. Neither review result is claimed yet. The reviewed worker checkout
+  stays at its reported head until the reviews finish.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
