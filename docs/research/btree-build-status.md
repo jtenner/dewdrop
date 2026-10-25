@@ -32,7 +32,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | in flight |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `59aab429906362eb62ace42989f65316ced9e6d9` | in flight; report received; parent review/checks pending |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
@@ -102,7 +102,21 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
 - Child thread ID:
   `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-2-plans-providers-r1`.
-- State: running; no report or test result yet.
+- Report received: `59aab429906362eb62ace42989f65316ced9e6d9`, clean worktree,
+  26 changed files. Transplant only this commit from the original base.
+- Worker checks: 20 Dew tests; 3 native tests (9.141 s); 26 integration tests
+  (8.131 s + 1.860 s); four optional-evidence misuse diagnostics; physical
+  probe compile (0.610 s). All passed.
+- Worker physical evidence: keyless inline branches, Unit with no value array,
+  and no allocations in clear/window/paired-access/rank paths. Actual heap
+  bytes were not measured. Full raw samples and limits are in the
+  [step-2 note](btree-step-2-plans-providers.md) and
+  `/home/dev/.t3/worktrees/dewdrop/t3-78c50516/.tmp/btree-step-2/final/`.
+- Four open tool-build costs above 30 seconds: cold CLI 38.906 s, registry CLI
+  32.375 s, final CLI 34.487 s, final generator 30.517 s. No proven phase cause.
+- The guarded-return compiler reproducer has a tested valid source form used
+  by storage. No design-fact blocker is reported.
+- Parent independent source reviews and focused checks are pending.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
