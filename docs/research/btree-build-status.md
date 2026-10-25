@@ -32,8 +32,8 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `6b902057c4679414d43c1031320b4623e5250d44` | integrated; generated gate repair and stage gate pending |
-| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | in flight |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `27580d200afd32fb4fa380bd6d7e7313a9fc8c01` | integrated; repair reported; parent stage gate pending |
+| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `441cf6cc1c23053919203461b3e623e6bb2fe9f3` | reported; independent review and parent checks pending |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
 | 6 | Inline search | `feat/btree-step-6-inline-search` | — | queued |
@@ -309,3 +309,33 @@ and `landing.json` under the evidence directory above. No force-push was used.
 ## Design-fact blockers
 
 None reported.
+
+## Latest reports and gate preparation
+
+- Step-2 intrinsic-coverage follow-up reported clean head
+  `27580d200afd32fb4fa380bd6d7e7313a9fc8c01` on base
+  `dce4fd0e36f6e0643e88f554e435af2617dc4e3c`. Eight files add all 28
+  missing public declarations from the independent scalar catalog and generic
+  reference signature. Existing public signatures and private boundaries stay
+  intact. Parent read the source, tests and evidence note. No compiler or
+  B-tree implementation changed.
+- Worker checks: 13 owning policy tests, four generator checks, five public
+  Dew tests, 28 exact single-opcode wrappers and expected scalar-ref rejection
+  passed. Full generated gate passed cold (39.690 s) and warm (10.568 s).
+  The cold cost remains open. The separate pre-existing imported generic
+  returned-callback MissingFunction limit is documented, not fixed or hidden.
+- Claude reached its session usage limit before reading any repair files.
+  The saved report claims no Claude coverage. Parent source review and fresh
+  gates are separate evidence; no successful Claude review is claimed.
+- Step 3 reported clean head `441cf6cc1c23053919203461b3e623e6bb2fe9f3`.
+  Worker reports 8 public and 24 private raw/O4s tests, 3 native identity and
+  2 backend tests, exact diagnostics and mirrors green. Allocation counts
+  distinguish private scratch from requested Options and comparator results.
+  O4s medians: lookup 15.817 ns, replacement 14.997 ns, fit including clear
+  35.603 ns. CLI 53.872 s and test-tool 30.596 s remain open build-cost bugs.
+  No design-fact blocker is reported. Parent acceptance is pending.
+- Independent read-only Sol/high step-3 review started. Exact base/head and
+  all 18 changed files, raw data, harness and allocation limits are in scope.
+  Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-3-review-sol-r1`.
+  No result is claimed yet. Claude remains unavailable due to the usage limit.
