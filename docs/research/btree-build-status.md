@@ -32,7 +32,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
-| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `27580d200afd32fb4fa380bd6d7e7313a9fc8c01` | integrated; repair reported; parent stage gate pending |
+| 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `8ac0ef46259275a9dd2d3ce468d7fdbee9647129` | stage-landed on master `484cfba12aa3664e1c06dcdcda706f0ec63272d6`; pushed |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `441cf6cc1c23053919203461b3e623e6bb2fe9f3` | reported; independent review and parent checks pending |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
@@ -272,7 +272,7 @@ The completed run used Python timing plus the script's per-command measurements.
 | --- | --- | --- | --- | --- |
 | 1, before master rebase | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | new gate required after rebase |
 | 1, after master rebase | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | 1,925 passed, 0 failed; 523.325 s | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | stage-landed; pushed to origin/master |
-| 2 | pending current-master rebase and gate | not run yet | — | integrated; old policy-check repair pending; not landed |
+| 2 | `484cfba12aa3664e1c06dcdcda706f0ec63272d6` | 1,925 passed, 0 failed; 567.337 s | `484cfba12aa3664e1c06dcdcda706f0ec63272d6` | stage-landed; pushed to origin/master |
 
 ### Owner landing updates and stage-1 rebase
 
@@ -339,3 +339,35 @@ None reported.
   Task ID:
   `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-3-review-sol-r1`.
   No result is claimed yet. Claude remains unavailable due to the usage limit.
+
+### Stage 2 landing and step 3 review
+
+- Intrinsic repair original head is pinned at
+  `refs/btree-build/step-2-intrinsic-original`. Only its one commit was
+  transplanted to current integration. Replayed worker head:
+  `8ac0ef46259275a9dd2d3ce468d7fdbee9647129`. Integration was rebased with
+  merges preserved onto current local master `6582b71b927ceb8e56207306edc05e00a1baa8eb`.
+- Fresh generated-source gate passed on integration
+  `484cfba12aa3664e1c06dcdcda706f0ec63272d6` (36.960 s). The outer cost is
+  above 30 seconds and remains open; it does not establish a slow phase.
+- Full routine native gate passed on that exact head: 1,925 passed, zero
+  failed, 304 measured commands, 26 zero-test groups, 567.337 s. Each native
+  command stayed below 30 seconds. Integration skips remain separate from
+  focused backend tests. Evidence: `.tmp/btree-integration/stage-2/`.
+- Parent confirmed clean integration and main checkouts and unchanged tested
+  master base. Main-checkout fast-forward merge returned 0. Normal
+  `git push origin master` returned 0. Both local and remote master are now
+  `484cfba12aa3664e1c06dcdcda706f0ec63272d6`; the main checkout is clean.
+  `landing.json`, `merge.*` and `push.*` record this landing. No force push.
+- Independent step-3 Sol/high review completed with no confirmed defect and
+  no actionable unverified risk. All three commits and all 18 changed files
+  were read. Source/tool/module hashes and generated mirror match. Saved
+  public 8/private raw 24/private O4s 24 tests passed. Independent searches
+  (261 per control), fit writes, comparator counts and inactive slots passed.
+  Every constructor form is recorded; checked private warm scratch is zero.
+- Review limits: historical scratch/review packets and WAT outside checked
+  paths were not fully read; no exact heap/GC/large-tree/other-CPU claim.
+  Known build costs and ordinary generic-Option compiler defect remain open.
+  No files changed or builds/large benchmarks ran in that review.
+- Parent will transplant only the three step-3 commits, run focused checks
+  on integration, then record acceptance before starting step 4.
