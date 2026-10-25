@@ -34,7 +34,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `8ac0ef46259275a9dd2d3ce468d7fdbee9647129` | stage-landed on master `484cfba12aa3664e1c06dcdcda706f0ec63272d6`; pushed |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `8beddc761964613ec915a9f67d749c5826ecf3cf` | integrated; full stage gate pending |
-| 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
+| 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | in flight |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
 | 6 | Inline search | `feat/btree-step-6-inline-search` | — | queued |
 | 7 | Prefix insertion | `feat/btree-step-7-prefix-insert` | — | queued |
@@ -273,6 +273,7 @@ The completed run used Python timing plus the script's per-command measurements.
 | 1, before master rebase | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | new gate required after rebase |
 | 1, after master rebase | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | 1,925 passed, 0 failed; 523.325 s | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | stage-landed; pushed to origin/master |
 | 2 | `484cfba12aa3664e1c06dcdcda706f0ec63272d6` | 1,925 passed, 0 failed; 567.337 s | `484cfba12aa3664e1c06dcdcda706f0ec63272d6` | stage-landed; pushed to origin/master |
+| 3 | gate starting after current-master rebase | pending | — | integrated; not landed |
 
 ### Owner landing updates and stage-1 rebase
 
@@ -391,3 +392,21 @@ None reported.
 - Step 3 meets the integration definition. Stage 3 remains off master until
   a fresh full native gate passes after the current-master rebase.
 - Step 4 may now start from this committed, accepted integration point.
+
+### Step 4 launch
+
+- Base: `e102287f61dd75e70e18a5be34c2301e60a1726d`.
+  Step 3 is integrated with parent focused checks green. Stage 3's full gate
+  is separate and must pass before any master landing.
+- Provider/model/options checked: `codex`, `gpt-6.1-sol`,
+  `reasoningEffort=high`. Isolated worker branch:
+  `feat/btree-step-4-plain-splits`.
+- Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-4-plain-splits-r1`.
+- Child thread ID:
+  `thread:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-4-plain-splits-r1`.
+- Scope: exact plain head ownership, branch descent, two-pass insertion,
+  all split indices, upward propagation, root growth and append hint.
+  Differential insertion and no-private-allocation warm fit evidence are
+  required. No later-step implementation or new design departure is allowed.
+- State: running. No worker result or design-fact blocker is claimed.
