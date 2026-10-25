@@ -130,6 +130,15 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   Scope is all 26 changed files plus relevant source and raw performance
   evidence. Neither review result is claimed yet. The reviewed worker checkout
   stays at its reported head until the reviews finish.
+- Sol review returned one confirmed P2 harness bug: `cost-*.json` includes the
+  previous `cost-summary.json`, which has no `samples` field. A repeated run
+  fails before the four negative-evidence checks. Parent reproduced the saved
+  file selection. Fix by reading numbered sample files, then run twice in the
+  same output folder. No storage/provider or design conflict was found.
+- Sol also noted that the allocation recorder omits `array.new_fixed`.
+  Whether this misses an allocation on a measured success path needs a direct
+  check. Parent is checking an instrumented module copy. Source hashes and
+  reported performance limits were independently checked by Sol.
 - Parent told the worker to continue from its original base. After the report,
   transplant only its step-2 commits onto current integration before merging;
   do not replay the old integration history. No active worker edits were moved.
