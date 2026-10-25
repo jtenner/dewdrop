@@ -31,7 +31,7 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 
 | Step | Scope | Worker branch | Worker head | State |
 | --- | --- | --- | --- | --- |
-| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | integrated |
+| 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | — | in flight |
 | 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | — | queued |
 | 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | queued |
@@ -88,9 +88,9 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
   withdrew the design findings; its remaining source/test gaps are fixed in
   the worker head and passed parent checks. Claude did not read binary Wasm
   or run tests; physical/runtime checks are separate evidence.
-- Step 1 is integrated. The original full native gate passed. After the owner
-  committed new local-master work, integration was rebased and a fresh full
-  native gate is required before landing.
+- Step 1 is integrated and stage-landed on local and remote master at
+  `6582b71b927ceb8e56207306edc05e00a1baa8eb`. Both the original and fresh
+  post-rebase full native gates passed. The merge and push each returned 0.
 
 ### Step 2 launch
 
@@ -109,7 +109,8 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 
 ## Stage landings
 
-No stage has landed on master.
+Stage 1 has landed on local and remote master at
+`6582b71b927ceb8e56207306edc05e00a1baa8eb`.
 
 Stage 1 gate: `tools/test-native.sh` with no package override or filter,
 tested head `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb`, passed (exit 0).
@@ -127,6 +128,7 @@ The completed run used Python timing plus the script's per-command measurements.
 | Stage | Tested integration head | Full native result | Master head | Landing state |
 | --- | --- | --- | --- | --- |
 | 1, before master rebase | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | new gate required after rebase |
+| 1, after master rebase | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | 1,925 passed, 0 failed; 523.325 s | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | stage-landed; pushed to origin/master |
 
 ### Owner landing updates and stage-1 rebase
 
@@ -146,9 +148,19 @@ The original worker branch/head remains unchanged. Its integration replay is
 All 13 step-1 files have identical content before and after the rebase.
 The two owner commits do not change compiler/std/submodule source.
 
-The fresh full native gate will run from the rebased integration branch.
-Evidence belongs in `.tmp/btree-integration/stage-1-after-master-rebase/`.
-No stage merge or push has occurred yet.
+The fresh full native gate passed on the rebased integration branch:
+1,925 tests, 0 failures, 303 measured commands, 523.325 seconds total.
+Every command stayed below 30 seconds. Evidence is in
+`.tmp/btree-integration/stage-1-after-master-rebase/`.
+
+Before landing, both worktrees were clean and local master still matched the
+tested base `0744aea0c697fdfaa62688eabcecead6ee8a5ef0`. The main checkout's
+`git merge --ff-only feat/btree-integration` returned 0 and advanced master
+to the exact tested head `6582b71b927ceb8e56207306edc05e00a1baa8eb`.
+`git push origin master` returned 0, advancing remote master from
+`b54e394e82d0320bbb56c1466c0dfc8144ec99ad` to that same head. The main
+checkout remained clean. Logs and exit codes are in `merge.*`, `push.*`,
+and `landing.json` under the evidence directory above. No force-push was used.
 
 ## Design-fact blockers
 
