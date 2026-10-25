@@ -1,0 +1,306 @@
+// Emission and runtime probe. Compiled beside the exact common source.
+pub fn plan_plain() -> BTreePlan {
+  btree_plan::<String, U64, BTreeStoragePlain>(BTreeStoragePlain::{
+  }, btree_default_config())
+}
+pub fn make_plain(plan: BTreePlan) -> BTreeNode<String, U64> {
+  btree_node_new::<String, U64>(plan, false)
+}
+pub fn clear_plain(node: BTreeNode<String, U64>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn plan_same() -> BTreePlan {
+  btree_plan::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+}
+pub fn make_same(plan: BTreePlan) -> BTreeNode<U64, U64> {
+  btree_node_new::<U64, U64>(plan, false)
+}
+pub fn clear_same(node: BTreeNode<U64, U64>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn plan_same_ref() -> BTreePlan {
+  btree_plan::<String, String, StringComparator>(string_comparator(), btree_default_config())
+}
+pub fn make_same_ref(plan: BTreePlan) -> BTreeNode<String, String> {
+  btree_node_new::<String, String>(plan, false)
+}
+pub fn clear_same_ref(node: BTreeNode<String, String>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn plan_common32() -> BTreePlan {
+  btree_plan::<I32, U32, BTreeStorageInline>(BTreeStorageInline::{
+    width: BTreeInlineWidth::Two
+  }, btree_default_config())
+}
+pub fn make_common32(plan: BTreePlan) -> BTreeNode<I32, U32> {
+  btree_node_new::<I32, U32>(plan, false)
+}
+pub fn clear_common32(node: BTreeNode<I32, U32>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn plan_mixed() -> BTreePlan {
+  btree_plan::<U64, F32, NaturalComparator>(natural_comparator(), btree_default_config())
+}
+pub fn make_mixed(plan: BTreePlan) -> BTreeNode<U64, F32> {
+  btree_node_new::<U64, F32>(plan, false)
+}
+pub fn clear_mixed(node: BTreeNode<U64, F32>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn plan_columns() -> BTreePlan {
+  btree_plan::<String, U64, StringComparator>(string_comparator(), btree_default_config())
+}
+pub fn make_columns(plan: BTreePlan) -> BTreeNode<String, U64> {
+  btree_node_new::<String, U64>(plan, false)
+}
+pub fn clear_columns(node: BTreeNode<String, U64>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn plan_unit() -> BTreePlan {
+  btree_plan::<String, Unit, StringComparator>(string_comparator(), btree_default_config())
+}
+pub fn make_unit(plan: BTreePlan) -> BTreeNode<String, Unit> {
+  btree_node_new::<String, Unit>(plan, false)
+}
+pub fn clear_unit(node: BTreeNode<String, Unit>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn make_branch(plan: BTreePlan) -> BTreeNode<String, Unit> {
+  btree_node_new::<String, Unit>(plan, true)
+}
+pub fn branch_payload(node: BTreeNode<String, Unit>) -> BTreeInlineBranch<String, Unit> {
+  match node.body {
+    BTreeBody::InlineBranch(body) => body
+    _ => unreachable()
+  }
+}
+pub fn branch_children(node: BTreeNode<String, Unit>) -> WasmArray<BTreeNode<String, Unit>> {
+  branch_payload(node).children
+}
+pub fn branch_prepare(node: BTreeNode<String, Unit>, child: BTreeNode<String, Unit>) -> Unit {
+  wasm_array_set(branch_payload(node).children, 0u32, child)
+  wasm_array_set(branch_payload(node).children, 1u32, child)
+  node.count = 1u32
+}
+pub fn branch_clear(node: BTreeNode<String, Unit>, plan: BTreePlan) -> Unit {
+  btree_node_clear(node, plan)
+}
+pub fn same_slots(node: BTreeNode<U64, U64>) -> WasmArray<U64> {
+  match node.body {
+    BTreeBody::InlineLeaf(body) => match body.entries {
+      BTreeLeafStorage::Same(slots) => slots
+      _ => unreachable()
+    }
+    _ => unreachable()
+  }
+}
+pub fn reference_slots(node: BTreeNode<String, String>) -> WasmArray<String> {
+  match node.body {
+    BTreeBody::InlineLeaf(body) => match body.entries {
+      BTreeLeafStorage::Same(slots) => slots
+      _ => unreachable()
+    }
+    _ => unreachable()
+  }
+}
+pub fn reference_prepare(node: BTreeNode<String, String>) -> Unit {
+  let slots = reference_slots(node)
+  wasm_array_set(slots, 0u32, "head")
+  wasm_array_set(slots, 1u32, "value")
+  wasm_array_set(slots, 2u32, "regular")
+  wasm_array_set(slots, 3u32, "value")
+  node.count = 1u32
+  node.head = true
+}
+pub fn unit_keys(node: BTreeNode<String, Unit>) -> WasmArray<String> {
+  match node.body {
+    BTreeBody::InlineLeaf(body) => match body.entries {
+      BTreeLeafStorage::Keys(keys) => keys.keys
+      _ => unreachable()
+    }
+    _ => unreachable()
+  }
+}
+pub fn unit_prepare(node: BTreeNode<String, Unit>) -> Unit {
+  let slots = unit_keys(node)
+  wasm_array_set(slots, 0u32, "head")
+  wasm_array_set(slots, 1u32, "regular")
+  node.count = 1u32
+  node.head = true
+}
+pub fn prefix_case() -> BTreeInlinePrefix {
+  btree_prefix_new(string_comparator(), "prefix")
+}
+pub fn packed_slots(width: U32) -> WasmArray<V128> {
+  let slots = btree_metadata_new(54u32, width, true)
+  while 0u32 {
+    i if i < 54u32 => {
+      btree_window_set(slots, width, i, btree_widen(i) << 48u64)
+      btree_tag_set(slots, 54u32, width, i, 0u8)
+      continue i + 1u32
+    }
+    _ => break slots
+  }
+}
+pub fn cost_pair(node: BTreeNode<U64, U64>, count: U32) -> U64 {
+  match node.body {
+    BTreeBody::InlineLeaf(body) => {
+      let mut sum = 0u64
+      while 0u32 {
+        i if i < count => {
+          btree_inline_value_set(body.entries, 1u32, btree_widen(i))
+          sum = sum + btree_inline_value_get(body.entries, 1u32)
+          continue i + 1u32
+        }
+        _ => break sum
+      }
+    }
+    _ => unreachable()
+  }
+}
+pub fn cost_pair_control(slots: WasmArray<U64>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      wasm_array_set(slots, 3u32, btree_widen(i))
+      sum = sum + wasm_array_get(slots, 3u32)
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn cost_simd2(slots: WasmArray<V128>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      sum = sum + btree_rank2(slots, 54u32, 54u32, btree_widen(i % 64u32) << 48u64)
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn cost_scalar2(slots: WasmArray<V128>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      let query = btree_widen(i % 64u32) << 48u64
+      let mut less = 0u32
+      let mut equal = 0u32
+      let rank = while 0u32 {
+        j if j < 54u32 => {
+          let window = btree_window_get(slots, 2u32, j)
+          less = less + (if window < query {
+            1u32
+          } else {
+            0u32
+          })
+          equal = equal + (if window == query {
+            1u32
+          } else {
+            0u32
+          })
+          continue j + 1u32
+        }
+        _ => break btree_widen(less) | (btree_widen(equal) << 32u64)
+      }
+      sum = sum + rank
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn cost_simd4(slots: WasmArray<V128>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      sum = sum + btree_rank4(slots, 54u32, 54u32, btree_widen(i % 64u32) << 48u64)
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn cost_scalar4(slots: WasmArray<V128>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      let query = btree_widen(i % 64u32) << 48u64
+      let mut less = 0u32
+      let mut equal = 0u32
+      let rank = while 0u32 {
+        j if j < 54u32 => {
+          let window = btree_window_get(slots, 4u32, j)
+          less = less + (if window < query {
+            1u32
+          } else {
+            0u32
+          })
+          equal = equal + (if window == query {
+            1u32
+          } else {
+            0u32
+          })
+          continue j + 1u32
+        }
+        _ => break btree_widen(less) | (btree_widen(equal) << 32u64)
+      }
+      sum = sum + rank
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn cost_simd8(slots: WasmArray<V128>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      sum = sum + btree_rank8(slots, 54u32, 54u32, btree_widen(i % 64u32) << 48u64)
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn cost_scalar8(slots: WasmArray<V128>, count: U32) -> U64 {
+  let mut sum = 0u64
+  while 0u32 {
+    i if i < count => {
+      let query = btree_widen(i % 64u32) << 48u64
+      let mut less = 0u32
+      let mut equal = 0u32
+      let rank = while 0u32 {
+        j if j < 54u32 => {
+          let window = btree_window_get(slots, 8u32, j)
+          less = less + (if window < query {
+            1u32
+          } else {
+            0u32
+          })
+          equal = equal + (if window == query {
+            1u32
+          } else {
+            0u32
+          })
+          continue j + 1u32
+        }
+        _ => break btree_widen(less) | (btree_widen(equal) << 32u64)
+      }
+      sum = sum + rank
+      continue i + 1u32
+    }
+    _ => break sum
+  }
+}
+pub fn text_provider() -> StringComparator {
+  string_comparator()
+}
+pub fn text_key() -> String {
+  "prefix"
+}
+pub fn prefix_with(comparator: StringComparator, key: String) -> BTreeInlinePrefix {
+  btree_prefix_new(comparator, key)
+}
+pub fn window_with(comparator: StringComparator, key: String, offset: U32) -> U64 {
+  comparator.inline_key_at(key, offset)
+}
+pub fn compare_with(comparator: StringComparator, key: String) -> Ordering {
+  comparator.compare_from(key, key, 8u32)
+}

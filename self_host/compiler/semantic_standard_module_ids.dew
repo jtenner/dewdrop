@@ -235,5 +235,8 @@ fn self_host_standard_module_id(path: String) -> U64 {
   if self_host_manifest_string_equal(path, "dew.std.types") {
     return 4294901839u64
   }
+  if self_host_manifest_string_equal(path, "dew.std.collections.btree") {
+    return 4294901840u64
+  }
   0u64
 }

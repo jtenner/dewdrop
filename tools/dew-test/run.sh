@@ -6,6 +6,7 @@ node tools/dew-test/run.mjs \
   --builtin-traps tools/dew-test/builtin_traps.wasm \
   --label "Dew stdlib tests" \
   "$@"
+node tools/dew-test/run.mjs --wasm tools/dew-test/btree_storage_tests.wasm --label "B-tree private storage tests"
 node tools/check-scalar-conversions.mjs tools/dew-test/scalar_conversions.wasm
 node tools/check-memory-operations.mjs tools/dew-test/memory_operations.wasm
 node tools/check-simd-memory-operations.mjs tools/dew-test/simd-memory-operations.wasm

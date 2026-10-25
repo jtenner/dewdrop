@@ -1,0 +1,20 @@
+open dew.std.types
+open dew.std.wasm.intrinsics
+
+fn read<t>(block: V128) -> t {
+  if type_equal::<t, F32>() {
+    wasm_f32x4_extract_0(unsafe_bitcast::<V128, F32x4>(block))
+  } else if type_equal::<t, F64>() {
+    wasm_f64x2_extract_0(unsafe_bitcast::<V128, F64x2>(block))
+  } else if can_bitcast::<V128, t>() {
+    unsafe_bitcast::<V128, t>(block)
+  } else {
+    unreachable()
+  }
+}
+pub fn read32(block: V128) -> F32 {
+  read::<F32>(block)
+}
+pub fn read64(block: V128) -> F64 {
+  read::<F64>(block)
+}
