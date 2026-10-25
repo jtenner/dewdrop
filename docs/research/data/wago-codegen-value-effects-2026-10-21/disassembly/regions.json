@@ -1,0 +1,58 @@
+[
+  {
+    "offset": 38716,
+    "size": 1452,
+    "kind": "guest-body",
+    "function": 465,
+    "name": "array_iter_next_option#18446462654567415976#278"
+  },
+  {
+    "offset": 6455008,
+    "size": 5010,
+    "kind": "guest-body",
+    "function": 2293,
+    "name": "self_host_imported_requirement_identity#31052613552037#4294967295"
+  },
+  {
+    "offset": 6460144,
+    "size": 17825,
+    "kind": "guest-body",
+    "function": 2294,
+    "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295"
+  },
+  {
+    "offset": 6547712,
+    "size": 2666,
+    "kind": "guest-body",
+    "function": 2306,
+    "name": "self_host_resolved_imported_callable_at#31052613552057#4294967295"
+  },
+  {
+    "offset": 6567652,
+    "size": 1555,
+    "kind": "guest-body",
+    "function": 2319,
+    "name": "span_matches#31052613552098#4294967295"
+  },
+  {
+    "offset": 6577616,
+    "size": 4188,
+    "kind": "guest-body",
+    "function": 2322,
+    "name": "intern_function#31052613552101#4294967295"
+  },
+  {
+    "offset": 9861540,
+    "size": 1515,
+    "kind": "guest-body",
+    "function": 2961,
+    "name": "span_matches#31052613552945#4294967295"
+  },
+  {
+    "offset": 9874816,
+    "size": 5991,
+    "kind": "guest-body",
+    "function": 2964,
+    "name": "intern_function#31052613552948#4294967295"
+  }
+]

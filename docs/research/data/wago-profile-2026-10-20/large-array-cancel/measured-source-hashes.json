@@ -1,0 +1,10 @@
+{
+  "host-gc-index-profile": {
+    "collector.go": "39de72518ce6ad649e258e145826d1d40c4511b0287974620b062c2c6e3ed0ee",
+    "native_alloc.go": "bdbcd1ad013f31f5cbe6802b7244c72b3936d2aa04c47cb79687801bd0ee253b"
+  },
+  "host-gc-plain-candidate": {
+    "collector.go": "39de72518ce6ad649e258e145826d1d40c4511b0287974620b062c2c6e3ed0ee",
+    "native_alloc.go": "bdbcd1ad013f31f5cbe6802b7244c72b3936d2aa04c47cb79687801bd0ee253b"
+  }
+}

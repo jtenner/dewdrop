@@ -1,0 +1,101 @@
+File: helper-counter-host
+Build ID: 281e6134925096c6fdd75ab3d2f5e6e9216013b6
+Type: cpu
+Time: 2026-10-20 22:18:13 UTC
+Duration: 95.36s, Total samples = 95.52s (100.16%)
+Active filters:
+   focus=diagnosticGC
+Showing nodes accounting for 23.03s, 24.11% of 95.52s total
+Dropped 70 nodes (cum <= 0.48s)
+Showing top 90 nodes out of 111
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/cli/internal/command.(*Cmd).Dispatch
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/cli/runtime.Main
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/cli/runtime.MainWithPluginSet
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/cli/runtime/commands/run.implementation.Run
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/core/runtime.(*Engine).CallWithHostBase (inline)
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostBase
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).Invoke
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncAdmitted
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncUnpreparedAdmitted
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCHelperParkedOnStack
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).invokeEntry
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch
+         0     0%     0%     27.48s 28.77%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchActive
+         0     0%     0%     27.48s 28.77%  main.main
+         0     0%     0%     27.48s 28.77%  runtime.main
+     0.13s  0.14%  0.14%     27.33s 28.61%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticDispatchGCOriginal
+     0.92s  0.96%  1.10%     14.40s 15.08%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCArrayHelperParked
+     0.60s  0.63%  1.73%     12.80s 13.40%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCStructHelperParked
+     0.01s  0.01%  1.74%     12.17s 12.74%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCStructNew
+     0.01s  0.01%  1.75%      7.44s  7.79%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCArrayNewFixedRefill
+     0.29s   0.3%  2.05%      7.43s  7.78%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).alloc
+     0.54s  0.57%  2.62%      6.63s  6.94%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewStructWordsPrevalidatedWithRootScratch
+         0     0%  2.62%      5.93s  6.21%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CollectMinor
+     5.80s  6.07%  8.69%      5.92s  6.20%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeStructHandles
+     0.04s 0.042%  8.73%      5.68s  5.95%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CancelNativeAllocationBatch
+         0     0%  8.73%      2.99s  3.13%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandles (inline)
+     0.43s  0.45%  9.18%      2.99s  3.13%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandlesMode
+     0.08s 0.084%  9.27%      2.96s  3.10%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCArrayGet
+     0.22s  0.23%  9.50%      2.80s  2.93%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishMinorEvacuation
+     2.41s  2.52% 12.02%      2.58s  2.70%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishSparseMinorEvacuation
+         0     0% 12.02%      2.47s  2.59%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).PrepareNativeStructAllocation (inline)
+     0.03s 0.031% 12.05%      2.47s  2.59%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).prepareNativeStructAllocation
+         0     0% 12.05%      2.23s  2.33%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).promoteCapturedNursery (inline)
+     0.13s  0.14% 12.19%      2.23s  2.33%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).promoteNursery
+         0     0% 12.19%      2.22s  2.32%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCArrayNewDefaultRefill
+     1.69s  1.77% 13.96%      2.16s  2.26%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles
+     0.56s  0.59% 14.54%      1.73s  1.81%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).ArrayGetTyped
+         0     0% 14.54%      1.68s  1.76%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewArrayFixedPrevalidatedWithRootScratch (inline)
+     0.05s 0.052% 14.59%      1.68s  1.76%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newArrayFixedWithRootScratch
+     0.18s  0.19% 14.78%      1.58s  1.65%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newArrayFixedWithRoots
+     0.04s 0.042% 14.82%      1.40s  1.47%  github.com/wago-org/wago/src/wago.(*Instance).lockGCCollector (inline)
+     0.26s  0.27% 15.10%      1.36s  1.42%  github.com/wago-org/wago/src/wago.(*referenceStore).lockGCCollector
+     0.01s  0.01% 15.11%      1.02s  1.07%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCArrayNew
+     0.51s  0.53% 15.64%         1s  1.05%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refDesc
+     0.44s  0.46% 16.10%      0.94s  0.98%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).commitPromotionPlans
+     0.02s 0.021% 16.12%      0.87s  0.91%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).drainNurseryMarkStackForPromotion
+     0.86s   0.9% 17.02%      0.86s   0.9%  github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry.young (inline)
+     0.01s  0.01% 17.03%      0.82s  0.86%  sync.(*Mutex).Unlock (partial-inline)
+     0.29s   0.3% 17.34%      0.81s  0.85%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refTest
+     0.81s  0.85% 18.18%      0.81s  0.85%  internal/sync.(*Mutex).Unlock (inline)
+         0     0% 18.18%      0.72s  0.75%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).scanNurseryObject (inline)
+     0.08s 0.084% 18.27%      0.72s  0.75%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).scanObjectNursery
+     0.03s 0.031% 18.30%      0.72s  0.75%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCArraySet
+     0.31s  0.32% 18.62%      0.72s  0.75%  github.com/wago-org/wago/src/wago.(*Instance).gcHelperRoots
+     0.71s  0.74% 19.37%      0.71s  0.74%  runtime.memmove
+     0.59s  0.62% 19.99%      0.70s  0.73%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).bytes (inline)
+     0.01s  0.01% 20.00%      0.69s  0.72%  github.com/wago-org/wago/src/wago.(*Instance).diagnosticGCRefCast
+         0     0% 20.00%      0.68s  0.71%  slices.SortStableFunc[go.shape.[]github.com/wago-org/wago/src/core/runtime/gc/native.plannedPromotion,go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }] (inline)
+         0     0% 20.00%      0.68s  0.71%  slices.stableCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }]
+     0.08s 0.084% 20.08%      0.62s  0.65%  github.com/wago-org/wago/src/wago.(*Instance).gcStructValueKnown
+     0.39s  0.41% 20.49%      0.62s  0.65%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeArrayAllocationMode
+     0.04s 0.042% 20.53%      0.61s  0.64%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).markNurseryRef (inline)
+     0.15s  0.16% 20.69%      0.57s   0.6%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).writeHeader
+     0.03s 0.031% 20.72%      0.57s   0.6%  github.com/wago-org/wago/src/wago.(*Instance).gcRefMatchesValueType
+     0.56s  0.59% 21.30%      0.56s  0.59%  internal/sync.(*Mutex).Lock (inline)
+         0     0% 21.30%      0.56s  0.59%  sync.(*Mutex).Lock (inline)
+     0.05s 0.052% 21.36%      0.54s  0.57%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewArrayWithRootScratch
+         0     0% 21.36%      0.53s  0.55%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).RefTest (inline)
+         0     0% 21.36%      0.49s  0.51%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refDescPtr (inline)
+     0.38s   0.4% 21.75%      0.49s  0.51%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refDescPtrBytes
+     0.10s   0.1% 21.86%      0.46s  0.48%  slices.symMergeCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }]
+     0.39s  0.41% 22.27%      0.43s  0.45%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newHandle
+     0.15s  0.16% 22.42%      0.42s  0.44%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).ArraySetTyped
+     0.01s  0.01% 22.44%      0.42s  0.44%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeArrayAllocation (inline)
+     0.02s 0.021% 22.46%      0.40s  0.42%  github.com/wago-org/wago/src/wago.unlockGCCollector
+     0.38s   0.4% 22.85%      0.39s  0.41%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCStructHelperParked.func1
+     0.10s   0.1% 22.96%      0.35s  0.37%  github.com/wago-org/wago/src/wago.(*Instance).gcArrayStoredValue
+     0.01s  0.01% 22.97%      0.35s  0.37%  slices.rotateCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }]
+     0.34s  0.36% 23.32%      0.34s  0.36%  slices.swapRangeCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }] (inline)
+     0.01s  0.01% 23.34%      0.33s  0.35%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewArrayWithRoots
+     0.06s 0.063% 23.40%      0.33s  0.35%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).loadValue
+     0.31s  0.32% 23.72%      0.31s  0.32%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).desc
+     0.01s  0.01% 23.73%      0.30s  0.31%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewArrayDefaultPrevalidatedWithRoots (inline)
+     0.01s  0.01% 23.74%      0.30s  0.31%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).RefCast (inline)
+     0.06s 0.063% 23.81%      0.29s   0.3%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newArrayDefaultWithRoots
+     0.01s  0.01% 23.82%      0.29s   0.3%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refCast
+     0.28s  0.29% 24.11%      0.28s  0.29%  encoding/binary.littleEndian.Uint32 (inline)

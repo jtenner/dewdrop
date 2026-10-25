@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags=wago_codegenstats,wago_regalloccheck",
+    "./src/core/compiler/backend/railshot/amd64",
+    "-run",
+    "^TestGCAbstractArrayCastLenFuses$",
+    "-count=1"
+  ],
+  "seconds": 4.747947848998592,
+  "exit": 1,
+  "stdout": "--- FAIL: TestGCAbstractArrayCastLenFuses (0.00s)\n    gc_abstract_array_len_test.go:42: shared stubs=false cast 22 fused paths=1, want 0; calls=map[gcnative-leaf:1 hostsync:2]\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t0.002s\nFAIL\n",
+  "stderr": ""
+}

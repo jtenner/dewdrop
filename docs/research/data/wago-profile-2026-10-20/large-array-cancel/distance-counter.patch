@@ -1,0 +1,50 @@
+diff --git a/src/core/runtime/gc/native/native_alloc.go b/src/core/runtime/gc/native/native_alloc.go
+index b0b43ec07a..a4c5aadd05 100644
+--- a/src/core/runtime/gc/native/native_alloc.go
++++ b/src/core/runtime/gc/native/native_alloc.go
+@@ -302,13 +302,17 @@ func (c *Collector) discardNativeLargeArrayAllocation() {
+ 	unused := s.Count != 0 && s.Cursor == 0 && s.Handle != 0 && int(s.Handle) < len(c.handles) && c.handles[s.Handle].space == spaceFree
+ 	if unused {
+ 		c.freeHandles = append(c.freeHandles, s.Handle)
++		found := false
+ 		for i, h := range c.nurseryHandles {
+ 			if h == s.Handle {
++				dewRecordLargeCancelDistance(len(c.nurseryHandles)-1-i, i+1)
++				found = true
+ 				copy(c.nurseryHandles[i:], c.nurseryHandles[i+1:])
+ 				c.nurseryHandles = c.nurseryHandles[:len(c.nurseryHandles)-1]
+ 				break
+ 			}
+ 		}
++		if !found { dewRecordLargeCancelDistance(-1, len(c.nurseryHandles)) }
+ 		space := spaceKind((s.ChunkBump >> 16) & 0xff)
+ 		if space == spaceNursery {
+ 			if c.nurseryBump == s.ChunkEnd {
+diff --git a/diagnosticprofile/profile.go b/diagnosticprofile/profile.go
+index 4502fcee11..10e4674e07 100644
+--- a/diagnosticprofile/profile.go
++++ b/diagnosticprofile/profile.go
+@@ -1,5 +1,5 @@
+ package diagnosticprofile
+-import("encoding/binary";"encoding/json";"fmt";"os";"path/filepath";"runtime";"runtime/pprof";"sync";"time";wago "github.com/wago-org/wago")
++import(gc "github.com/wago-org/wago/src/core/runtime/gc/native"; "encoding/binary";"encoding/json";"fmt";"os";"path/filepath";"runtime";"runtime/pprof";"sync";"time";wago "github.com/wago-org/wago")
+ var once sync.Once
+ var cpu *os.File
+ var dir string
+@@ -7,4 +7,4 @@ var epoch=time.Now()
+ func Event(name string, fields map[string]any) {if fields==nil {fields=map[string]any{}};fields["event"]=name;fields["elapsed_s"]=time.Since(epoch).Seconds();data,err:=json.Marshal(fields);if err!=nil {panic(err)};fmt.Fprintln(os.Stderr,"WAGO_DIAG "+string(data))}
+ func Start(){dir=os.Getenv("DEW_WAGO_PROFILE_DIR");if dir=="" {return};if err:=os.MkdirAll(dir,0755);err!=nil {panic(err)};var err error;cpu,err=os.Create(filepath.Join(dir,"cpu.pprof"));if err!=nil {panic(err)};if err=pprof.StartCPUProfile(cpu);err!=nil {panic(err)};Event("start",map[string]any{"gomaxprocs":runtime.GOMAXPROCS(0)})}
+ func Finish(){once.Do(func(){if cpu==nil{return};pprof.StopCPUProfile();if err:=cpu.Close();err!=nil{panic(err)};var mem runtime.MemStats;runtime.ReadMemStats(&mem);Event("go_memory",map[string]any{"heap_alloc":mem.HeapAlloc,"total_alloc":mem.TotalAlloc,"mallocs":mem.Mallocs,"num_gc":mem.NumGC,"pause_total_ns":mem.PauseTotalNs});for _,name:=range []string{"heap","allocs"}{f,err:=os.Create(filepath.Join(dir,name+".pprof"));if err!=nil{panic(err)};if err=pprof.Lookup(name).WriteTo(f,0);err!=nil{panic(err)};f.Close()}})}
+-func Snapshot(in *wago.Instance){if in==nil{return};if data,ok:=in.Read(0,80);ok&&binary.LittleEndian.Uint64(data)==4919706420659244884 {Event("invariant",map[string]any{"version":binary.LittleEndian.Uint64(data[8:]),"code":binary.LittleEndian.Uint32(data[16:]),"phase":binary.LittleEndian.Uint32(data[20:]),"module_id":binary.LittleEndian.Uint64(data[24:]),"declaration":binary.LittleEndian.Uint64(data[32:]),"body":binary.LittleEndian.Uint64(data[40:]),"expression":binary.LittleEndian.Uint32(data[48:]),"expected":binary.LittleEndian.Uint64(data[56:]),"actual":binary.LittleEndian.Uint64(data[64:]),"detail":binary.LittleEndian.Uint64(data[72:])})}}
++func Snapshot(in *wago.Instance){Event("large_cancel_distances",map[string]any{"buckets":gc.DewLargeCancelDistances(),"labels":[]string{"tail","distance1","distance2to16","distance17to64","distance65to512","distance513to4096","distanceOver4096","notFound"}});if in==nil{return};if data,ok:=in.Read(0,80);ok&&binary.LittleEndian.Uint64(data)==4919706420659244884 {Event("invariant",map[string]any{"version":binary.LittleEndian.Uint64(data[8:]),"code":binary.LittleEndian.Uint32(data[16:]),"phase":binary.LittleEndian.Uint32(data[20:]),"module_id":binary.LittleEndian.Uint64(data[24:]),"declaration":binary.LittleEndian.Uint64(data[32:]),"body":binary.LittleEndian.Uint64(data[40:]),"expression":binary.LittleEndian.Uint32(data[48:]),"expected":binary.LittleEndian.Uint64(data[56:]),"actual":binary.LittleEndian.Uint64(data[64:]),"detail":binary.LittleEndian.Uint64(data[72:])})}}
+diff --git a/src/core/runtime/gc/native/dew_counter_diagnostic.go b/src/core/runtime/gc/native/dew_counter_diagnostic.go
+new file mode 100644
+index 0000000000..0d018f5bd3
+--- /dev/null
++++ b/src/core/runtime/gc/native/dew_counter_diagnostic.go
+@@ -0,0 +1,5 @@
++package gc
++import "sync/atomic"
++var dewDistances [8][2]atomic.Uint64
++func dewRecordLargeCancelDistance(distance,scan int){bucket:=7;switch {case distance==0:bucket=0;case distance==1:bucket=1;case distance>=2&&distance<=16:bucket=2;case distance>16&&distance<=64:bucket=3;case distance>64&&distance<=512:bucket=4;case distance>512&&distance<=4096:bucket=5;case distance>4096:bucket=6};dewDistances[bucket][0].Add(1);dewDistances[bucket][1].Add(uint64(scan))}
++func DewLargeCancelDistances() [8][2]uint64{var out [8][2]uint64;for i:=range out {out[i]=[2]uint64{dewDistances[i][0].Load(),dewDistances[i][1].Load()}};return out}

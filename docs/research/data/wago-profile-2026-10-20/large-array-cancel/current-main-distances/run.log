@@ -1,0 +1,8 @@
+WAGO_DIAG {"elapsed_s":0.000108693,"event":"start","gomaxprocs":16}
+Wago 7997c86c36e0; patch unpatched; workers unverified; Facet v0.1.0; locked project bindings
+WAGO_DIAG {"elapsed_s":0.24975238,"event":"module_load","seconds":0.247875047}
+WAGO_DIAG {"elapsed_s":0.285995005,"event":"instantiate","seconds":0.036213461}
+transform result cache: miss
+WAGO_DIAG {"elapsed_s":120.510246609,"event":"invoke","seconds":120.224217911}
+WAGO_DIAG {"buckets":[[0,0],[8496,10120217022],[785,844916489],[1406,1512510041],[5050,6228620933],[5312,6461691409],[3830,4436390788],[0,0]],"elapsed_s":120.510285742,"event":"large_cancel_distances","labels":["tail","distance1","distance2to16","distance17to64","distance65to512","distance513to4096","distanceOver4096","notFound"]}
+WAGO_DIAG {"elapsed_s":120.51894445799999,"event":"go_memory","heap_alloc":918539120,"mallocs":956998,"num_gc":23,"pause_total_ns":1742571,"total_alloc":1980862416}

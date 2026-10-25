@@ -1,0 +1,36 @@
+{
+  "label": "allocation-mix-alternating-batch512-2",
+  "command": [
+    "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+    "run",
+    "--bare",
+    "--offline",
+    "--no-input",
+    "--allow-native-artifact",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "--invoke",
+    "alternating",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+    "500000"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+  "seconds": 0.7948160270002518,
+  "user_seconds": 0.779983,
+  "system_seconds": 0.017952,
+  "peak_rss_kib": 194964,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.02197265625,
+    3.76025390625,
+    3.4521484375
+  ],
+  "load_end": [
+    2.02197265625,
+    3.76025390625,
+    3.4521484375
+  ]
+}

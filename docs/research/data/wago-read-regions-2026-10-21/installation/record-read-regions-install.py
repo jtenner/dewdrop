@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,shutil,subprocess
+r=Path('/home/dev/Projects/dewdrop');t=r/'.tmp/wago-local-stack-2026-10-20/wago';sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=t,text=True).strip();evidence=r/'docs/research/data/wago-read-regions-2026-10-21';out=r/'.tmp/wago-next-gc-perf'/('install-'+sha[:9]);m=json.loads((out/'installation.json').read_text());assert m['source_commit']==sha
+rows=json.loads((r/'.tmp/wago-next-gc-perf/read-regions/full-tests-combined/finish-samples.json').read_text());assert len(rows)==4 and all(x['exit']==0 for x in rows)
+identity=json.loads((evidence/'final-source-identity.json').read_text())['combined-candidate']['production_sha256']
+for rel,want in identity.items():assert hashlib.sha256((t/rel).read_bytes()).hexdigest()==want,rel
+arm=t/'src/core/compiler/backend/railshot/arm64/call.go';assert hashlib.sha256(arm.read_bytes()).hexdigest()==''.join(['33b8f91b','38727df8','487afc9c','7a99d6c5','9bca0ed5','d8be1b92','7c0ad6fe','fa2f0818'])
+status=subprocess.check_output(['git','status','--short'],cwd=t,text=True).strip();assert status=='M src/core/compiler/backend/railshot/arm64/call.go',status
+for name in ['manager','runtime']:assert hashlib.sha256(Path(m[name]).read_bytes()).hexdigest()==m[name+'_sha256']
+dst=evidence/'installation';dst.mkdir(exist_ok=True)
+for name in ['installation.json','verification.json','build-wago.json','build-wago-runtime.json']:shutil.copyfile(out/name,dst/name)
+for name in ['published-and-picked.json']:shutil.copyfile(r/'.tmp/wago-next-gc-perf/read-regions'/name,dst/name)
+shutil.copytree(r/'.tmp/wago-next-gc-perf/read-regions/full-tests-combined',evidence/'full-tests-combined',dirs_exist_ok=True)
+for name in ['qualify-read-regions-combined.py','install-read-regions.py','record-read-regions-install.py']:shutil.copyfile(r/'.tmp/wago-next-gc-perf'/name,dst/name)
+text=f'''\n## Published and installed combined stack\n\n[Ready PR #1007](https://github.com/wago-org/wago/pull/1007) contains public feature `392af571edca957c5f3c946ed956a14b02ea001a` and forwarding merge `1b877f8c6675e08bfa7ad3a9ca665d46f6001b53`, above safety PR #1011. PR #1008 is closed because its commits are in #1007. Their local picks are `41e79be4ba63f8546ec843aa68e6bb659706fd1a` and `{sha}`. The picks retain the combined reference-ABI manifest entries and remove only an obsolete forwarding test wrapper. All seven changed production files exactly match the measured combined source.\n\nThe actual combined branch passes: '''+', '.join(f"{x['label']} ({x['seconds']:.3f} seconds)" for x in rows)+f'''. These suite times include testing and are not Dewdrop compile latency measurements.\n\nInstalled `{m['label']}`. The manager is `{m['manager']}`; runtime is `{m['runtime']}`. All {m['checks']} install checks pass, including both read loops, saved artifacts and exact-root admission. Login-shell PATH and manager/runtime version checks agree. Manager SHA-256 `{m['manager_sha256']}`; runtime SHA-256 `{m['runtime_sha256']}`. The previous manager is retained at `{out/'previous-manager'}`. The existing ARM64 edit remains byte-identical. Raw installation and combined-suite reports are in the linked evidence directory.\n'''
+p=r/'docs/research/wago-read-regions-2026-10-21.md';s=p.read_text();assert '## Published and installed combined stack' not in s;p.write_text(s+text)
+print(json.dumps(dict(label=m['label'],checks=m['checks'],commit=sha,source_identity=True,arm_edit_preserved=True,tests=rows),indent=2))

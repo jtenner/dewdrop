@@ -1,0 +1,40 @@
+{
+  "purpose": "Unpaired preliminary qualification; no measured speed comparison claim",
+  "source_files_sha256": {
+    "src/core/runtime/gc/native/nursery_canonical.go": "83bafb2b3fe425fc614cb01e365e5187fe8d8ada7438f476d17d5c835834d842",
+    "src/core/runtime/gc/native/collect.go": "9ff946cca8852129b89b20f442da6e9b32a26e19dc4980c7152c2d043e076043",
+    "src/core/runtime/gc/native/collector.go": "9cfe8f3cb3e6c6e13839eab77066c2abeae6b3a2224b32eb1892e46ba009951a"
+  },
+  "host_sha256": "8e9a8c9957828c07647ffcb725f4e23150c2c153b26a8cd5051ec4c556a435ce",
+  "installed_commit": "d06313bc31347491e19b7102404f00c7f3a0b36b",
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+  "gc_native_root_admission": {
+    "Callsites": 56923,
+    "Exact": true,
+    "MaximumRoots": 77,
+    "MetadataBytes": 1960164,
+    "Reason": "",
+    "Required": true,
+    "Safepoints": 25794,
+    "artifact_sections": {
+      "Framing": 16,
+      "Code": 27059224,
+      "Entries": 54256,
+      "Imports": 7322,
+      "Types": 213538,
+      "Functions": 36399,
+      "ExportsAndNames": 214776,
+      "Globals": 55014,
+      "Tables": 58229,
+      "Elements": 2,
+      "Data": 436198,
+      "Memories": 27,
+      "Tags": 2,
+      "Features": 9,
+      "GC": 2235271,
+      "Metadata": 3311043,
+      "Total": 30370283
+    }
+  }
+}

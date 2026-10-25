@@ -1,0 +1,732 @@
+[
+  {
+    "name": "select",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "version",
+      "switch",
+      "local-gc-5efc7acb1",
+      "--profile",
+      "standard",
+      "--build",
+      "normal",
+      "--offline",
+      "--no-input"
+    ],
+    "seconds": 0.04445663200021954,
+    "exit": 0,
+    "stdout": "Using Wago vlocal-gc-5efc7acb1 (standard/normal)\n",
+    "stderr": ""
+  },
+  {
+    "name": "version",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "--json",
+      "--version"
+    ],
+    "seconds": 0.004952750998199917,
+    "exit": 0,
+    "stdout": "{\n  \"managerPath\": \"/home/dev/.local/bin/wago\",\n  \"managerVersion\": \"local-gc-5efc7acb1\",\n  \"platform\": \"linux/amd64\",\n  \"runtimeBuild\": \"normal\",\n  \"runtimePath\": \"/home/dev/.local/share/wago/versions/local-gc-5efc7acb1/standard/normal/wago-runtime\",\n  \"runtimeProfile\": \"standard\",\n  \"runtimeSelected\": true,\n  \"runtimeVersion\": \"local-gc-5efc7acb1\",\n  \"toolchain\": \"gc go1.27.1\"\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "login-path",
+    "command": [
+      "bash",
+      "-lc",
+      "command -v wago; wago --json --version"
+    ],
+    "seconds": 0.00849181800003862,
+    "exit": 0,
+    "stdout": "/home/dev/.local/bin/wago\n{\n  \"managerPath\": \"/home/dev/.local/bin/wago\",\n  \"managerVersion\": \"local-gc-5efc7acb1\",\n  \"platform\": \"linux/amd64\",\n  \"runtimeBuild\": \"normal\",\n  \"runtimePath\": \"/home/dev/.local/share/wago/versions/local-gc-5efc7acb1/standard/normal/wago-runtime\",\n  \"runtimeProfile\": \"standard\",\n  \"runtimeSelected\": true,\n  \"runtimeVersion\": \"local-gc-5efc7acb1\",\n  \"toolchain\": \"gc go1.27.1\"\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "fib",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--invoke",
+      "fib",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm",
+      "20"
+    ],
+    "seconds": 0.00809501299954718,
+    "exit": 0,
+    "stdout": "6765\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-gc-allocation-mix",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/gc-allocation-mix.wasm"
+    ],
+    "seconds": 0.010275669003021903,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-allocation-mix-scalar-structs",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "scalar-structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago",
+      "500000"
+    ],
+    "seconds": 0.01297249299386749,
+    "exit": 0,
+    "stdout": "445698416\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-allocation-mix-structs",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago",
+      "500000"
+    ],
+    "seconds": 0.01750642800470814,
+    "exit": 0,
+    "stdout": "445698416\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-allocation-mix-alternating",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago",
+      "500000"
+    ],
+    "seconds": 0.023615250996954273,
+    "exit": 0,
+    "stdout": "891896832\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-allocation-mix-alternating-default",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating-default",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago",
+      "500000"
+    ],
+    "seconds": 0.022977051994530484,
+    "exit": 0,
+    "stdout": "445698416\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-allocation-mix-alternating-fill",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating-fill",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-allocation-mix.wago",
+      "500000"
+    ],
+    "seconds": 0.023882813002273906,
+    "exit": 0,
+    "stdout": "891396832\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-gc-shared-nursery-array",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/gc-shared-nursery-array.wasm"
+    ],
+    "seconds": 0.010150082998734433,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-shared-nursery-array-alternating",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "500000"
+    ],
+    "seconds": 0.018788445995596703,
+    "exit": 0,
+    "stdout": "891896832\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-shared-nursery-array-alternating-default",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating-default",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "500000"
+    ],
+    "seconds": 0.017936005002411548,
+    "exit": 0,
+    "stdout": "445698416\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-shared-nursery-array-alternating-fill",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating-fill",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "500000"
+    ],
+    "seconds": 0.019586024005548097,
+    "exit": 0,
+    "stdout": "891396832\n",
+    "stderr": ""
+  },
+  {
+    "name": "gc-shared-nursery-array-alternating-fill-dynamic",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating-fill-dynamic",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "500000"
+    ],
+    "seconds": 0.01833683800214203,
+    "exit": 0,
+    "stdout": "891396832\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-vector",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-array-vector-access.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/gc-array-vector-access.wasm"
+    ],
+    "seconds": 0.00995854299981147,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-array-vector-access.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "vector-multiple-exports",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "init",
+      "--invoke",
+      "read",
+      "--invoke",
+      "write",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-array-vector-access.wago",
+      "500000",
+      "500000"
+    ],
+    "seconds": 0.01062923299468821,
+    "exit": 0,
+    "stdout": "3500000\n499999\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-cast-field",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-cast-field-read.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/gc-cast-field-read.wasm"
+    ],
+    "seconds": 0.0112517109955661,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-cast-field-read.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "cast-numeric-vector",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "init",
+      "--invoke",
+      "loop-i32",
+      "--invoke",
+      "loop-v128",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-cast-field-read.wago",
+      "500000",
+      "500000"
+    ],
+    "seconds": 0.010358162995544262,
+    "exit": 0,
+    "stdout": "3500000\n11000000\n",
+    "stderr": ""
+  },
+  {
+    "name": "dynamic-array-0",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "dynamic-fill-check",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "0",
+      "7"
+    ],
+    "seconds": 0.007040693002636544,
+    "exit": 0,
+    "stdout": "1\n",
+    "stderr": ""
+  },
+  {
+    "name": "dynamic-array-60",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "dynamic-fill-check",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "60",
+      "7"
+    ],
+    "seconds": 0.006908643998031039,
+    "exit": 0,
+    "stdout": "1\n",
+    "stderr": ""
+  },
+  {
+    "name": "dynamic-array-61",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "dynamic-fill-check",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "61",
+      "4294967295"
+    ],
+    "seconds": 0.007527396999648772,
+    "exit": 0,
+    "stdout": "1\n",
+    "stderr": ""
+  },
+  {
+    "name": "dynamic-array-4096",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "dynamic-fill-check",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-shared-nursery-array.wago",
+      "4096",
+      "4294967295"
+    ],
+    "seconds": 0.006659155995293986,
+    "exit": 0,
+    "stdout": "1\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-abstract-array",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-abstract-array-cast-len.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/gc-abstract-array-cast-len.wasm"
+    ],
+    "seconds": 0.011050843997509219,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-abstract-array-cast-len.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "abstract-array-loop",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "init",
+      "--invoke",
+      "loop",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-abstract-array-cast-len.wago",
+      "64",
+      "8192"
+    ],
+    "seconds": 0.007812542004103307,
+    "exit": 0,
+    "stdout": "524288\n",
+    "stderr": ""
+  },
+  {
+    "name": "abstract-array-live-locals",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "init",
+      "--invoke",
+      "pressure",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-abstract-array-cast-len.wago",
+      "64",
+      "17"
+    ],
+    "seconds": 0.007257780998770613,
+    "exit": 0,
+    "stdout": "748\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-numeric-inline",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-numeric-leaf-inline.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/gc-numeric-leaf-inline.wasm"
+    ],
+    "seconds": 0.010998906996974256,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-numeric-leaf-inline.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "numeric-inline-roots",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "roots",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-numeric-leaf-inline.wago",
+      "17"
+    ],
+    "seconds": 0.0075138720058021136,
+    "exit": 0,
+    "stdout": "1061\n",
+    "stderr": ""
+  },
+  {
+    "name": "numeric-inline-loop",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "loop",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-numeric-leaf-inline.wago",
+      "8192"
+    ],
+    "seconds": 0.00827249600115465,
+    "exit": 0,
+    "stdout": "8192\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-forwarder",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-direct-forwarder-loop.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/gc-direct-forwarder-loop.wasm"
+    ],
+    "seconds": 0.010400643004686572,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-direct-forwarder-loop.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "forwarder-loop",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "loop",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-direct-forwarder-loop.wago",
+      "8192"
+    ],
+    "seconds": 0.007200353000371251,
+    "exit": 0,
+    "stdout": "57344\n",
+    "stderr": ""
+  },
+  {
+    "name": "old-native-artifact",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "seconds": 0.18635602799622575,
+    "exit": 0,
+    "stdout": "891896832\n",
+    "stderr": ""
+  },
+  {
+    "name": "build-combined-reference-abi",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/gc-combined-reference-abi.wasm"
+    ],
+    "seconds": 0.010488269996130839,
+    "exit": 0,
+    "stdout": "\u2713 built /home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago\n",
+    "stderr": ""
+  },
+  {
+    "name": "combined-reference-abi-private_direct",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "private_direct",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "17"
+    ],
+    "seconds": 0.0069096489969524555,
+    "exit": 0,
+    "stdout": "25\n",
+    "stderr": ""
+  },
+  {
+    "name": "combined-reference-abi-addressable_direct",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "addressable_direct",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "17"
+    ],
+    "seconds": 0.006840018002549186,
+    "exit": 0,
+    "stdout": "25\n",
+    "stderr": ""
+  },
+  {
+    "name": "combined-reference-abi-wrapper_indirect",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "wrapper_indirect",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "17"
+    ],
+    "seconds": 0.0070365770006901585,
+    "exit": 0,
+    "stdout": "25\n",
+    "stderr": ""
+  },
+  {
+    "name": "combined-reference-abi-wrapper_reference",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "wrapper_reference",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "17"
+    ],
+    "seconds": 0.008187979998183437,
+    "exit": 0,
+    "stdout": "25\n",
+    "stderr": ""
+  },
+  {
+    "name": "combined-reference-abi-terminal_indirect",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "terminal_indirect",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "17"
+    ],
+    "seconds": 0.007393067004159093,
+    "exit": 0,
+    "stdout": "25\n",
+    "stderr": ""
+  },
+  {
+    "name": "combined-reference-abi-terminal_reference",
+    "command": [
+      "/home/dev/.local/bin/wago",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--invoke",
+      "terminal_reference",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-5efc7acb1/gc-combined-reference-abi.wago",
+      "17"
+    ],
+    "seconds": 0.007323657002416439,
+    "exit": 0,
+    "stdout": "25\n",
+    "stderr": ""
+  }
+]

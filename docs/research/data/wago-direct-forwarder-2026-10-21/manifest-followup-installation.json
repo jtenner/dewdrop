@@ -1,0 +1,47 @@
+{
+  "label": "local-gc-d06313bc3",
+  "source_commit": "d06313bc31347491e19b7102404f00c7f3a0b36b",
+  "source_branch": "dewdrop/local-gc-perf-20261020",
+  "manager": "/home/dev/.local/bin/wago",
+  "runtime": "/home/dev/.local/share/wago/versions/local-gc-d06313bc3/standard/normal/wago-runtime",
+  "manager_sha256": "dc78f2ce8e29f5d074b6877089c7c45d5e2a096d73ed21ef493f0b54841cb084",
+  "runtime_sha256": "6916fb3496578343cc0d313109ccacc626934234b06f9785dc28ed8b17c55956",
+  "previous_manager_sha256": "8116b47661bd1b61fafc58260c952dc2bbcbe8d1ec51b3b7a2e528da3e7e801b",
+  "builds": [
+    {
+      "name": "wago",
+      "command": [
+        "go",
+        "build",
+        "-trimpath",
+        "-ldflags=-s -w -X main.version=local-gc-d06313bc3",
+        "-o",
+        "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-d06313bc3/wago",
+        "./cli/wago"
+      ],
+      "seconds": 0.7513695999987249,
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "wago-runtime",
+      "command": [
+        "go",
+        "build",
+        "-trimpath",
+        "-tags",
+        "wago_runtime",
+        "-ldflags=-s -w -X main.version=local-gc-d06313bc3",
+        "-o",
+        "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-d06313bc3/wago-runtime",
+        "./cli/wago"
+      ],
+      "seconds": 0.5051432100008242,
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "checks": 32
+}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=handle-order-diagnostic-20261021 -X main.workerPluginIdentity=handle-order-diagnostic-20261021",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-handle-order-diagnostic/order-host",
+    "."
+  ],
+  "seconds": 4.514667436000309,
+  "exit": 0,
+  "stdout": "",
+  "stderr": ""
+}

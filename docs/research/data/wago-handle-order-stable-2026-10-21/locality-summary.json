@@ -1,0 +1,61 @@
+{
+  "first5": {
+    "Before": {
+      "pairs": 20480,
+      "line64": 0.256298828125,
+      "page4k": 0.005810546875,
+      "delta1": 0.99140625
+    },
+    "Recycled": {
+      "pairs": 20480,
+      "line64": 0.2580078125,
+      "page4k": 0.00400390625,
+      "delta1": 0.99150390625
+    }
+  },
+  "middle5": {
+    "Before": {
+      "pairs": 20480,
+      "line64": 0.47529296875,
+      "page4k": 0.041455078125,
+      "delta1": 0.624609375
+    },
+    "Recycled": {
+      "pairs": 20480,
+      "line64": 0.474658203125,
+      "page4k": 0.038818359375,
+      "delta1": 0.61953125
+    }
+  },
+  "last5": {
+    "Before": {
+      "pairs": 20480,
+      "line64": 0.517626953125,
+      "page4k": 0.06640625,
+      "delta1": 0.574267578125
+    },
+    "Recycled": {
+      "pairs": 20480,
+      "line64": 0.517236328125,
+      "page4k": 0.06591796875,
+      "delta1": 0.57041015625
+    }
+  },
+  "base_batch_fraction": 0.0886310174849797,
+  "diagnostic_only": true,
+  "paths": {
+    "sparse": 140,
+    "general": 6
+  },
+  "stats": {
+    "Allocations": 317075456,
+    "MinorCollections": 146,
+    "FullCollections": 0,
+    "MinorObjectsScanned": 13726920,
+    "MinorRememberedScanned": 35910,
+    "YoungBytesCopied": 459938416,
+    "PromotedBytes": 142101064,
+    "LiveObjects": 4585223,
+    "TenuringThreshold": 3
+  }
+}

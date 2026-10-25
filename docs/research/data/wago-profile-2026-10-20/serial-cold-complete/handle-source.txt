@@ -1,0 +1,116 @@
+Total: 98.14s
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishMinorEvacuationMode in /home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/wago/src/core/runtime/gc/native/collect.go
+     760ms      5.35s (flat, cum)  5.45% of Total
+         .          .    306:func (c *Collector) finishMinorEvacuationMode(measured bool) {
+         .          .    307:	out := c.nurseryHandles[:0]
+      80ms       80ms    308:	for _, h := range c.nurseryHandles {
+     100ms      100ms    309:		if h == 0 || int(h) >= len(c.handles) {
+         .          .    310:			continue
+         .          .    311:		}
+      80ms       80ms    312:		live := c.mark[h]
+     440ms      440ms    313:		c.mark[h] = false
+      40ms       40ms    314:		if live {
+         .      110ms    315:			if c.handles[h].young() {
+         .          .    316:				out = append(out, h)
+         .          .    317:			}
+         .          .    318:			continue
+         .          .    319:		}
+      20ms      3.32s    320:		if c.handles[h].young() {
+         .          .    321:			if measured {
+         .          .    322:				c.cfg.Telemetry.noteSweep(c.handles[h].size)
+         .          .    323:			}
+         .      1.16s    324:			c.free(h)
+         .          .    325:		}
+         .          .    326:	}
+         .       20ms    327:	clear(c.nurseryHandles[len(out):])
+         .          .    328:	c.nurseryHandles = out
+         .          .    329:	c.nurseryBump = 0
+         .          .    330:	if len(out) == 0 {
+         .          .    331:		c.survivorBump = 0
+         .          .    332:		c.survivorFrom ^= 1
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).isYoungHandle in /home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/wago/src/core/runtime/gc/native/survivor.go
+      30ms      1.81s (flat, cum)  1.84% of Total
+         .          .     32:func (c *Collector) isYoungHandle(h uint32) bool {
+      30ms      1.81s     33:	return h != 0 && int(h) < len(c.handles) && c.handles[h].young()
+         .          .     34:}
+         .          .     35:
+         .          .     36:func (c *Collector) edenBytes() uint32 { return c.cfg.NurseryBytes }
+         .          .     37:
+         .          .     38:func (c *Collector) survivorBase(index uint8) uint32 {
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newHandle in /home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/wago/src/core/runtime/gc/native/alloc.go
+     6.70s      6.70s (flat, cum)  6.83% of Total
+     280ms      280ms    205:func (c *Collector) newHandle(e handleEntry) uint32 {
+      10ms       10ms    206:	for len(c.freeHandles) > 0 {
+         .          .    207:		n := len(c.freeHandles)
+     150ms      150ms    208:		h := c.freeHandles[n-1]
+      70ms       70ms    209:		c.freeHandles = c.freeHandles[:n-1]
+     110ms      110ms    210:		if c.checkedHandles != nil {
+         .          .    211:			generations := *c.checkedHandles
+         .          .    212:			if generations[h] == ^uint64(0) {
+         .          .    213:				continue
+         .          .    214:			} // retire rather than wrap
+         .          .    215:			generations[h]++
+         .          .    216:		}
+     5.87s      5.87s    217:		c.handles[h] = e
+     150ms      150ms    218:		return h
+         .          .    219:	}
+      50ms       50ms    220:	c.handles = append(c.handles, e)
+         .          .    221:	if c.checkedHandles != nil {
+         .          .    222:		*c.checkedHandles = append(*c.checkedHandles, 1)
+         .          .    223:	}
+         .          .    224:	c.mark = append(c.mark, false)
+         .          .    225:	// The handle is unpublished until the profile-specific post-allocation path.
+         .          .    226:	// Tiny overwrites this byte with its current-epoch gray/black state; keeping
+         .          .    227:	// the shared Throughput handle-growth path at a zero append avoids irrelevant
+         .          .    228:	// epoch encoding work.
+      10ms       10ms    229:	c.tinyGC.color = append(c.tinyGC.color, 0)
+         .          .    230:	return uint32(len(c.handles) - 1)
+         .          .    231:}
+         .          .    232:
+         .          .    233:func (c *Collector) desc(id TypeID) (TypeDesc, error) {
+         .          .    234:	if int(id) >= len(c.types) {
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles in /home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/wago/src/core/runtime/gc/native/native_alloc.go
+     780ms      7.25s (flat, cum)  7.39% of Total
+         .          .     49:func (c *Collector) reserveNativeHandles() {
+         .          .     50:	s := &c.nativeStructAlloc
+      10ms       10ms     51:	clear(s.Handles[:])
+         .          .     52:	s.Cursor = 0
+         .          .     53:	s.Count = 0
+         .          .     54:	s.HandleBase = 0
+         .          .     55:	newHandles := nativeStructHandleBatch - min(len(c.freeHandles), nativeStructHandleBatch)
+         .          .     56:	if newHandles != 0 {
+         .       70ms     57:		c.handles = slices.Grow(c.handles, newHandles)
+         .       10ms     58:		c.mark = slices.Grow(c.mark, newHandles)
+         .          .     59:		c.tinyGC.color = slices.Grow(c.tinyGC.color, newHandles)
+         .          .     60:	}
+      20ms       30ms     61:	c.nurseryHandles = slices.Grow(c.nurseryHandles, nativeStructHandleBatch)
+      30ms       30ms     62:	for i := range s.Handles {
+     100ms      6.46s     63:		h := c.newHandle(handleEntry{})
+      30ms       30ms     64:		s.Handles[i] = h
+         .          .     65:		// Reserved free handles participate in this dense list before activation.
+         .          .     66:		// Collection ignores spaceFree entries and compacts them after cancellation.
+      60ms       60ms     67:		c.nurseryHandles = append(c.nurseryHandles, h)
+      20ms       20ms     68:		s.Count++
+         .          .     69:	}
+         .          .     70:	base := s.Handles[0]
+         .          .     71:	contiguous := base != 0
+     500ms      500ms     72:	for i, h := range s.Handles {
+      10ms       10ms     73:		if h != base+uint32(i) {
+         .          .     74:			contiguous = false
+         .          .     75:			break
+         .          .     76:		}
+         .          .     77:	}
+         .          .     78:	if contiguous {
+         .          .     79:		s.HandleBase = base
+         .          .     80:	}
+         .          .     81:	s.Epoch = c.nativeAllocEpoch
+         .          .     82:	if c.telemetryEnabled() {
+         .          .     83:		c.cfg.Telemetry.paths.HandleRefills++
+         .          .     84:		c.cfg.Telemetry.paths.ConditionalMediumPaths++
+         .          .     85:	}
+         .       20ms     86:	c.refreshNativeHandles()
+         .          .     87:}
+         .          .     88:
+         .          .     89:// PrepareNativeStructAllocation retains the original direct nursery-bump struct
+         .          .     90:// path. Array chunks therefore add no cursor checks or reserved-byte gaps to the
+         .          .     91:// established native struct hot path.

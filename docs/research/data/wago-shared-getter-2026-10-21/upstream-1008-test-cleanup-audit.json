@@ -1,0 +1,10 @@
+{
+  "pr": 1008,
+  "old": "874f6d458e1ca2692f754ee120545fa2404d37db",
+  "new": "2cffbac1e23c91618d1b748c88121f8906e85cc1",
+  "classification": "test-only cleanup",
+  "diff_stat": " src/wago/direct_forwarder_amd64_test.go | 4 ----\n 1 file changed, 4 deletions(-)\n",
+  "decision": "No runtime/safety change; installed original safety fix already present. No required pick or rebuild.",
+  "researcher": "Astra",
+  "exact_head_ref": "refs/audit/pr1008-2cffbac1"
+}

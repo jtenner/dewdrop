@@ -1,0 +1,30 @@
+{
+  "default": {
+    "flag": "",
+    "seconds": [
+      4.001796684002329,
+      3.9578473130022758,
+      4.019342219005921
+    ],
+    "median_seconds": 4.001796684002329
+  },
+  "baseline-only": {
+    "flag": "--liftoff-only",
+    "seconds": [
+      24.10653851999814,
+      23.956033987997216,
+      23.522779186998378
+    ],
+    "median_seconds": 23.956033987997216
+  },
+  "optimizing-only": {
+    "flag": "--no-liftoff",
+    "seconds": [
+      7.21345047000068,
+      7.22093089199916,
+      7.265433205997397
+    ],
+    "median_seconds": 7.22093089199916
+  },
+  "all_outputs_identical_and_main_42": true
+}

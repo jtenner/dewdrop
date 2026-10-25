@@ -1,0 +1,114 @@
+{
+  "seconds": 99.77854764201038,
+  "exit": 0,
+  "result": {
+    "duration_api_ms": 424866,
+    "stop_reason": "end_turn",
+    "session_id": "0b95f6f4-2547-41ca-95c9-3eb6cc8c427c",
+    "total_cost_usd": 2.2751802,
+    "usage": {
+      "input_tokens": 14,
+      "cache_creation_input_tokens": 28692,
+      "cache_read_input_tokens": 899201,
+      "output_tokens": 6371,
+      "output_tokens_details": {
+        "thinking_tokens": 2899
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 28692,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 4459,
+          "cache_read_input_tokens": 139699,
+          "cache_creation_input_tokens": 3240,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 3240
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-haiku-5-5": {
+        "inputTokens": 2337,
+        "outputTokens": 23,
+        "thinkingTokens": 0,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0002452,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000
+      },
+      "claude-opus-5-5": {
+        "inputTokens": 66,
+        "outputTokens": 30502,
+        "thinkingTokens": 17200,
+        "cacheReadInputTokens": 2734515,
+        "cacheCreationInputTokens": 139716,
+        "webSearchRequests": 0,
+        "costUSD": 2.2749349999999997,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 11,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "# GC codegen follow-up: next two changes (read-only)\n\nI read only `classification.json`, `run.json`, the disassembly for functions 2293, 2306 and 2322, and source. I did not open the CPU profile, so I have **not checked** the 13.66% `CollectMinor` figure. I did not find the compiler WAT, so I rely on your description of `intern_function` and `span_matches`.\n\n**Labels:** **[M]** = measured. **[S]** = from source or disassembly. **[I]** = my inference.\n\n## What the new evidence shows\n\n- **[M]** Most sampled native instructions sit in the final-cast struct-ref resolver (402 of 1,090, 36.88%) and type-test/first-field (209, 19.17%). These are sample locations, not removable time.\n- **[S]** In 2293, 2306 and 2322 the hottest instruction is the `test` just after `movzx r10d, byte [r9+0xe]`. That is the load of the handle entry's space byte. The next hot spot is the header type load `mov ecx,[r11]`.\n- **[I]** So the cost is the chain of dependent loads, which a reordering cannot hide. Only skipping repeat checks helps. A chase that reaches a new object each time cannot benefit.\n- **[S]** 2293 shows the chain directly. The code calls the resolver stub, loads `mov edi,[rdx+0x10]` (a child reference), then calls the resolver at once on that child (type `0xe2b`, extent `0x20`).\n- **[S]** In 2306, hot samples also sit at `mov eax,[r10+0xc]; shr 16; and 0xff`. That is the reference-field check inside native `struct.new` (`gc_direct.go:1831-1833`).\n\n## Can cheap region transparency reach these chains?\n\nNo. It reaches only the first hop.\n\n- **[S]** `gcLocalProvenance` (`gc_resolver.go:76`) accepts only borrowed local reads. In `local0.field0(3631).field1(4281)`, the child and the array come from field loads, so no local key exists for them.\n- **[S]** These wrapper fields are mutable. So \"local is unchanged\" does not prove the child is unchanged.\n- **[I]** We need value IDs first:\n  - Key each field result as (base value ID, type, field).\n  - A `struct.set` to the same (type, field), or any unknown call, ends that value fact.\n  - That write does **not** end the base object's address certificate. Keep the two kinds of fact separate.\n  - A child gets its own certificate only at its first checked dereference.\n- **[I]** Transitive effect summaries are needed only to carry facts across real calls. Inside one call-free interval, local effects are enough. Hot scan loops probably contain calls, so summaries come second.\n\n## Change A (do next): per-function value/effect graph, then cross-splice reuse\n\n- **Where:** a pre-pass in the per-function compile path, `gc_resolver.go` (replace the single certificate slot), `inline.go:1092-1121` (seed and keep facts across region splices), `gc_test_field.go`, `gc_direct.go:emitDirectGCObjectWithStub`.\n- **Removes:**\n  - A repeat check of the same value in one call-free interval, including across region splices.\n  - A repeat field load when no aliasing write happened in between.\n  - **[I]** Maybe also the `struct.new` field check, when that value already has a valid certificate in the same no-Go interval. This replaces my earlier constructor lead.\n- **Proof obligations:**\n  - Never move the first trap.\n  - Never make a larger extent from a smaller check.\n  - Branch-created facts do not leave a join.\n  - Kill facts at every Go entry, helper, safepoint, allocation fallback and host boundary.\n  - Keep root-mask consumption exactly as it is.\n- **Smallest gate:** a shadow counter build.\n  - Always run the original resolver and never use the saved result (the epoch-audit probe design).\n  - At each site, count executions where a dominating fact with the same value ID existed. Split the count into: local-only, field-value, and killed (by aliasing write or by call).\n  - Go ahead if the field-value class is a real share of resolver executions in 2293, 2294, 2306 and 2322. If it is mostly \"killed by call\", do Change B first.\n\n## Change B: lazy loop-carried facts plus effect summaries\n\n- **Lazy, not eager.** At loop entry, store 0 to a private non-root home. That store is the only new work on zero-iteration or untaken paths. The first executed site does the normal full check and fills the home. Later sites do `test home; jz full_check`. Any kill inside the loop sets the home back to 0.\n- **Effect summaries:** per function, one \"never enters Go\" bit plus a compact write set of (type, field) pairs. These let a fact survive a call. They do **not** remove root masks. My earlier report mixed the two up.\n- **Smallest gate:**\n  - Static: in the `intern_function` and `span_matches` loops, check that every call in the body is summary-closed and writes neither 3631.f0 nor 4281.f1.\n  - Dynamic: a shadow count of the same value ID being checked across iterations.\n\n## Corrections to my earlier report\n\n1. **No-call loops:** coverage is probably poor, because hot loops likely make calls. Do not prototype this first.\n2. **Eager loop-entry probe:** replace it with the lazy first-executed check above.\n3. **Effect summaries:** keep them separate from root-mask removal. Masks stay as they are for now.\n4. **Fresh-constructor lead:** this is secondary. Value-ID certificate reuse may cover the hot 2306 `struct.new` field checks better. Count it before building anything.\n5. **Region transparency:** on its own it covers only the first hop of these chains.\n\n## Keeping compiler RSS low\n\n- Use one reusable arena per worker. Reset it for each function. Size it by instruction count, with a fixed node size. Measure its high-water mark.\n- Keep no whole-module SSA. Across functions, keep only the summary bit and write set. Compute the summaries by streaming over function bodies, not from a stored graph.\n- Limit worker concurrency by a byte budget, not a fixed count. Large functions then run alone.\n- Record compile seconds and peak RSS for each step. **[M]** The attribution run's own figures (0.468 s compile, 514,620 KiB peak RSS) come from the metadata-overlay tool. They are not a production baseline.\n\nI make no promise of any speed gain.",
+    "ttft_ms": 2998,
+    "type": "result",
+    "duration_ms": 99129,
+    "uuid": "ebc233ed-0c96-4031-8a20-6e9320c70697",
+    "ttft_stream_ms": 2576,
+    "time_to_request_ms": 399,
+    "first_content_frame_ms": 2576,
+    "queued_turn_count": 0,
+    "result_index": 0
+  }
+}

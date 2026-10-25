@@ -1,0 +1,56 @@
+[
+  {
+    "label": "format",
+    "command": [
+      "gofmt",
+      "-w",
+      "src/core/compiler/backend/railshot/amd64/gc_shared_getter.go",
+      "/home/dev/Projects/dewdrop/.tmp/wago-shared-getter/src/wago/gc_shared_getter_amd64_test.go",
+      "/home/dev/Projects/dewdrop/.tmp/wago-shared-getter/src/wago/gc_shared_getter_stats_amd64_test.go",
+      "/home/dev/Projects/dewdrop/.tmp/wago-shared-getter/src/wago/gc_shared_getter_safety_amd64_test.go",
+      "/home/dev/Projects/dewdrop/.tmp/wago-shared-getter/src/wago/gc_shared_getter_profile_amd64_test.go"
+    ],
+    "seconds": 0.010420724996947683,
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "label": "checked",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-tags=wago_codegenstats,wago_regalloccheck",
+      "-run",
+      "^TestGCSharedGetter",
+      "-count=1",
+      "-v",
+      "./src/wago"
+    ],
+    "seconds": 25.11344985300093,
+    "exit": 0,
+    "stdout": "=== RUN   TestGCSharedGetterCalls\n=== RUN   TestGCSharedGetterCalls/collector-0\n=== RUN   TestGCSharedGetterCalls/collector-1\n=== RUN   TestGCSharedGetterCalls/collector-2\n--- PASS: TestGCSharedGetterCalls (0.00s)\n    --- PASS: TestGCSharedGetterCalls/collector-0 (0.00s)\n    --- PASS: TestGCSharedGetterCalls/collector-1 (0.00s)\n    --- PASS: TestGCSharedGetterCalls/collector-2 (0.00s)\n=== RUN   TestGCSharedGetterResultRootsAcrossAllocatingCall\n--- PASS: TestGCSharedGetterResultRootsAcrossAllocatingCall (0.00s)\n=== RUN   TestGCSharedGetterSafety\n=== RUN   TestGCSharedGetterSafety/0\n=== RUN   TestGCSharedGetterSafety/1\n--- PASS: TestGCSharedGetterSafety (0.00s)\n    --- PASS: TestGCSharedGetterSafety/0 (0.00s)\n    --- PASS: TestGCSharedGetterSafety/1 (0.00s)\n=== RUN   TestGCSharedGetterNullPC\n--- PASS: TestGCSharedGetterNullPC (0.00s)\n=== RUN   TestGCSharedGetterAdmission\n    gc_shared_getter_stats_amd64_test.go:66: i32 inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=212\n    gc_shared_getter_stats_amd64_test.go:66: nullable-i32 inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=267\n    gc_shared_getter_stats_amd64_test.go:66: i64 inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=213\n    gc_shared_getter_stats_amd64_test.go:66: f32 inline=0 calls=map[mixed:1] frame=8 spills=0 code=134\n    gc_shared_getter_stats_amd64_test.go:66: f64 inline=0 calls=map[mixed:1] frame=8 spills=0 code=136\n    gc_shared_getter_stats_amd64_test.go:66: i8-s inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=213\n    gc_shared_getter_stats_amd64_test.go:66: i8-u inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=213\n    gc_shared_getter_stats_amd64_test.go:66: i16-s inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=213\n    gc_shared_getter_stats_amd64_test.go:66: i16-u inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=213\n    gc_shared_getter_stats_amd64_test.go:66: v128 inline=0 calls=map[wrapper:1] frame=56 spills=3 code=179\n    gc_shared_getter_stats_amd64_test.go:66: eqref inline=1 calls=map[gcnative:1 gcnative-leaf:1 inline:1] frame=8 spills=0 code=546\n    gc_shared_getter_stats_amd64_test.go:66: roots inline=3 calls=map[gcnative:3 gcnative-leaf:3 hostsync:3 inline:3 mixed:1] frame=56 spills=2 code=1915\n    gc_shared_getter_stats_amd64_test.go:66: stack-roots inline=2 calls=map[gcnative:4 gcnative-leaf:2 hostsync:3 inline:2 mixed:1] frame=40 spills=2 code=2104\n    gc_shared_getter_stats_amd64_test.go:66: loop-i32 inline=1 calls=map[gcnative-leaf:1 inline:1] frame=40 spills=1 code=301\n    gc_shared_getter_stats_amd64_test.go:66: pressure inline=1 calls=map[gcnative-leaf:1 inline:1] frame=216 spills=0 code=780\n    gc_shared_getter_stats_amd64_test.go:66: forwarded inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=212\n    gc_shared_getter_stats_amd64_test.go:66: negative inline=0 calls=map[mixed:1] frame=8 spills=0 code=133\n    gc_shared_getter_stats_amd64_test.go:66: cap inline=16 calls=map[gcnative-leaf:16 inline:16 wrapper:1] frame=40 spills=3 code=1409\n    gc_shared_getter_stats_amd64_test.go:66: dirty inline=1 calls=map[gcnative-leaf:1 inline:1] frame=8 spills=0 code=536\n--- PASS: TestGCSharedGetterAdmission (0.00s)\nPASS\nok  \tgithub.com/wago-org/wago/src/wago\t0.009s\n",
+    "stderr": ""
+  },
+  {
+    "label": "profile",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-tags=wago_profile,wago_regalloccheck",
+      "-run",
+      "^TestGCSharedGetter",
+      "-count=1",
+      "-v",
+      "./src/wago"
+    ],
+    "seconds": 25.130026526996517,
+    "exit": 0,
+    "stdout": "=== RUN   TestGCSharedGetterCalls\n=== RUN   TestGCSharedGetterCalls/collector-0\n=== RUN   TestGCSharedGetterCalls/collector-1\n=== RUN   TestGCSharedGetterCalls/collector-2\n--- PASS: TestGCSharedGetterCalls (0.00s)\n    --- PASS: TestGCSharedGetterCalls/collector-0 (0.00s)\n    --- PASS: TestGCSharedGetterCalls/collector-1 (0.00s)\n    --- PASS: TestGCSharedGetterCalls/collector-2 (0.00s)\n=== RUN   TestGCSharedGetterResultRootsAcrossAllocatingCall\n--- PASS: TestGCSharedGetterResultRootsAcrossAllocatingCall (0.00s)\n=== RUN   TestGCSharedGetterProfile\n--- PASS: TestGCSharedGetterProfile (0.00s)\n=== RUN   TestGCSharedGetterSafety\n=== RUN   TestGCSharedGetterSafety/0\n=== RUN   TestGCSharedGetterSafety/1\n--- PASS: TestGCSharedGetterSafety (0.00s)\n    --- PASS: TestGCSharedGetterSafety/0 (0.00s)\n    --- PASS: TestGCSharedGetterSafety/1 (0.00s)\n=== RUN   TestGCSharedGetterNullPC\n--- PASS: TestGCSharedGetterNullPC (0.00s)\nPASS\nok  \tgithub.com/wago-org/wago/src/wago\t0.010s\n",
+    "stderr": ""
+  }
+]

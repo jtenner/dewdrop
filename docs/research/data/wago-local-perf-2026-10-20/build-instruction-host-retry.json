@@ -1,0 +1,30 @@
+{
+  "label": "build-instruction-host-retry",
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-tags=wago_profile",
+    "-ldflags=-X main.runtimePatchIdentity=instruction-profile-e2fe43ffc -X main.workerPluginIdentity=instruction-profile",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-host",
+    "."
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-host-source",
+  "seconds": 1.1332073040002797,
+  "user_seconds": 4.211218,
+  "system_seconds": 0.57638,
+  "peak_rss_kib": 241000,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    0.751953125,
+    1.48876953125,
+    2.07080078125
+  ],
+  "load_end": [
+    0.751953125,
+    1.48876953125,
+    2.07080078125
+  ]
+}

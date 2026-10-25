@@ -1,0 +1,39 @@
+{
+  "label": "parallel-warm",
+  "mode": "parallel",
+  "seconds": 24.945243619993562,
+  "user_seconds": 25.03312,
+  "system_seconds": 0.22943999999999998,
+  "rss_kib": 546576,
+  "exit": 1,
+  "command": [
+    "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+    "run",
+    "-p8",
+    "--core",
+    "3",
+    "--local",
+    "--locked",
+    "--no-input",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+    ".tmp/wago-profile-2026-10-20/request.bin"
+  ],
+  "host_sha256": "2d9944b33f4514afd8628cf8b870274966d3df059f561964efe6afa8e92b1e15",
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+  "environment": {
+    "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+    "DEW_TRANSFORM_WORKERS": "2",
+    "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+  },
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "loadavg": [
+    6.01708984375,
+    4.65576171875,
+    4.20361328125
+  ]
+}

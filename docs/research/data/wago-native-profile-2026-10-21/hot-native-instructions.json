@@ -1,0 +1,1092 @@
+[
+  {
+    "name": "array_get_unchecked#18446462654567415815#16",
+    "start": 18336,
+    "size": 1180,
+    "samples": 142,
+    "hot_instructions": [
+      {
+        "offset": 928,
+        "assembly": "cmp    ecx,edx",
+        "samples": 16
+      },
+      {
+        "offset": 341,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 14
+      },
+      {
+        "offset": 388,
+        "assembly": "cmp    ecx,edx",
+        "samples": 13
+      },
+      {
+        "offset": 308,
+        "assembly": "test   r10d,r10d",
+        "samples": 13
+      },
+      {
+        "offset": 882,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 12
+      },
+      {
+        "offset": 364,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 7
+      },
+      {
+        "offset": 849,
+        "assembly": "test   r10d,r10d",
+        "samples": 6
+      },
+      {
+        "offset": 879,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 5
+      }
+    ]
+  },
+  {
+    "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+    "start": 5869216,
+    "size": 15956,
+    "samples": 86,
+    "hot_instructions": [
+      {
+        "offset": 15351,
+        "assembly": "test   r10d,r10d",
+        "samples": 35
+      },
+      {
+        "offset": 4527,
+        "assembly": "shr    eax,0x10",
+        "samples": 8
+      },
+      {
+        "offset": 15749,
+        "assembly": "cmp    ecx,edx",
+        "samples": 6
+      },
+      {
+        "offset": 15431,
+        "assembly": "cmp    ecx,edx",
+        "samples": 4
+      },
+      {
+        "offset": 15670,
+        "assembly": "test   r10d,r10d",
+        "samples": 4
+      },
+      {
+        "offset": 15703,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 3
+      },
+      {
+        "offset": 15407,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 2
+      },
+      {
+        "offset": 15726,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "name": "self_host_imported_requirement_identity#31052613552037#4294967295",
+    "start": 5864400,
+    "size": 4691,
+    "samples": 70,
+    "hot_instructions": [
+      {
+        "offset": 4056,
+        "assembly": "test   r10d,r10d",
+        "samples": 37
+      },
+      {
+        "offset": 4136,
+        "assembly": "cmp    ecx,edx",
+        "samples": 5
+      },
+      {
+        "offset": 4089,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 2
+      },
+      {
+        "offset": 4466,
+        "assembly": "cmp    ecx,edx",
+        "samples": 2
+      },
+      {
+        "offset": 3995,
+        "assembly": "test   r10d,r10d",
+        "samples": 2
+      },
+      {
+        "offset": 3960,
+        "assembly": "shr    r10,0x20",
+        "samples": 2
+      },
+      {
+        "offset": 4211,
+        "assembly": "mov    eax,edx",
+        "samples": 2
+      },
+      {
+        "offset": 4463,
+        "assembly": "mov    ecx,DWORD PTR [r11]",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "bytes_byte_at#18446462603027808293#4294967295",
+    "start": 1027856,
+    "size": 1523,
+    "samples": 60,
+    "hot_instructions": [
+      {
+        "offset": 933,
+        "assembly": "cmp    ecx,edx",
+        "samples": 9
+      },
+      {
+        "offset": 853,
+        "assembly": "test   r10d,r10d",
+        "samples": 7
+      },
+      {
+        "offset": 886,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 6
+      },
+      {
+        "offset": 1259,
+        "assembly": "cmp    ecx,edx",
+        "samples": 4
+      },
+      {
+        "offset": 726,
+        "assembly": "pextrb edi,xmm1,0x0",
+        "samples": 3
+      },
+      {
+        "offset": 1059,
+        "assembly": "jmp    0xfb338",
+        "samples": 3
+      },
+      {
+        "offset": 708,
+        "assembly": "movdqu xmm2,XMMWORD PTR [rip+0x327]        # 0xfb503",
+        "samples": 3
+      },
+      {
+        "offset": 694,
+        "assembly": "vmovdqu xmm0,XMMWORD PTR [rsp+0x30]",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "name": "intern_function#31052613552101#4294967295",
+    "start": 5971872,
+    "size": 3371,
+    "samples": 56,
+    "hot_instructions": [
+      {
+        "offset": 3140,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 5
+      },
+      {
+        "offset": 2856,
+        "assembly": "cmp    ecx,edx",
+        "samples": 5
+      },
+      {
+        "offset": 3186,
+        "assembly": "cmp    ecx,edx",
+        "samples": 5
+      },
+      {
+        "offset": 2806,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 4
+      },
+      {
+        "offset": 2998,
+        "assembly": "push   r11",
+        "samples": 4
+      },
+      {
+        "offset": 2809,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 3
+      },
+      {
+        "offset": 2776,
+        "assembly": "test   r10d,r10d",
+        "samples": 3
+      },
+      {
+        "offset": 3137,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "name": "gc-resolver",
+    "start": 24185648,
+    "size": 1275,
+    "samples": 46,
+    "hot_instructions": [
+      {
+        "offset": 163,
+        "assembly": "cmp    ecx,edx",
+        "samples": 11
+      },
+      {
+        "offset": 117,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 5
+      },
+      {
+        "offset": 175,
+        "assembly": "cmp    ecx,edi",
+        "samples": 3
+      },
+      {
+        "offset": 121,
+        "assembly": "mov    eax,DWORD PTR [r9]",
+        "samples": 3
+      },
+      {
+        "offset": 19,
+        "assembly": "and    r10d,0x1",
+        "samples": 3
+      },
+      {
+        "offset": 218,
+        "assembly": "ret",
+        "samples": 2
+      },
+      {
+        "offset": 140,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 2
+      },
+      {
+        "offset": 6,
+        "assembly": "mov    edi,ecx",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "name": "self_host_resolved_imported_callable_at#31052613552057#4294967295",
+    "start": 5948128,
+    "size": 2091,
+    "samples": 41,
+    "hot_instructions": [
+      {
+        "offset": 803,
+        "assembly": "shr    eax,0x10",
+        "samples": 12
+      },
+      {
+        "offset": 1856,
+        "assembly": "cmp    ecx,edx",
+        "samples": 5
+      },
+      {
+        "offset": 1754,
+        "assembly": "jae    0x5aca41",
+        "samples": 3
+      },
+      {
+        "offset": 1716,
+        "assembly": "test   r10d,r10d",
+        "samples": 2
+      },
+      {
+        "offset": 1868,
+        "assembly": "cmp    ecx,edi",
+        "samples": 2
+      },
+      {
+        "offset": 1666,
+        "assembly": "push   r10",
+        "samples": 2
+      },
+      {
+        "offset": 1748,
+        "assembly": "shr    eax,1",
+        "samples": 2
+      },
+      {
+        "offset": 884,
+        "assembly": "shr    eax,0x10",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "array_length#18446462654567415812#35",
+    "start": 24012,
+    "size": 419,
+    "samples": 34,
+    "hot_instructions": [
+      {
+        "offset": 201,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 7
+      },
+      {
+        "offset": 168,
+        "assembly": "test   r10d,r10d",
+        "samples": 6
+      },
+      {
+        "offset": 247,
+        "assembly": "cmp    ecx,edx",
+        "samples": 6
+      },
+      {
+        "offset": 198,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 3
+      },
+      {
+        "offset": 259,
+        "assembly": "cmp    ecx,edi",
+        "samples": 2
+      },
+      {
+        "offset": 60,
+        "assembly": "ret",
+        "samples": 2
+      },
+      {
+        "offset": 224,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 2
+      },
+      {
+        "offset": 44,
+        "assembly": "call   0x5e09",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "name": "get_unchecked#18446462641682513925#42",
+    "start": 8896,
+    "size": 655,
+    "samples": 28,
+    "hot_instructions": [
+      {
+        "offset": 348,
+        "assembly": "cmp    ecx,edx",
+        "samples": 7
+      },
+      {
+        "offset": 75,
+        "assembly": "mov    ecx,0x10",
+        "samples": 2
+      },
+      {
+        "offset": 327,
+        "assembly": "ja     0x2527",
+        "samples": 2
+      },
+      {
+        "offset": 268,
+        "assembly": "test   r10d,r10d",
+        "samples": 2
+      },
+      {
+        "offset": 227,
+        "assembly": "imul   rdx,rdx,0x4",
+        "samples": 1
+      },
+      {
+        "offset": 131,
+        "assembly": "mov    rbp,rdi",
+        "samples": 1
+      },
+      {
+        "offset": 298,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      },
+      {
+        "offset": 255,
+        "assembly": "shl    rax,0x4",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "simple_equal#31052613552096#4294967295",
+    "start": 5960624,
+    "size": 2037,
+    "samples": 23,
+    "hot_instructions": [
+      {
+        "offset": 1442,
+        "assembly": "test   r10d,r10d",
+        "samples": 3
+      },
+      {
+        "offset": 1475,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 3
+      },
+      {
+        "offset": 1433,
+        "assembly": "add    r9,rax",
+        "samples": 2
+      },
+      {
+        "offset": 1852,
+        "assembly": "cmp    ecx,edx",
+        "samples": 2
+      },
+      {
+        "offset": 1522,
+        "assembly": "cmp    ecx,edx",
+        "samples": 2
+      },
+      {
+        "offset": 1597,
+        "assembly": "mov    eax,edx",
+        "samples": 2
+      },
+      {
+        "offset": 1093,
+        "assembly": "je     0x5af8a6",
+        "samples": 1
+      },
+      {
+        "offset": 1524,
+        "assembly": "je     0x5afa16",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "set_unchecked#18446462641682513927#43",
+    "start": 9601,
+    "size": 669,
+    "samples": 20,
+    "hot_instructions": [
+      {
+        "offset": 360,
+        "assembly": "cmp    ecx,edx",
+        "samples": 8
+      },
+      {
+        "offset": 257,
+        "assembly": "jae    0x27f6",
+        "samples": 2
+      },
+      {
+        "offset": 173,
+        "assembly": "mov    r10,rax",
+        "samples": 1
+      },
+      {
+        "offset": 362,
+        "assembly": "je     0x2765",
+        "samples": 1
+      },
+      {
+        "offset": 26,
+        "assembly": "mov    r9d,edx",
+        "samples": 1
+      },
+      {
+        "offset": 146,
+        "assembly": "cmp    rbp,rsi",
+        "samples": 1
+      },
+      {
+        "offset": 336,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 1
+      },
+      {
+        "offset": 357,
+        "assembly": "mov    ecx,DWORD PTR [r11]",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "imported_callable#31052613551083#4294967295",
+    "start": 2710480,
+    "size": 1732,
+    "samples": 17,
+    "hot_instructions": [
+      {
+        "offset": 1463,
+        "assembly": "test   r10d,r10d",
+        "samples": 14
+      },
+      {
+        "offset": 1542,
+        "assembly": "cmp    ecx,edx",
+        "samples": 1
+      },
+      {
+        "offset": 1519,
+        "assembly": "cmp    ecx,r8d",
+        "samples": 1
+      },
+      {
+        "offset": 1503,
+        "assembly": "cmp    eax,r8d",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "array_iter_next#18446462654567415823#480",
+    "start": 59500,
+    "size": 927,
+    "samples": 15,
+    "hot_instructions": [
+      {
+        "offset": 765,
+        "assembly": "cmp    ecx,edx",
+        "samples": 3
+      },
+      {
+        "offset": 62,
+        "assembly": "mov    rdi,r12",
+        "samples": 1
+      },
+      {
+        "offset": 645,
+        "assembly": "imul   rdx,rdx,0x4",
+        "samples": 1
+      },
+      {
+        "offset": 621,
+        "assembly": "and    r10d,0x1",
+        "samples": 1
+      },
+      {
+        "offset": 397,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      },
+      {
+        "offset": 719,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 1
+      },
+      {
+        "offset": 767,
+        "assembly": "jne    0xeb84",
+        "samples": 1
+      },
+      {
+        "offset": 11,
+        "assembly": "cmp    rsp,rsi",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "imported_implementation#31052613551141#4294967295",
+    "start": 2936336,
+    "size": 1732,
+    "samples": 15,
+    "hot_instructions": [
+      {
+        "offset": 1463,
+        "assembly": "test   r10d,r10d",
+        "samples": 8
+      },
+      {
+        "offset": 1542,
+        "assembly": "cmp    ecx,edx",
+        "samples": 2
+      },
+      {
+        "offset": 1571,
+        "assembly": "mov    rax,rsi",
+        "samples": 1
+      },
+      {
+        "offset": 1503,
+        "assembly": "cmp    eax,r8d",
+        "samples": 1
+      },
+      {
+        "offset": 153,
+        "assembly": "call   0x5dcc",
+        "samples": 1
+      },
+      {
+        "offset": 298,
+        "assembly": "mov    r11,QWORD PTR [rsp+0x8]",
+        "samples": 1
+      },
+      {
+        "offset": 1493,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "check_type_term#31052613552977#4294967295",
+    "start": 9054080,
+    "size": 4602,
+    "samples": 15,
+    "hot_instructions": [
+      {
+        "offset": 4007,
+        "assembly": "test   r10d,r10d",
+        "samples": 5
+      },
+      {
+        "offset": 148,
+        "assembly": "push   r11",
+        "samples": 1
+      },
+      {
+        "offset": 323,
+        "assembly": "je     0x8a2972",
+        "samples": 1
+      },
+      {
+        "offset": 144,
+        "assembly": "push   r9",
+        "samples": 1
+      },
+      {
+        "offset": 594,
+        "assembly": "mov    DWORD PTR [rsp+0x58],edi",
+        "samples": 1
+      },
+      {
+        "offset": 4040,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 1
+      },
+      {
+        "offset": 4368,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      },
+      {
+        "offset": 4390,
+        "assembly": "mov    ecx,DWORD PTR [r9+0x4]",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "validate_compile_time_storage#31052613551826#4294967295",
+    "start": 5302800,
+    "size": 5649,
+    "samples": 15,
+    "hot_instructions": [
+      {
+        "offset": 5014,
+        "assembly": "test   r10d,r10d",
+        "samples": 11
+      },
+      {
+        "offset": 5322,
+        "assembly": "jae    0x50ff61",
+        "samples": 1
+      },
+      {
+        "offset": 5005,
+        "assembly": "add    r9,rax",
+        "samples": 1
+      },
+      {
+        "offset": 5424,
+        "assembly": "cmp    ecx,edx",
+        "samples": 1
+      },
+      {
+        "offset": 5368,
+        "assembly": "lea    r8,[r8+0x18]",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "array_iter_next_option#18446462654567415976#278",
+    "start": 33916,
+    "size": 1056,
+    "samples": 14,
+    "hot_instructions": [
+      {
+        "offset": 315,
+        "assembly": "shr    eax,0x10",
+        "samples": 7
+      },
+      {
+        "offset": 294,
+        "assembly": "jae    0x8674",
+        "samples": 2
+      },
+      {
+        "offset": 423,
+        "assembly": "mov    rax,QWORD PTR [r8+0x90]",
+        "samples": 1
+      },
+      {
+        "offset": 490,
+        "assembly": "mov    eax,esi",
+        "samples": 1
+      },
+      {
+        "offset": 247,
+        "assembly": "mov    rax,QWORD PTR [r8+0x98]",
+        "samples": 1
+      },
+      {
+        "offset": 11,
+        "assembly": "cmp    rsp,rsi",
+        "samples": 1
+      },
+      {
+        "offset": 14,
+        "assembly": "jb     0x886f",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "string_as_bytes_unchecked#18446462603027808256#4294967295",
+    "start": 1005676,
+    "size": 461,
+    "samples": 12,
+    "hot_instructions": [
+      {
+        "offset": 244,
+        "assembly": "cmp    ecx,edx",
+        "samples": 7
+      },
+      {
+        "offset": 164,
+        "assembly": "test   r10d,r10d",
+        "samples": 4
+      },
+      {
+        "offset": 0,
+        "assembly": "sub    rsp,0x18",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "self_host_source_keyword#31052613553738#4294967295",
+    "start": 12957040,
+    "size": 30089,
+    "samples": 11,
+    "hot_instructions": [
+      {
+        "offset": 29649,
+        "assembly": "shr    eax,0x10",
+        "samples": 4
+      },
+      {
+        "offset": 24409,
+        "assembly": "mov    rdi,QWORD PTR [r8+0x248]",
+        "samples": 1
+      },
+      {
+        "offset": 24734,
+        "assembly": "mov    ecx,DWORD PTR [r10]",
+        "samples": 1
+      },
+      {
+        "offset": 6396,
+        "assembly": "add    ecx,0x7",
+        "samples": 1
+      },
+      {
+        "offset": 29885,
+        "assembly": "mov    rax,QWORD PTR [r12+0x48]",
+        "samples": 1
+      },
+      {
+        "offset": 29591,
+        "assembly": "test   esi,esi",
+        "samples": 1
+      },
+      {
+        "offset": 1233,
+        "assembly": "test   r11,r11",
+        "samples": 1
+      },
+      {
+        "offset": 14309,
+        "assembly": "and    eax,0xff",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "constrain_pending_binary_operator#31052613551186#4294967295",
+    "start": 3140592,
+    "size": 10636,
+    "samples": 11,
+    "hot_instructions": [
+      {
+        "offset": 10332,
+        "assembly": "test   r10d,r10d",
+        "samples": 7
+      },
+      {
+        "offset": 10291,
+        "assembly": "imul   rdx,rdx,0x4",
+        "samples": 1
+      },
+      {
+        "offset": 6614,
+        "assembly": "mov    edx,0xc1a",
+        "samples": 1
+      },
+      {
+        "offset": 10287,
+        "assembly": "mov    r10,QWORD PTR [r8+0x10]",
+        "samples": 1
+      },
+      {
+        "offset": 10081,
+        "assembly": "cmp    ecx,edx",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "array_iter_has_next#18446462654567415822#479",
+    "start": 58940,
+    "size": 505,
+    "samples": 11,
+    "hot_instructions": [
+      {
+        "offset": 345,
+        "assembly": "cmp    ecx,edi",
+        "samples": 2
+      },
+      {
+        "offset": 193,
+        "assembly": "test   r10d,r10d",
+        "samples": 1
+      },
+      {
+        "offset": 152,
+        "assembly": "shr    r10,0x20",
+        "samples": 1
+      },
+      {
+        "offset": 284,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      },
+      {
+        "offset": 136,
+        "assembly": "movzx  eax,al",
+        "samples": 1
+      },
+      {
+        "offset": 147,
+        "assembly": "mov    edi,ecx",
+        "samples": 1
+      },
+      {
+        "offset": 306,
+        "assembly": "mov    ecx,DWORD PTR [r9+0x4]",
+        "samples": 1
+      },
+      {
+        "offset": 231,
+        "assembly": "jae    0xe7a4",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "bytes_byte_length#18446462603027808291#4294967295",
+    "start": 1027388,
+    "size": 419,
+    "samples": 9,
+    "hot_instructions": [
+      {
+        "offset": 168,
+        "assembly": "test   r10d,r10d",
+        "samples": 3
+      },
+      {
+        "offset": 247,
+        "assembly": "cmp    ecx,edx",
+        "samples": 2
+      },
+      {
+        "offset": 208,
+        "assembly": "cmp    eax,r8d",
+        "samples": 1
+      },
+      {
+        "offset": 53,
+        "assembly": "add    rsp,0x18",
+        "samples": 1
+      },
+      {
+        "offset": 29,
+        "assembly": "mov    edx,0x2336",
+        "samples": 1
+      },
+      {
+        "offset": 227,
+        "assembly": "ja     0xfae4e",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "self_host_collected_method_identity#31052613552401#4294967295",
+    "start": 6619152,
+    "size": 1411,
+    "samples": 9,
+    "hot_instructions": [
+      {
+        "offset": 14,
+        "assembly": "jb     0x65050c",
+        "samples": 1
+      },
+      {
+        "offset": 1221,
+        "assembly": "cmp    ecx,edx",
+        "samples": 1
+      },
+      {
+        "offset": 1218,
+        "assembly": "mov    ecx,DWORD PTR [r11]",
+        "samples": 1
+      },
+      {
+        "offset": 1172,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      },
+      {
+        "offset": 1119,
+        "assembly": "jae    0x6504f6",
+        "samples": 1
+      },
+      {
+        "offset": 1223,
+        "assembly": "jne    0x6504f6",
+        "samples": 1
+      },
+      {
+        "offset": 525,
+        "assembly": "shr    eax,0x10",
+        "samples": 1
+      },
+      {
+        "offset": 1113,
+        "assembly": "shr    eax,1",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "intern_imported_simple#31052613552097#4294967295",
+    "start": 5962720,
+    "size": 1386,
+    "samples": 9,
+    "hot_instructions": [
+      {
+        "offset": 1155,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 3
+      },
+      {
+        "offset": 1011,
+        "assembly": "push   r10",
+        "samples": 2
+      },
+      {
+        "offset": 1201,
+        "assembly": "cmp    ecx,edx",
+        "samples": 1
+      },
+      {
+        "offset": 1035,
+        "assembly": "jne    0x5afffe",
+        "samples": 1
+      },
+      {
+        "offset": 1152,
+        "assembly": "mov    r11,QWORD PTR [r8]",
+        "samples": 1
+      },
+      {
+        "offset": 1013,
+        "assembly": "push   r11",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "name": "check_type_source#31052613552978#4294967295",
+    "start": 9058736,
+    "size": 8584,
+    "samples": 9,
+    "hot_instructions": [
+      {
+        "offset": 7531,
+        "assembly": "shr    eax,0x10",
+        "samples": 3
+      },
+      {
+        "offset": 118,
+        "assembly": "mov    edx,0xe63",
+        "samples": 1
+      },
+      {
+        "offset": 7626,
+        "assembly": "mov    DWORD PTR [r9+0x4],0x18",
+        "samples": 1
+      },
+      {
+        "offset": 8308,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 1
+      },
+      {
+        "offset": 7977,
+        "assembly": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 1
+      },
+      {
+        "offset": 8252,
+        "assembly": "jae    0x8a5a73",
+        "samples": 1
+      },
+      {
+        "offset": 8024,
+        "assembly": "cmp    ecx,edx",
+        "samples": 1
+      }
+    ]
+  }
+]

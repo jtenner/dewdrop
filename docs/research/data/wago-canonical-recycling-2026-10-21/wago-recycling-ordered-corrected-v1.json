@@ -1,0 +1,229 @@
+{
+  "elapsed_seconds": 1.8830006730022433,
+  "samples": [
+    {
+      "pair": 0,
+      "experiment": "stable",
+      "variant": "base",
+      "ns_per_op": 3336248.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 0,
+      "experiment": "stable",
+      "variant": "candidate",
+      "ns_per_op": 3780484.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 0,
+      "experiment": "canonical",
+      "variant": "base",
+      "ns_per_op": 3074469.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 0,
+      "experiment": "canonical",
+      "variant": "candidate",
+      "ns_per_op": 9413998.0,
+      "bytes_per_op": 27033.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "experiment": "canonical",
+      "variant": "candidate",
+      "ns_per_op": 10076020.0,
+      "bytes_per_op": 27033.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "experiment": "canonical",
+      "variant": "base",
+      "ns_per_op": 3007986.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "experiment": "stable",
+      "variant": "candidate",
+      "ns_per_op": 3830047.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "experiment": "stable",
+      "variant": "base",
+      "ns_per_op": 2915743.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "experiment": "stable",
+      "variant": "base",
+      "ns_per_op": 3077109.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "experiment": "stable",
+      "variant": "candidate",
+      "ns_per_op": 3821996.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "experiment": "canonical",
+      "variant": "base",
+      "ns_per_op": 3237342.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "experiment": "canonical",
+      "variant": "candidate",
+      "ns_per_op": 9794383.0,
+      "bytes_per_op": 27033.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "experiment": "canonical",
+      "variant": "candidate",
+      "ns_per_op": 9703252.0,
+      "bytes_per_op": 27033.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "experiment": "canonical",
+      "variant": "base",
+      "ns_per_op": 3451925.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "experiment": "stable",
+      "variant": "candidate",
+      "ns_per_op": 3861359.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "experiment": "stable",
+      "variant": "base",
+      "ns_per_op": 3021668.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "experiment": "stable",
+      "variant": "base",
+      "ns_per_op": 3150642.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "experiment": "stable",
+      "variant": "candidate",
+      "ns_per_op": 4009148.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "experiment": "canonical",
+      "variant": "base",
+      "ns_per_op": 3204746.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "experiment": "canonical",
+      "variant": "candidate",
+      "ns_per_op": 9429773.0,
+      "bytes_per_op": 27033.0,
+      "allocs_per_op": 0.0
+    }
+  ],
+  "summary": {
+    "stable": {
+      "samples": {
+        "base": [
+          3336248.0,
+          2915743.0,
+          3077109.0,
+          3021668.0,
+          3150642.0
+        ],
+        "candidate": [
+          3780484.0,
+          3830047.0,
+          3821996.0,
+          3861359.0,
+          4009148.0
+        ]
+      },
+      "medians": {
+        "base": 3077109.0,
+        "candidate": 3830047.0
+      },
+      "change_pct": 24.469006460284646,
+      "bytes_per_op": {
+        "base": [
+          0.0
+        ],
+        "candidate": [
+          0.0
+        ]
+      }
+    },
+    "canonical": {
+      "samples": {
+        "base": [
+          3074469.0,
+          3007986.0,
+          3237342.0,
+          3451925.0,
+          3204746.0
+        ],
+        "candidate": [
+          9413998.0,
+          10076020.0,
+          9794383.0,
+          9703252.0,
+          9429773.0
+        ]
+      },
+      "medians": {
+        "base": 3204746.0,
+        "candidate": 9703252.0
+      },
+      "change_pct": 202.77756801943116,
+      "bytes_per_op": {
+        "base": [
+          0.0
+        ],
+        "candidate": [
+          27033.0
+        ]
+      }
+    }
+  }
+}

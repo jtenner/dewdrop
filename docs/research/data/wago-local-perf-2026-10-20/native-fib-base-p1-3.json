@@ -1,0 +1,31 @@
+{
+  "label": "native-fib-base-p1-3",
+  "command": [
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+    "build",
+    "--bare",
+    "--offline",
+    "--no-input",
+    "-p1",
+    "--output",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p1-3.wago",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+  "seconds": 0.0030427159999817377,
+  "user_seconds": 0.001298,
+  "system_seconds": 0.001303,
+  "peak_rss_kib": 21528,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.45751953125,
+    1.9970703125,
+    2.29541015625
+  ],
+  "load_end": [
+    2.45751953125,
+    1.9970703125,
+    2.29541015625
+  ]
+}

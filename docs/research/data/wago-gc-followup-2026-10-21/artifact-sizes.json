@@ -1,0 +1,194 @@
+[
+  {
+    "label": "numeric-control-1",
+    "engine": "control",
+    "admission": {
+      "Callsites": 68809,
+      "Exact": true,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438,
+      "Reason": "",
+      "Required": true,
+      "Safepoints": 25794,
+      "artifact_sections": {
+        "Framing": 16,
+        "Code": 26901064,
+        "Entries": 54238,
+        "Imports": 7322,
+        "Types": 213538,
+        "Functions": 36399,
+        "ExportsAndNames": 214776,
+        "Globals": 55014,
+        "Tables": 58229,
+        "Elements": 2,
+        "Data": 436198,
+        "Memories": 27,
+        "Tags": 2,
+        "Features": 9,
+        "GC": 2566545,
+        "Metadata": 3642299,
+        "Total": 30543379
+      }
+    }
+  },
+  {
+    "label": "numeric-candidate-1",
+    "engine": "candidate",
+    "admission": {
+      "Callsites": 56923,
+      "Exact": true,
+      "MaximumRoots": 77,
+      "MetadataBytes": 1960164,
+      "Reason": "",
+      "Required": true,
+      "Safepoints": 25794,
+      "artifact_sections": {
+        "Framing": 16,
+        "Code": 27059224,
+        "Entries": 54256,
+        "Imports": 7322,
+        "Types": 213538,
+        "Functions": 36399,
+        "ExportsAndNames": 214776,
+        "Globals": 55014,
+        "Tables": 58229,
+        "Elements": 2,
+        "Data": 436198,
+        "Memories": 27,
+        "Tags": 2,
+        "Features": 9,
+        "GC": 2235271,
+        "Metadata": 3311043,
+        "Total": 30370283
+      }
+    }
+  },
+  {
+    "label": "numeric-candidate-2",
+    "engine": "candidate",
+    "admission": {
+      "Callsites": 56923,
+      "Exact": true,
+      "MaximumRoots": 77,
+      "MetadataBytes": 1960164,
+      "Reason": "",
+      "Required": true,
+      "Safepoints": 25794,
+      "artifact_sections": {
+        "Framing": 16,
+        "Code": 27059224,
+        "Entries": 54256,
+        "Imports": 7322,
+        "Types": 213538,
+        "Functions": 36399,
+        "ExportsAndNames": 214776,
+        "Globals": 55014,
+        "Tables": 58229,
+        "Elements": 2,
+        "Data": 436198,
+        "Memories": 27,
+        "Tags": 2,
+        "Features": 9,
+        "GC": 2235271,
+        "Metadata": 3311043,
+        "Total": 30370283
+      }
+    }
+  },
+  {
+    "label": "numeric-control-2",
+    "engine": "control",
+    "admission": {
+      "Callsites": 68809,
+      "Exact": true,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438,
+      "Reason": "",
+      "Required": true,
+      "Safepoints": 25794,
+      "artifact_sections": {
+        "Framing": 16,
+        "Code": 26901064,
+        "Entries": 54238,
+        "Imports": 7322,
+        "Types": 213538,
+        "Functions": 36399,
+        "ExportsAndNames": 214776,
+        "Globals": 55014,
+        "Tables": 58229,
+        "Elements": 2,
+        "Data": 436198,
+        "Memories": 27,
+        "Tags": 2,
+        "Features": 9,
+        "GC": 2566545,
+        "Metadata": 3642299,
+        "Total": 30543379
+      }
+    }
+  },
+  {
+    "label": "numeric-control-3",
+    "engine": "control",
+    "admission": {
+      "Callsites": 68809,
+      "Exact": true,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438,
+      "Reason": "",
+      "Required": true,
+      "Safepoints": 25794,
+      "artifact_sections": {
+        "Framing": 16,
+        "Code": 26901064,
+        "Entries": 54238,
+        "Imports": 7322,
+        "Types": 213538,
+        "Functions": 36399,
+        "ExportsAndNames": 214776,
+        "Globals": 55014,
+        "Tables": 58229,
+        "Elements": 2,
+        "Data": 436198,
+        "Memories": 27,
+        "Tags": 2,
+        "Features": 9,
+        "GC": 2566545,
+        "Metadata": 3642299,
+        "Total": 30543379
+      }
+    }
+  },
+  {
+    "label": "numeric-candidate-3",
+    "engine": "candidate",
+    "admission": {
+      "Callsites": 56923,
+      "Exact": true,
+      "MaximumRoots": 77,
+      "MetadataBytes": 1960164,
+      "Reason": "",
+      "Required": true,
+      "Safepoints": 25794,
+      "artifact_sections": {
+        "Framing": 16,
+        "Code": 27059224,
+        "Entries": 54256,
+        "Imports": 7322,
+        "Types": 213538,
+        "Functions": 36399,
+        "ExportsAndNames": 214776,
+        "Globals": 55014,
+        "Tables": 58229,
+        "Elements": 2,
+        "Data": 436198,
+        "Memories": 27,
+        "Tags": 2,
+        "Features": 9,
+        "GC": 2235271,
+        "Metadata": 3311043,
+        "Total": 30370283
+      }
+    }
+  }
+]

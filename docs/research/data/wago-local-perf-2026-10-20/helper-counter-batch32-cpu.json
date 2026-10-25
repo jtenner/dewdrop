@@ -1,0 +1,31 @@
+{
+  "label": "helper-counter-batch32-cpu",
+  "command": [
+    "go",
+    "tool",
+    "pprof",
+    "-top",
+    "-cum",
+    "-nodecount=90",
+    "-focus=diagnosticGC",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/helper-counter-host",
+    "/home/dev/Projects/dewdrop/docs/research/data/wago-local-perf-2026-10-20/helper-counter-batch32/cpu.pprof"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 0.06517004600027576,
+  "user_seconds": 0.13150599999999998,
+  "system_seconds": 0.091178,
+  "peak_rss_kib": 36000,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    1.93896484375,
+    3.8037109375,
+    3.46337890625
+  ],
+  "load_end": [
+    1.93896484375,
+    3.8037109375,
+    3.46337890625
+  ]
+}

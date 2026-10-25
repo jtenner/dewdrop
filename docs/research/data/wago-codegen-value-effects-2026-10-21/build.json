@@ -1,0 +1,20 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-tags=wago_profile",
+    "-ldflags=-X main.runtimePatchIdentity=post-read-regions-profile-40cfab8d8 -X main.workerPluginIdentity=post-read-regions-profile-40cfab8d8",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/profile-host",
+    "."
+  ],
+  "build_seconds": 8.321898704001796,
+  "total_prepare_seconds": 9.949457928989432,
+  "exit": 0,
+  "stdout": "",
+  "stderr": "",
+  "production_base": "40cfab8d8ec32ca3eff1cd178fa746cb2eeb82b0",
+  "diagnostics": "Only CLI Go profiling and native source/site metadata; no collector/helper counters or runtime instruction changes. Never install.",
+  "host_sha256": "62fc9f9a8d7dd7376e1f43cadeaf838864593875a6791d05583813b4bf8fd9c0"
+}

@@ -1,0 +1,5 @@
+**No concrete production correctness fault found** in this read-only followup. The expanded tests cover the main gaps from the prior review, including the high 32-bit reference and the 16th/17th call boundary.
+
+One check is weaker than its description suggests: the [profile test](/home/dev/Projects/dewdrop/.tmp/wago-shared-getter/src/wago/gc_shared_getter_profile_amd64_test.go:63) checks that *some* inline frame exists and that getter source offsets exist, but does not link those offsets to the getter’s inline caller. A valid standalone getter source entry and an unrelated inline frame could satisfy it.
+
+The remaining material gap is the forwarded-call case where the standalone target is omitted. The existing terminal guard still gates that retarget, but this fixture does not exercise it. I ran no edits, builds, tests, or benchmarks; the PASS timings are the ones you supplied.

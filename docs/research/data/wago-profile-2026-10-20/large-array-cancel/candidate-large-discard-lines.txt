@@ -1,0 +1,44 @@
+Total: 104.03s
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeLargeArrayAllocation in /home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/current-host-moxko2x2/wago/src/core/runtime/gc/native/native_alloc.go
+      10ms       30ms (flat, cum) 0.029% of Total
+         .          .    298:func (c *Collector) discardNativeLargeArrayAllocation() {
+         .          .    299:	if c == nil {
+         .          .    300:		return
+         .          .    301:	}
+         .          .    302:	s := &c.nativeLargeArrayAlloc
+         .          .    303:	unused := s.Count != 0 && s.Cursor == 0 && s.Handle != 0 && int(s.Handle) < len(c.handles) && c.handles[s.Handle].space == spaceFree
+         .          .    304:	if unused {
+         .          .    305:		c.freeHandles = append(c.freeHandles, s.Handle)
+         .          .    306:		index := c.nativeLargeArrayNurseryIndex
+         .          .    307:		if index < 0 || index >= len(c.nurseryHandles) || c.nurseryHandles[index] != s.Handle {
+         .          .    308:			index = -1
+         .          .    309:			for i, h := range c.nurseryHandles {
+         .          .    310:				if h == s.Handle {
+         .          .    311:					index = i
+         .          .    312:					break
+         .          .    313:				}
+         .          .    314:			}
+         .          .    315:		}
+         .          .    316:		if index >= 0 {
+         .       20ms    317:			copy(c.nurseryHandles[index:], c.nurseryHandles[index+1:])
+         .          .    318:			c.nurseryHandles = c.nurseryHandles[:len(c.nurseryHandles)-1]
+         .          .    319:		}
+         .          .    320:		space := spaceKind((s.ChunkBump >> 16) & 0xff)
+         .          .    321:		if space == spaceNursery {
+         .          .    322:			if c.nurseryBump == s.ChunkEnd {
+         .          .    323:				c.nurseryBump = s.Rewind
+         .          .    324:			}
+         .          .    325:		} else {
+         .          .    326:			e := handleEntry{off: s.ChunkStart, size: s.ChunkEnd - s.ChunkStart, class: uint16(s.ChunkBump), space: spaceLarge}
+         .          .    327:			if err := c.throughput.free(e); err != nil {
+         .          .    328:				panic("gc: cannot cancel native large-array reservation: " + err.Error())
+         .          .    329:			}
+         .          .    330:		}
+         .          .    331:	}
+         .          .    332:	*s = nativeLargeArrayAllocState{}
+      10ms       10ms    333:	c.nativeLargeArrayEpoch++
+         .          .    334:	if c.nativeLargeArrayEpoch == 0 {
+         .          .    335:		c.nativeLargeArrayEpoch = 1
+         .          .    336:	}
+         .          .    337:	s.Epoch = c.nativeLargeArrayEpoch
+         .          .    338:}

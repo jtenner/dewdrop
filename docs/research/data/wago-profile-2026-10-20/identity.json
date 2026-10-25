@@ -1,0 +1,79 @@
+{
+  "dewdrop_commit": "69ea1cb533edd60353e0a9f49d6169403c92ef41",
+  "starshine_commit": "1b237952167f582abd492aec27adf10c5a6c9e60",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "node": "v24.21.0",
+  "go": "go version go1.27.2 linux/amd64",
+  "wago_pin": "2dd978ccda6f",
+  "baseline_host_identity": {
+    "module": "github.com/wago-org/wago",
+    "version": "v0.0.0-20260915172549-2dd978ccda6f",
+    "module_sum": "h1:dFBzMhoW0lupYuCXLJqVppzIwOuPRw30/glZGpD/ywQ=",
+    "patch_sha256": "8bc69b2815397860d254bd2c46c02662750841d73fa96139797e2c182d877a27",
+    "patches": {
+      "cli-module-lifetime.patch": "ab923611800eb2ff2a38bd415854f1e1c3378633f32d76a11f5eb6e43f445103",
+      "gc-frame-reference-liveness.patch": "0b21a9d106ee312cf7a570a5cef59fb4e37f0a8513498077ae28f8bc3bf800e8",
+      "managed-isolated-fork.patch": "4c72054f8f9c1330ee8ebd08fd3186709b16881d3009069558c79b35c4616008"
+    },
+    "host_sha256": "b5948a864a7700396b7d0c40720ac6f59d23f004f47be99d7e88cb06cfced487",
+    "tests_run": true,
+    "private_source": "/home/dev/Projects/dewdrop/.tmp/wago-transform-host/build-y_uuvb8q/wago",
+    "host_source_sha256": "13ecf8ac6df34b10b6901f2c3f315c28555b7a0255be0066d36f9cd45df388e4"
+  },
+  "inputs": {
+    ".tmp/self-host-bootstrap/b/compiler.wasm": {
+      "bytes": 2724036,
+      "sha256": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    ".tmp/transform-workers/run-rvr6ozve/compiler.wasm": {
+      "bytes": 2723633,
+      "sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6"
+    },
+    ".tmp/wago-profile-2026-10-20/compiler-node.wasm": {
+      "bytes": 2723633,
+      "sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6"
+    },
+    ".tmp/wago-profile-2026-10-20/request.bin": {
+      "bytes": 9271942,
+      "sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721"
+    },
+    "tools/run-dew-facet.mjs": {
+      "bytes": 9157,
+      "sha256": "3c5d3274d532449ed39eed2702aab102acc6522218b62551bdbf9ecba4d941c2"
+    },
+    "tools/export-wasm-memory.py": {
+      "bytes": 1902,
+      "sha256": "7bbda60175733bd85d6243cb1abda08079db86641cd82b5c686ebf6bbfc9f371"
+    },
+    "tools/prepare-wago-compiler.py": {
+      "bytes": 4579,
+      "sha256": "a19b521ca5ac236fb67b6d40d9059f9b46ea4658980061b7b58316994c2c7a8b"
+    },
+    "tools/wago-transform-host/main.go": {
+      "bytes": 1782,
+      "sha256": "15ed7b92ea8ba705c5c8bd2d0d68aad68464df78edeca5eab327e2c2583c5e91"
+    },
+    "tools/wago-transform-host/workers.go": {
+      "bytes": 12104,
+      "sha256": "d918c942b3f07b19a2cdffea4fb8a295a608396492762469e41515d59140acd4"
+    },
+    "starshine-mb/dist/ffi/starshine-ffi.wasm": {
+      "bytes": 8342422,
+      "sha256": "0af2b5d3971a0f06a9641d06dba883d54a3376052c6e50dc72a79105b473baed"
+    }
+  },
+  "environment": {
+    "/proc/sys/kernel/perf_event_paranoid": "3",
+    "/sys/fs/cgroup/cpu.max": "max 100000",
+    "/sys/fs/cgroup/memory.max": "max"
+  },
+  "limits": [
+    "Shared Linux AMD64 host; other user jobs remained active.",
+    "Wago timing runs are single observations per diagnostic build/mode.",
+    "Tagged GC runs add substantial instrumentation costs.",
+    "Native sampler interrupts only our own child and does not read guest data.",
+    "No ARM64 runtime evidence.",
+    "Initial CPU records were lost to os.Exit; zero-length profiles are retained as incomplete.",
+    "First native sampler stalled in startup and was killed; it is not a speed sample."
+  ]
+}

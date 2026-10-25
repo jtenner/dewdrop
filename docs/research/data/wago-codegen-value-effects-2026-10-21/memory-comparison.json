@@ -1,0 +1,9 @@
+{
+  "scope": "Research WAT census only, not Wago compiler or runtime performance.",
+  "counts_equal": true,
+  "eager_seconds": 0.8834777719894191,
+  "streaming_seconds": 1.591396417003125,
+  "eager_peak_rss_kib": 136836,
+  "streaming_peak_rss_kib": 26348,
+  "peak_reduction_percent": 80.74483323102108
+}

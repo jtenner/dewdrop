@@ -1,0 +1,117 @@
+{
+  "seconds": 179.90242543099885,
+  "exit": 0,
+  "result": {
+    "duration_api_ms": 179365,
+    "stop_reason": "end_turn",
+    "session_id": "0ac36ba3-f816-410a-a023-e3a780a57542",
+    "total_cost_usd": 0.8118779,
+    "usage": {
+      "input_tokens": 38,
+      "cache_creation_input_tokens": 46882,
+      "cache_read_input_tokens": 570153,
+      "output_tokens": 16119,
+      "output_tokens_details": {
+        "thinking_tokens": 8901
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 46882,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 3149,
+          "cache_read_input_tokens": 48158,
+          "cache_creation_input_tokens": 3551,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 3551
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "claude-haiku-5-5": {
+        "inputTokens": 2473,
+        "outputTokens": 24,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0002593,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      },
+      "claude-opus-5-5": {
+        "inputTokens": 38,
+        "outputTokens": 16119,
+        "cacheReadInputTokens": 570153,
+        "cacheCreationInputTokens": 46882,
+        "webSearchRequests": 0,
+        "costUSD": 0.8116186000000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 8901,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": false,
+    "num_turns": 30,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "# Research report: rebuilding the trait-implementation index is quadratic\n\nI used only Read, Grep and Glob. I did not edit, build or run anything.\n\n## Answer first\n\nMy best lead is in the Dewdrop compiler source, not in Wago. The function that builds the trait-implementation index (the \"impl index\") does two nested scans over all imported callables. Both scans can become linear with an owner chain. That is the same `buckets` + `next` pattern that `SelfHostResolvedTypeInterner` already uses.\n\n**This change cannot affect the pinned compiler WASM.** It only helps after root builds a new compiler WASM, which gets a new hash. That also changes V8's time, so the Wago/V8 ratio may not improve.\n\n## Measured facts (from `docs/research/wago-read-followups-profile-2026-10-21.md`)\n\n- Generated code is 79% of profiled time. CollectMinor is 13%.\n- Of 1098 native samples, `index_module_implementations` has 89 and `imported_requirement_identity` has 74. Together that is 163, about 15%.\n- Import interning regions: `intern_function` 53 and `simple_equal` 17.\n- These are locality samples, not execution counts.\n\n## Source facts\n\n**1. The impl index scans are quadratic.** Function: `self_host_index_module_implementations_with_imports`, `self_host/compiler/semantic_impl_index.dew:1432`.\n- Lines 1443\u20131549: for each imported impl, it scans every entry in `imports.callables` to find `FrozenImplCallable(owner)`. Cost: O(I\u00b7C), where I = imported impls and C = imported callables.\n- Line 1492: for each matched trait method, it calls `self_host_imported_requirement_identity` (`:1412`). That function scans all of `imports.callables` again. Cost: another O(M_t\u00b7C), where M_t = trait methods.\n- Line 1304, in the local-impl path: the same requirement scan runs for each local trait method. The local loop at 1294 also scans all of `collected.methods` for each local impl: O(L\u00b7Mc).\n\n**2. The index is rebuilt many times.** It is never edited after it is built (a grep found no writes outside the builder). Call sites:\n- `semantic_inference_trait_obligations.dew:23`: memoized only per body inferencer, so one full build per body that needs trait obligations or trait-object coercion.\n- `semantic_compile_time_guard_dispatch.dew:326`: one build per guarded body, plus a full `self_host_resolve_module_imports` at `:320`.\n- `semantic_compile_time_implements.dew:448`: one build per `implements` query, plus a full import resolve at `:442`.\n- Also `:318` (associated scopes), `semantic_lowering_plan.dew:1737` and `semantic_compile_time_recheck.dew:79`.\n\n**3. Import interning is a linear scan.** `SelfHostInterfaceTypeImporter::intern_function` (`semantic_imported_semantics.dew:542`), and the same pattern in `intern_applied` (501), `intern_product` (463) and `intern_imported_simple` (414), scan all of `resolved.types`. `intern_function` runs once per imported callable (`:1008`). Cost per resolve: O(C\u00b7T), where T = type count. The `intern_function` at `semantic_resolved_types.dew:619` is already hashed, so it is not the problem.\n\n## Inference\n\n- `array_get_unchecked` (80) and `array_length` (34) are probably called from these scan loops. Their loop bodies are exactly `callables.length()` plus `callables[slot]` plus a tag match.\n- I cannot see dynamic counts. How many builds happen per job is unknown.\n\n---\n\n## Proposal: make the impl-index build linear\n\n**Change**, in `semantic_impl_index.dew` only:\n\n1. Before the imported-impl loop, do one pass over `imports.callables` and build two chains:\n   - `owner_head: Map<U64, U32>` + `owner_next: Array<U32>`, for `FrozenImplCallable(owner)` entries.\n   - `trait_head: Map<U64, U32>` + `trait_next: Array<U32>`, for `FrozenTraitCallable(owner)` entries.\n   - Fill the chains in **reverse** slot order. Then each chain runs in ascending slot order, which is the current push order.\n2. Lines 1466\u20131529: walk `owner_head[imported.declaration]` instead of all callables.\n3. Change `self_host_imported_requirement_identity` to walk the `trait_` chain and compare `name`. Walk the whole chain so the `EVD-212` duplicate assertion still runs.\n4. Pass the same requirement chain into `self_host_index_module_implementations_context` for line 1304.\n5. Optional, same commit or the next one: a `collected.methods` parent chain for the local loop at 1294.\n\n**Complexity:**\n- Before: O(I\u00b7C + M_t\u00b7C + L\u00b7Mc) per build.\n- After: O(C + I + M + \u03a3 chain lengths) expected. The trait chain is only as long as one trait's requirement list.\n- The pairwise coherence loop (1550\u20131632) does not change.\n\n**Work removed:** per build, about I\u00b7C callable loads and tag matches, plus M_t\u00b7C loads, `==` checks and string compares.\n\n**Correctness:**\n- Output order must stay byte-identical. Method order sets `method_slot`, the dispatch order and the diagnostic order.\n- No cache lives past the call, so there is nothing to invalidate. All checks stay.\n- Standard and user modules use the same code path. No codec or version change.\n\n**Memory:** two `U32` arrays of length C and two maps with \u2264 I and \u2264 T_traits entries. All are short-lived, so expect a small young-generation cost (memory that the minor collector frees soon).\n\n**Smallest test that tells the answer:**\n1. Build two compiler WASMs from the same tree: A without the change, B with it. Run the same fixed request bytes on the installed Wago stack, three runs each.\n2. All output WASM and cache hashes must equal the pinned outputs, and `main` must return 42.\n3. The deciding check: a native-PC profile of B. Samples for `index_module_implementations` + `imported_requirement_identity` should drop from ~163 to near 0, and `array_get_unchecked` / `array_length` should drop too.\n4. If the job time changes less than the run-to-run spread while those regions do drop, the regions were not the real cost. Then stop.\n\n**Implementation plan (one atomic commit):**\n1. TDD: add a case to `self_host/compiler/semantic_impl_index_test.dew`. Use two imported impls whose callables are interleaved in the callable list. Assert the order of `methods` and `method_dispatch`, and the requirement identities. Also run the existing `semantic_trait_evidence_test.dew` and `semantic_imported_trait_contract_test.dew`.\n2. Add the chain builders and rewrite the two loops plus `self_host_imported_requirement_identity`.\n3. Run `tools/test-native.sh`, then `tools/test-integration-native.sh`.\n4. Do the A/B check above. Write the note in `docs/research/`.\n\n---\n\n## Fallback: hash the import interner\n\nApply the same chain idea to `SelfHostInterfaceTypeImporter` in `semantic_imported_semantics.dew:414\u2013585`.\n\n1. When a builder starts, do one O(T) pass over `resolved.types` and key each type on its raw ids. Example: `mix(tag, result, param ids\u2026)`. Ids are already canonical, so no recursive hash is needed.\n2. Add to the chain on each push.\n3. Return the **lowest** matching index, to match the current first-hit linear scan.\n\n- Cost: O(C\u00b7T) \u2192 O(T + C) per resolve.\n- This also helps every repeated resolve at the 5 call sites above.\n- Risk: the table is shared and mutated across resolves. Rebuild the chain for each builder; do not keep it on `SelfHostResolvedModuleTypes`.\n- Test: the same A/B check. `intern_function` and `simple_equal` samples should drop.\n\n## What I did not propose, and why\n\n- **Cross-body or cross-query memo of index/imports.** It is a larger win, but the import resolve mutates the shared resolved-types table, and the compile-time paths use a different `resolved` than `imports.resolved`. It needs an equality proof first. Do it only if, after the proposal, a counter still shows many builds per module.\n- **A Wago loop-hoisting pass over these scans.** It needs reasoning across the loop back-edge. That is the interval or epoch class you said not to propose. Removing the scans in source removes the need.\n\nI gave no speed guarantee. The 4-second V8 target is not shown to be reachable by this change.\n\n**What you do now:** decide if root should build a new, non-pinned compiler WASM for the A/B test. My pick is yes: do the primary proposal first. It is local, it keeps the order, and it adds no cache.",
+    "ttft_ms": 3303,
+    "type": "result",
+    "duration_ms": 179221,
+    "uuid": "43de4472-a461-4e30-8970-9cd78bead725",
+    "ttft_stream_ms": 1557,
+    "time_to_request_ms": 359,
+    "first_content_frame_ms": 1557,
+    "queued_turn_count": 0,
+    "result_index": 0
+  }
+}

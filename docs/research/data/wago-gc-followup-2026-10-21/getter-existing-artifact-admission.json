@@ -1,0 +1,28 @@
+[
+  {
+    "label": "astra-getter-paired-fixed-2",
+    "artifact": ".tmp/wago-local-perf-2026-10-20/astra-getter-paired-fixed-2-home/cache/dewdrop-transform-check/modules/8a/5f82a3a9438e419639de6596643922b025583a2ba9d493928726246e36f243.wago",
+    "admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 68733,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2289842
+    }
+  },
+  {
+    "label": "astra-getter-paired-control-2",
+    "artifact": ".tmp/wago-local-perf-2026-10-20/astra-getter-paired-control-2-home/cache/dewdrop-transform-check/modules/3d/ef40226eb30e896d040b87d09ed1b48038b2583c43f307c8c0be7e54395572.wago",
+    "admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 68809,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438
+    }
+  }
+]

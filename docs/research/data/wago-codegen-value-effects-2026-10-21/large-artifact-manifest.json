@@ -1,0 +1,27 @@
+[
+  {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/profile/native-code.bin",
+    "bytes": 25622571,
+    "sha256": "5f3a7b1c1c2be27dee30b225df83a7934f8fdc5b8eb8dfb7046f2eedab566c33"
+  },
+  {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/profile/code-map.json",
+    "bytes": 50945681,
+    "sha256": "9f60215b5e19876997a63325df517c7c800c11b18eb1c11ccd7d5b291708c91a"
+  },
+  {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/profile/native-samples.json",
+    "bytes": 150281,
+    "sha256": "0ffa73936658bae1a0c45d9973f25ca3da656230486f5ad90fbd4a261d71bccb"
+  },
+  {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/profile/resolved-samples.json",
+    "bytes": 341382,
+    "sha256": "6bdb9a790749f427e584baa7463453975a9b0522ee48954c4efc150b7709e9b0"
+  },
+  {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/profile-host",
+    "bytes": 18843060,
+    "sha256": "62fc9f9a8d7dd7376e1f43cadeaf838864593875a6791d05583813b4bf8fd9c0"
+  }
+]

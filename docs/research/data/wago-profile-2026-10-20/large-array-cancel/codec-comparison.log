@@ -1,0 +1,14 @@
+=== RUN   TestDewCodecMetadataDiagnostic
+    codec_dew_diagnostic_test.go:55: source_sha256=c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6 code_sha256=ff68daff1ba1b8ec79928d0a1e564adfdd344eda22660b7d8d28cd6c0e285202 code_bytes=22260253 artifact_sha256=39eaf4c877a6f05a04b88f197d61e3ce5c5e559d165e238177c639a1368c8206
+    codec_dew_diagnostic_test.go:56: start fresh=(true,false,6961,0) loaded=(false,false,0,0) imports=266
+    codec_dew_diagnostic_test.go:105: HasStart: true / false
+    codec_dew_diagnostic_test.go:105: StartLocalFunc: 6961 / 0
+    codec_dew_diagnostic_test.go:68: known-policy independentInstances: fresh=true loaded=false
+    codec_dew_diagnostic_test.go:68: known-policy preparedIsolatedTables: fresh=false loaded=false
+    codec_dew_diagnostic_test.go:95: known-entry-policy: GoHostTag=true/false boundedHostSegments=false/false integerHostContext=false/false
+    codec_dew_diagnostic_test.go:97: found 2 metadata differences; first 60 shown
+--- FAIL: TestDewCodecMetadataDiagnostic (0.44s)
+FAIL
+FAIL	github.com/wago-org/wago/src/wago	0.450s
+FAIL
+self-host timing: wago-compiler-codec-comparison: 19.339 seconds

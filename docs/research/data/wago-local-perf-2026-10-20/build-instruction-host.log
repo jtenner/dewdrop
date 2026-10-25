@@ -1,0 +1,2 @@
+# github.com/wago-org/wago/diagnosticprofile
+../instruction-source/diagnosticprofile/profile.go:10:143: undefined: wago.DiagnosticGCHelperCounts

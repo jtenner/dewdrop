@@ -1,0 +1,77 @@
+diff --git a/cli/runtime/commands/run/command.go b/cli/runtime/commands/run/command.go
+index 99fc72233d..0b040316ed 100644
+--- a/cli/runtime/commands/run/command.go
++++ b/cli/runtime/commands/run/command.go
+@@ -2,12 +2,14 @@
+ package run
+ 
+ import (
++ "github.com/wago-org/wago/diagnosticprofile"
+ 	"context"
+ 	"errors"
+ 	"fmt"
+ 	"os"
+ 	"runtime"
+ 	"strings"
++ "time"
+ 
+ 	"github.com/wago-org/wago"
+ 	"github.com/wago-org/wago/cli/internal/command"
+@@ -108,16 +110,20 @@ func (cmd implementation) Run(ctx *command.Ctx) {
+ 		}
+ 	}
+ 	runtime := cmd.environment.LoadRuntime(config, positionals)
+-	module, err := loadModule(positionals[0], config, runtime, cmd.environment.ArtifactCache(), ctx.Bool("allow-native-artifact"))
++	loadStart := time.Now()
++ module, err := loadModule(positionals[0], config, runtime, cmd.environment.ArtifactCache(), ctx.Bool("allow-native-artifact"))
+ 	if err != nil {
+ 		_ = runtime.CloseContext(context.Background())
+ 		ui.Fatal("%v", err)
+ 	}
+-	var instance *wago.Instance
++	diagnosticprofile.Event("module_load", map[string]any{"seconds":time.Since(loadStart).Seconds()})
++ var instance *wago.Instance
+ 	// Teardown order is part of the plugin lifecycle contract: instances release
+ 	// module uses, modules notify close observers, then Runtime.CloseContext waits
+ 	// for runtime observers and plugin Stop before main can exit.
+ 	finish := func() error {
++ diagnosticprofile.Snapshot(instance)
++ defer diagnosticprofile.Finish()
+ 		var instanceErr error
+ 		if instance != nil {
+ 			instanceErr = instance.Close()
+@@ -176,12 +182,16 @@ func (cmd implementation) Run(ctx *command.Ctx) {
+ 		})
+ 		arguments = arguments[count:]
+ 	}
+-	instance, err = instantiate(runtime, module, gc, configuredGC)
++	instantiateStart := time.Now()
++ instance, err = instantiate(runtime, module, gc, configuredGC)
+ 	if err != nil {
+ 		fatal("%v", friendlyInstantiationError(err))
+ 	}
+-	for _, invocation := range invocations {
++	diagnosticprofile.Event("instantiate",map[string]any{"seconds":time.Since(instantiateStart).Seconds()})
++ for _, invocation := range invocations {
++ invokeStart := time.Now()
+ 		result, err := instance.Invoke(invocation.export, invocation.values...)
++ diagnosticprofile.Event("invoke", map[string]any{"seconds":time.Since(invokeStart).Seconds()})
+ 		if err != nil {
+ 			if invocation.export == "_start" {
+ 				var exit *wago.ExitError
+diff --git a/diagnosticprofile/profile.go b/diagnosticprofile/profile.go
+new file mode 100644
+index 0000000000..4502fcee11
+--- /dev/null
++++ b/diagnosticprofile/profile.go
+@@ -0,0 +1,10 @@
++package diagnosticprofile
++import("encoding/binary";"encoding/json";"fmt";"os";"path/filepath";"runtime";"runtime/pprof";"sync";"time";wago "github.com/wago-org/wago")
++var once sync.Once
++var cpu *os.File
++var dir string
++var epoch=time.Now()
++func Event(name string, fields map[string]any) {if fields==nil {fields=map[string]any{}};fields["event"]=name;fields["elapsed_s"]=time.Since(epoch).Seconds();data,err:=json.Marshal(fields);if err!=nil {panic(err)};fmt.Fprintln(os.Stderr,"WAGO_DIAG "+string(data))}
++func Start(){dir=os.Getenv("DEW_WAGO_PROFILE_DIR");if dir=="" {return};if err:=os.MkdirAll(dir,0755);err!=nil {panic(err)};var err error;cpu,err=os.Create(filepath.Join(dir,"cpu.pprof"));if err!=nil {panic(err)};if err=pprof.StartCPUProfile(cpu);err!=nil {panic(err)};Event("start",map[string]any{"gomaxprocs":runtime.GOMAXPROCS(0)})}
++func Finish(){once.Do(func(){if cpu==nil{return};pprof.StopCPUProfile();if err:=cpu.Close();err!=nil{panic(err)};var mem runtime.MemStats;runtime.ReadMemStats(&mem);Event("go_memory",map[string]any{"heap_alloc":mem.HeapAlloc,"total_alloc":mem.TotalAlloc,"mallocs":mem.Mallocs,"num_gc":mem.NumGC,"pause_total_ns":mem.PauseTotalNs});for _,name:=range []string{"heap","allocs"}{f,err:=os.Create(filepath.Join(dir,name+".pprof"));if err!=nil{panic(err)};if err=pprof.Lookup(name).WriteTo(f,0);err!=nil{panic(err)};f.Close()}})}
++func Snapshot(in *wago.Instance){if in==nil{return};if data,ok:=in.Read(0,80);ok&&binary.LittleEndian.Uint64(data)==4919706420659244884 {Event("invariant",map[string]any{"version":binary.LittleEndian.Uint64(data[8:]),"code":binary.LittleEndian.Uint32(data[16:]),"phase":binary.LittleEndian.Uint32(data[20:]),"module_id":binary.LittleEndian.Uint64(data[24:]),"declaration":binary.LittleEndian.Uint64(data[32:]),"body":binary.LittleEndian.Uint64(data[40:]),"expression":binary.LittleEndian.Uint32(data[48:]),"expected":binary.LittleEndian.Uint64(data[56:]),"actual":binary.LittleEndian.Uint64(data[64:]),"detail":binary.LittleEndian.Uint64(data[72:])})}}

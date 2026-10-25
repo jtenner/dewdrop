@@ -1,0 +1,32 @@
+{
+  "control": {
+    "seconds": [
+      37.18948013699992,
+      37.349001776005025,
+      37.06553217199689
+    ],
+    "median_seconds": 37.18948013699992,
+    "median_peak_rss_kib": 1137420
+  },
+  "candidate": {
+    "seconds": [
+      37.05739598099899,
+      36.93139870799496,
+      37.21763891199953
+    ],
+    "median_seconds": 37.05739598099899,
+    "median_peak_rss_kib": 1127304
+  },
+  "v8": {
+    "seconds": [
+      3.998129407998931,
+      3.981449734994385,
+      4.037512691000302
+    ],
+    "median_seconds": 3.998129407998931,
+    "median_peak_rss_kib": 479284
+  },
+  "candidate_reduction_percent": 0.35516537341837573,
+  "candidate_over_v8": 9.268683476542662,
+  "all_outputs_identical_and_main_42": true
+}

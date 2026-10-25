@@ -1,0 +1,30 @@
+{
+  "command": [
+    "claude",
+    "-p",
+    "--model",
+    "opus",
+    "--effort",
+    "high",
+    "--permission-mode",
+    "plan",
+    "--permission-prompts",
+    "none",
+    "--tools",
+    "Read,Glob,Grep",
+    "--allowedTools",
+    "Read,Glob,Grep",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-budget-usd",
+    "3",
+    "--max-turns",
+    "30",
+    "Independent read-only RESEARCH, not code review. Use Read/Grep/Glob only; no edits, tests/builds/benchmarks/network/messages/subagents. Scope this follow-up narrowly; under1100words. Wago user wants Dewdrop compiler around4seconds, known V8 timing; no V8 reruns. New test+first-field fusion fulljob36.65\u219236.19seconds1.26percent, allchecks retained. A fresh profile has79percent GoCPU in generatedcode,13percent cumulative minorGC. Largest remaining problem is repeated full handle-table/space/type/span resolution for each access.\nYour earlier report is /home/dev/Projects/dewdrop/docs/research/wago-claude-runtime-research-2026-10-21.md. Its unrestricted MoveEpoch per-site address cache would miss malformed handle/header/view data that tests inject before Invoke while moveepoch unchanged. Astra audit /home/dev/Projects/dewdrop/docs/research/astrawago-epoch-cache-audit-2026-10-21.md rejected changing tests to bump epochs. Do not revive that unchanged.\nNEW question: Could a cache use a CLOSED NATIVE INTERVAL generation instead: increment on EVERY Go\u2192native entry, and EVERY host/helper/custom resume, plus real moves/frees/rollback/backing changes? Native Wasm can mutate payloads and cards, not handle entries/header identity/extent. Native alloc publishes new IDs into fixed backing, no recycling/moves until Go. A private corruption before Invoke must always miss; a host callback corruption must miss on return. No test changes to epoch counters are allowed. Cache full checked physical result only inside such an interval; retain checked first miss and null/i31/foreign semantics. Need actual universal entry/resume seam covering prepared/private cached entry reuse. A cheap generation bump could permit broad address reuse across noncollecting native calls, and remove repeated pointer chasing. This is a hypothesis, no speed claim.\nCurrent complete combined source /home/dev/Projects/dewdrop/.tmp/wago-test-field-qualification has latest safety fixes and type-test/first-field fusion. Inspect exact relevant source paths: src/wago/prepared_gc.go, prepared_function.go, instance_entry.go, gc_native_view.go (find actual similarly named file), internal/runtimebridge, src/core/runtime native bridge/trampolines and src/core/runtime/gc/native. Core compiled leaves are src/core/compiler/backend/railshot/amd64/gc_direct.go. Do bounded reads, not the whole huge repo. Separate source-stable proof from assumptions. Astra is independently auditing this; provide your own vector.\nReturn: cheapest SINGLE common entry/resume hook if it exists; a compact complete list of entry paths or mutations that bypass it; whether generation can reside in existing ABI space (do not assume unused offsets), memory/concurrency/reentry/domain isolation constraints; smallest safe prototype and diagnostic counters; and specific disproof if universal interval cannot be guaranteed. No broad representation alternatives or repeated prior-report recommendations. Root will implement/test and use actual GPT6Sol Daybreak for code review. Research only."
+  ],
+  "role": "independent native-interval research"
+}

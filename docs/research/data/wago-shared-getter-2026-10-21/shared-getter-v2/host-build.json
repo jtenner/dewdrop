@@ -1,0 +1,48 @@
+[
+  {
+    "variant": "control",
+    "source_commit": "073b2f61880e965d3c33ba83e32f72e9391a845d",
+    "candidate_production_delta": {},
+    "command": [
+      "go",
+      "build",
+      "-mod=mod",
+      "-ldflags=-X main.runtimePatchIdentity=shared-getter-v2-control -X main.workerPluginIdentity=shared-getter-v2-control",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/shared-getter-v2-control-host",
+      "."
+    ],
+    "seconds": 7.737151282999548,
+    "total_prepare_seconds": 8.6527472470043,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "managed_patch_sha256": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+    "binary_sha256": "e5938d2d9a686ec1fd3cf7ff9a8cba7e604c4ab39f30754f7f1737339283cce4"
+  },
+  {
+    "variant": "candidate",
+    "source_commit": "073b2f61880e965d3c33ba83e32f72e9391a845d",
+    "candidate_production_delta": {
+      "src/core/compiler/backend/railshot/amd64/call.go": "2e85596e957468dd7a4b6baa0cd0d84c660c57982e6af004229447cffc308f16",
+      "src/core/compiler/backend/railshot/amd64/compile.go": "e9301b7b86fb9319df3ae91b5fbf5fff604b49442e9f33d4eeddc5931a8a724b",
+      "src/core/compiler/backend/railshot/amd64/gc_shared_getter.go": "a617d1870fd6cbd1b697eead2c666b9e34ebd93d2a4d63a822cc855de0313d93"
+    },
+    "command": [
+      "go",
+      "build",
+      "-mod=mod",
+      "-ldflags=-X main.runtimePatchIdentity=shared-getter-v2-candidate -X main.workerPluginIdentity=shared-getter-v2-candidate",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/shared-getter-v2-candidate-host",
+      "."
+    ],
+    "seconds": 7.613538862002315,
+    "total_prepare_seconds": 8.509315149000031,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "managed_patch_sha256": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+    "binary_sha256": "27701852727c03f8269c2fb358319aa1c16077afaf31f97254808ce22e11a6dd"
+  }
+]

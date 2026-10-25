@@ -1,0 +1,494 @@
+[
+  {
+    "label": "allocation-mix-structs-batch512-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0216115749999517,
+    "user_seconds": 0.014594,
+    "system_seconds": 0.0072429999999999994,
+    "peak_rss_kib": 151568,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.0244140625,
+      3.7900390625,
+      3.46044921875
+    ],
+    "load_end": [
+      2.0244140625,
+      3.7900390625,
+      3.46044921875
+    ],
+    "export": "structs",
+    "batch": 512,
+    "iterations": 500000,
+    "result": 445698416,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-structs-batch32-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.028652933000103076,
+    "user_seconds": 0.019527,
+    "system_seconds": 0.009182,
+    "peak_rss_kib": 161744,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.0244140625,
+      3.7900390625,
+      3.46044921875
+    ],
+    "load_end": [
+      2.0244140625,
+      3.7900390625,
+      3.46044921875
+    ],
+    "export": "structs",
+    "batch": 32,
+    "iterations": 500000,
+    "result": 445698416,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-alternating-batch512-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.8375604479997492,
+    "user_seconds": 0.824457,
+    "system_seconds": 0.013689999999999999,
+    "peak_rss_kib": 192964,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.0244140625,
+      3.7900390625,
+      3.46044921875
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "alternating",
+    "batch": 512,
+    "iterations": 500000,
+    "result": 891896832,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-alternating-batch32-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.2495153179997942,
+    "user_seconds": 0.236444,
+    "system_seconds": 0.009819,
+    "peak_rss_kib": 195072,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "alternating",
+    "batch": 32,
+    "iterations": 500000,
+    "result": 891896832,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-structs-batch32-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.029900452999754634,
+    "user_seconds": 0.020037,
+    "system_seconds": 0.010229,
+    "peak_rss_kib": 160048,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "structs",
+    "batch": 32,
+    "iterations": 500000,
+    "result": 445698416,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-structs-batch512-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.021499252000012348,
+    "user_seconds": 0.014872,
+    "system_seconds": 0.007918999999999999,
+    "peak_rss_kib": 151640,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "structs",
+    "batch": 512,
+    "iterations": 500000,
+    "result": 445698416,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-alternating-batch32-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.24259443699975236,
+    "user_seconds": 0.23202799999999998,
+    "system_seconds": 0.008969999999999999,
+    "peak_rss_kib": 195056,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "alternating",
+    "batch": 32,
+    "iterations": 500000,
+    "result": 891896832,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-alternating-batch512-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.7948160270002518,
+    "user_seconds": 0.779983,
+    "system_seconds": 0.017952,
+    "peak_rss_kib": 194964,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "alternating",
+    "batch": 512,
+    "iterations": 500000,
+    "result": 891896832,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-structs-batch512-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.02210709799965116,
+    "user_seconds": 0.014268,
+    "system_seconds": 0.006985,
+    "peak_rss_kib": 151684,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "structs",
+    "batch": 512,
+    "iterations": 500000,
+    "result": 445698416,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-structs-batch32-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "structs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.02932647299985547,
+    "user_seconds": 0.020163,
+    "system_seconds": 0.008473,
+    "peak_rss_kib": 159828,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "structs",
+    "batch": 32,
+    "iterations": 500000,
+    "result": 445698416,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-alternating-batch512-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.8247605480000857,
+    "user_seconds": 0.8103629999999999,
+    "system_seconds": 0.013947999999999999,
+    "peak_rss_kib": 195148,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "alternating",
+    "batch": 512,
+    "iterations": 500000,
+    "result": 891896832,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  },
+  {
+    "label": "allocation-mix-alternating-batch32-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "run",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "--allow-native-artifact",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "--invoke",
+      "alternating",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+      "500000"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.2320526640000935,
+    "user_seconds": 0.22180999999999998,
+    "system_seconds": 0.012464,
+    "peak_rss_kib": 192948,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "load_end": [
+      2.02197265625,
+      3.76025390625,
+      3.4521484375
+    ],
+    "export": "alternating",
+    "batch": 32,
+    "iterations": 500000,
+    "result": 891896832,
+    "artifact_sha256": "9130190c7f62307453a7deea6c8bae9862e77ed95861b393f86a20f369a1f053"
+  }
+]

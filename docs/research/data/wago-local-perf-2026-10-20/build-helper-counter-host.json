@@ -1,0 +1,29 @@
+{
+  "label": "build-helper-counter-host",
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=helper-counts-e2fe43ffc -X main.workerPluginIdentity=helper-counts",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/helper-counter-host",
+    "."
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-host-source",
+  "seconds": 4.282758532000116,
+  "user_seconds": 16.60405,
+  "system_seconds": 0.870068,
+  "peak_rss_kib": 579292,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    7.78271484375,
+    6.251953125,
+    3.9208984375
+  ],
+  "load_end": [
+    8.52099609375,
+    6.4306640625,
+    3.9912109375
+  ]
+}

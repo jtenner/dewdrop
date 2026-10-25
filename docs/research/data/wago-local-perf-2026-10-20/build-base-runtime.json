@@ -1,0 +1,31 @@
+{
+  "label": "build-base-runtime",
+  "command": [
+    "go",
+    "build",
+    "-trimpath",
+    "-tags",
+    "wago_runtime",
+    "-ldflags=-s -w -X main.version=base-7997c86c3",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+    "./cli/wago"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-origin-main-2026-10-20/wago",
+  "seconds": 3.9611481629999616,
+  "user_seconds": 15.044288,
+  "system_seconds": 0.778126,
+  "peak_rss_kib": 575812,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.19482421875,
+    1.9111328125,
+    2.275390625
+  ],
+  "load_end": [
+    2.580078125,
+    1.99609375,
+    2.30078125
+  ]
+}

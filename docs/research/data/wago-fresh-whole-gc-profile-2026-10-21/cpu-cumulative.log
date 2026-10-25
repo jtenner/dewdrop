@@ -1,0 +1,69 @@
+File: profile-host
+Build ID: 341e32b71d021bc1deb2b5b26071d2eaa74ab180
+Type: cpu
+Time: 2026-10-21 15:08:05 UTC
+Duration: 35.57s, Total samples = 35.80s (100.66%)
+Showing nodes accounting for 33.37s, 93.21% of 35.80s total
+Dropped 433 nodes (cum <= 0.18s)
+Showing top 60 nodes out of 67
+      flat  flat%   sum%        cum   cum%
+    28.73s 80.25% 80.25%     28.73s 80.25%  runtime._ExternalCode
+         0     0% 80.25%     28.73s 80.25%  runtime._System
+         0     0% 80.25%      6.26s 17.49%  github.com/wago-org/wago/cli/runtime.MainWithPluginSet
+         0     0% 80.25%      6.26s 17.49%  main.main
+         0     0% 80.25%      6.26s 17.49%  runtime.main
+         0     0% 80.25%      6.25s 17.46%  github.com/wago-org/wago/cli/internal/command.(*Cmd).Dispatch
+         0     0% 80.25%      6.25s 17.46%  github.com/wago-org/wago/cli/runtime.Main
+         0     0% 80.25%      6.25s 17.46%  github.com/wago-org/wago/cli/runtime/commands/run.implementation.Run
+         0     0% 80.25%      5.87s 16.40%  github.com/wago-org/wago/src/core/runtime.(*Engine).CallWithHostBase (inline)
+         0     0% 80.25%      5.87s 16.40%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostBase
+     0.09s  0.25% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop
+         0     0% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/wago.(*Instance).Invoke
+         0     0% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncAdmitted
+         0     0% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncUnpreparedAdmitted
+         0     0% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext
+         0     0% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/wago.(*Instance).invokeEntry
+         0     0% 80.50%      5.87s 16.40%  github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken
+     0.01s 0.028% 80.53%      5.54s 15.47%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch
+     0.01s 0.028% 80.56%      5.49s 15.34%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchActive
+         0     0% 80.56%      5.48s 15.31%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCHelperParkedOnStack
+     0.07s   0.2% 80.75%      4.86s 13.58%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCStructHelperParked
+         0     0% 80.75%      4.63s 12.93%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).alloc
+         0     0% 80.75%      4.57s 12.77%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CollectMinor
+     0.02s 0.056% 80.81%      4.36s 12.18%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewStructWordsPrevalidatedWithRootScratch
+     0.09s  0.25% 81.06%      1.99s  5.56%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishMinorEvacuation
+     1.73s  4.83% 85.89%      1.88s  5.25%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishSparseMinorEvacuation
+         0     0% 85.89%      1.73s  4.83%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).promoteCapturedNursery (inline)
+     0.24s  0.67% 86.56%      1.73s  4.83%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).promoteNursery
+     0.02s 0.056% 86.62%      0.83s  2.32%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).drainNurseryMarkStackForPromotion
+     0.78s  2.18% 88.80%      0.78s  2.18%  github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry.young (inline)
+         0     0% 88.80%      0.68s  1.90%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).scanNurseryObject (inline)
+     0.03s 0.084% 88.88%      0.68s  1.90%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).scanObjectNursery
+     0.32s  0.89% 89.78%      0.66s  1.84%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).commitPromotionPlans
+     0.04s  0.11% 89.89%      0.64s  1.79%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).markNurseryRef (inline)
+     0.06s  0.17% 90.06%      0.62s  1.73%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCArrayHelperParked
+     0.02s 0.056% 90.11%      0.48s  1.34%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).sortPromotionPlans
+         0     0% 90.11%      0.45s  1.26%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.compileModuleParallel.func1
+         0     0% 90.11%      0.44s  1.23%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.compileFunc
+         0     0% 90.11%      0.44s  1.23%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).sortPromotionPlansByComparison
+         0     0% 90.11%      0.44s  1.23%  slices.SortStableFunc[go.shape.[]github.com/wago-org/wago/src/core/runtime/gc/native.plannedPromotion,go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }] (inline)
+     0.01s 0.028% 90.14%      0.44s  1.23%  slices.stableCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }]
+     0.01s 0.028% 90.17%      0.43s  1.20%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.compileFuncAttempt
+     0.37s  1.03% 91.20%      0.37s  1.03%  runtime.memmove
+         0     0% 91.20%      0.35s  0.98%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandles (inline)
+         0     0% 91.20%      0.35s  0.98%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandlesMode
+         0     0% 91.20%      0.34s  0.95%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.(*fn).body
+     0.01s 0.028% 91.23%      0.34s  0.95%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.(*fn).bodyLoop
+         0     0% 91.23%      0.34s  0.95%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.(*fn).emitRegABI
+         0     0% 91.23%      0.34s  0.95%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.(*fn).runBody
+         0     0% 91.23%      0.34s  0.95%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).PrepareNativeStructAllocation (inline)
+         0     0% 91.23%      0.34s  0.95%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).prepareNativeStructAllocation
+     0.23s  0.64% 91.87%      0.33s  0.92%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles
+         0     0% 91.87%      0.28s  0.78%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.(*fn).emitPlain
+     0.01s 0.028% 91.90%      0.28s  0.78%  runtime.systemstack
+     0.03s 0.084% 91.98%      0.26s  0.73%  slices.symMergeCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }]
+         0     0% 91.98%      0.23s  0.64%  slices.rotateCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }]
+     0.23s  0.64% 92.63%      0.23s  0.64%  slices.swapRangeCmpFunc[go.shape.struct { github.com/wago-org/wago/src/core/runtime/gc/native.handle uint32; github.com/wago-org/wago/src/core/runtime/gc/native.entry github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry }] (inline)
+         0     0% 92.63%      0.22s  0.61%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.(*fn).emitFB
+     0.21s  0.59% 93.21%      0.21s  0.59%  encoding/binary.littleEndian.Uint32 (inline)
+         0     0% 93.21%      0.21s  0.59%  github.com/wago-org/wago/cli/runtime/commands/run.loadModule

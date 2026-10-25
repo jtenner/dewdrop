@@ -1,0 +1,221 @@
+{
+  "largest_confirmed_cost": "array allocations cancel mostly unused 512-handle struct allocation batches",
+  "helper_ranking": [
+    {
+      "helper": 34,
+      "name": "ArrayNewFixedRefill",
+      "calls": 22237969,
+      "batches": 22228599,
+      "reserved": 11381039808,
+      "consumed": 31255035,
+      "canceled": 11349784773,
+      "struct_batches": 22228593,
+      "array_batches": 6,
+      "default_helper_cpu_seconds": 39.09,
+      "batch32_helper_cpu_seconds": 7.44
+    },
+    {
+      "helper": 11,
+      "name": "StructNew",
+      "calls": 30354650,
+      "batches": 302309,
+      "reserved": 154766368,
+      "consumed": 151845073,
+      "canceled": 2921295,
+      "struct_batches": 302276,
+      "array_batches": 33,
+      "default_helper_cpu_seconds": 18.43,
+      "batch32_helper_cpu_seconds": 12.17
+    },
+    {
+      "helper": 32,
+      "name": "ArrayNewDefaultRefill",
+      "calls": 8327645,
+      "batches": 6882222,
+      "reserved": 3523694784,
+      "consumed": 52788068,
+      "canceled": 3470906716,
+      "struct_batches": 6882216,
+      "array_batches": 6,
+      "default_helper_cpu_seconds": 12.39,
+      "batch32_helper_cpu_seconds": 2.22
+    },
+    {
+      "helper": 17,
+      "name": "ArrayGet",
+      "calls": 90707302,
+      "batches": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "canceled": 0,
+      "struct_batches": 0,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": 3.06,
+      "batch32_helper_cpu_seconds": 2.96
+    },
+    {
+      "helper": 23,
+      "name": "ArrayNew",
+      "calls": 3727628,
+      "batches": 935573,
+      "reserved": 479013376,
+      "consumed": 16522468,
+      "canceled": 462490908,
+      "struct_batches": 935573,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": 2.36,
+      "batch32_helper_cpu_seconds": 1.02
+    },
+    {
+      "helper": 10,
+      "name": "RefCast",
+      "calls": 20913295,
+      "batches": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "canceled": 0,
+      "struct_batches": 0,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": 0.88,
+      "batch32_helper_cpu_seconds": 0.69
+    },
+    {
+      "helper": 20,
+      "name": "ArraySet",
+      "calls": 15707906,
+      "batches": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "canceled": 0,
+      "struct_batches": 0,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": 0.63,
+      "batch32_helper_cpu_seconds": 0.72
+    },
+    {
+      "helper": 28,
+      "name": "ArrayCopy",
+      "calls": 3939402,
+      "batches": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "canceled": 0,
+      "struct_batches": 0,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": null,
+      "batch32_helper_cpu_seconds": null
+    },
+    {
+      "helper": 3,
+      "name": "StructSet",
+      "calls": 7639,
+      "batches": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "canceled": 0,
+      "struct_batches": 0,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": null,
+      "batch32_helper_cpu_seconds": null
+    },
+    {
+      "helper": 22,
+      "name": "ArrayNewFixed",
+      "calls": 205,
+      "batches": 200,
+      "reserved": 102400,
+      "consumed": 336,
+      "canceled": 102064,
+      "struct_batches": 200,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": null,
+      "batch32_helper_cpu_seconds": null
+    },
+    {
+      "helper": 24,
+      "name": "ArrayNewData",
+      "calls": 20,
+      "batches": 19,
+      "reserved": 9728,
+      "consumed": 79,
+      "canceled": 9649,
+      "struct_batches": 19,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": null,
+      "batch32_helper_cpu_seconds": null
+    },
+    {
+      "helper": 2,
+      "name": "StructGet",
+      "calls": 17,
+      "batches": 0,
+      "reserved": 0,
+      "consumed": 0,
+      "canceled": 0,
+      "struct_batches": 0,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": null,
+      "batch32_helper_cpu_seconds": null
+    },
+    {
+      "helper": 31,
+      "name": "ArrayNewFixedV128",
+      "calls": 7,
+      "batches": 5,
+      "reserved": 2560,
+      "consumed": 9,
+      "canceled": 2551,
+      "struct_batches": 5,
+      "array_batches": 0,
+      "default_helper_cpu_seconds": null,
+      "batch32_helper_cpu_seconds": null
+    }
+  ],
+  "full_seconds": {
+    "base": [
+      112.67814554100005,
+      104.88548836500013
+    ],
+    "stack": [
+      133.26960364099978,
+      125.33062227800019
+    ],
+    "stack_native_cache_warm": 124.91532379099999,
+    "node_control": 3.4704391670002224,
+    "plain_stack_batch32": 83.71247695800002,
+    "counter_default": 145.75231297500022,
+    "counter_batch32": 95.38269659299976
+  },
+  "same_native_artifact_sha256": "09c851a691ccb9f402197b00455c8e2854ca8b331178d91d742c94ced70f1de2",
+  "native_source_coverage": {
+    "native_observations": 2871,
+    "instruction_mapped_observations": 658,
+    "note": "Remaining source gaps are explicit. Counts are observations, not CPU time."
+  },
+  "allocation_mix": [
+    {
+      "export": "structs",
+      "batch": 512,
+      "median_seconds": 0.0216115749999517,
+      "median_cpu_seconds": 0.021837
+    },
+    {
+      "export": "structs",
+      "batch": 32,
+      "median_seconds": 0.02932647299985547,
+      "median_cpu_seconds": 0.028709
+    },
+    {
+      "export": "alternating",
+      "batch": 512,
+      "median_seconds": 0.8247605480000857,
+      "median_cpu_seconds": 0.8243109999999999
+    },
+    {
+      "export": "alternating",
+      "batch": 32,
+      "median_seconds": 0.24259443699975236,
+      "median_cpu_seconds": 0.240998
+    }
+  ]
+}

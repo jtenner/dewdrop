@@ -1,0 +1,19 @@
+{
+  "source_commit": "77ccd8a26d549e499bf340b90a90d758e2133329",
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=old-descriptor-77ccd8a26 -X main.workerPluginIdentity=old-descriptor-77ccd8a26",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/old-descriptor-candidate-host",
+    "."
+  ],
+  "build_seconds": 7.6739433580005425,
+  "total_prepare_seconds": 9.125029333001294,
+  "exit": 0,
+  "stdout": "",
+  "stderr": "",
+  "managed_patch_sha256": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+  "binary_sha256": "e8eb633f9a80fe0b72211da5335c5a9112e79ec6ab2524a8645eadbdb5558047"
+}

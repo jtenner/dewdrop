@@ -1,0 +1,22 @@
+{
+  "platform": "Linux-7.2.5-3-omarchy-x86_64-with-glibc2.41",
+  "go": "go version go1.27.1 linux/amd64",
+  "base_commit": "7997c86c36e05cfba4c4f39cabb026a318f55fc0",
+  "stack_commit": "e2fe43ffc83d31b16c7d82e66dc5a97782db942d",
+  "installed_runtime_sha256": "f93eedfa94240d092b4736dd4d8eaf980c808dbfb3dfdc81df571994e581ced9",
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "base_source": "/home/dev/Projects/dewdrop/.tmp/wago-origin-main-2026-10-20/wago",
+  "stack_source": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/stack-source",
+  "facet_source": "/home/dev/Projects/dewdrop/.tmp/wago-origin-main-2026-10-20/facet",
+  "cpu": "AMD Ryzen 7 8845HS w/ Radeon 780M Graphics",
+  "logical_cpus": 16,
+  "base-runtime_sha256": "0b701c681607101e2849fead2a0ec896975e320b70d7abd8168474c80d34ee75",
+  "base-host_sha256": "40c8942c197e797018eb44361834bbaa4146d7ca203786d2d303d51132cef724",
+  "stack-host_sha256": "6fe5b6c089fdefdac326ab168ecc35bf37fab271e9a4f6fe29f98f7c48292cae",
+  "setup_harness_sha256": "441fd8436f754a9ab804dcde441712227122a6d0242bffdc5e169c110c0c289e",
+  "final_harnesses_sha256": {
+    "allocation_mix.py": "5482b76728d8626ad06f056dd4fbc6d381d9b70bb0c1b25e8bdd470c9b18679f",
+    "measure.py": "97610422086512975b01f4c22bbc6d8eab45edeeaaf2d3b67adf23e7bde4c218",
+    "isolate_gc.py": "2956fe96353123791f595f42f11b8718e80cd852c88fcd09d218999cec620dd7"
+  }
+}

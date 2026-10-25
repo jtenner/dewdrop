@@ -1,0 +1,59 @@
+File: host-profile
+Build ID: 2c8f018bf8129ae2044f049e1f9156378f5fe8b2
+Type: cpu
+Time: 2026-10-20 19:04:21 UTC
+Duration: 116.96s, Total samples = 117.62s (100.56%)
+Showing nodes accounting for 99.73s, 84.79% of 117.62s total
+Dropped 412 nodes (cum <= 0.59s)
+Showing top 50 nodes out of 75
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%     60.34s 51.30%  github.com/wago-org/wago/cli/internal/command.(*Cmd).Dispatch
+         0     0%     0%     60.34s 51.30%  github.com/wago-org/wago/cli/runtime.Main
+         0     0%     0%     60.34s 51.30%  github.com/wago-org/wago/cli/runtime.MainWithPluginSet
+         0     0%     0%     60.34s 51.30%  github.com/wago-org/wago/cli/runtime/commands/run.implementation.Run
+         0     0%     0%     60.34s 51.30%  main.main
+         0     0%     0%     60.34s 51.30%  runtime.main
+         0     0%     0%     60.13s 51.12%  github.com/wago-org/wago/src/core/runtime.(*Engine).CallWithHostBase (inline)
+         0     0%     0%     60.13s 51.12%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostBase
+     2.66s  2.26%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop
+         0     0%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/wago.(*Instance).Invoke
+         0     0%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncAdmitted
+         0     0%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncUnpreparedAdmitted
+         0     0%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext
+         0     0%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/wago.(*Instance).invokeEntry
+         0     0%  2.26%     60.13s 51.12%  github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken
+    54.63s 46.45% 48.71%     54.63s 46.45%  runtime._ExternalCode
+         0     0% 48.71%     54.63s 46.45%  runtime._System
+     0.45s  0.38% 49.09%     51.85s 44.08%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch
+     0.41s  0.35% 49.44%     51.28s 43.60%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchActive
+     0.23s   0.2% 49.63%     50.84s 43.22%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCHelperParkedOnStack
+     1.16s  0.99% 50.62%     33.54s 28.52%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCArrayHelperParked
+     0.73s  0.62% 51.24%     17.07s 14.51%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCStructHelperParked
+     0.34s  0.29% 51.53%     14.41s 12.25%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeArrayAllocationMode
+     0.01s 0.0085% 51.54%     13.91s 11.83%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).PrepareNativeArrayAllocation
+     0.08s 0.068% 51.61%     13.87s 11.79%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CancelNativeAllocationBatch (inline)
+    13.55s 11.52% 63.13%     13.82s 11.75%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeStructHandles
+     0.02s 0.017% 63.14%     13.39s 11.38%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeDefaultArrayAllocation (inline)
+    13.30s 11.31% 74.45%     13.30s 11.31%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeLargeArrayAllocation
+         0     0% 74.45%     13.20s 11.22%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).prepareNativeLargeArrayAllocation
+     0.35s   0.3% 74.75%      7.80s  6.63%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).alloc
+     0.51s  0.43% 75.18%      7.32s  6.22%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewStructWordsPrevalidatedWithRootScratch
+         0     0% 75.18%      6.55s  5.57%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CollectMinor
+     1.05s  0.89% 76.08%      4.05s  3.44%  github.com/wago-org/wago/src/core/runtime.resumeNative
+     2.91s  2.47% 78.55%      3.53s  3.00%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles
+     0.26s  0.22% 78.77%      3.25s  2.76%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishMinorEvacuation
+         0     0% 78.77%      3.23s  2.75%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandles (inline)
+     0.31s  0.26% 79.03%      3.23s  2.75%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandlesMode
+     2.78s  2.36% 81.40%      2.98s  2.53%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishSparseMinorEvacuation
+         0     0% 81.40%      2.92s  2.48%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).PrepareNativeStructAllocation (inline)
+     0.04s 0.034% 81.43%      2.92s  2.48%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).prepareNativeStructAllocation
+         0     0% 81.43%      2.24s  1.90%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).promoteCapturedNursery (inline)
+     0.16s  0.14% 81.57%      2.24s  1.90%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).promoteNursery
+     0.50s  0.43% 81.99%      2.19s  1.86%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).ArrayGetTyped
+     1.07s  0.91% 82.90%      2.18s  1.85%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refDesc
+         0     0% 82.90%      1.63s  1.39%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewArrayFixedPrevalidatedWithRootScratch (inline)
+     0.07s  0.06% 82.96%      1.63s  1.39%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newArrayFixedWithRootScratch
+     0.09s 0.077% 83.04%      1.58s  1.34%  runtime.entersyscall
+     0.15s  0.13% 83.17%      1.54s  1.31%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newArrayFixedWithRoots
+     1.15s  0.98% 84.14%      1.42s  1.21%  runtime.exitsyscall
+     0.76s  0.65% 84.79%      1.28s  1.09%  runtime.reentersyscall

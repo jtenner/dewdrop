@@ -1,0 +1,49 @@
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=true-4         	  276679	       442.2 ns/op	      3128 collector-bytes	         0 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=true-4         	  271726	       458.9 ns/op	      3128 collector-bytes	         0 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=true-4         	  255148	       461.8 ns/op	      3128 collector-bytes	         0 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=false-4        	  262676	       445.6 ns/op	      3128 collector-bytes	         1.000 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=false-4        	  264392	       443.6 ns/op	      3128 collector-bytes	         1.000 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=false-4        	  225066	       449.4 ns/op	      3128 collector-bytes	         1.000 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/distance=512-4      	  408426	       253.7 ns/op	      3128 collector-bytes	       512.0 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/distance=512-4      	  480619	       262.9 ns/op	      3128 collector-bytes	       512.0 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/distance=512-4      	  477034	       264.3 ns/op	      3128 collector-bytes	       512.0 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/front-4             	 1171616	       114.6 ns/op	      3128 collector-bytes	      1000 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/front-4             	 1224567	        99.95 ns/op	      3128 collector-bytes	      1000 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000/front-4             	 1266232	        99.37 ns/op	      3128 collector-bytes	      1000 later-handles	      1000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=true-4       	    2416	     42561 ns/op	      3128 collector-bytes	         0 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=true-4       	    2738	     42108 ns/op	      3128 collector-bytes	         0 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=true-4       	    2888	     44166 ns/op	      3128 collector-bytes	         0 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=false-4      	    2799	     41863 ns/op	      3128 collector-bytes	         1.000 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=false-4      	    2734	     41564 ns/op	      3128 collector-bytes	         1.000 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=false-4      	    2971	     42551 ns/op	      3128 collector-bytes	         1.000 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=512-4    	    2964	     41462 ns/op	      3128 collector-bytes	       512.0 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=512-4    	    2912	     43481 ns/op	      3128 collector-bytes	       512.0 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=512-4    	    2856	     43356 ns/op	      3128 collector-bytes	       512.0 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=1024-4   	    2797	     43700 ns/op	      3128 collector-bytes	      1024 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=1024-4   	    2876	     42788 ns/op	      3128 collector-bytes	      1024 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=1024-4   	    2865	     43536 ns/op	      3128 collector-bytes	      1024 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/front-4           	    8154	     15566 ns/op	      3128 collector-bytes	    100000 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/front-4           	    7798	     15427 ns/op	      3128 collector-bytes	    100000 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=100000/front-4           	    8442	     15361 ns/op	      3128 collector-bytes	    100000 later-handles	    100000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=true-4      	     288	    455358 ns/op	      3128 collector-bytes	         0 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=true-4      	     268	    432076 ns/op	      3128 collector-bytes	         0 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=true-4      	     289	    411780 ns/op	      3128 collector-bytes	         0 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=false-4     	     288	    415513 ns/op	      3128 collector-bytes	         1.000 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=false-4     	     278	    414398 ns/op	      3128 collector-bytes	         1.000 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=false-4     	     285	    417947 ns/op	      3128 collector-bytes	         1.000 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=512-4   	     249	    434359 ns/op	      3128 collector-bytes	       512.0 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=512-4   	     283	    428009 ns/op	      3128 collector-bytes	       512.0 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=512-4   	     286	    420056 ns/op	      3128 collector-bytes	       512.0 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=1024-4  	     276	    423109 ns/op	      3128 collector-bytes	      1024 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=1024-4  	     280	    436982 ns/op	      3128 collector-bytes	      1024 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=1024-4  	     288	    417775 ns/op	      3128 collector-bytes	      1024 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/front-4          	     238	    493505 ns/op	      3128 collector-bytes	   1000000 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/front-4          	     228	    501488 ns/op	      3128 collector-bytes	   1000000 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+BenchmarkNativeLargeArrayCancellation/prefix=1000000/front-4          	     235	    492966 ns/op	      3128 collector-bytes	   1000000 later-handles	   1000000 prefix-handles	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/wago-org/wago/src/core/runtime/gc/native	8.587s
+self-host timing: gc-index-baseline-bench: 8.747 seconds

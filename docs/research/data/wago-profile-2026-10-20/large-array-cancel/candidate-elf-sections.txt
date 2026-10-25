@@ -1,0 +1,40 @@
+/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/host-gc-plain-candidate  :
+section                  size       addr
+.tbss                       8          0
+.note.go.buildid          100    4198236
+.note.gnu.build-id         36    4198336
+.interp                    28    4198372
+.text                 5647345    4198400
+.plt                      608    9845760
+.rodata                355745    9846784
+.gopclntab            4369424   10202536
+.dynsym                  1008   14573952
+.rela                      24   14571960
+.rela.plt                 888   14571984
+.gnu.version_r             80   14572896
+.gnu.version               84   14572992
+.hash                     204   14573088
+.dynstr                   615   14573312
+.go.type               925640   14574960
+.go.func                 3480   15500600
+.go.buildinfo            1552   15507456
+.go.fipsinfo              120   15509024
+.dynamic                  304   15509152
+.got.plt                  320   15509472
+.go.module                568   15509792
+.got                        8   15510360
+.noptrdata              59041   15510368
+.data                   50002   15569440
+.bss                   138744   15619456
+.noptrbss            33754528   15758208
+.debug_abbrev             368          0
+.debug_line           1092399          0
+.debug_frame           187234          0
+.debug_gdb_scripts         75          0
+.debug_info           1810491          0
+.debug_loclists       1048749          0
+.debug_rnglists        513400          0
+.debug_addr             26303          0
+Total                49989523
+
+

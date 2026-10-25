@@ -1,0 +1,263 @@
+[
+  {
+    "function": 2293,
+    "samples": 76,
+    "top_instructions": [
+      {
+        "offset": 6459009,
+        "asm": "test   r10d,r10d",
+        "samples": 48
+      },
+      {
+        "offset": 6459087,
+        "asm": "cmp    ecx,edx",
+        "samples": 6
+      },
+      {
+        "offset": 6455733,
+        "asm": "mov    r12,rdi",
+        "samples": 5
+      },
+      {
+        "offset": 6459162,
+        "asm": "mov    eax,edx",
+        "samples": 3
+      },
+      {
+        "offset": 6459718,
+        "asm": "test   r10d,r10d",
+        "samples": 2
+      },
+      {
+        "offset": 6459793,
+        "asm": "cmp    ecx,edx",
+        "samples": 2
+      },
+      {
+        "offset": 6459037,
+        "asm": "mov    r8d,DWORD PTR [r8+r10*1+0x20]",
+        "samples": 2
+      },
+      {
+        "offset": 6459746,
+        "asm": "mov    r8d,DWORD PTR [r8+r10*1+0x20]",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "function": 2294,
+    "samples": 121,
+    "top_instructions": [
+      {
+        "offset": 6476889,
+        "asm": "test   r10d,r10d",
+        "samples": 37
+      },
+      {
+        "offset": 6465104,
+        "asm": "shr    eax,0x10",
+        "samples": 16
+      },
+      {
+        "offset": 6477562,
+        "asm": "test   r10d,r10d",
+        "samples": 10
+      },
+      {
+        "offset": 6476967,
+        "asm": "cmp    ecx,edx",
+        "samples": 6
+      },
+      {
+        "offset": 6476917,
+        "asm": "mov    r8d,DWORD PTR [r8+r10*1+0x20]",
+        "samples": 5
+      },
+      {
+        "offset": 6477637,
+        "asm": "cmp    ecx,edx",
+        "samples": 5
+      },
+      {
+        "offset": 6477455,
+        "asm": "mov    edi,ecx",
+        "samples": 3
+      },
+      {
+        "offset": 6477590,
+        "asm": "mov    r8d,DWORD PTR [r8+r10*1+0x20]",
+        "samples": 3
+      }
+    ]
+  },
+  {
+    "function": 2306,
+    "samples": 66,
+    "top_instructions": [
+      {
+        "offset": 6549988,
+        "asm": "test   r10d,r10d",
+        "samples": 8
+      },
+      {
+        "offset": 6548704,
+        "asm": "shr    eax,0x10",
+        "samples": 8
+      },
+      {
+        "offset": 6550063,
+        "asm": "cmp    ecx,edx",
+        "samples": 6
+      },
+      {
+        "offset": 6548785,
+        "asm": "shr    eax,0x10",
+        "samples": 3
+      },
+      {
+        "offset": 6548866,
+        "asm": "shr    eax,0x10",
+        "samples": 3
+      },
+      {
+        "offset": 6550075,
+        "asm": "cmp    ecx,edi",
+        "samples": 2
+      },
+      {
+        "offset": 6549720,
+        "asm": "mov    r11,QWORD PTR [r8]",
+        "samples": 2
+      },
+      {
+        "offset": 6550021,
+        "asm": "mov    eax,DWORD PTR [r9]",
+        "samples": 2
+      }
+    ]
+  },
+  {
+    "function": 2319,
+    "samples": 3,
+    "top_instructions": [
+      {
+        "offset": 6568867,
+        "asm": "test   r10d,r10d",
+        "samples": 1
+      },
+      {
+        "offset": 6568942,
+        "asm": "cmp    ecx,edx",
+        "samples": 1
+      },
+      {
+        "offset": 6568919,
+        "asm": "cmp    ecx,r8d",
+        "samples": 1
+      }
+    ]
+  },
+  {
+    "function": 2322,
+    "samples": 92,
+    "top_instructions": [
+      {
+        "offset": 6581489,
+        "asm": "cmp    ecx,edx",
+        "samples": 8
+      },
+      {
+        "offset": 6581414,
+        "asm": "test   r10d,r10d",
+        "samples": 8
+      },
+      {
+        "offset": 6581035,
+        "asm": "test   r10d,r10d",
+        "samples": 6
+      },
+      {
+        "offset": 6581442,
+        "asm": "mov    r8d,DWORD PTR [r8+r10*1+0x20]",
+        "samples": 6
+      },
+      {
+        "offset": 6581113,
+        "asm": "cmp    ecx,edx",
+        "samples": 5
+      },
+      {
+        "offset": 6580482,
+        "asm": "cmp    ecx,edx",
+        "samples": 4
+      },
+      {
+        "offset": 6580435,
+        "asm": "mov    r8d,DWORD PTR [r8+0x8]",
+        "samples": 3
+      },
+      {
+        "offset": 6581450,
+        "asm": "cmp    eax,r8d",
+        "samples": 3
+      }
+    ]
+  },
+  {
+    "function": 2961,
+    "samples": 0,
+    "top_instructions": []
+  },
+  {
+    "function": 2964,
+    "samples": 0,
+    "top_instructions": []
+  },
+  {
+    "function": 465,
+    "samples": 28,
+    "top_instructions": [
+      {
+        "offset": 39114,
+        "asm": "shr    eax,0x10",
+        "samples": 13
+      },
+      {
+        "offset": 39856,
+        "asm": "and    r10d,0x1",
+        "samples": 2
+      },
+      {
+        "offset": 38827,
+        "asm": "movzx  edi,dil",
+        "samples": 1
+      },
+      {
+        "offset": 38957,
+        "asm": "jae    0x9987",
+        "samples": 1
+      },
+      {
+        "offset": 39984,
+        "asm": "jb     0x9c57",
+        "samples": 1
+      },
+      {
+        "offset": 39892,
+        "asm": "shr    eax,1",
+        "samples": 1
+      },
+      {
+        "offset": 39969,
+        "asm": "mov    ecx,DWORD PTR [r9+0x4]",
+        "samples": 1
+      },
+      {
+        "offset": 38778,
+        "asm": "mov    eax,DWORD PTR [rax+riz*1+0x14]",
+        "samples": 1
+      }
+    ]
+  }
+]

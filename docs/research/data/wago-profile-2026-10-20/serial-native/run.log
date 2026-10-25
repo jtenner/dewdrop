@@ -1,0 +1,10 @@
+WAGO_DIAG {"event":"start","gcstats":true,"gomaxprocs":16,"since_start_s":0.004349705}
+Wago 2dd978ccda6f; patch unpatched; workers unverified; Facet v0.1.0; locked project bindings
+WAGO_DIAG {"event":"begin","phase":"module_load","since_start_s":0.0057074}
+WAGO_DIAG {"event":"begin","phase":"prepare_compile","since_start_s":0.007246784}
+WAGO_DIAG {"event":"end","phase":"prepare_compile","seconds":0.000018806,"since_start_s":0.007263947}
+WAGO_DIAG {"cacheable":true,"event":"cache_policy","generation":true,"path":"/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/native-cold-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago","since_start_s":0.008429042}
+WAGO_DIAG {"event":"begin","phase":"artifact_lookup","since_start_s":0.008439933}
+WAGO_DIAG {"event":"end","phase":"artifact_lookup","seconds":0.000009298,"since_start_s":0.008448499}
+WAGO_DIAG {"event":"cache_lookup","hit":false,"since_start_s":0.008451535}
+WAGO_DIAG {"event":"begin","phase":"native_compile","since_start_s":0.00845408}

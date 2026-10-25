@@ -1,0 +1,103 @@
+Total: 145.52s
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeStructHandles in /home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-source/src/core/runtime/gc/native/native_alloc.go
+    47.96s     48.85s (flat, cum) 33.57% of Total
+      60ms       60ms    363:func (c *Collector) discardNativeStructHandles() {
+      30ms       30ms    364:	if c == nil {
+         .          .    365:		return
+         .          .    366:	}
+         .          .    367:	s := &c.nativeStructAlloc
+         .          .    368:	end := s.Count
+         .          .    369:	if end > uint32(len(s.Handles)) {
+         .          .    370:		end = uint32(len(s.Handles))
+         .          .    371:	}
+         .          .    372:	used := s.Cursor
+      10ms       10ms    373:	if used > end {
+         .          .    374:		used = end
+         .          .    375:	}
+         .          .    376:	// Native struct constructors advance Cursor only after publishing the
+         .          .    377:	// complete object. Account for a struct-only batch once at its next
+         .          .    378:	// serialized boundary rather than updating the shared statistic per object.
+         .          .    379:	// Array chunks retain immediate accounting in generated code.
+      30ms       30ms    380:	if s.ChunkEnd == 0 {
+      10ms       10ms    381:		c.stats.Allocations += uint64(used)
+         .          .    382:	}
+      10ms       30ms    383:	diagnosticRecordBatch(end,used,s.ChunkEnd==0)
+         .          .    384:	canceled := false
+      10ms       10ms    385:	if end > used {
+      10ms       10ms    386:		c.freeHandles = slices.Grow(c.freeHandles, int(end-used))
+         .          .    387:	}
+     2.10s      2.10s    388:	for i := used; i < end; i++ {
+     320ms      320ms    389:		h := s.Handles[i]
+     460ms      460ms    390:		if s.HandleBase != 0 {
+         .          .    391:			h = s.HandleBase + i
+         .          .    392:		}
+    23.08s     23.08s    393:		if h != 0 && int(h) < len(c.handles) && c.handles[h].space == spaceFree {
+     1.74s      1.74s    394:			c.freeHandles = append(c.freeHandles, h)
+     120ms      120ms    395:			canceled = true
+         .          .    396:		}
+         .          .    397:	}
+         .          .    398:	// The chunk is exclusively reserved while the collector-wide bump equals its
+         .          .    399:	// end. Rewind only in that exact state; any intervening allocation keeps the
+         .          .    400:	// harmless bounded tail gap rather than risking overlap.
+      50ms       50ms    401:	if s.ChunkEnd != 0 && c.nurseryBump == s.ChunkEnd && s.ChunkCursor >= s.ChunkStart && s.ChunkCursor <= s.ChunkEnd {
+         .          .    402:		rewind := s.ChunkCursor
+         .          .    403:		if rewind == s.ChunkStart {
+         .          .    404:			rewind = s.ChunkBump
+         .          .    405:		}
+         .          .    406:		c.nurseryBump = rewind
+         .          .    407:	}
+         .          .    408:	chargedBump := c.nurseryBump
+         .          .    409:	if canceled {
+         .          .    410:		// Reserved handles are appended as one tail batch and no Go allocation or
+         .          .    411:		// collection can append another nursery identity before cancellation. Trim
+         .          .    412:		// that bounded tail directly and retain only consumed live handles. Keep the
+         .          .    413:		// full compaction as a fail-closed fallback if the invariant is not exact.
+         .          .    414:		trimmed := false
+     130ms      130ms    415:		if int(end) <= len(c.nurseryHandles) {
+         .          .    416:			start := len(c.nurseryHandles) - int(end)
+         .          .    417:			trimmed = true
+     160ms      160ms    418:			for i := uint32(0); i < end; i++ {
+     6.61s      6.61s    419:				if c.nurseryHandles[start+int(i)] != s.Handles[i] {
+         .          .    420:					trimmed = false
+         .          .    421:					break
+         .          .    422:				}
+         .          .    423:			}
+         .          .    424:			if trimmed {
+         .          .    425:				out := c.nurseryHandles[:start]
+     620ms      620ms    426:				for i := uint32(0); i < end; i++ {
+     330ms      330ms    427:					h := s.Handles[i]
+    11.73s     11.73s    428:					if h != 0 && int(h) < len(c.handles) && c.handles[h].space != spaceFree {
+      60ms       60ms    429:						out = append(out, h)
+         .          .    430:					}
+         .          .    431:				}
+     130ms      130ms    432:				c.nurseryHandles = out
+         .          .    433:			}
+         .          .    434:		}
+         .          .    435:		if !trimmed {
+         .          .    436:			// A failed collection can return before normal nursery compaction, and
+         .          .    437:			// later handle reuse must not append a duplicate identity to the dense
+         .          .    438:			// young set.
+         .          .    439:			c.compactNurseryHandles()
+         .          .    440:			if c.hasPendingDeadNurseryObjects() && c.nurseryBump < chargedBump {
+         .          .    441:				// Native dead-struct charges have no handle extent for compaction
+         .          .    442:				// to discover. Keep their high-water mark until collection reclaims
+         .          .    443:				// the charged bytes and clears the pending object count.
+         .          .    444:				c.nurseryBump = chargedBump
+         .          .    445:			}
+         .          .    446:		}
+         .          .    447:	}
+         .      870ms    448:	clear(s.Handles[:end])
+      10ms       10ms    449:	s.Cursor = 0
+      20ms       20ms    450:	s.Count = 0
+         .          .    451:	s.HandleBase = 0
+         .          .    452:	s.ChunkStart = 0
+         .          .    453:	s.ChunkCursor = 0
+      10ms       10ms    454:	s.ChunkEnd = 0
+         .          .    455:	s.ChunkBump = 0
+         .          .    456:	c.arraySlow = 0
+      10ms       10ms    457:	c.nativeAllocEpoch++
+      60ms       60ms    458:	if c.nativeAllocEpoch == 0 {
+         .          .    459:		c.nativeAllocEpoch = 1
+         .          .    460:	}
+      30ms       30ms    461:	s.Epoch = c.nativeAllocEpoch
+      10ms       10ms    462:}

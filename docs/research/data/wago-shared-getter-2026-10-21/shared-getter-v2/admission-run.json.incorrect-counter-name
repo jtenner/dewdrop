@@ -1,0 +1,44 @@
+[
+  {
+    "variant": "control",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-tags=wago_codegenstats,wago_regalloccheck",
+      "-overlay",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/shared-getter-v2/admission/control-overlay.json",
+      "-run",
+      "^TestRealSharedGetterStaticAdmission$",
+      "-count=1",
+      "-v",
+      "./src/wago"
+    ],
+    "seconds": 23.988570986002742,
+    "exit": 0,
+    "stdout": "=== RUN   TestRealSharedGetterStaticAdmission\n    real_shared_getter_capture_test.go:71: fusions=0 functions=0 native_bytes=24516539 compile_seconds=1.230866 roots={Required:true Exact:true Reason: Safepoints:25794 Callsites:56923 MaximumRoots:77 MetadataBytes:1983045}\n--- PASS: TestRealSharedGetterStaticAdmission (1.24s)\nPASS\nok  \tgithub.com/wago-org/wago/src/wago\t1.248s\n",
+    "stderr": ""
+  },
+  {
+    "variant": "candidate",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-tags=wago_codegenstats,wago_regalloccheck",
+      "-overlay",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/shared-getter-v2/admission/overlay.json",
+      "-run",
+      "^TestRealSharedGetterStaticAdmission$",
+      "-count=1",
+      "-v",
+      "./src/wago"
+    ],
+    "seconds": 23.963969650001673,
+    "exit": 1,
+    "stdout": "=== RUN   TestRealSharedGetterStaticAdmission\n    real_shared_getter_capture_test.go:71: fusions=0 functions=0 native_bytes=24704955 compile_seconds=1.216282 roots={Required:true Exact:true Reason: Safepoints:25794 Callsites:53514 MaximumRoots:77 MetadataBytes:1887976}\n    real_shared_getter_capture_test.go:73: real compiler had zero admitted type-test/field fusions\n--- FAIL: TestRealSharedGetterStaticAdmission (1.23s)\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/wago\t1.234s\nFAIL\n",
+    "stderr": ""
+  }
+]

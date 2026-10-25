@@ -1,0 +1,307 @@
+diff --git a/src/core/runtime/gc/native/collector.go b/src/core/runtime/gc/native/collector.go
+index b4d4c16435..5b87e9ab57 100644
+--- a/src/core/runtime/gc/native/collector.go
++++ b/src/core/runtime/gc/native/collector.go
+@@ -173,7 +173,9 @@ type Collector struct {
+ 	majorBlocks    []uint64 // lazy AMD64 full-collection occupancy; one bit per256handles
+ 	// A validated list-position hint; compaction may move or remove the entry.
+ 	nativeLargeArrayNurseryIndex int
+-	promotionSortScratch         []plannedPromotion // bounded stable counting-sort workspace
++	promotionSortScratch         []plannedPromotion     // bounded stable counting-sort workspace
++	localHandleOrder             *localHandleOrderTrace // private bounded diagnostic only
++
+ }
+ 
+ const defaultNursery = 64 << 10
+@@ -243,6 +245,8 @@ func NewCollector(config Config, types []TypeDesc) (*Collector, error) {
+ // errCollectorClosed. It is idempotent; Stats remains safe for post-close
+ // counters, while unchecked root-slot reads return null after slots are released.
+ func (c *Collector) Close() {
++	c.localHandleOrderDump()
++
+ 	c.discardNativeStructHandles()
+ 	c.discardNativeLargeArrayAllocation()
+ 	c.stats.LiveObjects = 0
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 4a93cffe8c..aadf1713f6 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -175,6 +175,8 @@ func (c *Collector) finishMinorEvacuation(liveCount uint64) {
+ 		c.finishSparseMinorEvacuation()
+ 		return
+ 	}
++	localOrder := c.localHandleOrderStart("general")
++	defer c.localHandleOrderEnd(localOrder)
+ 	out := c.nurseryHandles[:0]
+ 	for _, h := range c.nurseryHandles {
+ 		if h == 0 || int(h) >= len(c.handles) {
+@@ -218,6 +220,8 @@ func (c *Collector) finishMinorEvacuation(liveCount uint64) {
+ // Remove exceptional entries by swapping from the end of that copy, avoiding
+ // writes to every dead identity after the first survivor.
+ func (c *Collector) finishSparseMinorEvacuation() {
++	localOrder := c.localHandleOrderStart("sparse")
++	defer c.localHandleOrderEnd(localOrder)
+ 	nursery := c.nurseryHandles
+ 	freeStart := len(c.freeHandles)
+ 	c.freeHandles = append(c.freeHandles, nursery...)
+@@ -270,6 +274,8 @@ func (c *Collector) finishDeadNurseryEvacuation() bool {
+ 	if !nativeCollectorFastPaths || c.cfg.PoisonFreed {
+ 		return false
+ 	}
++	localOrder := c.localHandleOrderStart("dead")
++	defer c.localHandleOrderEnd(localOrder)
+ 	nursery := c.nurseryHandles
+ 	freeStart := len(c.freeHandles)
+ 	c.freeHandles = append(c.freeHandles, nursery...)
+diff --git a/src/core/runtime/gc/native/native_alloc.go b/src/core/runtime/gc/native/native_alloc.go
+index c41a4ec66f..4d3021db82 100644
+--- a/src/core/runtime/gc/native/native_alloc.go
++++ b/src/core/runtime/gc/native/native_alloc.go
+@@ -142,6 +142,8 @@ func (c *Collector) reserveNativeHandles(batch int) {
+ 	s.Epoch = c.nativeAllocEpoch
+ 
+ 	c.refreshNativeHandles()
++	c.localHandleOrderBatch()
++
+ }
+ 
+ // PrepareNativeStructAllocation retains the original direct nursery-bump struct
+diff --git a/src/core/runtime/gc/native/local_handle_order.go b/src/core/runtime/gc/native/local_handle_order.go
+new file mode 100644
+index 0000000000..25605d60eb
+--- /dev/null
++++ b/src/core/runtime/gc/native/local_handle_order.go
+@@ -0,0 +1,195 @@
++package gc
++
++import (
++	"encoding/json"
++	"fmt"
++	"os"
++	"sync/atomic"
++	"unsafe"
++)
++
++// Private research instrumentation. No installed or published source uses it.
++var localHandleOrderPath = os.Getenv("DEW_WAGO_HANDLE_ORDER_TRACE")
++var localHandleOrderNext atomic.Uint64
++
++type localHandleOrderStats struct {
++	Count                                                     uint32
++	Pairs, Invalid, Ascending, Descending, Equal              uint16
++	Line64Crossings, Page4KCrossings, SampledDirectionChanges uint16
++	Delta                                                     [6]uint16 // <=1, <=4, <=16, <=256, <=4096, larger
++}
++
++type localHandleOrderRow struct {
++	Cycle                            uint64
++	Path                             string
++	Before, Recycled                 localHandleOrderStats
++	FreePrefix, RetainedYoung, Other uint32
++}
++
++type localHandleOrderTrace struct {
++	ID, Events, Batches, BaseBatches                            uint64
++	BatchSamplePairs, BatchAscendingPairs, BatchDescendingPairs uint64
++	Rows                                                        [256]localHandleOrderRow
++}
++
++func localSummarizeHandleOrder(ids []uint32, tableBase uintptr, handleCount int) localHandleOrderStats {
++	s := localHandleOrderStats{Count: uint32(len(ids))}
++	if len(ids) < 2 {
++		return s
++	}
++	pairs := min(len(ids)-1, 4096)
++	previousDirection := 0
++	for sample := 0; sample < pairs; sample++ {
++		i := 0
++		if pairs > 1 {
++			i = sample * (len(ids) - 2) / (pairs - 1)
++		}
++		a, b := ids[i], ids[i+1]
++		s.Pairs++
++		if a == 0 || b == 0 || int(a) >= handleCount || int(b) >= handleCount {
++			s.Invalid++
++			continue
++		}
++		delta := int64(b) - int64(a)
++		direction := 0
++		if delta > 0 {
++			s.Ascending++
++			direction = 1
++		} else if delta < 0 {
++			s.Descending++
++			direction = -1
++			delta = -delta
++		} else {
++			s.Equal++
++		}
++		if direction != 0 {
++			if previousDirection != 0 && direction != previousDirection {
++				s.SampledDirectionChanges++
++			}
++			previousDirection = direction
++		}
++		bucket := 5
++		for n, bound := range [...]int64{1, 4, 16, 256, 4096} {
++			if delta <= bound {
++				bucket = n
++				break
++			}
++		}
++		s.Delta[bucket]++
++		left := tableBase + uintptr(a)*unsafe.Sizeof(handleEntry{})
++		right := tableBase + uintptr(b)*unsafe.Sizeof(handleEntry{})
++		if left/64 != right/64 {
++			s.Line64Crossings++
++		}
++		if left/4096 != right/4096 {
++			s.Page4KCrossings++
++		}
++	}
++	return s
++}
++
++func (c *Collector) localHandleOrderState() *localHandleOrderTrace {
++	if localHandleOrderPath == "" {
++		return nil
++	}
++	if c.localHandleOrder == nil {
++		c.localHandleOrder = &localHandleOrderTrace{ID: localHandleOrderNext.Add(1)}
++	}
++	return c.localHandleOrder
++}
++
++func (c *Collector) localHandleOrderStart(path string) localHandleOrderRow {
++	if c.localHandleOrderState() == nil {
++		return localHandleOrderRow{}
++	}
++	base := uintptr(unsafe.Pointer(unsafe.SliceData(c.handles)))
++	return localHandleOrderRow{Cycle: c.collectionCycle(), Path: path,
++		Before: localSummarizeHandleOrder(c.nurseryHandles, base, len(c.handles)), FreePrefix: uint32(len(c.freeHandles))}
++}
++
++func (c *Collector) localHandleOrderEnd(row localHandleOrderRow) {
++	if row.Path == "" {
++		return
++	}
++	t := c.localHandleOrder
++	if t == nil {
++		panic("private handle-order trace lost its state")
++	}
++	if int(row.FreePrefix) > len(c.freeHandles) {
++		panic("private handle-order trace: recycled suffix lost its prefix")
++	}
++	base := uintptr(unsafe.Pointer(unsafe.SliceData(c.handles)))
++	row.Recycled = localSummarizeHandleOrder(c.freeHandles[row.FreePrefix:], base, len(c.handles))
++	row.RetainedYoung = uint32(len(c.nurseryHandles))
++	if uint64(row.RetainedYoung)+uint64(row.Recycled.Count) > uint64(row.Before.Count) {
++		panic("private handle-order trace: inconsistent cohort counts")
++	}
++	row.Other = row.Before.Count - row.RetainedYoung - row.Recycled.Count
++	t.Rows[t.Events%uint64(len(t.Rows))] = row
++	t.Events++
++}
++
++func (c *Collector) localHandleOrderBatch() {
++	t := c.localHandleOrderState()
++	if t == nil {
++		return
++	}
++	s := &c.nativeStructAlloc
++	t.Batches++
++	if s.HandleBase != 0 {
++		t.BaseBatches++
++	}
++	if s.Count < 2 {
++		return
++	}
++	pairs := min(int(s.Count)-1, 8)
++	for sample := 0; sample < pairs; sample++ {
++		i := 0
++		if pairs > 1 {
++			i = sample * (int(s.Count) - 2) / (pairs - 1)
++		}
++		a, b := s.Handles[i], s.Handles[i+1]
++		t.BatchSamplePairs++
++		if b == a+1 {
++			t.BatchAscendingPairs++
++		}
++		if a == b+1 {
++			t.BatchDescendingPairs++
++		}
++	}
++}
++
++func (c *Collector) localHandleOrderDump() {
++	t := c.localHandleOrder
++	if t == nil {
++		return
++	}
++	c.localHandleOrder = nil
++	n := min(t.Events, uint64(len(t.Rows)))
++	rows := make([]localHandleOrderRow, 0, n)
++	for i := t.Events - n; i < t.Events; i++ {
++		rows = append(rows, t.Rows[i%uint64(len(t.Rows))])
++	}
++	data, err := json.Marshal(struct {
++		ID, Events, Batches, BaseBatches, BatchSamplePairs, BatchAscendingPairs, BatchDescendingPairs uint64
++		EntryBytes, TraceBytes                                                                        uintptr
++		Types                                                                                         int
++		Stats                                                                                         Stats
++		Rows                                                                                          []localHandleOrderRow
++	}{t.ID, t.Events, t.Batches, t.BaseBatches, t.BatchSamplePairs, t.BatchAscendingPairs, t.BatchDescendingPairs,
++		unsafe.Sizeof(handleEntry{}), unsafe.Sizeof(*t), len(c.types), c.Stats(), rows})
++	if err == nil {
++		var f *os.File
++		f, err = os.OpenFile(localHandleOrderPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
++		if err == nil {
++			_, err = f.Write(append(data, '\n'))
++			closeErr := f.Close()
++			if err == nil {
++				err = closeErr
++			}
++		}
++	}
++	if err != nil {
++		fmt.Fprintf(os.Stderr, "private handle-order trace write failed: %v\n", err)
++	}
++}
+diff --git a/src/core/runtime/gc/native/local_handle_order_test.go b/src/core/runtime/gc/native/local_handle_order_test.go
+new file mode 100644
+index 0000000000..fdd357306e
+--- /dev/null
++++ b/src/core/runtime/gc/native/local_handle_order_test.go
+@@ -0,0 +1,32 @@
++package gc
++
++import (
++	"testing"
++	"unsafe"
++)
++
++func TestLocalHandleOrderSummary(t *testing.T) {
++	if n := unsafe.Sizeof(localHandleOrderTrace{}); n > 32<<10 {
++		t.Fatalf("trace size=%d, want <=32768", n)
++	}
++	for _, ids := range [][]uint32{{1, 2, 3, 4, 5}, {5, 4, 3, 2, 1}} {
++		s := localSummarizeHandleOrder(ids, 0, 32)
++		if s.Pairs != 4 || s.Delta[0] != 4 || s.Line64Crossings != 1 || s.Page4KCrossings != 0 || s.SampledDirectionChanges != 0 {
++			t.Fatalf("ids=%v stats=%+v", ids, s)
++		}
++		if s.Ascending+s.Descending != 4 {
++			t.Fatalf("direction counts=%+v", s)
++		}
++	}
++	s := localSummarizeHandleOrder([]uint32{1, 2, 512, 3, 4}, 0, 1024)
++	if s.Pairs != 4 || s.Page4KCrossings != 2 || s.SampledDirectionChanges != 2 || s.Delta[0] != 2 || s.Delta[4] != 2 {
++		t.Fatalf("scrambled stats=%+v", s)
++	}
++	ids := make([]uint32, 20000)
++	for i := range ids {
++		ids[i] = uint32(i + 1)
++	}
++	if s := localSummarizeHandleOrder(ids, 0, 20001); s.Pairs != 4096 || s.Delta[0] != 4096 {
++		t.Fatalf("bounded sample=%+v", s)
++	}
++}

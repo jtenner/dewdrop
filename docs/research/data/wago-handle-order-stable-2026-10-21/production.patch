@@ -1,0 +1,83 @@
+diff --git a/src/core/runtime/gc/native/collect.go b/src/core/runtime/gc/native/collect.go
+index 6b65a3115..8122031e6 100644
+--- a/src/core/runtime/gc/native/collect.go
++++ b/src/core/runtime/gc/native/collect.go
+@@ -216,49 +216,42 @@ func (c *Collector) finishMinorEvacuation(liveCount uint64) {
+ 	}
+ }
+ 
+-// finishSparseMinorEvacuation bulk-copies the mostly-dead nursery identities.
+-// Remove exceptional entries by swapping from the end of that copy, avoiding
+-// writes to every dead identity after the first survivor.
++// finishSparseMinorEvacuation preserves both the dead and surviving input
++// subsequences. Repeated tail swaps scatter recycled handles across the handle
++// table; stable recycling keeps allocation cohorts together across collections.
+ func (c *Collector) finishSparseMinorEvacuation() {
+ 	nursery := c.nurseryHandles
+-	freeStart := len(c.freeHandles)
+-	c.freeHandles = append(c.freeHandles, nursery...)
+-	freeEnd := len(c.freeHandles)
+-	youngStart := len(nursery)
+-	// Descending traversal leaves every unread free-list and nursery entry in
+-	// place. Retained young identities occupy the already-read nursery suffix.
+-	for i := len(nursery) - 1; i >= 0; i-- {
+-		h := nursery[i]
+-		if h != 0 && int(h) < len(c.handles) {
+-			if c.mark[h] {
+-				c.mark[h] = false
+-				if c.handles[h].young() {
+-					youngStart--
+-					nursery[youngStart] = h
+-				}
+-			} else {
+-				e := &c.handles[h]
+-				if e.space == spaceNursery && e.cardSlot == 0 {
+-					e.space = spaceFree
+-					continue
+-				} else if e.young() {
+-					// The bulk copy already contains the recycled identity.
+-					end := len(c.freeHandles)
+-					c.free(h)
+-					c.freeHandles = c.freeHandles[:end]
+-					continue
+-				}
++	// At most one free identity per input entry, including releaseHandle's
++	// append. Reserve once, without allocating a separate compaction buffer.
++	c.freeHandles = slices.Grow(c.freeHandles, len(nursery))
++	out := nursery[:0]
++	for _, h := range nursery {
++		if h == 0 || int(h) >= len(c.handles) {
++			continue
++		}
++		if c.mark[h] {
++			c.mark[h] = false
++			if c.handles[h].young() {
++				// The output cursor never overtakes unread nursery entries.
++				out = append(out, h)
+ 			}
++			continue
++		}
++		e := &c.handles[h]
++		if e.space == spaceNursery && e.cardSlot == 0 {
++			// No individual allocator or card ownership. Reuse overwrites the
++			// complete entry; the space byte invalidates this identity now.
++			e.space = spaceFree
++			c.freeHandles = append(c.freeHandles, h)
++		} else if e.young() {
++			// Release large-object ownership and remembered/card metadata once.
++			c.free(h)
+ 		}
+-		freeEnd--
+-		c.freeHandles[freeStart+i] = c.freeHandles[freeEnd]
+ 	}
+-	c.freeHandles = c.freeHandles[:freeEnd]
+-	n := copy(nursery, nursery[youngStart:])
+-	c.nurseryHandles = nursery[:n]
++	c.nurseryHandles = out
+ 	c.lastCardBounds = objectCardBounds{}
+ 	c.nurseryBump = 0
+-	if n == 0 {
++	if len(out) == 0 {
+ 		c.survivorBump = 0
+ 		c.survivorFrom ^= 1
+ 	}

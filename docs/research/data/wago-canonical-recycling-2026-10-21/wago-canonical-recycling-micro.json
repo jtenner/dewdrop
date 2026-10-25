@@ -1,0 +1,215 @@
+{
+  "elapsed_seconds": 12.778180209999846,
+  "samples": [
+    {
+      "pair": 0,
+      "variant": "base",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 7376918.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 0,
+      "variant": "base",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 3295162.0,
+      "bytes_per_op": 5244518.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 0,
+      "variant": "candidate",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 12817691.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 0,
+      "variant": "candidate",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 9376939.0,
+      "bytes_per_op": 5271552.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "variant": "candidate",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 13671189.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "variant": "candidate",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 10001906.0,
+      "bytes_per_op": 5271552.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "variant": "base",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 8505644.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 1,
+      "variant": "base",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 3295532.0,
+      "bytes_per_op": 5244518.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "variant": "base",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 8396723.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "variant": "base",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 3531525.0,
+      "bytes_per_op": 5244518.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "variant": "candidate",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 12619843.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 2,
+      "variant": "candidate",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 9483976.0,
+      "bytes_per_op": 5271552.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "variant": "candidate",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 12625223.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "variant": "candidate",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 9691190.0,
+      "bytes_per_op": 5271552.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "variant": "base",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 7411581.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 3,
+      "variant": "base",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 3164269.0,
+      "bytes_per_op": 5244518.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "variant": "base",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 7352098.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "variant": "base",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 3223364.0,
+      "bytes_per_op": 5244518.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "variant": "candidate",
+      "benchmark": "WarmCycles",
+      "ns_per_op": 12732255.0,
+      "bytes_per_op": 0.0,
+      "allocs_per_op": 0.0
+    },
+    {
+      "pair": 4,
+      "variant": "candidate",
+      "benchmark": "OrderedCleanup",
+      "ns_per_op": 9466775.0,
+      "bytes_per_op": 5271552.0,
+      "allocs_per_op": 0.0
+    }
+  ],
+  "summary": {
+    "WarmCycles": {
+      "samples": {
+        "base": [
+          7376918.0,
+          8505644.0,
+          8396723.0,
+          7411581.0,
+          7352098.0
+        ],
+        "candidate": [
+          12817691.0,
+          13671189.0,
+          12619843.0,
+          12625223.0,
+          12732255.0
+        ]
+      },
+      "medians": {
+        "base": 7411581.0,
+        "candidate": 12732255.0
+      },
+      "speedup": 0.5821106316202432,
+      "change_pct": 71.78865076155816
+    },
+    "OrderedCleanup": {
+      "samples": {
+        "base": [
+          3295162.0,
+          3295532.0,
+          3531525.0,
+          3164269.0,
+          3223364.0
+        ],
+        "candidate": [
+          9376939.0,
+          10001906.0,
+          9483976.0,
+          9691190.0,
+          9466775.0
+        ]
+      },
+      "medians": {
+        "base": 3295162.0,
+        "candidate": 9483976.0
+      },
+      "speedup": 0.3474452065251958,
+      "change_pct": 187.81516659878938
+    }
+  }
+}

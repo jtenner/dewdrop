@@ -1,0 +1,3 @@
+No findings in the two production changes. The linked argument stays visible to spill staging, and `popValue` uses its updated storage. The failure jump records the same unknown PC and profile origin as the helper it replaces. The profile assertion checks the specific wrapper and call PC.
+
+Critical gap: the current builds and tests are still running, so this review does not confirm their results. I ran no builds, tests, or benchmarks.

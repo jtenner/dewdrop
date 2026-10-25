@@ -1,0 +1,40 @@
+[
+  {
+    "variant": "control",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-c",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/test-field-prefix/control.test",
+      "-overlay",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/test-field-prefix/control-overlay.json",
+      "./src/wago"
+    ],
+    "seconds": 24.40236717800144,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "sha256": "514c56ffe5b74e91b2881dfe4c0e6c2cd1f6ff61f1467ec01f49d5ccc4d70bdf"
+  },
+  {
+    "variant": "candidate",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-c",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/test-field-prefix/candidate.test",
+      "./src/wago"
+    ],
+    "seconds": 24.310082969001087,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "sha256": "ab8c45e6a314db0020a28dac147c86147904b8dd67928051091b9f8a786422dd"
+  }
+]

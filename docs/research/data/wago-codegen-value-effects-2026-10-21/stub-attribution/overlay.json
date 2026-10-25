@@ -1,0 +1,6 @@
+{
+  "Replace": {
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/source/src/core/compiler/backend/railshot/amd64/gc_direct.go": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/stub-attribution/gc_direct.go",
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/source/src/core/compiler/backend/railshot/amd64/diagnostic_stub_attribution.go": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/stub-attribution/diagnostic.go"
+  }
+}

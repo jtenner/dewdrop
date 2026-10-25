@@ -1,0 +1,7 @@
+{
+  "thread_id": "01a15ee1-7c10-71d1-bdbd-9040f71ae1cc",
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-shared-getter",
+  "model": "gpt-6-sol",
+  "cyber_access_program": "daybreak_blue",
+  "note": "Harness turn_context is model/mode evidence; reviewer text cannot independently verify its own mode."
+}

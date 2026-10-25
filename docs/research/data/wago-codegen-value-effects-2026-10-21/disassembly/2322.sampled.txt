@@ -1,0 +1,103 @@
+8 samples at 646cf1: cmp    ecx,edx
+  646cda:	44 39 c1             	cmp    ecx,r8d
+  646cdd:	0f 87 2f 00 00 00    	ja     0x646d12
+  646ce3:	39 f9                	cmp    ecx,edi
+  646ce5:	0f 82 27 00 00 00    	jb     0x646d12
+  646ceb:	49 01 c3             	add    r11,rax
+  646cee:	41 8b 0b             	mov    ecx,DWORD PTR [r11]
+  646cf1:	39 d1                	cmp    ecx,edx
+  646cf3:	0f 85 19 00 00 00    	jne    0x646d12
+  646cf9:	41 8b 4b 04          	mov    ecx,DWORD PTR [r11+0x4]
+  646cfd:	39 f9                	cmp    ecx,edi
+  646cff:	0f 82 0d 00 00 00    	jb     0x646d12
+
+8 samples at 646ca6: test   r10d,r10d
+  646c8b:	41 3b 40 10          	cmp    eax,DWORD PTR [r8+0x10]
+  646c8f:	0f 83 7d 00 00 00    	jae    0x646d12
+  646c95:	4d 8b 48 08          	mov    r9,QWORD PTR [r8+0x8]
+  646c99:	48 c1 e0 04          	shl    rax,0x4
+  646c9d:	49 01 c1             	add    r9,rax
+  646ca0:	45 0f b6 54 21 0e    	movzx  r10d,BYTE PTR [r9+riz*1+0xe]
+  646ca6:	45 85 d2             	test   r10d,r10d
+  646ca9:	0f 84 63 00 00 00    	je     0x646d12
+  646caf:	41 83 fa 04          	cmp    r10d,0x4
+  646cb3:	0f 87 59 00 00 00    	ja     0x646d12
+  646cb9:	41 c1 e2 04          	shl    r10d,0x4
+
+6 samples at 646b2b: test   r10d,r10d
+  646b10:	41 3b 40 10          	cmp    eax,DWORD PTR [r8+0x10]
+  646b14:	0f 83 10 01 00 00    	jae    0x646c2a
+  646b1a:	4d 8b 48 08          	mov    r9,QWORD PTR [r8+0x8]
+  646b1e:	48 c1 e0 04          	shl    rax,0x4
+  646b22:	49 01 c1             	add    r9,rax
+  646b25:	45 0f b6 54 21 0e    	movzx  r10d,BYTE PTR [r9+riz*1+0xe]
+  646b2b:	45 85 d2             	test   r10d,r10d
+  646b2e:	0f 84 f6 00 00 00    	je     0x646c2a
+  646b34:	41 83 fa 04          	cmp    r10d,0x4
+  646b38:	0f 87 ec 00 00 00    	ja     0x646c2a
+  646b3e:	41 c1 e2 04          	shl    r10d,0x4
+
+6 samples at 646cc2: mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  646ca6:	45 85 d2             	test   r10d,r10d
+  646ca9:	0f 84 63 00 00 00    	je     0x646d12
+  646caf:	41 83 fa 04          	cmp    r10d,0x4
+  646cb3:	0f 87 59 00 00 00    	ja     0x646d12
+  646cb9:	41 c1 e2 04          	shl    r10d,0x4
+  646cbd:	4f 8b 5c 10 18       	mov    r11,QWORD PTR [r8+r10*1+0x18]
+  646cc2:	47 8b 44 10 20       	mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  646cc7:	41 8b 01             	mov    eax,DWORD PTR [r9]
+  646cca:	44 39 c0             	cmp    eax,r8d
+  646ccd:	0f 87 3f 00 00 00    	ja     0x646d12
+  646cd3:	41 29 c0             	sub    r8d,eax
+
+5 samples at 646b79: cmp    ecx,edx
+  646b62:	0f 87 c2 00 00 00    	ja     0x646c2a
+  646b68:	83 f9 10             	cmp    ecx,0x10
+  646b6b:	0f 82 b9 00 00 00    	jb     0x646c2a
+  646b71:	89 cf                	mov    edi,ecx
+  646b73:	49 01 c3             	add    r11,rax
+  646b76:	41 8b 0b             	mov    ecx,DWORD PTR [r11]
+  646b79:	39 d1                	cmp    ecx,edx
+  646b7b:	0f 84 6c 00 00 00    	je     0x646bed
+  646b81:	4c 8b 83 e8 fe ff ff 	mov    r8,QWORD PTR [rbx-0x118]
+  646b88:	4d 8b 40 08          	mov    r8,QWORD PTR [r8+0x8]
+  646b8c:	89 c8                	mov    eax,ecx
+
+4 samples at 646902: cmp    ecx,edx
+  6468ea:	44 39 c1             	cmp    ecx,r8d
+  6468ed:	0f 87 57 00 00 00    	ja     0x64694a
+  6468f3:	83 f9 10             	cmp    ecx,0x10
+  6468f6:	0f 82 4e 00 00 00    	jb     0x64694a
+  6468fc:	49 01 c3             	add    r11,rax
+  6468ff:	41 8b 0b             	mov    ecx,DWORD PTR [r11]
+  646902:	39 d1                	cmp    ecx,edx
+  646904:	0f 85 40 00 00 00    	jne    0x64694a
+  64690a:	45 8b 53 08          	mov    r10d,DWORD PTR [r11+0x8]
+  64690e:	44 39 d6             	cmp    esi,r10d
+  646911:	0f 83 49 00 00 00    	jae    0x646960
+
+3 samples at 6468d3: mov    r8d,DWORD PTR [r8+0x8]
+  6468bb:	41 83 fa 04          	cmp    r10d,0x4
+  6468bf:	0f 87 85 00 00 00    	ja     0x64694a
+  6468c5:	4d 6b d2 10          	imul   r10,r10,0x10
+  6468c9:	4d 8d 40 18          	lea    r8,[r8+0x18]
+  6468cd:	4d 01 d0             	add    r8,r10
+  6468d0:	4d 8b 18             	mov    r11,QWORD PTR [r8]
+  6468d3:	45 8b 40 08          	mov    r8d,DWORD PTR [r8+0x8]
+  6468d7:	41 8b 01             	mov    eax,DWORD PTR [r9]
+  6468da:	44 39 c0             	cmp    eax,r8d
+  6468dd:	0f 87 67 00 00 00    	ja     0x64694a
+  6468e3:	41 29 c0             	sub    r8d,eax
+
+3 samples at 646cca: cmp    eax,r8d
+  646caf:	41 83 fa 04          	cmp    r10d,0x4
+  646cb3:	0f 87 59 00 00 00    	ja     0x646d12
+  646cb9:	41 c1 e2 04          	shl    r10d,0x4
+  646cbd:	4f 8b 5c 10 18       	mov    r11,QWORD PTR [r8+r10*1+0x18]
+  646cc2:	47 8b 44 10 20       	mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  646cc7:	41 8b 01             	mov    eax,DWORD PTR [r9]
+  646cca:	44 39 c0             	cmp    eax,r8d
+  646ccd:	0f 87 3f 00 00 00    	ja     0x646d12
+  646cd3:	41 29 c0             	sub    r8d,eax
+  646cd6:	41 8b 49 04          	mov    ecx,DWORD PTR [r9+0x4]
+  646cda:	44 39 c1             	cmp    ecx,r8d

@@ -1,0 +1,55 @@
+=== RUN   TestGCConstructorNativeChargeKeepsActiveArrayChunk
+--- PASS: TestGCConstructorNativeChargeKeepsActiveArrayChunk (0.00s)
+=== RUN   TestGCNativeArrayAllocAcrossChunksAndCollections
+--- PASS: TestGCNativeArrayAllocAcrossChunksAndCollections (0.00s)
+=== RUN   TestGCNativeArrayAllocReferenceInitializers
+--- PASS: TestGCNativeArrayAllocReferenceInitializers (0.00s)
+=== RUN   TestGCNativeArrayAllocTrapCancelsBatch
+--- PASS: TestGCNativeArrayAllocTrapCancelsBatch (0.00s)
+=== RUN   TestGCNativeArrayAllocMalformedMetadataFallsBack
+--- PASS: TestGCNativeArrayAllocMalformedMetadataFallsBack (0.00s)
+=== RUN   TestGCNativeArrayDynamicAndLargeShapes
+=== RUN   TestGCNativeArrayDynamicAndLargeShapes/dynamic
+=== RUN   TestGCNativeArrayDynamicAndLargeShapes/large-static
+--- PASS: TestGCNativeArrayDynamicAndLargeShapes (0.00s)
+    --- PASS: TestGCNativeArrayDynamicAndLargeShapes/dynamic (0.00s)
+    --- PASS: TestGCNativeArrayDynamicAndLargeShapes/large-static (0.00s)
+=== RUN   TestGCNativeDynamicDefaultArrayUsesReservation
+--- PASS: TestGCNativeDynamicDefaultArrayUsesReservation (0.00s)
+=== RUN   TestGCNativeDynamicTypedDefaultArrayUsesLargeReservation
+=== RUN   TestGCNativeDynamicTypedDefaultArrayUsesLargeReservation/length=4096
+=== RUN   TestGCNativeDynamicTypedDefaultArrayUsesLargeReservation/length=8192
+--- PASS: TestGCNativeDynamicTypedDefaultArrayUsesLargeReservation (0.00s)
+    --- PASS: TestGCNativeDynamicTypedDefaultArrayUsesLargeReservation/length=4096 (0.00s)
+    --- PASS: TestGCNativeDynamicTypedDefaultArrayUsesLargeReservation/length=8192 (0.00s)
+=== RUN   TestGCNativeArrayAllocPreservesAllocationCount
+--- PASS: TestGCNativeArrayAllocPreservesAllocationCount (0.00s)
+=== RUN   TestGCNativeLargeArrayReservationRetainsCapacity
+=== RUN   TestGCNativeLargeArrayReservationRetainsCapacity/native=false
+=== RUN   TestGCNativeLargeArrayReservationRetainsCapacity/native=true
+--- PASS: TestGCNativeLargeArrayReservationRetainsCapacity (0.00s)
+    --- PASS: TestGCNativeLargeArrayReservationRetainsCapacity/native=false (0.00s)
+    --- PASS: TestGCNativeLargeArrayReservationRetainsCapacity/native=true (0.00s)
+=== RUN   TestGCNativeMixedReservationPreservesStructAcrossFallbackCollection
+=== RUN   TestGCNativeMixedReservationPreservesStructAcrossFallbackCollection/helper
+=== RUN   TestGCNativeMixedReservationPreservesStructAcrossFallbackCollection/native
+--- PASS: TestGCNativeMixedReservationPreservesStructAcrossFallbackCollection (0.00s)
+    --- PASS: TestGCNativeMixedReservationPreservesStructAcrossFallbackCollection/helper (0.00s)
+    --- PASS: TestGCNativeMixedReservationPreservesStructAcrossFallbackCollection/native (0.00s)
+=== RUN   TestGCNativeMixedReservationCountsBeforeAndAfterCollection
+--- PASS: TestGCNativeMixedReservationCountsBeforeAndAfterCollection (0.00s)
+=== RUN   TestGCNativeStructAllocPreparedAcrossCollections
+--- PASS: TestGCNativeStructAllocPreparedAcrossCollections (0.01s)
+=== RUN   TestGCNativeStructAllocMalformedMetadataFallsBack
+--- PASS: TestGCNativeStructAllocMalformedMetadataFallsBack (0.00s)
+=== RUN   TestGCNativeStructAllocReferenceFieldsRemainRooted
+--- PASS: TestGCNativeStructAllocReferenceFieldsRemainRooted (0.00s)
+=== RUN   TestCompiledGenericGCArtifactRejectsNativeABIMismatch
+--- PASS: TestCompiledGenericGCArtifactRejectsNativeABIMismatch (0.00s)
+=== RUN   TestNativeGCViewVersionAndAllocationRefresh
+--- PASS: TestNativeGCViewVersionAndAllocationRefresh (0.00s)
+=== RUN   TestGCNativeArrayAllocationAfterNurseryGrowth
+--- PASS: TestGCNativeArrayAllocationAfterNurseryGrowth (0.34s)
+PASS
+ok  	github.com/wago-org/wago/src/wago	0.365s
+self-host timing: gc-index-native-execution: 18.344 seconds

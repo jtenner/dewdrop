@@ -1,0 +1,31 @@
+{
+  "label": "helper-counter-default-cpu",
+  "command": [
+    "go",
+    "tool",
+    "pprof",
+    "-top",
+    "-cum",
+    "-nodecount=90",
+    "-focus=diagnosticGC",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/helper-counter-host",
+    "/home/dev/Projects/dewdrop/docs/research/data/wago-local-perf-2026-10-20/helper-counter-default/cpu.pprof"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 5.943011775999821,
+  "user_seconds": 1.00231,
+  "system_seconds": 4.399132,
+  "peak_rss_kib": 35512,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.01513671875,
+    3.8828125,
+    3.4853515625
+  ],
+  "load_end": [
+    1.93896484375,
+    3.8037109375,
+    3.46337890625
+  ]
+}

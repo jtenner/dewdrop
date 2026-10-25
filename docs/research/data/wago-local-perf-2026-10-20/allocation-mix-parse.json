@@ -1,0 +1,27 @@
+{
+  "label": "allocation-mix-parse",
+  "command": [
+    "wasm-tools",
+    "parse",
+    "/home/dev/Projects/dewdrop/docs/research/data/wago-local-perf-2026-10-20/allocation-mix.wat",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wasm"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 0.014856950999728724,
+  "user_seconds": 0.003558,
+  "system_seconds": 0.010589999999999999,
+  "peak_rss_kib": 25796,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.0244140625,
+    3.7900390625,
+    3.46044921875
+  ],
+  "load_end": [
+    2.0244140625,
+    3.7900390625,
+    3.46044921875
+  ]
+}

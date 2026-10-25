@@ -1,0 +1,30 @@
+{
+  "label": "profile-cpu-cumulative",
+  "command": [
+    "go",
+    "tool",
+    "pprof",
+    "-top",
+    "-cum",
+    "-nodecount=35",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/stack-profile-host",
+    "/home/dev/Projects/dewdrop/docs/research/data/wago-local-perf-2026-10-20/stack-profile/cpu.pprof"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 0.06007256300017616,
+  "user_seconds": 0.142586,
+  "system_seconds": 0.077217,
+  "peak_rss_kib": 37512,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    1.7548828125,
+    2.23046875,
+    2.40478515625
+  ],
+  "load_end": [
+    1.7548828125,
+    2.23046875,
+    2.40478515625
+  ]
+}

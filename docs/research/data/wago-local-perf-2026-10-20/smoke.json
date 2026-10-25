@@ -1,0 +1,26 @@
+{
+  "kind": "selected checked GC smoke tests",
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago",
+  "command": [
+    "go",
+    "test",
+    "-tags=wago_regalloccheck",
+    "-count=1",
+    "-timeout=25s",
+    "./src/core/runtime/gc/native",
+    "./src/core/compiler/backend/railshot/shared",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/wago",
+    "-run",
+    "^(TestNativeLargeArrayCancellation.*|TestGCFrameRootPlan.*|TestGCDecoderTupleReferenceSurvivesAdjacentScalarRead|TestGCReferenceRead.*|TestGCSharedReference.*|TestGCNativeNullExtern.*|TestGCNonrootElemDropLifecycle|TestGCBranchCast.*|TestGCNativeOpenStruct.*|TestGCGeneralArrayLenEligibility)$"
+  ],
+  "seconds": 3.819,
+  "exit": 0,
+  "package_seconds": {
+    "src/core/runtime/gc/native": 0.004,
+    "src/core/compiler/backend/railshot/shared": 0.002,
+    "src/core/compiler/backend/railshot/amd64": 0.002,
+    "src/wago": 0.07
+  },
+  "note": "Recorded from the timed tool execution before performance measurements; this is a selected smoke suite, not all upstream tests."
+}

@@ -1,0 +1,7 @@
+{
+  "accepted": false,
+  "reason": "Initial persistent ptrace probe stalled during startup while Go CPU profiling was also active. The guest was killed, then the blocked harness was closed. No speed or native sample result is used.",
+  "replacement": "serial-native-bounded",
+  "guest_pid": 1424029,
+  "harness_pid": 1424012
+}

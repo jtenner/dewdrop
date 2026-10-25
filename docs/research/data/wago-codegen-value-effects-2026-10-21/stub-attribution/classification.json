@@ -1,0 +1,298 @@
+{
+  "note": "Native byte identity confirmed. Metadata-only compilation maps per-function emitted stub ranges onto existing diagnostic samples. These are leaf-PC locations, not dynamic execution counts or measured removable time.",
+  "native_samples": 1090,
+  "counts": [
+    {
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 402,
+      "share": 0.3688073394495413
+    },
+    {
+      "kind": "type-test-first-field",
+      "samples": 209,
+      "share": 0.19174311926605506
+    },
+    {
+      "kind": "other-generated-code",
+      "samples": 171,
+      "share": 0.15688073394495414
+    },
+    {
+      "kind": "emitNativeStructAlloc",
+      "samples": 102,
+      "share": 0.09357798165137615
+    },
+    {
+      "kind": "emitNativeGCStubs",
+      "samples": 88,
+      "share": 0.08073394495412844
+    },
+    {
+      "kind": "type-cast",
+      "samples": 58,
+      "share": 0.05321100917431193
+    },
+    {
+      "kind": "emitNativeArrayAllocStub",
+      "samples": 37,
+      "share": 0.03394495412844037
+    },
+    {
+      "kind": "type-test",
+      "samples": 21,
+      "share": 0.01926605504587156
+    },
+    {
+      "kind": "emitNativeBarrierSafeStructRefSetStub",
+      "samples": 1,
+      "share": 0.0009174311926605505
+    },
+    {
+      "kind": "emitNativeCardSafeArrayRefSetStub",
+      "samples": 1,
+      "share": 0.0009174311926605505
+    }
+  ],
+  "functions": [
+    {
+      "function": 2293,
+      "name": "self_host_imported_requirement_identity#31052613552037#4294967295",
+      "kind": "type-test-first-field",
+      "samples": 63
+    },
+    {
+      "function": 2294,
+      "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "kind": "type-test-first-field",
+      "samples": 55
+    },
+    {
+      "function": 2322,
+      "name": "intern_function#31052613552101#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 45
+    },
+    {
+      "function": 2294,
+      "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 37
+    },
+    {
+      "function": 2306,
+      "name": "self_host_resolved_imported_callable_at#31052613552057#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 33
+    },
+    {
+      "function": -1,
+      "name": "",
+      "kind": "other-generated-code",
+      "samples": 29
+    },
+    {
+      "function": 2306,
+      "name": "self_host_resolved_imported_callable_at#31052613552057#4294967295",
+      "kind": "emitNativeStructAlloc",
+      "samples": 24
+    },
+    {
+      "function": 1064,
+      "name": "bytes_byte_at#18446462603027808293#4294967295",
+      "kind": "type-cast",
+      "samples": 21
+    },
+    {
+      "function": 1064,
+      "name": "bytes_byte_at#18446462603027808293#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 21
+    },
+    {
+      "function": 2322,
+      "name": "intern_function#31052613552101#4294967295",
+      "kind": "type-test-first-field",
+      "samples": 21
+    },
+    {
+      "function": 2294,
+      "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "kind": "emitNativeStructAlloc",
+      "samples": 19
+    },
+    {
+      "function": 1521,
+      "name": "imported_callable#31052613551083#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 19
+    },
+    {
+      "function": 465,
+      "name": "array_iter_next_option#18446462654567415976#278",
+      "kind": "emitNativeStructAlloc",
+      "samples": 18
+    },
+    {
+      "function": 3640,
+      "name": "self_host_source_keyword#31052613553738#4294967295",
+      "kind": "emitNativeArrayAllocStub",
+      "samples": 17
+    },
+    {
+      "function": 2322,
+      "name": "intern_function#31052613552101#4294967295",
+      "kind": "emitNativeGCStubs",
+      "samples": 17
+    },
+    {
+      "function": 1064,
+      "name": "bytes_byte_at#18446462603027808293#4294967295",
+      "kind": "other-generated-code",
+      "samples": 16
+    },
+    {
+      "function": 492,
+      "name": "array_iter_next#18446462654567415823#480",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 16
+    },
+    {
+      "function": 1018,
+      "name": "blake3_mix#18446462826366107657#4294967295",
+      "kind": "emitNativeGCStubs",
+      "samples": 14
+    },
+    {
+      "function": 1042,
+      "name": "string_as_bytes_unchecked#18446462603027808256#4294967295",
+      "kind": "type-cast",
+      "samples": 12
+    },
+    {
+      "function": 492,
+      "name": "array_iter_next#18446462654567415823#480",
+      "kind": "emitNativeGCStubs",
+      "samples": 12
+    },
+    {
+      "function": 1571,
+      "name": "select_imported_callable#31052613551134#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 12
+    },
+    {
+      "function": 1578,
+      "name": "imported_implementation#31052613551141#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 12
+    },
+    {
+      "function": 1623,
+      "name": "constrain_pending_binary_operator#31052613551186#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 11
+    },
+    {
+      "function": 2318,
+      "name": "intern_imported_simple#31052613552097#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 11
+    },
+    {
+      "function": 2982,
+      "name": "check_type_term#31052613552977#4294967295",
+      "kind": "type-test-first-field",
+      "samples": 10
+    },
+    {
+      "function": 2221,
+      "name": "self_host_plan_top_level_callable#31052613551922#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 10
+    },
+    {
+      "function": 2322,
+      "name": "intern_function#31052613552101#4294967295",
+      "kind": "other-generated-code",
+      "samples": 9
+    },
+    {
+      "function": 2138,
+      "name": "validate_compile_time_storage#31052613551826#4294967295",
+      "kind": "type-test-first-field",
+      "samples": 8
+    },
+    {
+      "function": 2304,
+      "name": "self_host_resolved_imported_implementation_at#31052613552052#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 8
+    },
+    {
+      "function": 401,
+      "name": "set_unchecked#18446462641682513927#43",
+      "kind": "type-cast",
+      "samples": 7
+    },
+    {
+      "function": 3640,
+      "name": "self_host_source_keyword#31052613553738#4294967295",
+      "kind": "emitNativeStructAlloc",
+      "samples": 7
+    },
+    {
+      "function": 1966,
+      "name": "first_parameter_index#31052613551625#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 7
+    },
+    {
+      "function": 492,
+      "name": "array_iter_next#18446462654567415823#480",
+      "kind": "other-generated-code",
+      "samples": 7
+    },
+    {
+      "function": 1519,
+      "name": "local_callable_index_of_declaration#31052613551081#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 7
+    },
+    {
+      "function": 465,
+      "name": "array_iter_next_option#18446462654567415976#278",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 7
+    },
+    {
+      "function": 2293,
+      "name": "self_host_imported_requirement_identity#31052613552037#4294967295",
+      "kind": "emitNativeFinalCastStructRefResolverStub",
+      "samples": 7
+    },
+    {
+      "function": 2294,
+      "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "kind": "emitNativeGCStubs",
+      "samples": 7
+    },
+    {
+      "function": 2317,
+      "name": "simple_equal#31052613552096#4294967295",
+      "kind": "type-test-first-field",
+      "samples": 7
+    },
+    {
+      "function": 1018,
+      "name": "blake3_mix#18446462826366107657#4294967295",
+      "kind": "other-generated-code",
+      "samples": 6
+    },
+    {
+      "function": 1020,
+      "name": "blake3_permute#18446462826366107659#4294967295",
+      "kind": "emitNativeGCStubs",
+      "samples": 6
+    }
+  ]
+}

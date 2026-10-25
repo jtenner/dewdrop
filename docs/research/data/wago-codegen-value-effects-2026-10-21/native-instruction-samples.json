@@ -1,0 +1,2239 @@
+{
+  "method": "brief ptrace leaf-PC probes of up to 3 CPU-active threads, every 20-30 ms, after code mapping; no stacks; not a hardware CPU profile",
+  "total_samples": 1848,
+  "native_samples": 1090,
+  "errors": {},
+  "stop_ns": 92627682,
+  "duration_s": 37.32914370400249,
+  "metadata_status": {
+    "clock": "monotonic",
+    "dropped_spans": 0,
+    "dropped_records": 0,
+    "retained_bytes": 38512674,
+    "closed": false
+  },
+  "instructions": [
+    {
+      "instruction": "outside-native-images",
+      "samples": 758
+    },
+    {
+      "instruction": "struct.new",
+      "samples": 107
+    },
+    {
+      "instruction": "unmapped-source:self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "samples": 99
+    },
+    {
+      "instruction": "unmapped-source:intern_function#31052613552101#4294967295",
+      "samples": 83
+    },
+    {
+      "instruction": "unmapped-source:self_host_imported_requirement_identity#31052613552037#4294967295",
+      "samples": 70
+    },
+    {
+      "instruction": "unmapped-source:bytes_byte_at#18446462603027808293#4294967295",
+      "samples": 42
+    },
+    {
+      "instruction": "unmapped-source:self_host_resolved_imported_callable_at#31052613552057#4294967295",
+      "samples": 36
+    },
+    {
+      "instruction": "ref.cast",
+      "samples": 33
+    },
+    {
+      "instruction": "call",
+      "samples": 31
+    },
+    {
+      "instruction": "unmapped-source:array_iter_next#18446462654567415823#480",
+      "samples": 31
+    },
+    {
+      "instruction": "unmapped-source:gc-resolver",
+      "samples": 29
+    },
+    {
+      "instruction": "unmapped-source:imported_callable#31052613551083#4294967295",
+      "samples": 19
+    },
+    {
+      "instruction": "unmapped-source:self_host_source_keyword#31052613553738#4294967295",
+      "samples": 17
+    },
+    {
+      "instruction": "local.set",
+      "samples": 16
+    },
+    {
+      "instruction": "unmapped-source:intern_imported_simple#31052613552097#4294967295",
+      "samples": 15
+    },
+    {
+      "instruction": "unmapped-source:blake3_mix#18446462826366107657#4294967295",
+      "samples": 14
+    },
+    {
+      "instruction": "unmapped-source:check_type_term#31052613552977#4294967295",
+      "samples": 14
+    },
+    {
+      "instruction": "unmapped-source:select_imported_callable#31052613551134#4294967295",
+      "samples": 14
+    },
+    {
+      "instruction": "unmapped-source:string_as_bytes_unchecked#18446462603027808256#4294967295",
+      "samples": 13
+    },
+    {
+      "instruction": "unmapped-source:constrain_pending_binary_operator#31052613551186#4294967295",
+      "samples": 13
+    },
+    {
+      "instruction": "unmapped-source:simple_equal#31052613552096#4294967295",
+      "samples": 13
+    },
+    {
+      "instruction": "unmapped-source:imported_implementation#31052613551141#4294967295",
+      "samples": 12
+    },
+    {
+      "instruction": "unmapped-source:self_host_plan_top_level_callable#31052613551922#4294967295",
+      "samples": 11
+    },
+    {
+      "instruction": "unmapped-source:first_parameter_index#31052613551625#4294967295",
+      "samples": 10
+    },
+    {
+      "instruction": "unmapped-source:check_type_graph#31052613552981#4294967295",
+      "samples": 10
+    },
+    {
+      "instruction": "if",
+      "samples": 10
+    },
+    {
+      "instruction": "end",
+      "samples": 9
+    },
+    {
+      "instruction": "unmapped-source:validate_compile_time_storage#31052613551826#4294967295",
+      "samples": 9
+    },
+    {
+      "instruction": "unmapped-source:local_callable_index_of_declaration#31052613551081#4294967295",
+      "samples": 8
+    },
+    {
+      "instruction": "unmapped-source:self_host_resolved_imported_implementation_at#31052613552052#4294967295",
+      "samples": 8
+    },
+    {
+      "instruction": "unmapped-source:set_unchecked#18446462641682513927#43",
+      "samples": 7
+    },
+    {
+      "instruction": "unmapped-source:array_iter_next_option#18446462654567415976#278",
+      "samples": 7
+    },
+    {
+      "instruction": "unmapped-source:array_clear_suffix#18446462654567415978#482",
+      "samples": 7
+    },
+    {
+      "instruction": "unmapped-source:self_host_body_member_type_context#31052613551353#4294967295",
+      "samples": 7
+    },
+    {
+      "instruction": "unmapped-source:blake3_permute#18446462826366107659#4294967295",
+      "samples": 6
+    },
+    {
+      "instruction": "unmapped-source:self_host_source_keyword_matches#31052613553737#4294967295",
+      "samples": 6
+    },
+    {
+      "instruction": "unmapped-source:checked_declaration_span#31052613552456#4294967295",
+      "samples": 6
+    },
+    {
+      "instruction": "unmapped-source:imported_function_reference_candidate_matches#31052613551088#4294967295",
+      "samples": 6
+    },
+    {
+      "instruction": "unmapped-source:bytes_builder_append_byte#18446462603027808280#4294967295",
+      "samples": 5
+    },
+    {
+      "instruction": "op.0xfd",
+      "samples": 5
+    },
+    {
+      "instruction": "array.set",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:intern#31052613551611#4294967295",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:array_clear_suffix#18446462654567415978#483",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:new_with_solver#31052613551052#4294967295",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:self_host_collected_method_identity#31052613552401#4294967295",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:import_callable#31052613552109#4294967295",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:constrain_static_call#31052613551086#4294967295",
+      "samples": 5
+    },
+    {
+      "instruction": "unmapped-source:self_host_frozen_callable_kind#31052613552534#4294967295",
+      "samples": 4
+    },
+    {
+      "instruction": "unmapped-source:array_push#18446462654567415818#36",
+      "samples": 4
+    },
+    {
+      "instruction": "unmapped-source:self_host_basic_evidence_implementation_for_method#31052613551237#4294967295",
+      "samples": 4
+    },
+    {
+      "instruction": "unmapped-source:self_host_body_arena_info#31052613551221#4294967295",
+      "samples": 4
+    },
+    {
+      "instruction": "unmapped-source:array_reserve_raw#18446462654567415845#298",
+      "samples": 4
+    },
+    {
+      "instruction": "unmapped-source:check_type_source#31052613552978#4294967295",
+      "samples": 4
+    },
+    {
+      "instruction": "unmapped-source:self_host_collected_callable_identity#31052613552412#4294967295",
+      "samples": 4
+    },
+    {
+      "instruction": "br",
+      "samples": 3
+    },
+    {
+      "instruction": "ref.test",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:map_insert#18446462645977481232#521",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:checked_type_edges#31052613552980#4294967295",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:array_replace_backing#18446462654567415977#495",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:import_type#31052613552016#4294967295",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:span_matches#31052613552098#4294967295",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:map_get#18446462645977481228#339",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:assert_variable_arrays#31052613552226#4294967295",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:intern_applied#31052613552100#4294967295",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:self_host_lowering_expression_kind#31052613552359#4294967295",
+      "samples": 3
+    },
+    {
+      "instruction": "unmapped-source:bytes_storage_write_byte#18446462603027808290#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:blake3_rotate_right#18446462826366107656#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:blake3_round#18446462826366107658#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:bytes_builder_append#18446462603027808279#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:bytes_builder_with_capacity_raw#18446462603027808275#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:map_grow#18446462645977481231#630",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:array_reserve_raw#18446462654567415845#481",
+      "samples": 2
+    },
+    {
+      "instruction": "struct.set",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:bytes_equals#18446462603027808329#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_collected_declaration_identity#31052613552399#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:representative_type#31052613552252#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:array_push#18446462654567415818#284",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_lowering_builtin_name#31052613552356#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:constrain_imported_binary_operator#31052613552049#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:import_interface#31052613552110#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:select_qualified_imported_function_reference#31052613551089#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:array_with_capacity#18446462654567415811#11",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_lower_nonreturning_constructions#31052613551867#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:ct_scalar_original_offset#31052613554083#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:first_method_name#31052613551628#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_lowering_plan_expressions#31052613552363#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_frozen_module_interface_identity#31052613552491#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_indexed_method_dispatch_identity#31052613551988#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "array.copy",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:self_host_check_trait_impl_methods#31052613552033#4294967295",
+      "samples": 2
+    },
+    {
+      "instruction": "unmapped-source:map_empty#18446462645977481224#134",
+      "samples": 2
+    },
+    {
+      "instruction": "op.0x76",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:bytes_storage_write_vector#18446462603027808289#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:blake3_chaining_value#18446462826366107663#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_scan_identifier#31052613553740#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_tokenize#31052613553785#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:wasm_bytes_load_u8x16#18446462637387547664#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "op.0x46",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:collect_declaration#31052613551642#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_insert#18446462645977481232#508",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:resolve_signatures#31052613553089#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "op.0x49",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:resolve_any_named_type#31052613553076#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_body_relative_index#31052613551224#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:constrain_pending_method_call#31052613551148#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:commit_imported_callable#31052613551132#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:unify_work#31052613552278#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:analyze_expressions#31052613551295#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:import_type#31052613552103#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:assert_type_caches#31052613552228#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_grow#18446462645977481231#633",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:expression_type#31052613551059#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_hir_span_identity#31052613551941#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_bind_raw_array_contracts#31052613552852#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_insert#18446462645977481232#548",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:ct_index_fresh_names#31052613553993#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_tokenizer_emit#31052613553725#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_frozen_declaration_location#31052613552535#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_primitive_type_from_name#31052613552917#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_find#18446462645977481227#520",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_collected_import_identity#31052613552415#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_insert#18446462645977481232#537",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_validate_collected_program_bodies#31052613552767#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_query_local_sources#31052613552843#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:check_undo_restore#31052613552985#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_impl_primitive_key#31052613552002#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:schedule_expression_children#31052613551443#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:constrain_pending_direct_call#31052613551135#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:checked_resolved_body_type#31052613552979#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_flow_expression_is_never#31052613551269#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:array_replace_backing#18446462654567415977#627",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_array_pop#31052613550695#23",
+      "samples": 1
+    },
+    {
+      "instruction": "local.get",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:constrain_imported_method_call#31052613551145#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_find#18446462645977481227#523",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:array_truncate_raw#18446462654567415847#286",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:declaration_at#31052613552509#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:array_truncate_raw#18446462654567415847#287",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:finalize#31052613551205#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_query_module_has_projections#31052613551749#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:u32_into_u8#18446462598732841626#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:bytes_builder_reserve#18446462603027808286#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:bytes_builder_finish#18446462603027808281#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:ct_scan#31052613554159#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_scan_string#31052613553781#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:array_push#18446462654567415818#302",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_parser_consume_newline#31052613550809#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:bytes_range_equals#18446462603027808328#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_parser_identifier#31052613550813#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_get#18446462645977481228#310",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:rank#31052613552916#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:assert_solver_boundary#31052613552972#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_function_plan_body#31052613551911#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:copy_generic_parameters#31052613552108#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:constrain_local_function_references#31052613551094#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_lowering_flow_at#31052613552354#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:array_iter_next_option#18446462654567415976#291",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_plan_method_callable#31052613551923#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:array_with_capacity#18446462654567415811#17",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:get#31052613552087#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:imported_generics_require_evidence#31052613552107#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:expression_index#31052613551054#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:clear_generics#31052613552009#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:restore_undo#31052613552280#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:assert_solver_invariant#31052613552225#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:member_projection#31052613551357#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:resolved_type_count#31052613552503#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_lowering_imported_builtin_recipes#31052613552383#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:reduce_member_type#31052613551359#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:offset#31052613551971#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:map_find#18446462645977481227#509",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:assert_zonk_stack#31052613552230#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_compile_time_owned_expressions#31052613551648#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_compile_time_planning_lowering#31052613551813#4294967295",
+      "samples": 1
+    },
+    {
+      "instruction": "unmapped-source:self_host_program_specialization_callable_generics#31052613552794#4294967295",
+      "samples": 1
+    }
+  ],
+  "regions": [
+    {
+      "region": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "samples": 121
+    },
+    {
+      "region": "intern_function#31052613552101#4294967295",
+      "samples": 92
+    },
+    {
+      "region": "self_host_imported_requirement_identity#31052613552037#4294967295",
+      "samples": 76
+    },
+    {
+      "region": "self_host_resolved_imported_callable_at#31052613552057#4294967295",
+      "samples": 66
+    },
+    {
+      "region": "bytes_byte_at#18446462603027808293#4294967295",
+      "samples": 58
+    },
+    {
+      "region": "array_iter_next#18446462654567415823#480",
+      "samples": 38
+    },
+    {
+      "region": "gc-resolver",
+      "samples": 29
+    },
+    {
+      "region": "array_iter_next_option#18446462654567415976#278",
+      "samples": 28
+    },
+    {
+      "region": "self_host_source_keyword#31052613553738#4294967295",
+      "samples": 25
+    },
+    {
+      "region": "blake3_mix#18446462826366107657#4294967295",
+      "samples": 20
+    },
+    {
+      "region": "check_type_term#31052613552977#4294967295",
+      "samples": 19
+    },
+    {
+      "region": "imported_callable#31052613551083#4294967295",
+      "samples": 19
+    },
+    {
+      "region": "intern_imported_simple#31052613552097#4294967295",
+      "samples": 16
+    },
+    {
+      "region": "simple_equal#31052613552096#4294967295",
+      "samples": 16
+    },
+    {
+      "region": "select_imported_callable#31052613551134#4294967295",
+      "samples": 15
+    },
+    {
+      "region": "constrain_pending_binary_operator#31052613551186#4294967295",
+      "samples": 14
+    },
+    {
+      "region": "imported_implementation#31052613551141#4294967295",
+      "samples": 14
+    },
+    {
+      "region": "string_as_bytes_unchecked#18446462603027808256#4294967295",
+      "samples": 13
+    },
+    {
+      "region": "self_host_resolved_imported_implementation_at#31052613552052#4294967295",
+      "samples": 12
+    },
+    {
+      "region": "set_unchecked#18446462641682513927#43",
+      "samples": 11
+    },
+    {
+      "region": "self_host_plan_top_level_callable#31052613551922#4294967295",
+      "samples": 11
+    },
+    {
+      "region": "check_type_graph#31052613552981#4294967295",
+      "samples": 11
+    },
+    {
+      "region": "first_parameter_index#31052613551625#4294967295",
+      "samples": 10
+    },
+    {
+      "region": "validate_compile_time_storage#31052613551826#4294967295",
+      "samples": 10
+    },
+    {
+      "region": "self_host_source_keyword_matches#31052613553737#4294967295",
+      "samples": 9
+    },
+    {
+      "region": "blake3_permute#18446462826366107659#4294967295",
+      "samples": 8
+    },
+    {
+      "region": "self_host_body_member_type_context#31052613551353#4294967295",
+      "samples": 8
+    },
+    {
+      "region": "checked_type_edges#31052613552980#4294967295",
+      "samples": 8
+    },
+    {
+      "region": "array_clear_suffix#18446462654567415978#483",
+      "samples": 8
+    },
+    {
+      "region": "local_callable_index_of_declaration#31052613551081#4294967295",
+      "samples": 8
+    },
+    {
+      "region": "array_clear_suffix#18446462654567415978#482",
+      "samples": 8
+    },
+    {
+      "region": "self_host_collected_method_identity#31052613552401#4294967295",
+      "samples": 7
+    },
+    {
+      "region": "bytes_builder_append_byte#18446462603027808280#4294967295",
+      "samples": 6
+    },
+    {
+      "region": "blake3_rotate_right#18446462826366107656#4294967295",
+      "samples": 6
+    },
+    {
+      "region": "intern#31052613551611#4294967295",
+      "samples": 6
+    },
+    {
+      "region": "checked_declaration_span#31052613552456#4294967295",
+      "samples": 6
+    },
+    {
+      "region": "self_host_basic_evidence_implementation_for_method#31052613551237#4294967295",
+      "samples": 6
+    },
+    {
+      "region": "imported_function_reference_candidate_matches#31052613551088#4294967295",
+      "samples": 6
+    },
+    {
+      "region": "bytes_storage_write_byte#18446462603027808290#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "wasm_bytes_load_u8x16#18446462637387547664#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "self_host_frozen_callable_kind#31052613552534#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "new_with_solver#31052613551052#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "map_insert#18446462645977481232#521",
+      "samples": 5
+    },
+    {
+      "region": "array_reserve_raw#18446462654567415845#298",
+      "samples": 5
+    },
+    {
+      "region": "import_callable#31052613552109#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "constrain_static_call#31052613551086#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "check_type_source#31052613552978#4294967295",
+      "samples": 5
+    },
+    {
+      "region": "bytes_builder_append#18446462603027808279#4294967295",
+      "samples": 4
+    },
+    {
+      "region": "self_host_tokenize#31052613553785#4294967295",
+      "samples": 4
+    },
+    {
+      "region": "array_reserve_raw#18446462654567415845#481",
+      "samples": 4
+    },
+    {
+      "region": "array_push#18446462654567415818#36",
+      "samples": 4
+    },
+    {
+      "region": "map_insert#18446462645977481232#490",
+      "samples": 4
+    },
+    {
+      "region": "self_host_body_arena_info#31052613551221#4294967295",
+      "samples": 4
+    },
+    {
+      "region": "self_host_collected_callable_identity#31052613552412#4294967295",
+      "samples": 4
+    },
+    {
+      "region": "self_host_frozen_module_interface_identity#31052613552491#4294967295",
+      "samples": 4
+    },
+    {
+      "region": "assert_variable_arrays#31052613552226#4294967295",
+      "samples": 4
+    },
+    {
+      "region": "self_host_collected_declaration_identity#31052613552399#4294967295",
+      "samples": 3
+    },
+    {
+      "region": "array_replace_backing#18446462654567415977#495",
+      "samples": 3
+    },
+    {
+      "region": "import_type#31052613552016#4294967295",
+      "samples": 3
+    },
+    {
+      "region": "span_matches#31052613552098#4294967295",
+      "samples": 3
+    },
+    {
+      "region": "map_get#18446462645977481228#339",
+      "samples": 3
+    },
+    {
+      "region": "intern_applied#31052613552100#4294967295",
+      "samples": 3
+    },
+    {
+      "region": "self_host_lowering_expression_kind#31052613552359#4294967295",
+      "samples": 3
+    },
+    {
+      "region": "map_empty#18446462645977481224#134",
+      "samples": 3
+    },
+    {
+      "region": "blake3_round#18446462826366107658#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "bytes_builder_with_capacity_raw#18446462603027808275#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "bytes_builder_finish#18446462603027808281#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "resolve_signatures#31052613553089#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "map_grow#18446462645977481231#630",
+      "samples": 2
+    },
+    {
+      "region": "bytes_equals#18446462603027808329#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "representative_type#31052613552252#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "array_push#18446462654567415818#284",
+      "samples": 2
+    },
+    {
+      "region": "self_host_lowering_builtin_name#31052613552356#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "member_projection#31052613551357#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "constrain_imported_binary_operator#31052613552049#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "check_undo_restore#31052613552985#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "import_interface#31052613552110#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "import_type#31052613552103#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "select_qualified_imported_function_reference#31052613551089#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "array_with_capacity#18446462654567415811#11",
+      "samples": 2
+    },
+    {
+      "region": "self_host_lower_nonreturning_constructions#31052613551867#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "ct_scalar_original_offset#31052613554083#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "first_method_name#31052613551628#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "self_host_primitive_type_from_name#31052613552917#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "map_insert#18446462645977481232#537",
+      "samples": 2
+    },
+    {
+      "region": "self_host_check_body_relative_index#31052613551223#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "self_host_lowering_plan_expressions#31052613552363#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "self_host_indexed_method_dispatch_identity#31052613551988#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "bytes_range_equals#18446462603027808328#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "reduce_member_type#31052613551359#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "assert_solver_boundary#31052613552972#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "self_host_parser_identifier#31052613550813#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "self_host_check_trait_impl_methods#31052613552033#4294967295",
+      "samples": 2
+    },
+    {
+      "region": "bytes_storage_chunk_count#18446462603027808285#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "bytes_storage_write_vector#18446462603027808289#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "blake3_chaining_value#18446462826366107663#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "blake3_compress#18446462826366107661#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "blake3_block_words#18446462826366107667#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_ascii_letter#31052613553726#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_scan_identifier#31052613553740#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_keyword#31052613553736#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "collect_declaration#31052613551642#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_identifier_start#31052613553733#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_insert#18446462645977481232#508",
+      "samples": 1
+    },
+    {
+      "region": "resolve_any_named_type#31052613553076#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_body_relative_index#31052613551224#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "constrain_pending_method_call#31052613551148#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "commit_imported_callable#31052613551132#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "unify_work#31052613552278#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "analyze_expressions#31052613551295#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_empty_body_name_references#31052613551496#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "implementation#31052613552066#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "assert_type_caches#31052613552228#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_grow#18446462645977481231#633",
+      "samples": 1
+    },
+    {
+      "region": "map_empty#18446462645977481224#85",
+      "samples": 1
+    },
+    {
+      "region": "expression_type#31052613551059#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_hir_span_identity#31052613551941#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_bind_raw_array_contracts#31052613552852#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_insert#18446462645977481232#548",
+      "samples": 1
+    },
+    {
+      "region": "ct_index_fresh_names#31052613553993#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_tokenizer_emit#31052613553725#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_frozen_declaration_location#31052613552535#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_find#18446462645977481227#520",
+      "samples": 1
+    },
+    {
+      "region": "self_host_collected_import_identity#31052613552415#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_validate_collected_program_bodies#31052613552767#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_query_local_sources#31052613552843#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_impl_primitive_key#31052613552002#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "schedule_expression_children#31052613551443#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "assert_undo_arrays#31052613552227#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "constrain_pending_direct_call#31052613551135#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "checked_resolved_body_type#31052613552979#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_flow_expression_is_never#31052613551269#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "array_replace_backing#18446462654567415977#627",
+      "samples": 1
+    },
+    {
+      "region": "self_host_array_pop#31052613550695#23",
+      "samples": 1
+    },
+    {
+      "region": "constrain_imported_method_call#31052613551145#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_find#18446462645977481227#598",
+      "samples": 1
+    },
+    {
+      "region": "map_find#18446462645977481227#523",
+      "samples": 1
+    },
+    {
+      "region": "array_truncate_raw#18446462654567415847#286",
+      "samples": 1
+    },
+    {
+      "region": "declaration_at#31052613552509#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "array_truncate_raw#18446462654567415847#287",
+      "samples": 1
+    },
+    {
+      "region": "finalize#31052613551205#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_query_module_has_projections#31052613551749#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_planned_expression_identity#31052613552330#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "u32_into_u8#18446462598732841626#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "bytes_builder_reserve#18446462603027808286#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "ct_scan#31052613554159#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_scan_string#31052613553781#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_utf8_width#31052613553729#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "array_push#18446462654567415818#302",
+      "samples": 1
+    },
+    {
+      "region": "self_host_parser_consume_newline#31052613550809#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "resolve_syntax#31052613553084#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "bytes_hash#18446462603027808334#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_get#18446462645977481228#310",
+      "samples": 1
+    },
+    {
+      "region": "rank#31052613552916#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_function_plan_body#31052613551911#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "copy_generic_parameters#31052613552108#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "constrain_local_function_references#31052613551094#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_lowering_flow_at#31052613552354#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "array_iter_next_option#18446462654567415976#291",
+      "samples": 1
+    },
+    {
+      "region": "self_host_collected_builtin_identity#31052613552417#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_plan_method_callable#31052613551923#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "array_with_capacity#18446462654567415811#17",
+      "samples": 1
+    },
+    {
+      "region": "get#31052613552087#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "imported_generics_require_evidence#31052613552107#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "expression_index#31052613551054#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "clear_generics#31052613552009#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "restore_undo#31052613552280#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "assert_solver_invariant#31052613552225#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "resolved_type_count#31052613552503#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_lowering_imported_builtin_recipes#31052613552383#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "offset#31052613551971#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "map_find#18446462645977481227#509",
+      "samples": 1
+    },
+    {
+      "region": "assert_zonk_stack#31052613552230#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_compile_time_owned_expressions#31052613551648#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_compile_time_planning_lowering#31052613551813#4294967295",
+      "samples": 1
+    },
+    {
+      "region": "self_host_program_specialization_callable_generics#31052613552794#4294967295",
+      "samples": 1
+    }
+  ],
+  "sites": [
+    {
+      "instruction_and_site": [
+        "call",
+        "gp-local-store"
+      ],
+      "samples": 13
+    },
+    {
+      "instruction_and_site": [
+        "local.set",
+        "vector-local-store"
+      ],
+      "samples": 5
+    },
+    {
+      "instruction_and_site": [
+        "end",
+        "gp-local-store"
+      ],
+      "samples": 5
+    },
+    {
+      "instruction_and_site": [
+        "call",
+        "gp-local-load"
+      ],
+      "samples": 4
+    },
+    {
+      "instruction_and_site": [
+        "local.set",
+        "gp-local-store"
+      ],
+      "samples": 4
+    },
+    {
+      "instruction_and_site": [
+        "if",
+        "gp-local-store"
+      ],
+      "samples": 3
+    },
+    {
+      "instruction_and_site": [
+        "call",
+        "gp-reload"
+      ],
+      "samples": 3
+    },
+    {
+      "instruction_and_site": [
+        "op.0xfd",
+        "vector-local-load"
+      ],
+      "samples": 2
+    },
+    {
+      "instruction_and_site": [
+        "br",
+        "gp-local-load"
+      ],
+      "samples": 2
+    },
+    {
+      "instruction_and_site": [
+        "unmapped-source:simple_equal#31052613552096#4294967295",
+        "gp-local-store"
+      ],
+      "samples": 2
+    },
+    {
+      "instruction_and_site": [
+        "struct.set",
+        "gp-reload"
+      ],
+      "samples": 1
+    },
+    {
+      "instruction_and_site": [
+        "ref.cast",
+        "gp-local-load"
+      ],
+      "samples": 1
+    },
+    {
+      "instruction_and_site": [
+        "local.get",
+        "gp-local-load"
+      ],
+      "samples": 1
+    },
+    {
+      "instruction_and_site": [
+        "if",
+        "gp-reload"
+      ],
+      "samples": 1
+    }
+  ],
+  "functions": [
+    {
+      "function_and_instruction": [
+        2306,
+        "struct.new"
+      ],
+      "samples": 25
+    },
+    {
+      "function_and_instruction": [
+        2294,
+        "struct.new"
+      ],
+      "samples": 21
+    },
+    {
+      "function_and_instruction": [
+        465,
+        "struct.new"
+      ],
+      "samples": 18
+    },
+    {
+      "function_and_instruction": [
+        3640,
+        "struct.new"
+      ],
+      "samples": 8
+    },
+    {
+      "function_and_instruction": [
+        2293,
+        "local.set"
+      ],
+      "samples": 6
+    },
+    {
+      "function_and_instruction": [
+        1064,
+        "local.set"
+      ],
+      "samples": 5
+    },
+    {
+      "function_and_instruction": [
+        2985,
+        "struct.new"
+      ],
+      "samples": 5
+    },
+    {
+      "function_and_instruction": [
+        424,
+        "ref.cast"
+      ],
+      "samples": 5
+    },
+    {
+      "function_and_instruction": [
+        1017,
+        "call"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        401,
+        "array.set"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        1064,
+        "op.0xfd"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        868,
+        "struct.new"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        435,
+        "end"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        492,
+        "ref.cast"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        2304,
+        "struct.new"
+      ],
+      "samples": 4
+    },
+    {
+      "function_and_instruction": [
+        400,
+        "ref.cast"
+      ],
+      "samples": 3
+    },
+    {
+      "function_and_instruction": [
+        1064,
+        "ref.cast"
+      ],
+      "samples": 3
+    },
+    {
+      "function_and_instruction": [
+        1018,
+        "call"
+      ],
+      "samples": 3
+    },
+    {
+      "function_and_instruction": [
+        1137,
+        "call"
+      ],
+      "samples": 3
+    },
+    {
+      "function_and_instruction": [
+        466,
+        "ref.cast"
+      ],
+      "samples": 3
+    },
+    {
+      "function_and_instruction": [
+        400,
+        "end"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        3639,
+        "call"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        492,
+        "struct.set"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        1064,
+        "call"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        2547,
+        "struct.new"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        2982,
+        "struct.new"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        1064,
+        "end"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        2317,
+        "if"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        2596,
+        "struct.new"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        495,
+        "array.copy"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        424,
+        "if"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        2306,
+        "ref.cast"
+      ],
+      "samples": 2
+    },
+    {
+      "function_and_instruction": [
+        340,
+        "op.0x76"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1062,
+        "op.0xfd"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1062,
+        "array.set"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1055,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1062,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1022,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1028,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3628,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1054,
+        "br"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1054,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3682,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1056,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3638,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        322,
+        "op.0x46"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3635,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2138,
+        "br"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        335,
+        "op.0x49"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1761,
+        "ref.test"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1623,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2986,
+        "local.set"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1764,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2982,
+        "local.set"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        892,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        494,
+        "if"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1858,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2308,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        538,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2306,
+        "local.set"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        493,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2631,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1658,
+        "if"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1658,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2546,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        491,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1079,
+        "if"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2982,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2322,
+        "br"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2318,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1766,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        892,
+        "local.get"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2322,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        435,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        968,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        465,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1571,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2294,
+        "local.set"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1667,
+        "if"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2500,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1063,
+        "end"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3682,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3631,
+        "if"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1289,
+        "ref.test"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3059,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1085,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        3064,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2942,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        908,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1137,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2983,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        572,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2554,
+        "struct.new"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2317,
+        "ref.test"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2406,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1667,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        495,
+        "ref.cast"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        1578,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2322,
+        "local.set"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        474,
+        "if"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        2324,
+        "call"
+      ],
+      "samples": 1
+    },
+    {
+      "function_and_instruction": [
+        493,
+        "call"
+      ],
+      "samples": 1
+    }
+  ]
+}

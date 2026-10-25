@@ -1,0 +1,29 @@
+{
+  "label": "build-stack-profile-host",
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=local-perf-profile-e2fe43ffc -X main.workerPluginIdentity=local-perf-profile",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/stack-profile-host",
+    "."
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/profile-host-source",
+  "seconds": 4.225268456999856,
+  "user_seconds": 20.152704,
+  "system_seconds": 1.149526,
+  "peak_rss_kib": 596136,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    1.142578125,
+    2.0927734375,
+    2.3759765625
+  ],
+  "load_end": [
+    2.89306640625,
+    2.43994140625,
+    2.48681640625
+  ]
+}

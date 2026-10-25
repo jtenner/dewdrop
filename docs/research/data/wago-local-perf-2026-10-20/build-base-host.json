@@ -1,0 +1,29 @@
+{
+  "label": "build-base-host",
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=local-perf-7997c86c36e0 -X main.workerPluginIdentity=0efaa987c523dfbcc40a21dc14bda7ecd509d168c51479a6231a32b5e50a4b01",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-host",
+    "."
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-host-source",
+  "seconds": 4.464356939999561,
+  "user_seconds": 21.554245,
+  "system_seconds": 1.228228,
+  "peak_rss_kib": 579016,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.580078125,
+    1.99609375,
+    2.30078125
+  ],
+  "load_end": [
+    2.580078125,
+    1.99609375,
+    2.30078125
+  ]
+}

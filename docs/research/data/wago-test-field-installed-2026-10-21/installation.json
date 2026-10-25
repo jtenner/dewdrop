@@ -1,0 +1,48 @@
+{
+  "label": "local-gc-073b2f618",
+  "source_commit": "073b2f61880e965d3c33ba83e32f72e9391a845d",
+  "source_branch": "dewdrop/local-gc-perf-20261020",
+  "manager": "/home/dev/.local/bin/wago",
+  "runtime": "/home/dev/.local/share/wago/versions/local-gc-073b2f618/standard/normal/wago-runtime",
+  "manager_sha256": "9a74e6f79882b40fe531ca68c0120f4841f25a91f71dc1616334859dec8ac42d",
+  "runtime_sha256": "21f0a682b00c524bd5f7b175244615a97e685aae0f780b8e8da57d21918a315c",
+  "previous_manager_sha256": "2ff4ce7d53dc68e9c000541861dbf662b25a93bfbec28dd35c4739a6f69f18f1",
+  "builds": [
+    {
+      "name": "wago",
+      "command": [
+        "go",
+        "build",
+        "-trimpath",
+        "-ldflags=-s -w -X main.version=local-gc-073b2f618",
+        "-o",
+        "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-073b2f618/wago",
+        "./cli/wago"
+      ],
+      "seconds": 6.737475057998381,
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "wago-runtime",
+      "command": [
+        "go",
+        "build",
+        "-trimpath",
+        "-tags",
+        "wago_runtime",
+        "-ldflags=-s -w -X main.version=local-gc-073b2f618",
+        "-o",
+        "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-073b2f618/wago-runtime",
+        "./cli/wago"
+      ],
+      "seconds": 6.6953024190006545,
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "checks": 66,
+  "initial_harness_expectation_correction": "CLI correctly prints signed i32 -2; initial harness expected unsigned4294967294. Raw first failure retained in verification-initial-unsigned-display-expectation.json and test-field/install.log. Final66checks pass; no runtime code change."
+}

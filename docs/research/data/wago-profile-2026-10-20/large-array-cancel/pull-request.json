@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/wago-org/wago/pull/987",
+  "head": "3da9b38d6500d600e16e7d64c7f9d0aaf695cc7d",
+  "base": "ed76fd17957fd472b92a69d2fa3f5f63680f2cd5",
+  "branch": "perf/native-large-array-cancel"
+}

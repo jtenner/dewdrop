@@ -1,0 +1,42 @@
+{
+  "label": "current-main-distances",
+  "mode": "serial",
+  "seconds": 120.57627970297472,
+  "user_seconds": 122.050003,
+  "system_seconds": 0.528879,
+  "rss_kib": 1105952,
+  "exit": 0,
+  "command": [
+    "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/host-counters",
+    "run",
+    "-p8",
+    "--core",
+    "3",
+    "--local",
+    "--locked",
+    "--no-input",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+    ".tmp/wago-profile-2026-10-20/request.bin"
+  ],
+  "host_sha256": "fa97260ef9d66d71eef8b993635255f382a7b4a2a0377afcd9aecceb3756c1f0",
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+  "environment": {
+    "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/counter-home",
+    "DEW_TRANSFORM_WORKERS": "0",
+    "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+  },
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "loadavg": [
+    3.7236328125,
+    3.6884765625,
+    3.74072265625
+  ],
+  "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+  "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+  "validated_main": 42
+}

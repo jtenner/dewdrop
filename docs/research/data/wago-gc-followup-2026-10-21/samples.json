@@ -1,0 +1,497 @@
+[
+  {
+    "label": "numeric-control-1",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/safety-current-host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 55.0888758880028,
+    "user_seconds": 55.026519,
+    "system_seconds": 0.42825599999999997,
+    "peak_rss_kib": 1134332,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      1.7646484375,
+      4.2392578125,
+      4.9326171875
+    ],
+    "load_end": [
+      4.2109375,
+      4.54296875,
+      4.99755859375
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-control-1-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "control",
+    "gc_native_root_admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 68809,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438
+    }
+  },
+  {
+    "label": "numeric-candidate-1",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-leaf-host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 46.0165060190011,
+    "user_seconds": 46.232966,
+    "system_seconds": 0.292178,
+    "peak_rss_kib": 1141428,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      4.2109375,
+      4.54296875,
+      4.99755859375
+    ],
+    "load_end": [
+      2.666015625,
+      4.0830078125,
+      4.81689453125
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-candidate-1-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "candidate",
+    "gc_native_root_admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 56923,
+      "MaximumRoots": 77,
+      "MetadataBytes": 1960164
+    }
+  },
+  {
+    "label": "numeric-candidate-2",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-leaf-host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 45.915910607000114,
+    "user_seconds": 46.095799,
+    "system_seconds": 0.316562,
+    "peak_rss_kib": 1037988,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.666015625,
+      4.0830078125,
+      4.81689453125
+    ],
+    "load_end": [
+      2.0947265625,
+      3.74169921875,
+      4.666015625
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-candidate-2-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "candidate",
+    "gc_native_root_admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 56923,
+      "MaximumRoots": 77,
+      "MetadataBytes": 1960164
+    }
+  },
+  {
+    "label": "numeric-control-2",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/safety-current-host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 47.116836493001756,
+    "user_seconds": 47.297865,
+    "system_seconds": 0.308714,
+    "peak_rss_kib": 1089892,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.0947265625,
+      3.74169921875,
+      4.666015625
+    ],
+    "load_end": [
+      2.08642578125,
+      3.51123046875,
+      4.54296875
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-control-2-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "control",
+    "gc_native_root_admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 68809,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438
+    }
+  },
+  {
+    "label": "numeric-v8-1",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "node",
+      "--stack-size=65500",
+      "tools/run-dew-facet.mjs",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 4.017356202002702,
+    "user_seconds": 4.62116,
+    "system_seconds": 0.26872399999999996,
+    "peak_rss_kib": 492828,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.08642578125,
+      3.51123046875,
+      4.54296875
+    ],
+    "load_end": [
+      2.23974609375,
+      3.51953125,
+      4.5400390625
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-v8-1-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "v8"
+  },
+  {
+    "label": "numeric-v8-2",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "node",
+      "--stack-size=65500",
+      "tools/run-dew-facet.mjs",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 4.024900582997361,
+    "user_seconds": 4.70577,
+    "system_seconds": 0.219354,
+    "peak_rss_kib": 484668,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.23974609375,
+      3.51953125,
+      4.5400390625
+    ],
+    "load_end": [
+      2.22021484375,
+      3.494140625,
+      4.5263671875
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-v8-2-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "v8"
+  },
+  {
+    "label": "numeric-v8-3",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "node",
+      "--stack-size=65500",
+      "tools/run-dew-facet.mjs",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 3.9934332749980967,
+    "user_seconds": 4.644213,
+    "system_seconds": 0.251011,
+    "peak_rss_kib": 482900,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.22021484375,
+      3.494140625,
+      4.5263671875
+    ],
+    "load_end": [
+      2.52294921875,
+      3.5361328125,
+      4.53466796875
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-v8-3-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "v8"
+  },
+  {
+    "label": "numeric-control-3",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/safety-current-host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 47.499022596999566,
+    "user_seconds": 47.687334,
+    "system_seconds": 0.332128,
+    "peak_rss_kib": 1135588,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      1.423828125,
+      3.0810546875,
+      4.326171875
+    ],
+    "load_end": [
+      1.69677734375,
+      2.89892578125,
+      4.19677734375
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-control-3-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "control",
+    "gc_native_root_admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 68809,
+      "MaximumRoots": 77,
+      "MetadataBytes": 2291438
+    }
+  },
+  {
+    "label": "numeric-candidate-3",
+    "command": [
+      "taskset",
+      "-c",
+      "12,14",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-leaf-host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-local-perf-2026-10-20/request.bin"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop",
+    "seconds": 45.686766861999786,
+    "user_seconds": 45.905795,
+    "system_seconds": 0.297158,
+    "peak_rss_kib": 1136764,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      1.69677734375,
+      2.89892578125,
+      4.19677734375
+    ],
+    "load_end": [
+      1.60595703125,
+      2.69677734375,
+      4.06494140625
+    ],
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/numeric-candidate-3-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "WAGO_AMD64_GC_STRUCT_BATCH": "",
+      "DEW_WAGO_NATIVE_MAP": "",
+      "DEW_WAGO_PROFILE_DIR": ""
+    },
+    "output_wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output_cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+    "native_cache": "cold",
+    "engine": "candidate",
+    "gc_native_root_admission": {
+      "Required": true,
+      "Exact": true,
+      "Reason": "",
+      "Safepoints": 25794,
+      "Callsites": 56923,
+      "MaximumRoots": 77,
+      "MetadataBytes": 1960164
+    }
+  }
+]

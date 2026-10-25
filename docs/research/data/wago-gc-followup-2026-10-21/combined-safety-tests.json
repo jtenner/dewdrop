@@ -1,0 +1,31 @@
+[
+  {
+    "name": "normal",
+    "command": [
+      "go",
+      "test",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-count=1"
+    ],
+    "seconds": 43.93182032600089,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-safety-normal.log"
+  },
+  {
+    "name": "checked",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_regalloccheck,wago_codegenstats",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-count=1"
+    ],
+    "seconds": 43.93873492399871,
+    "exit": 1,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-safety-checked.log"
+  }
+]

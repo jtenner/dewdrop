@@ -1,0 +1,18 @@
+{
+  "name": "wago-runtime",
+  "command": [
+    "go",
+    "build",
+    "-trimpath",
+    "-tags",
+    "wago_runtime",
+    "-ldflags=-s -w -X main.version=local-gc-61881e2d0",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/install-61881e2d0/wago-runtime",
+    "./cli/wago"
+  ],
+  "seconds": 5.36709600299946,
+  "exit": 0,
+  "stdout": "",
+  "stderr": ""
+}

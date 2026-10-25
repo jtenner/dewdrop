@@ -1,0 +1,30 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "12,14",
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/fresh-whole-gc-profile/profile-host",
+    "run",
+    "-p8",
+    "--core",
+    "3",
+    "--local",
+    "--locked",
+    "--no-input",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+    ".tmp/wago-local-perf-2026-10-20/request.bin"
+  ],
+  "seconds": 35.608510474005016,
+  "user_seconds": 35.856774,
+  "system_seconds": 0.224013,
+  "peak_rss_kib": 1247076,
+  "exit": 0,
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+  "host_sha256": "3905162be7a36b531557dca77105616294ee1ec7d0f7d7d059251d6829d3863d",
+  "method": "Diagnostic leaf-PC probes plus Go CPU profile; source/site maps only; no per-helper counters. Not a matched runtime benchmark."
+}

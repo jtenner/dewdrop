@@ -1,0 +1,30 @@
+{
+  "label": "allocation-mix-build",
+  "command": [
+    "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+    "build",
+    "--bare",
+    "--offline",
+    "--no-input",
+    "--output",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wasm"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+  "seconds": 0.004410026000186917,
+  "user_seconds": 0.003397,
+  "system_seconds": 0.0,
+  "peak_rss_kib": 18976,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.0244140625,
+    3.7900390625,
+    3.46044921875
+  ],
+  "load_end": [
+    2.0244140625,
+    3.7900390625,
+    3.46044921875
+  ]
+}

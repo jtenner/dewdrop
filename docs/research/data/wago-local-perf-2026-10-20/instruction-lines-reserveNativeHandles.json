@@ -1,0 +1,28 @@
+{
+  "label": "instruction-lines-reserveNativeHandles",
+  "command": [
+    "go",
+    "tool",
+    "pprof",
+    "-list=reserveNativeHandles",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/helper-counter-host",
+    "/home/dev/Projects/dewdrop/docs/research/data/wago-local-perf-2026-10-20/helper-counter-default/cpu.pprof"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 0.06047997099994973,
+  "user_seconds": 0.133985,
+  "system_seconds": 0.070522,
+  "peak_rss_kib": 35612,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    1.12158203125,
+    2.86962890625,
+    3.15869140625
+  ],
+  "load_end": [
+    1.12158203125,
+    2.86962890625,
+    3.15869140625
+  ]
+}

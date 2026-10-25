@@ -1,0 +1,110 @@
+{
+  "duration_api_ms": 292691,
+  "stop_reason": "end_turn",
+  "session_id": "88eba4fb-de65-4389-a2f8-e4f886782a4c",
+  "total_cost_usd": 2.4484512,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 95357,
+    "cache_read_input_tokens": 649,
+    "output_tokens": 11176,
+    "output_tokens_details": {
+      "thinking_tokens": 8002
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 95357,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 11176,
+        "cache_read_input_tokens": 649,
+        "cache_creation_input_tokens": 95357,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 95357
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-haiku-5-5": {
+      "inputTokens": 2286,
+      "outputTokens": 244,
+      "thinkingTokens": 225,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.0003506,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000
+    },
+    "claude-opus-5-5": {
+      "inputTokens": 62,
+      "outputTokens": 25907,
+      "thinkingTokens": 16608,
+      "cacheReadInputTokens": 1808283,
+      "cacheCreationInputTokens": 196007,
+      "webSearchRequests": 0,
+      "costUSD": 2.4481006,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "safety_stops": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "# Closed native interval generation: research report\n\nThis is research only. I made no edits and ran no tests or builds. All source is from `.tmp/wago-test-field-qualification`. I make no claim about hit rate or speed.\n\n## Answer\n\n**There is no single runtime entry or resume hook.** A runtime generation that only the Go\u2192native stubs increment is not sufficient across cross-instance calls.\n\nThe cheapest universal seam is in the **compiler, not the runtime**. Increment a per-instance interval serial at three places:\n\n- every function prologue\n- after every CALL returns\n- at every native GC allocation or GC store\n\nAstra's overlap finding makes GC stores interval ends. With that rule, the interval becomes \"call-free, allocation-free, GC-store-free region.\" A static, frame-local reuse of a checked address may be enough in that region, with no ABI change. Measure this before you build a runtime generation.\n\n## Proved from source\n\n1. **Go-side wrappers are not common.**\n   - `native_scheduler.go:20-49` wraps `enterNativeRaw` and `resumeNativeRaw`.\n   - Callers are spread over many files: `engine.go:186,207,225,540,548,622,630`, `engine_hostbounded.go:68,102,157,177`, `engine_hostmulti.go:50,73`, `prepared_bounded_helper.go:35,57`, `zz_engine_hostfixed.go`, `engine_hostview.go`, `zz_engine_hostfixedview.go`, and `sigtrap_linux_amd64.go:241`.\n   - The bounded variants skip `entersyscall`. They still reach the same raw stubs.\n\n2. **The raw amd64 stubs are a closed but plural set.** Each one transfers control into guest code:\n   - `trampoline_amd64.s:enterNativeRaw`\n   - `resume_amd64.s:resumeNativeRaw`\n   - the nine `engine_int_amd64.s` entries (Int, Pair, Wide, Oct, Float, FloatOct, Mixed, IntPreboundContext, IntCall), which do `CALL R11` themselves\n   - `inline_host_amd64.s:inlineHostEnterForeign` and `inlineHostResumeForeign`\n   - the inline integer and multi variants\n\n   Inline host callbacks run Go (`CALL R9`, line 38) and then resume through `inlineHostResumeForeign`. That path **bypasses `resumeNativeRaw`**. arm64 and TinyGo have separate stubs (`trampoline_tinygo_*.go`, `resume_arm64.s`, `engine_int_arm64.s`).\n\n3. **Some GC fast paths exclude inline hosts.**\n   - `prepared_function.go:481` (`tryInvokeScalarHost1`) and `host_execution.go:969,1024` reject `in.gc != nil`.\n   - `gcPrepared` requires `NumImports == 0` (`prepared_function.go:279`).\n   - **Not proved:** that every inline or direct-int path is closed to GC instances. For example, an instance with an imported or dynamic GC domain can have `in.gc == nil` (`reference_store.go:1314,1455`). Treat these paths as reachable.\n\n4. **The bounded helper runs Go and then resumes.** `CallBoundedHelper` calls `host(...)` and then `resumeNativeBounded` (`prepared_bounded_helper.go:44,57`). This is covered by the resume stub.\n\n5. **The native scalar leaf needs no boundary.** `native_leaf_amd64.go` copies only proven register arithmetic. It has no memory access and no Go code.\n\n6. **Native code writes handle entries and headers.**\n   - Struct allocation writes the header at R11 (`gc_direct.go:1906-1913`). It publishes entry offset, size, card slot and space at 1934-1941.\n   - Array allocation does the same at 1573-1596.\n   - Dead-struct charge stores at 2059.\n   - Barrier and card stubs are at 2635 and 2780. Payload stores are `emitDirectGCStructSet:3019` and `emitDirectGCArraySet:3187`.\n\n   So native code **does** mutate handle entries, not only payloads and cards. The premise \"native code does not change handle entries\" is false for allocation.\n\n7. **There is no proved free ABI space.**\n   - Basedata offsets 64\u2013288 are all assigned. `ActualLinMemByteSize64Offset` is 288, and `BasedataSize` is 288 (`abi/basedata.go`).\n   - `NativeCollectorView` ends at 200, and `ValidateNativeABI` checks its size.\n   - `NativeInstanceView` has a native prefix of 32 bytes, with Go `keepTypes` at offset 32.\n   - Any new field is a native ABI change and needs `NativeABIVersion` increased.\n   - `RefreshGeneration` (offset 104) is not usable. Allocation and card refreshes increment it, and Astra showed that `ForcePromote` can miss it.\n\n8. **Lock scope.** Host callbacks release all lease domains (`suspendGCInvocation`, `reference_store.go:1460-1490`). Go code in a callback can therefore mutate any collector in the lease, not only the callee's collector.\n\n## Disproof: a runtime stub generation is not enough\n\nExample:\n\n1. Instance A calls instance B natively. Both have collectors in the lease.\n2. B calls a host. Go corrupts A's metadata.\n3. B resumes through a stub. That stub sees `BX` = B's basedata, so it can only increment B's counter (or the collector reached from B).\n4. B returns to A by a native RET. No stub runs.\n5. A's cached slot still matches A's generation. This is a false hit.\n\nThere are only two runtime fixes:\n\n- **A process-global atomic counter.** This needs `LOCK XADD` on every entry and resume, which can cause cache-line contention between parallel workers. I did not check if Dewdrop's isolated workers are threads or processes.\n- **Increment every collector in the lease at each stub.** This is not cheap in asm.\n\nA non-atomic shared counter is **unsafe**: a delayed write can lower the value, so an old generation can appear again.\n\n## Compiler seam (proposed)\n\nGuest code is reached only in two ways:\n\n- at a function entry, through the int stubs, `enterNativeRaw` or tail calls\n- at the return address after a CALL, through `resumeNativeRaw` (\"RET into wasm after the host CALL\") or `inlineHostResumeForeign`\n\nSo a per-instance serial needs only three kinds of increment:\n\n- **(a)** in each prologue\n- **(b)** after each call returns, including helper, host, import, cross-instance and internal calls\n- **(c)** at each native GC allocation or GC store\n\nWith this rule, each instance compares only its own serial. No coordination between instances is needed, because Go or foreign code that runs between two reads in A must be behind a call in A.\n\n**Not proved for this seam:**\n\n- exception-handling catch landings (they must also increment)\n- whether interrupt or signal paths ever resume guest code other than as an exit\n- whether two threads can run native code in the same instance at the same time. Astra noted that a parked callback allows another invocation. Slot updates must stay under the native lease of that instance.\n- custom instruction maps (exclude them)\n- arm64 and TinyGo\n\n**Residual risk:** if private corruption can set a space `Base` into linear memory, table storage or global storage, then normal Wasm stores can also overwrite a validated header. In that case, all stores must end the interval. Root must decide if this case is in scope. I did not find a check that rejects it.\n\n## Cheapest counter-only prototype\n\nThis is diagnostic-only. There is no cache use and no change to guest semantics.\n\n1. Use Astra's family: successful fused final-struct field resolutions. Keep the dense site IDs and the per-instance table. Always run the original resolver. Never dereference a saved address.\n2. Add one u64 interval serial in the table header.\n3. Emitted code increments the serial at:\n   - **(a)** every prologue\n   - **(b)** every post-call return point\n   - **(c1)** every native GC allocation, publish, card store or payload store\n   - **(c2), separate variant:** every linear-memory, table or global store\n4. Per site, on a normal resolver return, record ref, address and serial. Count:\n   - resolutions\n   - same-ref, same-address, same-serial (potential interval hit)\n   - same-ref, same-address, different serial (lost to an interval end)\n   - same-ref, same-serial, but a different address or a resolver failure (**must be zero**; any nonzero value disproves the design)\n5. Count serial increments by kind (prologue, call, allocation, GC store, other store). This shows the instrumentation cost.\n6. Use saturating counters with an overflow flag. Read them only when execution is quiescent.\n7. Reject codec serialization of instrumented code.\n\nIf \"same-serial\" hits are rare compared to \"lost to interval end,\" then the runtime generation design has little value. A static frame-local reuse inside the same regions should show the same opportunity with no ABI change.\n\n## Blocker, in one sentence\n\nNo single runtime hook exists: amd64 alone has at least 13 entry/resume stubs, plus arm64 and TinyGo, and stub-only generations fail across native cross-instance returns, so universality needs the compiler-side post-call/prologue/GC-store increments described above.",
+  "ttft_ms": 99859,
+  "type": "result",
+  "duration_ms": 122833,
+  "uuid": "483d095b-f286-4ea7-81e9-5ac0233f073f",
+  "ttft_stream_ms": 1673,
+  "time_to_request_ms": 395,
+  "first_content_frame_ms": 1673,
+  "queued_turn_count": 0,
+  "result_index": 0
+}

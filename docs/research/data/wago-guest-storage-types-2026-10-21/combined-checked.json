@@ -1,0 +1,12 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-p",
+    "2",
+    "-tags=wago_regalloccheck",
+    "./src/wago"
+  ],
+  "seconds": 52.12496774099418,
+  "exit": 0
+}

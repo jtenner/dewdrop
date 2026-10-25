@@ -1,0 +1,23 @@
+{
+  "command": [
+    "go",
+    "test",
+    "./src/core/compiler/backend/railshot/amd64",
+    "./src/core/runtime/gc/native",
+    "./src/wago",
+    "./cli/internal/settings"
+  ],
+  "seconds": 45.75569758200072,
+  "exit": 0,
+  "source_commit": "34c82f912eebafade2f47793cb6850fd6a0e2c35",
+  "measured_production_files_equal": [
+    "src/core/compiler/backend/railshot/amd64/call.go",
+    "src/core/compiler/backend/railshot/amd64/compile.go",
+    "src/core/compiler/backend/railshot/amd64/gc_numeric_inline.go",
+    "src/core/compiler/backend/railshot/amd64/direct_forwarder.go",
+    "src/core/compiler/backend/railshot/amd64/knobs.go",
+    "src/core/compiler/optimization/catalog.go",
+    "schema.json",
+    "src/core/runtime/gc/native/collect.go"
+  ]
+}

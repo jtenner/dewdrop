@@ -1,0 +1,20 @@
+Total: 117.62s
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeLargeArrayAllocation in /home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/profile/wago/src/core/runtime/gc/native/native_alloc.go
+    13.30s     13.30s (flat, cum) 11.31% of Total
+         .          .    297:func (c *Collector) discardNativeLargeArrayAllocation() {
+         .          .    298:	if c == nil {
+         .          .    299:		return
+         .          .    300:	}
+         .          .    301:	s := &c.nativeLargeArrayAlloc
+         .          .    302:	unused := s.Count != 0 && s.Cursor == 0 && s.Handle != 0 && int(s.Handle) < len(c.handles) && c.handles[s.Handle].space == spaceFree
+         .          .    303:	if unused {
+         .          .    304:		c.freeHandles = append(c.freeHandles, s.Handle)
+     2.70s      2.70s    305:		for i, h := range c.nurseryHandles {
+    10.59s     10.59s    306:			if h == s.Handle {
+         .          .    307:				copy(c.nurseryHandles[i:], c.nurseryHandles[i+1:])
+      10ms       10ms    308:				c.nurseryHandles = c.nurseryHandles[:len(c.nurseryHandles)-1]
+         .          .    309:				break
+         .          .    310:			}
+         .          .    311:		}
+         .          .    312:		space := spaceKind((s.ChunkBump >> 16) & 0xff)
+         .          .    313:		if space == spaceNursery {

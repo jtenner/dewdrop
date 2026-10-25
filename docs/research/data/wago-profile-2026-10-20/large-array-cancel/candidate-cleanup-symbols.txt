@@ -1,0 +1,2 @@
+  5b7c00        805 T github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeLargeArrayAllocation
+  5b7900        765 T github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).prepareNativeLargeArrayAllocation

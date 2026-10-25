@@ -1,0 +1,18 @@
+{
+  "command": [
+    "codex",
+    "exec",
+    "--model",
+    "gpt-6-sol",
+    "--cyber-access-program",
+    "daybreak_blue",
+    "--sandbox",
+    "read-only",
+    "--json",
+    "-C",
+    "/home/dev/Projects/dewdrop/.tmp/wago-shared-getter",
+    "--output-last-message",
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/daybreak-shared-getter/review.md",
+    "Use actual Daybreak Blue for code REVIEW, read only, no edits/builds/tests/benchmarks/subagents. Scope uncommitted production delta versus073b2f618: src/core/compiler/backend/railshot/amd64/gc_shared_getter.go, call.go, compile.go. Tests gc_shared_getter* and fixture gc-shared-getter. Astra recommended module-shared checked resolver getter specialization after forwarding, replacing held per-caller-stub getter that regressed4.7%. New shape: final nonexact cast/get GP/ref32 only, no locals/fullbody32B, cap16/caller. Skip custom/EH/inline/interval/vector. Consume one original source mask but no native frame/safepoint; materialize older traps+flush live operands without prepareGCFrameCallsite/spillLocalsForCall/storePinnedGlobals. Existing module shared resolver preserves actual persistent GP/FPpins, returnsRAXbase/RDXstatus. High32checked first, nullcast mapping maintained, ambiguous combinedCastFailure uses unknownPC in getter trace; nullable null getPC; profileinlineorigin set. Prior standard private ref ABI remains baseline073. Need concrete correctness issues with path/line, esp operand root liveness and mask consumption, pin leases/dirty globals on failure, high32/ref-domain behavior, call selection omitted-standalone guard after forwarding, profiling/runtime trap function and PC attribution, shape/result classification, size budgets, source codec reuse. No performance claims; no PR yet. Report no concrete findings if so plus critical test gaps. Current tests may still be building; do not run anything heavy."
+  ]
+}

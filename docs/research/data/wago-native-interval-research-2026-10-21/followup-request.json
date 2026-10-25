@@ -1,0 +1,29 @@
+{
+  "command": [
+    "claude",
+    "-p",
+    "--resume",
+    "88eba4fb-de65-4389-a2f8-e4f886782a4c",
+    "--model",
+    "opus",
+    "--effort",
+    "high",
+    "--permission-mode",
+    "plan",
+    "--permission-prompts",
+    "none",
+    "--tools",
+    "",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-budget-usd",
+    "3",
+    "--max-turns",
+    "2",
+    "Stop all tool use now. Complete your independent research report using only the source you already read. Under1100words. State what is proved and what is not. Identify common raw entry/resume seams, direct/prepared/private/bounded bypass coverage, cross-instance generation ownership, and native heap allocation/store boundaries. Astra found malformed overlapping allocator/handle data can let a native allocation or payload store overwrite an already-validated header within a Go/native interval, so a cache must also invalidate on native GC mutations or restrict to a statically proved read-only interval; do not assume private metadata corruption cannot happen. No test edits allowed. Give cheapest safe counter-only first prototype and any disproof/blocker. Do not claim a measured cache hit rate or speedup. No more source reads, tests/builds/benchmarks/edits/network/subagents. Return conclusions now; incomplete evidence should be explicit."
+  ]
+}

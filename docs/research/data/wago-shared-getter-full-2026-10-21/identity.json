@@ -1,0 +1,55 @@
+{
+  "common_stack_commit": "073b2f61880e965d3c33ba83e32f72e9391a845d",
+  "control_build": {
+    "variant": "control",
+    "source_commit": "073b2f61880e965d3c33ba83e32f72e9391a845d",
+    "candidate_production_delta": {},
+    "command": [
+      "go",
+      "build",
+      "-mod=mod",
+      "-ldflags=-X main.runtimePatchIdentity=shared-getter-control -X main.workerPluginIdentity=shared-getter-control",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/shared-getter-control-host",
+      "."
+    ],
+    "seconds": 8.090031259998796,
+    "total_prepare_seconds": 8.973727593001968,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "managed_patch_sha256": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+    "binary_sha256": "5b4b74233dea69d1de69a063c7065b324cdff175f74a407abf9cf396c2644c31"
+  },
+  "candidate_build": {
+    "variant": "candidate",
+    "source_commit": "073b2f61880e965d3c33ba83e32f72e9391a845d",
+    "candidate_production_delta": {
+      "src/core/compiler/backend/railshot/amd64/call.go": "2e85596e957468dd7a4b6baa0cd0d84c660c57982e6af004229447cffc308f16",
+      "src/core/compiler/backend/railshot/amd64/compile.go": "e9301b7b86fb9319df3ae91b5fbf5fff604b49442e9f33d4eeddc5931a8a724b",
+      "src/core/compiler/backend/railshot/amd64/gc_shared_getter.go": "51c22ecc7850762171d56e518d6952d796db56df71c9c76b86cde0ffd07e127b"
+    },
+    "command": [
+      "go",
+      "build",
+      "-mod=mod",
+      "-ldflags=-X main.runtimePatchIdentity=shared-getter-candidate -X main.workerPluginIdentity=shared-getter-candidate",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/shared-getter-candidate-host",
+      "."
+    ],
+    "seconds": 8.746499549000873,
+    "total_prepare_seconds": 9.634367329999804,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "managed_patch_sha256": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+    "binary_sha256": "9c5ded1cbf5e9f62c6cfa31f82048db2db0764d6f6e39e7f29ebccd49f6c702e"
+  },
+  "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+  "request_sha256": "077b0ff0271706cc3034f3e06c7a228f227c49aeec7786d21373b2072af89c72",
+  "affinity": "12,14",
+  "GOMAXPROCS": 2,
+  "v8_reference_seconds": 4.0,
+  "method": "Three serial balanced pairs; fresh native/result caches; normal diagnostic-free binaries. Same installed GC safety/performance stack; only candidate bounded module-shared checked getter specialization. All physical/type/root checks remain. No concurrent task-owned builds/tests/benchmarks. Known V8 four-second result; no new V8 run."
+}

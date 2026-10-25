@@ -1,0 +1,33 @@
+[
+  {
+    "name": "checked-required",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_regalloccheck",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-count=1"
+    ],
+    "seconds": 42.19141856300121,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-safety-checked-required.log"
+  },
+  {
+    "name": "checked-safety-diagnostics",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_regalloccheck,wago_codegenstats",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/wago",
+      "-run",
+      "GCAbstractArray|GCGeneralArrayLen|GCFinalResolverTrapPreservesGlobalPins",
+      "-count=1"
+    ],
+    "seconds": 0.5701051860014559,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-safety-checked-safety-diagnostics.log"
+  }
+]

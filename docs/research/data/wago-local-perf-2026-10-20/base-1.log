@@ -1,0 +1,2 @@
+Wago 7997c86c36e0; patch local-perf-7997c86c36e0; workers 0efaa987c523dfbcc40a21dc14bda7ecd509d168c51479a6231a32b5e50a4b01; Facet v0.1.0; locked project bindings
+self-host smoke: request path is not relative

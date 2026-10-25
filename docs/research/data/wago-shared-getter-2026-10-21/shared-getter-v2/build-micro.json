@@ -1,0 +1,40 @@
+[
+  {
+    "variant": "control",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-c",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/shared-getter-v2/control.test",
+      "-overlay",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/shared-getter-v2/control-overlay.json",
+      "./src/wago"
+    ],
+    "seconds": 23.20468663200154,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "sha256": "6ec2b1fc9df1ad2171db05b8724e5ec050b937eba88a3ac05ffb5cd5657afc60"
+  },
+  {
+    "variant": "candidate",
+    "command": [
+      "go",
+      "test",
+      "-p",
+      "2",
+      "-c",
+      "-o",
+      "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/shared-getter-v2/candidate.test",
+      "./src/wago"
+    ],
+    "seconds": 24.888666248996742,
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "sha256": "c2b8159dddbbc4d478efd626e105552f36a09c332f526ccc533bf0268c12339e"
+  }
+]

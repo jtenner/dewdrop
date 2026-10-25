@@ -1,0 +1,122 @@
+[
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "7e6927f68c330a1fa492219194a4a6a5f11fddb3",
+    "local_commit": "6b2e392109fd597262433bff0397e5aac07060be"
+  },
+  {
+    "pr": 1005,
+    "url": "https://github.com/wago-org/wago/pull/1005",
+    "public_commit": "2a2c75b4b40975581ae250affc43b5cc5955d0a3",
+    "local_commit": "41a4e4b2c425d4511fbc31ff045d00f7fd007f31"
+  },
+  {
+    "pr": 1002,
+    "url": "https://github.com/wago-org/wago/pull/1002",
+    "public_commit": "847b3531e2f8935b1f9f7ca17cc622dcec73516c",
+    "local_commit": "17bf49e24d3d0eb4b809ad160719e81d0e195f79"
+  },
+  {
+    "pr": 1002,
+    "url": "https://github.com/wago-org/wago/pull/1002",
+    "public_commit": "e85aabe0b78af04db763fb4e8c9b1f9153291f69",
+    "local_commit": "22ba58656ad852e373ef804fa278196b3624d2b4"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "f600f30c995e2cc97644e865e7a1e00d5a8efc54",
+    "local_commit": "7d219e5d8a8b4ec24f46b5c4d76aecd8bc465531"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "44ac1bbf245782cf68b23e3d3417231c263dbe01",
+    "local_commit": "20992c5400fa7c2bc8e5965ad1515d5957f14020"
+  },
+  {
+    "pr": 980,
+    "url": "https://github.com/wago-org/wago/pull/980",
+    "public_commit": "3dfadf1ecb76311cec0fd947532c2d3d66a73893",
+    "local_commit": "35d4c9dcfd44a7a97737e354dab552f07f1bc409"
+  },
+  {
+    "pr": 980,
+    "url": "https://github.com/wago-org/wago/pull/980",
+    "public_commit": "0a45af6230c1832f3713f8d6953d1fca327b31e9",
+    "local_commit": "b46adbb87de686fd15c5ae15bbefc533d93681e8"
+  },
+  {
+    "pr": 1006,
+    "url": "https://github.com/wago-org/wago/pull/1006",
+    "public_commit": "021d36398d2fc78091a3f22045aadbbeb62c6583",
+    "local_commit": "0fde6f6b170565ab8ea0bee728940d6702a309ea"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "21fb47c09c16ef3e657c292b66e8708441ab3845",
+    "local_commit": "03b40547187f9db18b9479ef2c9cc771bad1b15f"
+  },
+  {
+    "pr": 1007,
+    "url": "https://github.com/wago-org/wago/pull/1007",
+    "public_commit": "a59763770ad243b13e8c85488f6f3554b4bf71f3",
+    "local_commit": "f71a0eb1d0a510957e6be83ad9caa514e1284b96"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "4bfc46b92186d8b78e5dccb6ec008f73544e3b3c",
+    "local_commit": "d476f70abd475a2d33a186aae8a1723d99d44913"
+  },
+  {
+    "pr": 1008,
+    "url": "https://github.com/wago-org/wago/pull/1008",
+    "public_commit": "8b5ed461e8515c4e708056b032387813b13df094",
+    "local_commit": "34c82f912eebafade2f47793cb6850fd6a0e2c35"
+  },
+  {
+    "pr": 1008,
+    "url": "https://github.com/wago-org/wago/pull/1008",
+    "public_commit": "48849d58b5b0a51e0646f02c2eaeccb58ea14129",
+    "local_commit": "d06313bc31347491e19b7102404f00c7f3a0b36b"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "d7b8ac6ef1daf28a0bdd16747ec9ab1fbfba9e21",
+    "local_commit": "273a99c3836b9622ccdce33fd3c7d364d65623b0"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "254473b30caac2d61024723830dfc75eb59de79f",
+    "local_commit": "c25a1dbb22ae09e7f9f767f78bae9202014668ec"
+  },
+  {
+    "pr": 1009,
+    "url": "https://github.com/wago-org/wago/pull/1009",
+    "public_commit": "f240a3aa451b6e09b2f5505eaf182c074c439ecc",
+    "local_commit": "940ff1a120f1df5a7c504d102a6836e8b1db1618"
+  },
+  {
+    "pr": 948,
+    "url": "https://github.com/wago-org/wago/pull/948",
+    "public_commit": "2c53a783828d7ae3ca2d3fe92946a249d6fdf278",
+    "local_commit": "04e5d2394cb521649aebb050e3618ef01cae2a99"
+  },
+  {
+    "pr": 1008,
+    "url": "https://github.com/wago-org/wago/pull/1008",
+    "public_commit": "cb943b2194ddd6e0af4d87b273ef6cf4db14d194",
+    "local_commit": "e89dc1ad9c317e72870f84b4775fdace6d42a28c"
+  },
+  {
+    "pr": 1003,
+    "url": "https://github.com/wago-org/wago/pull/1003",
+    "public_commit": "5b1943728e428a39ca154fc359b589be21cc7a6d",
+    "local_commit": "2b0b6948e842509b160dfd69079404c4bc7fad22"
+  }
+]

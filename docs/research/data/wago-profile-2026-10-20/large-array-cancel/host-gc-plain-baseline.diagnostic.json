@@ -1,0 +1,44 @@
+{
+  "baseline": {
+    "module": "github.com/wago-org/wago",
+    "version": "v0.1.0-beta.13.0.20261020170030-7997c86c36e0",
+    "commit": "7997c86c36e05cfba4c4f39cabb026a318f55fc0",
+    "module_sum": "h1:ED/J26fRuRcXd0jIz+7KxdyoFrF+3WM9Dg4guPaShvs=",
+    "patch_sha256": "e58a6b4161474abc6fdb631a07ae19e6212945df8a980f8cf4de2ecaace8fd93",
+    "patches": {
+      "wago/gc-frame-reference-liveness.patch": "0b21a9d106ee312cf7a570a5cef59fb4e37f0a8513498077ae28f8bc3bf800e8",
+      "wago/managed-isolated-fork.patch": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+      "facet/host-call-api.patch": "e90c48cf19d354ad553c4a94eaafc16ec113e33de471e5c470524b838cfdd2a7"
+    },
+    "host_sha256": "77a001e9410f64dcf81fb466d81abfc803eedb72e1d06730ccd0f36ef7da7dfd",
+    "facet_version": "v0.1.0",
+    "facet_sum": "h1:MjD4xiQZit6v9VohEFrzJDXJjv6l+X9kYCao7hNDb9E=",
+    "facet_private_source": "/home/dev/Projects/dewdrop/.tmp/wago-transform-host/build-z8xh9a35/facet",
+    "tests_run": true,
+    "private_source": "/home/dev/Projects/dewdrop/.tmp/wago-transform-host/build-z8xh9a35/wago",
+    "host_source_sha256": "701c7053d2617d0c527f2d5708eefbd26211fd36855ed5621dc135432310fd95"
+  },
+  "plain": true,
+  "distance_counters": false,
+  "patches": {},
+  "build_seconds": 5.4642356040130835,
+  "command": [
+    "mise",
+    "exec",
+    "go@1.27.2",
+    "--",
+    "go",
+    "build",
+    "-C",
+    "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/current-host-a7fa8a1t/host",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=992ff2e840d8029fec267ebc5caf6538a68328da44974c8095aeb081d7227cf4 -X main.workerPluginIdentity=701c7053d2617d0c527f2d5708eefbd26211fd36855ed5621dc135432310fd95",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/host-gc-plain-baseline",
+    "."
+  ],
+  "runtime_identity": "992ff2e840d8029fec267ebc5caf6538a68328da44974c8095aeb081d7227cf4",
+  "private_source": "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/current-host-a7fa8a1t/wago",
+  "host_source": "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/current-host-a7fa8a1t/host",
+  "host_sha256": "d5c1e6f2c8d957ebf053e2167fcf09988f984eae9473f40287a43a5b5cdd378a"
+}

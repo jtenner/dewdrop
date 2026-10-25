@@ -1,0 +1,23 @@
+{
+  "commit": "7997c86c36e05cfba4c4f39cabb026a318f55fc0",
+  "command": "GOMAXPROCS=4 mise exec go@1.27.2 wasm-tools@1.262.0 -- python3 tools/build-wago-transform-host.py .tmp/wago-origin-main-2026-10-20/host-main --test",
+  "seconds": 32.123,
+  "passed": [
+    "TestGCFrameRootPlan*",
+    "TestGCDecoderTupleReferenceSurvivesAdjacentScalarRead",
+    "TestGCReferenceRead*",
+    "TestGCSharedReference*",
+    "TestManagedIsolatedFork*",
+    "TestManagedForkContext*",
+    "TestWorker* with -race"
+  ],
+  "packages_seconds": {
+    "railshot/shared": 0.003,
+    "wago": 0.29,
+    "worker_host_race": 1.217
+  },
+  "limits": [
+    "Build wall time exceeds the 30-second project threshold.",
+    "The full upstream Facet test suite was not run. Worker race tests and the real compiler request check the host integration."
+  ]
+}

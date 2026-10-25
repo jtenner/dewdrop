@@ -1,0 +1,30 @@
+{
+  "command": [
+    "claude",
+    "-p",
+    "--model",
+    "opus",
+    "--effort",
+    "high",
+    "--permission-mode",
+    "plan",
+    "--permission-prompts",
+    "none",
+    "--tools",
+    "Read,Glob,Grep",
+    "--allowedTools",
+    "Read,Glob,Grep",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-budget-usd",
+    "3",
+    "--max-turns",
+    "28",
+    "Independent RESEARCH, not code review. Use only Read/Grep/Glob. Do not edit, run builds/tests/benchmarks, use network, send messages, or spawn agents. Finish within 26 turns with a concrete report under 1200 words. User asks Astra for research, you as an independent research vector, and actual GPT-6 Sol Daybreak Blue for code review. Root will implement and measure.\nGoal: Wago runtime runs fixed Dewdrop compiler WASM in about 36s; known V8 result 4s. Do NOT rerun V8. All checks must remain for metadata corruption before Invoke and after host callbacks. Do not propose unproved epoch caches: prior read-only interval audit requires invalidating every native write/allocation and cross-instance lifetime generation. Prior minor collector stable-handle warm path +319%, canonical recycling +12%, getter per-caller stub +4.7%, generic type-facts no full gain. Avoid repeating these designs.\nCurrent installed full Wago stack /home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago at073b2f618. New bounded type-test/deconstruction experiment /home/dev/Projects/dewdrop/.tmp/wago-test-field-prefix has dirty gc_test_field.go and gc_test_field_prefix.go only production changes, all checked/profile/root/trap tests pass. It keeps checked address RDX and handle extent RDI only across same-object local.set/local.get/cast/get pairs, no calls/stores/control, repeats larger extent checks at original read. 760 static extra reads/272functions; micro34% faster but full control36.071/36.455/36.585 vs candidate55.666/36.228/36.174, median0.6% within spread. Not installed.\nProfile note /home/dev/Projects/dewdrop/docs/research/wago-read-followups-profile-2026-10-21.md and data directory beside it: generated code79%, CollectMinor13% cumulative. Software native samples1098 (not execution counts): index_module_implementations89, array_get_unchecked80, imported_requirement_identity74, intern_function53, bytes_byte_at36, array_length34, get_unchecked31, shared resolver28. Read small reports first.\nPlease find a larger algorithm-level opportunity. Two possible vectors: (1) generated runtime hot array_get/byte_at/type+index resolution repeated pointer chasing and private ref ABI; a bounded whole-loop optimization with all physical safety proof intact; (2) Dewdrop algorithm itself (self_host/compiler/semantic_impl_index.dew functions self_host_imported_requirement_identity line1412 and self_host_index_module_implementations_with_imports1432, semantic_resolved_types.dew intern_function619, semantic_imported_semantics.dew intern_function542) may perform repeated scans or rebuild indexes. Compiler must use same rules for standard/user modules and all versions/codecs stay1. Source inspection alone cannot show dynamic invocation counts.\nReturn ONE highest-impact proposal plus at most one fallback, exact source paths/functions, current computational complexity and improved complexity or exact runtime work removed, correctness/memory constraints, smallest discriminating benchmark/counter that could confirm it on fixed existing compiler workload, and a bounded implementation plan. Distinguish measured facts, source facts, inference. Do not claim4s is achieved or guarantee speed. You may inspect Dewdrop sources even if dirty, but root must preserve all unrelated edits and fixed compiler benchmark remains hash-pinned. If source-algorithm change cannot affect the pinned WASM, state that explicitly. Do not research broad representation rewrites without a concrete proof/test plan. Root and Astra are independently investigating. Use bounded relevant reads, not entire giant files.\n"
+  ],
+  "role": "independent hot algorithm research"
+}

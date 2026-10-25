@@ -1,0 +1,11 @@
+{
+  "public_pr": "https://github.com/wago-org/wago/pull/1007",
+  "closed_consolidated_pr": "https://github.com/wago-org/wago/pull/1008",
+  "base_pr": "https://github.com/wago-org/wago/pull/1011",
+  "public_merge": "1b877f8c6675e08bfa7ad3a9ca665d46f6001b53",
+  "public_feature": "392af571edca957c5f3c946ed956a14b02ea001a",
+  "combined_merge": "41e79be4ba63f8546ec843aa68e6bb659706fd1a",
+  "combined_feature": "40cfab8d8ec32ca3eff1cd178fa746cb2eeb82b0",
+  "conflict_resolution": "Kept combined reference ABI manifest entries; removed only obsolete unused forwarding test wrapper.",
+  "production_identity": "Seven changed production files exactly equal qualified combined measurement source."
+}

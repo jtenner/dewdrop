@@ -1,0 +1,44 @@
+File: stack-profile-host
+Build ID: 61561b3b187d8791fdb962702cc45987c20e4f2a
+Type: cpu
+Time: 2026-10-20 22:06:02 UTC
+Duration: 118.78s, Total samples = 118.88s (100.08%)
+Showing nodes accounting for 97.05s, 81.64% of 118.88s total
+Dropped 447 nodes (cum <= 0.59s)
+Showing top 35 nodes out of 67
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%     66.49s 55.93%  github.com/wago-org/wago/cli/internal/command.(*Cmd).Dispatch
+         0     0%     0%     66.49s 55.93%  github.com/wago-org/wago/cli/runtime.Main
+         0     0%     0%     66.49s 55.93%  github.com/wago-org/wago/cli/runtime.MainWithPluginSet
+         0     0%     0%     66.49s 55.93%  github.com/wago-org/wago/cli/runtime/commands/run.implementation.Run
+         0     0%     0%     66.49s 55.93%  main.main
+         0     0%     0%     66.49s 55.93%  runtime.main
+         0     0%     0%     66.32s 55.79%  github.com/wago-org/wago/src/core/runtime.(*Engine).CallWithHostBase (inline)
+         0     0%     0%     66.32s 55.79%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostBase
+     2.56s  2.15%  2.15%     66.32s 55.79%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop
+         0     0%  2.15%     66.32s 55.79%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncAdmitted
+         0     0%  2.15%     66.32s 55.79%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncUnpreparedAdmitted
+         0     0%  2.15%     66.32s 55.79%  github.com/wago-org/wago/src/wago.(*Instance).callNativeSyncWithTrapContext
+         0     0%  2.15%     66.31s 55.78%  github.com/wago-org/wago/src/wago.(*Instance).Invoke
+         0     0%  2.15%     66.31s 55.78%  github.com/wago-org/wago/src/wago.(*Instance).invokeEntry
+         0     0%  2.15%     66.31s 55.78%  github.com/wago-org/wago/src/wago.(*Instance).invokeWithToken
+     0.43s  0.36%  2.52%     58.36s 49.09%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch
+     0.26s  0.22%  2.73%     57.73s 48.56%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatchActive
+     0.23s  0.19%  2.93%     57.46s 48.33%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCHelperParkedOnStack
+    50.35s 42.35% 45.28%     50.35s 42.35%  runtime._ExternalCode
+         0     0% 45.28%     50.35s 42.35%  runtime._System
+     1.06s  0.89% 46.17%     39.42s 33.16%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCArrayHelperParked
+    29.87s 25.13% 71.30%     30.72s 25.84%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeStructHandles
+     0.03s 0.025% 71.32%     30.66s 25.79%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CancelNativeAllocationBatch
+     0.78s  0.66% 71.98%     17.81s 14.98%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCStructHelperParked
+     0.01s 0.0084% 71.99%      9.07s  7.63%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandles (inline)
+     0.37s  0.31% 72.30%      9.06s  7.62%  github.com/wago-org/wago/src/wago.(*Instance).prepareNativeStructHandlesMode
+         0     0% 72.30%      8.63s  7.26%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).PrepareNativeStructAllocation (inline)
+     0.01s 0.0084% 72.31%      8.63s  7.26%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).prepareNativeStructAllocation
+     6.87s  5.78% 78.09%      8.53s  7.18%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles
+     0.16s  0.13% 78.22%      6.74s  5.67%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).alloc
+     0.36s   0.3% 78.52%      5.83s  4.90%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).NewStructWordsPrevalidatedWithRootScratch
+         0     0% 78.52%      5.76s  4.85%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).CollectMinor
+     0.94s  0.79% 79.32%      4.01s  3.37%  github.com/wago-org/wago/src/core/runtime.resumeNative
+     0.20s  0.17% 79.48%      2.89s  2.43%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishMinorEvacuation
+     2.56s  2.15% 81.64%      2.67s  2.25%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishSparseMinorEvacuation

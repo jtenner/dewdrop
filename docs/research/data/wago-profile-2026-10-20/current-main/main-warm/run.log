@@ -1,0 +1,3 @@
+Wago 7997c86c36e0; patch e58a6b4161474abc6fdb631a07ae19e6212945df8a980f8cf4de2ecaace8fd93; workers 701c7053d2617d0c527f2d5708eefbd26211fd36855ed5621dc135432310fd95; Facet v0.1.0; locked project bindings
+wago: trap: unreachable instruction executed
+    at self_host_assert_compiler_invariant_with_failure#31052613550623#4294967295 (func[1163], wasm pc 0x12)

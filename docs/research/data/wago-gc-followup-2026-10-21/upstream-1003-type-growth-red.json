@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "./src/core/runtime/gc/native",
+    "./src/wago",
+    "-run",
+    "TestAddTypesIndependentRootsPreserveKindEncoding|TestGCAbstractArrayCastLenIncrementalRuntimeRoots",
+    "-count=1"
+  ],
+  "seconds": 15.902886725001736,
+  "exit": 1,
+  "stdout": "--- FAIL: TestAddTypesIndependentRootsPreserveKindEncoding (0.00s)\n    subtype_interval_test.go:27: batch 0 type 1 interval=0x300000004, rebuilt=0x600000008\n    subtype_interval_test.go:30: batch 0 type 1 array bit=true, kind=2\n    subtype_interval_test.go:27: batch 0 type 2 interval=0x500000006, rebuilt=0xb0000000c\n    subtype_interval_test.go:27: batch 2 type 5 interval=0xb0000000c, rebuilt=0x1600000018\n    subtype_interval_test.go:30: batch 2 type 5 array bit=true, kind=2\n    subtype_interval_test.go:27: batch 2 type 6 interval=0xd0000000e, rebuilt=0x1b0000001c\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/core/runtime/gc/native\t0.005s\n--- FAIL: TestGCAbstractArrayCastLenIncrementalRuntimeRoots (0.00s)\n    gc_abstract_array_incremental_amd64_test.go:78: encoding 1 length(struct)=<nil>; want cast failure\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/wago\t0.017s\nFAIL\n",
+  "stderr": ""
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "module": "fib",
+    "version": "base",
+    "workers": 1,
+    "median_seconds": 0.0030427159999817377,
+    "median_cpu_seconds": 0.002601,
+    "median_peak_rss_kib": 21528
+  },
+  {
+    "module": "fib",
+    "version": "base",
+    "workers": 8,
+    "median_seconds": 0.0031654529998377257,
+    "median_cpu_seconds": 0.002711,
+    "median_peak_rss_kib": 21520
+  },
+  {
+    "module": "fib",
+    "version": "stack",
+    "workers": 1,
+    "median_seconds": 0.0031677900001341186,
+    "median_cpu_seconds": 0.00266,
+    "median_peak_rss_kib": 21528
+  },
+  {
+    "module": "fib",
+    "version": "stack",
+    "workers": 8,
+    "median_seconds": 0.0030527459998666018,
+    "median_cpu_seconds": 0.002397,
+    "median_peak_rss_kib": 21520
+  },
+  {
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 1,
+    "median_seconds": 0.565731962999962,
+    "median_cpu_seconds": 0.493351,
+    "median_peak_rss_kib": 157528
+  },
+  {
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 8,
+    "median_seconds": 0.2448215480003455,
+    "median_cpu_seconds": 0.658813,
+    "median_peak_rss_kib": 161228
+  },
+  {
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 1,
+    "median_seconds": 0.5684203929999967,
+    "median_cpu_seconds": 0.5115599999999999,
+    "median_peak_rss_kib": 165868
+  },
+  {
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 8,
+    "median_seconds": 0.2624021859996901,
+    "median_cpu_seconds": 0.694986,
+    "median_peak_rss_kib": 208744
+  }
+]

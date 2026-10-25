@@ -1,0 +1,31 @@
+{
+  "label": "native-dew-compiler-base-p1-2",
+  "command": [
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+    "build",
+    "--bare",
+    "--offline",
+    "--no-input",
+    "-p1",
+    "--output",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p1-2.wago",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+  "seconds": 0.565731962999962,
+  "user_seconds": 0.466669,
+  "system_seconds": 0.024184,
+  "peak_rss_kib": 157960,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.45751953125,
+    1.9970703125,
+    2.29541015625
+  ],
+  "load_end": [
+    2.45751953125,
+    1.9970703125,
+    2.29541015625
+  ]
+}

@@ -1,0 +1,33 @@
+[
+  {
+    "command": [
+      "go",
+      "test",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-run",
+      "TestAddTypesIndependentRootsPreserveKindEncoding|TestGCAbstractArrayCastLenIncrementalRuntimeRoots",
+      "-count=1"
+    ],
+    "seconds": 19.11643046500103,
+    "exit": 0,
+    "stdout": "ok  \tgithub.com/wago-org/wago/src/core/runtime/gc/native\t0.018s\nok  \tgithub.com/wago-org/wago/src/wago\t0.100s\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_regalloccheck",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-run",
+      "TestAddTypesIndependentRootsPreserveKindEncoding|TestGCAbstractArrayCastLenIncrementalRuntimeRoots",
+      "-count=1"
+    ],
+    "seconds": 21.27677154200137,
+    "exit": 0,
+    "stdout": "ok  \tgithub.com/wago-org/wago/src/core/runtime/gc/native\t0.006s\nok  \tgithub.com/wago-org/wago/src/wago\t0.021s\n",
+    "stderr": ""
+  }
+]

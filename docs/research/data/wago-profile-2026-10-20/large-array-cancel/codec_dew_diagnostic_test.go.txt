@@ -1,0 +1,178 @@
+//go:build !tinygo && !wago_precompiled
+
+package wago
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"fmt"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+// This local diagnostic is not a proposed upstream test. It compares the full
+// Dew compiler's source and decoded execution metadata without running a guest.
+func TestDewCodecMetadataDiagnostic(t *testing.T) {
+	path := os.Getenv("DEW_WAGO_COMPILER")
+	if path == "" {
+		t.Skip("set DEW_WAGO_COMPILER to the exact reproducing compiler.wasm")
+	}
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := NewRuntimeConfig().WithCoreFeatures(CoreFeaturesV3).WithBoundsChecks(BoundsChecksExplicit).WithFunctionWorkers(8)
+	freshOwner, err := Compile(cfg, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer freshOwner.Close()
+	encoded, err := freshOwner.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	loadedOwner := &Compiled{}
+	if err := loadedOwner.UnmarshalBinary(encoded); err != nil {
+		t.Fatal(err)
+	}
+	defer loadedOwner.Close()
+	fresh, err := freshOwner.freezeExecution(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := loadedOwner.freezeExecution(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fresh.validateCached(); err != nil {
+		t.Fatal(err)
+	}
+	if err := loaded.validateCached(); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("source_sha256=%x code_sha256=%x code_bytes=%d artifact_sha256=%x", sha256.Sum256(source), sha256.Sum256(fresh.code), len(fresh.code), sha256.Sum256(encoded))
+	t.Logf("start fresh=(%v,%v,%d,%d) loaded=(%v,%v,%d,%d) imports=%d", fresh.HasStart, fresh.StartIsImport, fresh.StartLocalFunc, fresh.StartImportIdx, loaded.HasStart, loaded.StartIsImport, loaded.StartLocalFunc, loaded.StartImportIdx, fresh.NumImports)
+	diffs := 0
+	check := func(path string, a, b any) {
+		dewCodecDiagnosticCompare(t, path, reflect.ValueOf(a), reflect.ValueOf(b), &diffs)
+	}
+	a, b := reflect.ValueOf(fresh).Elem(), reflect.ValueOf(loaded).Elem()
+	for i := 0; i < a.NumField(); i++ {
+		name := a.Type().Field(i).Name
+		switch name {
+		case "codeCache", "validateMemo", "memoryDir", "compactData", "Data", "InternalEntry", "gcCodeTelemetry", "customInstructions":
+			continue
+		case "independentInstances", "preparedIsolatedTables":
+			t.Logf("known-policy %s: fresh=%v loaded=%v", name, a.Field(i), b.Field(i))
+			continue
+		}
+		dewCodecDiagnosticCompare(t, name, a.Field(i), b.Field(i), &diffs)
+	}
+	entries := append([]int(nil), fresh.InternalEntry...)
+	for i := range entries {
+		entries[i] = internalEntryOffset(entries[i])
+	}
+	check("InternalEntry.offsets", entries, loaded.InternalEntry)
+	data := func(c *Compiled) []DataInit {
+		out := make([]DataInit, c.activeDataCount())
+		for i := range out {
+			out[i] = c.activeDataAt(i)
+		}
+		return out
+	}
+	check("activeData", data(fresh), data(loaded))
+	check("memoryDir", fresh.memoryDir, loaded.memoryDir)
+	check("gcFrameRoots", fresh.genericGCFrameRoots(), loaded.genericGCFrameRoots())
+	check("importModuleEnds", fresh.validateMemo.importModuleEnds, loaded.validateMemo.importModuleEnds)
+	check("nativeGCABI", fresh.nativeGCABIRequirement(), loaded.nativeGCABIRequirement())
+	check("gcStructProduct", fresh.stagedGCStructProduct(), loaded.stagedGCStructProduct())
+	check("gcArrayProduct", fresh.stagedGCArrayProduct(), loaded.stagedGCArrayProduct())
+	check("gcI31Product", fresh.stagedGCI31Product(), loaded.stagedGCI31Product())
+	check("needsExactNativeGCRoots", fresh.needsExactNativeGCRoots(), loaded.needsExactNativeGCRoots())
+	check("usesDynamicFuncRefTest", fresh.usesDynamicFuncRefTest(), loaded.usesDynamicFuncRefTest())
+	t.Logf("known-entry-policy: GoHostTag=%v/%v boundedHostSegments=%v/%v integerHostContext=%v/%v", fresh.supportsGoHostDispatchTag(), loaded.supportsGoHostDispatchTag(), fresh.boundedHostSegments(), loaded.boundedHostSegments(), fresh.integerHostContextAllowed(), loaded.integerHostContextAllowed())
+	if diffs != 0 {
+		t.Fatalf("found %d metadata differences; first 60 shown", diffs)
+	}
+}
+
+func dewCodecDiagnosticCompare(t *testing.T, path string, a, b reflect.Value, differences *int) {
+	fail := func(detail string) {
+		*differences++
+		if *differences <= 60 {
+			t.Errorf("%s: %s", path, detail)
+		}
+	}
+	if !a.IsValid() || !b.IsValid() {
+		if a.IsValid() != b.IsValid() {
+			fail("only one value is valid")
+		}
+		return
+	}
+	if a.Type() != b.Type() {
+		fail(fmt.Sprintf("types %s / %s", a.Type(), b.Type()))
+		return
+	}
+	switch a.Kind() {
+	case reflect.Pointer:
+		if a.IsNil() || b.IsNil() {
+			if a.IsNil() != b.IsNil() {
+				fail("nil pointer differs")
+			}
+			return
+		}
+		dewCodecDiagnosticCompare(t, path, a.Elem(), b.Elem(), differences)
+	case reflect.Struct:
+		for i := 0; i < a.NumField(); i++ {
+			dewCodecDiagnosticCompare(t, path+"."+a.Type().Field(i).Name, a.Field(i), b.Field(i), differences)
+		}
+	case reflect.Slice, reflect.Array:
+		if a.Len() != b.Len() {
+			fail(fmt.Sprintf("lengths %d / %d", a.Len(), b.Len()))
+			return
+		}
+		if a.Kind() == reflect.Slice && a.Type().Elem().Kind() == reflect.Uint8 {
+			if !bytes.Equal(a.Bytes(), b.Bytes()) {
+				fail(fmt.Sprintf("byte slices differ: sha256=%x / %x", sha256.Sum256(a.Bytes()), sha256.Sum256(b.Bytes())))
+			}
+			return
+		}
+		if a.Kind() == reflect.Slice && a.Len() == 0 && a.IsNil() != b.IsNil() {
+			if strings.HasSuffix(path, ".Fields") {
+				fail("nil/empty GC descriptor field list differs")
+			}
+			return
+		}
+		for i := 0; i < a.Len(); i++ {
+			dewCodecDiagnosticCompare(t, fmt.Sprintf("%s[%d]", path, i), a.Index(i), b.Index(i), differences)
+		}
+	case reflect.Map:
+		if a.Len() != b.Len() {
+			fail(fmt.Sprintf("map lengths %d / %d", a.Len(), b.Len()))
+			return
+		}
+		for _, key := range a.MapKeys() {
+			dewCodecDiagnosticCompare(t, fmt.Sprintf("%s[%v]", path, key), a.MapIndex(key), b.MapIndex(key), differences)
+		}
+	case reflect.Bool:
+		if a.Bool() != b.Bool() {
+			fail(fmt.Sprintf("%v / %v", a.Bool(), b.Bool()))
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if a.Int() != b.Int() {
+			fail(fmt.Sprintf("%d / %d", a.Int(), b.Int()))
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if a.Uint() != b.Uint() {
+			fail(fmt.Sprintf("%d / %d", a.Uint(), b.Uint()))
+		}
+	case reflect.String:
+		if a.String() != b.String() {
+			fail(fmt.Sprintf("%q / %q", a.String(), b.String()))
+		}
+	default:
+		fail(fmt.Sprintf("unhandled comparison kind %s", a.Kind()))
+	}
+}

@@ -1,0 +1,26 @@
+{
+  "source": "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/gc",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "go": "go1.27.2",
+  "GOMAXPROCS": "4",
+  "benchmark": "go test ./src/core/runtime/gc/native -run ^$ -bench ^BenchmarkNativeLargeArrayCancellation$ -benchtime=100ms -count=3 -timeout=90s",
+  "baseline_harness_identical": true,
+  "measured_baseline": "7997c86c36e05cfba4c4f39cabb026a318f55fc0",
+  "measured_candidate": "ce9467c2205dd318f377abe781e0973c57b4dace",
+  "baseline": "ed76fd17957fd472b92a69d2fa3f5f63680f2cd5",
+  "candidate": "3da9b38d6500d600e16e7d64c7f9d0aaf695cc7d",
+  "rebase_delta": "two upstream commits change tests/docs/CI only; no runtime source difference",
+  "validation_commands": [
+    "GOWORK=off GOMAXPROCS=4 go test -p 4 ./src/core/runtime/gc/native -count=1 -timeout=90s",
+    "GOWORK=off GOMAXPROCS=4 go test -p 4 -tags=wagodebug ./src/core/runtime/gc/native -count=1 -timeout=90s",
+    "GOWORK=off GOMAXPROCS=4 go test -p 4 -race ./src/core/runtime/gc/native -count=1 -timeout=90s",
+    "GOWORK=off GOMAXPROCS=4 go test -p 4 ./src/wago -run '^(TestGCNative(ArrayAlloc|ArrayDynamic|DynamicDefault|DynamicTypedDefault|LargeArray|MixedReservation|StructAlloc)|TestGCConstructorNativeChargeKeepsActiveArrayChunk|TestNativeGCViewVersionAndAllocationRefresh|TestCompiledGenericGCArtifactRejectsNativeABIMismatch)' -count=1 -timeout=90s -v",
+    "GOWORK=off GOMAXPROCS=4 GOOS=linux GOARCH=arm64 go test -c -o gc-arm64.test ./src/core/runtime/gc/native"
+  ],
+  "plain_run_order": [
+    "gc-plain-baseline",
+    "gc-plain-candidate",
+    "gc-plain-candidate-2",
+    "gc-plain-baseline-2"
+  ]
+}

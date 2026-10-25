@@ -1,0 +1,31 @@
+{
+  "label": "native-dew-compiler-stack-p8-3",
+  "command": [
+    "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+    "build",
+    "--bare",
+    "--offline",
+    "--no-input",
+    "-p8",
+    "--output",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p8-3.wago",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+  "seconds": 0.33333430099992256,
+  "user_seconds": 0.652924,
+  "system_seconds": 0.042061999999999995,
+  "peak_rss_kib": 208744,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.45751953125,
+    1.9970703125,
+    2.29541015625
+  ],
+  "load_end": [
+    2.45751953125,
+    1.9970703125,
+    2.29541015625
+  ]
+}

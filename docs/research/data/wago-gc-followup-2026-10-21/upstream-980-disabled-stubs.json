@@ -1,0 +1,34 @@
+[
+  {
+    "name": "red",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_codegenstats,wago_regalloccheck",
+      "./src/core/compiler/backend/railshot/amd64",
+      "-run",
+      "TestGCGeneralArrayLenRespectsSharedStubSwitch",
+      "-count=1"
+    ],
+    "seconds": 4.724379990999296,
+    "exit": 1,
+    "stdout": "--- FAIL: TestGCGeneralArrayLenRespectsSharedStubSwitch (0.00s)\n    gc_array_len_test.go:71: disabled shared stubs still emitted an array.len leaf\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t0.003s\nFAIL\n",
+    "stderr": ""
+  },
+  {
+    "name": "green",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_codegenstats,wago_regalloccheck",
+      "./src/core/compiler/backend/railshot/amd64",
+      "-run",
+      "TestGCGeneralArrayLenRespectsSharedStubSwitch",
+      "-count=1"
+    ],
+    "seconds": 4.987454883997998,
+    "exit": 0,
+    "stdout": "ok  \tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t0.002s\n",
+    "stderr": ""
+  }
+]

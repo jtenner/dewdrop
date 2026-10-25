@@ -1,0 +1,31 @@
+File: host-profile
+Build ID: 5671347097ae9a6356282ea7e458dc2a8662e52e
+Type: cpu
+Time: 2026-10-20 18:27:22 UTC
+Duration: 90.95s, Total samples = 92.51s (101.72%)
+Showing nodes accounting for 76.72s, 82.93% of 92.51s total
+Dropped 413 nodes (cum <= 0.46s)
+Showing top 22 nodes out of 106
+      flat  flat%   sum%        cum   cum%
+    46.16s 49.90% 49.90%     46.16s 49.90%  runtime._ExternalCode
+     6.82s  7.37% 57.27%      6.85s  7.40%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).newHandle
+     6.16s  6.66% 63.93%      6.16s  6.66%  github.com/wago-org/wago/src/core/runtime/gc/native.handleEntry.young (inline)
+     2.63s  2.84% 66.77%     42.27s 45.69%  github.com/wago-org/wago/src/core/runtime.(*Engine).callWithHostLoop
+     1.39s  1.50% 68.27%      2.64s  2.85%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).refDesc
+     1.06s  1.15% 69.42%      1.06s  1.15%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).discardNativeStructHandles
+     1.06s  1.15% 70.57%     11.03s 11.92%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCArrayHelperParked
+     1.03s  1.11% 71.68%      4.07s  4.40%  github.com/wago-org/wago/src/core/runtime.resumeNative
+     0.99s  1.07% 72.75%      1.31s  1.42%  runtime.exitsyscall
+     0.94s  1.02% 73.76%      1.40s  1.51%  runtime.reentersyscall
+     0.93s  1.01% 74.77%     22.19s 23.99%  github.com/wago-org/wago/src/wago.(*Instance).dispatchGCStructHelperParked
+     0.82s  0.89% 75.66%      1.04s  1.12%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).releaseHandle
+     0.76s  0.82% 76.48%      0.76s  0.82%  github.com/wago-org/wago/src/core/compiler/backend/railshot/amd64.globalRegValue
+     0.76s  0.82% 77.30%      7.17s  7.75%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles
+     0.74s   0.8% 78.10%      0.74s   0.8%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).desc
+     0.70s  0.76% 78.86%      0.70s  0.76%  github.com/wago-org/wago/src/core/runtime.enterNativeRaw
+     0.69s  0.75% 79.60%     34.26s 37.03%  github.com/wago-org/wago/src/wago.(*hostLoopActivation).dispatch
+     0.66s  0.71% 80.32%      0.91s  0.98%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).bytes (inline)
+     0.66s  0.71% 81.03%      0.66s  0.71%  internal/sync.(*Mutex).Lock (inline)
+     0.62s  0.67% 81.70%      0.62s  0.67%  internal/sync.(*Mutex).Unlock (inline)
+     0.58s  0.63% 82.33%      5.22s  5.64%  github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).finishMinorEvacuationMode
+     0.56s  0.61% 82.93%      0.56s  0.61%  encoding/binary.littleEndian.Uint32 (inline)

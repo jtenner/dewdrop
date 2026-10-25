@@ -1,0 +1,44 @@
+[
+  {
+    "headRefOid": "0a45af6230c1832f3713f8d6953d1fca327b31e9",
+    "isDraft": false,
+    "number": 980,
+    "state": "OPEN",
+    "url": "https://github.com/wago-org/wago/pull/980"
+  },
+  {
+    "headRefOid": "e85aabe0b78af04db763fb4e8c9b1f9153291f69",
+    "isDraft": false,
+    "number": 1002,
+    "state": "OPEN",
+    "url": "https://github.com/wago-org/wago/pull/1002"
+  },
+  {
+    "headRefOid": "4bfc46b92186d8b78e5dccb6ec008f73544e3b3c",
+    "isDraft": false,
+    "number": 1003,
+    "state": "OPEN",
+    "url": "https://github.com/wago-org/wago/pull/1003"
+  },
+  {
+    "headRefOid": "2a2c75b4b40975581ae250affc43b5cc5955d0a3",
+    "isDraft": false,
+    "number": 1005,
+    "state": "OPEN",
+    "url": "https://github.com/wago-org/wago/pull/1005"
+  },
+  {
+    "headRefOid": "021d36398d2fc78091a3f22045aadbbeb62c6583",
+    "isDraft": false,
+    "number": 1006,
+    "state": "OPEN",
+    "url": "https://github.com/wago-org/wago/pull/1006"
+  },
+  {
+    "headRefOid": "a59763770ad243b13e8c85488f6f3554b4bf71f3",
+    "isDraft": false,
+    "number": 1007,
+    "state": "OPEN",
+    "url": "https://github.com/wago-org/wago/pull/1007"
+  }
+]

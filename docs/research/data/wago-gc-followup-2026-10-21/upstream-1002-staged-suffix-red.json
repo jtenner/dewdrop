@@ -1,0 +1,14 @@
+{
+  "command": [
+    "go",
+    "test",
+    "./src/core/compiler/backend/railshot/amd64",
+    "-run",
+    "^TestPartialFlushLaterSpillPreservesStagedSuffix$",
+    "-count=1"
+  ],
+  "seconds": 3.7992521449996275,
+  "exit": 1,
+  "stdout": "--- FAIL: TestPartialFlushLaterSpillPreservesStagedSuffix (0.00s)\n    --- FAIL: TestPartialFlushLaterSpillPreservesStagedSuffix/5 (0.00s)\n        partial_flush_spills_test.go:108: later spill at slot 2 overlaps live staged suffix [2,4)\nFAIL\nFAIL\tgithub.com/wago-org/wago/src/core/compiler/backend/railshot/amd64\t0.002s\nFAIL\n",
+  "stderr": ""
+}

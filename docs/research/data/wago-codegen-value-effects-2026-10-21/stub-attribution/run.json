@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "run",
+    "-overlay=/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/stub-attribution/overlay.json",
+    "./attribute-stubs",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+    "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/post-read-regions-profile/stub-attribution/ranges.json"
+  ],
+  "seconds": 6.464536017010687,
+  "exit": 0,
+  "stdout": "native_sha256=5f3a7b1c1c2be27dee30b225df83a7934f8fdc5b8eb8dfb7046f2eedab566c33 compile_seconds=0.467789 roots={Required:true Exact:true Reason: Safepoints:25794 Callsites:50438 MaximumRoots:77 MetadataBytes:1803076}\n",
+  "stderr": "",
+  "peak_rss_kib": 514620
+}

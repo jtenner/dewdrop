@@ -1,0 +1,1055 @@
+[
+  {
+    "label": "node-control-1",
+    "mode": "node",
+    "seconds": 3.8717076079919934,
+    "user_seconds": 5.246408,
+    "system_seconds": 0.27824899999999997,
+    "rss_kib": 464860,
+    "exit": 0,
+    "command": [
+      "/home/dev/.local/share/mise/installs/node/24/bin/node",
+      "--stack-size=65500",
+      "tools/run-dew-facet.mjs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/compiler-node.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      4.29638671875,
+      4.357421875,
+      4.15771484375
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [],
+    "diagnostic_events": []
+  },
+  {
+    "label": "node-control-2",
+    "mode": "node",
+    "seconds": 3.854311045986833,
+    "user_seconds": 5.16874,
+    "system_seconds": 0.303348,
+    "rss_kib": 456720,
+    "exit": 0,
+    "command": [
+      "/home/dev/.local/share/mise/installs/node/24/bin/node",
+      "--stack-size=65500",
+      "tools/run-dew-facet.mjs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/compiler-node.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      4.43310546875,
+      4.384765625,
+      4.16796875
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [],
+    "diagnostic_events": []
+  },
+  {
+    "label": "node-profile",
+    "mode": "node-profile",
+    "seconds": 3.885937955987174,
+    "user_seconds": 5.351572,
+    "system_seconds": 0.280817,
+    "rss_kib": 487160,
+    "exit": 0,
+    "command": [
+      "/home/dev/.local/share/mise/installs/node/24/bin/node",
+      "--stack-size=65500",
+      "--cpu-prof",
+      "--cpu-prof-dir=/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/node-profile",
+      "tools/run-dew-facet.mjs",
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/compiler-node.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      4.40966796875,
+      4.38037109375,
+      4.1640625
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [],
+    "diagnostic_events": []
+  },
+  {
+    "label": "parallel-cold-complete",
+    "mode": "parallel",
+    "seconds": 158.56212476600194,
+    "user_seconds": 215.802458,
+    "system_seconds": 0.87061,
+    "rss_kib": 2295764,
+    "exit": 0,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "b9af15510544b71041c0b84cb9a67979ba3c6cefced6138f880f60c3af03636a",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/parallel-cold-home",
+      "DEW_TRANSFORM_WORKERS": "2",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      3.7099609375,
+      4.31103515625,
+      4.1962890625
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 2.7211e-05,
+        "since_start_s": 0.006135053
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 1.572e-05,
+        "since_start_s": 0.007984826
+      },
+      {
+        "phase": "native_compile",
+        "seconds": 0.726759131,
+        "since_start_s": 0.734752093
+      },
+      {
+        "phase": "artifact_publish",
+        "seconds": 0.027782275,
+        "since_start_s": 0.762575275
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.757336163,
+        "since_start_s": 0.762612296
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.94032223,
+        "since_start_s": 1.7029467390000002
+      },
+      {
+        "phase": "worker_fork",
+        "seconds": 0.862813954,
+        "since_start_s": 72.42038259
+      },
+      {
+        "phase": "worker_fork",
+        "seconds": 0.874924218,
+        "since_start_s": 73.295347736
+      },
+      {
+        "phase": "worker_invoke",
+        "seconds": 54.505084947,
+        "since_start_s": 127.800514367
+      },
+      {
+        "phase": "worker_invoke",
+        "seconds": 55.625981917,
+        "since_start_s": 128.92137043
+      },
+      {
+        "phase": "worker_batch",
+        "seconds": 57.364195409,
+        "since_start_s": 128.921678173
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 156.765352332,
+        "since_start_s": 158.487614896
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/parallel-cold-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.007952154
+      },
+      {
+        "event": "cache_lookup",
+        "hit": false,
+        "since_start_s": 0.007987902
+      },
+      {
+        "event": "go_memory",
+        "heap_alloc": 1846177688,
+        "mallocs": 1666072,
+        "num_gc": 30,
+        "pause_total_ns": 2447831,
+        "since_start_s": 158.498389945,
+        "sys": 2470849368,
+        "total_alloc": 5137913832
+      }
+    ],
+    "native_code_sha256": "6eb46b29fbf9bc825a9e82116cbb5ca19c325ff36788780b944746ba74408c0f",
+    "native_code_bytes": 21170004
+  },
+  {
+    "label": "parallel-warm",
+    "mode": "parallel",
+    "seconds": 24.945243619993562,
+    "user_seconds": 25.03312,
+    "system_seconds": 0.22943999999999998,
+    "rss_kib": 546576,
+    "exit": 1,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "2d9944b33f4514afd8628cf8b870274966d3df059f561964efe6afa8e92b1e15",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "2",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      6.01708984375,
+      4.65576171875,
+      4.20361328125
+    ],
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 2.5651e-05,
+        "since_start_s": 0.008240951
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 0.020926533,
+        "since_start_s": 0.030351145
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.023180551,
+        "since_start_s": 0.030470171
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.920966339,
+        "since_start_s": 0.951445768
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 23.970045827,
+        "since_start_s": 24.921532276
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.009407638
+      },
+      {
+        "event": "cache_lookup",
+        "hit": true,
+        "since_start_s": 0.030387447
+      }
+    ]
+  },
+  {
+    "label": "production-warm",
+    "mode": "baseline",
+    "seconds": 29.921795256988844,
+    "user_seconds": 30.141466,
+    "system_seconds": 0.096775,
+    "rss_kib": 592940,
+    "exit": 1,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/transforms-v5/worker-host-start/host",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "b5948a864a7700396b7d0c40720ac6f59d23f004f47be99d7e88cb06cfced487",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/serial-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      4.61767578125,
+      4.4287109375,
+      4.189453125
+    ],
+    "phases": [],
+    "diagnostic_events": []
+  },
+  {
+    "label": "serial-cold",
+    "mode": "serial",
+    "seconds": 112.50855645799311,
+    "user_seconds": 114.598054,
+    "system_seconds": 0.6968519999999999,
+    "rss_kib": 1135784,
+    "exit": 0,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "2d9944b33f4514afd8628cf8b870274966d3df059f561964efe6afa8e92b1e15",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      7.3740234375,
+      4.55078125,
+      4.14453125
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 5.0464e-05,
+        "since_start_s": 0.007081925
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 1.1832e-05,
+        "since_start_s": 0.00826055
+      },
+      {
+        "phase": "native_compile",
+        "seconds": 0.695759511,
+        "since_start_s": 0.704027776
+      },
+      {
+        "phase": "artifact_publish",
+        "seconds": 0.024066383,
+        "since_start_s": 0.728136879
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.722393306,
+        "since_start_s": 0.728164981
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.915495545,
+        "since_start_s": 1.6436731
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 110.791428709,
+        "since_start_s": 112.4351445
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.00823878
+      },
+      {
+        "event": "cache_lookup",
+        "hit": false,
+        "since_start_s": 0.008263155
+      }
+    ]
+  },
+  {
+    "label": "serial-cold-complete",
+    "mode": "serial",
+    "seconds": 95.86296051798854,
+    "user_seconds": 98.800611,
+    "system_seconds": 0.45634399999999997,
+    "rss_kib": 1297148,
+    "exit": 0,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "7db77c20c06364d1aab9cc72a213c0deea05bb9a1a71847b8395f78f673d91f9",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/complete-cold-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      2.50927734375,
+      3.91455078125,
+      4.00537109375
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 6.9697e-05,
+        "since_start_s": 0.008009563
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 2.3566e-05,
+        "since_start_s": 0.009561277
+      },
+      {
+        "phase": "native_compile",
+        "seconds": 1.06387075,
+        "since_start_s": 1.073450393
+      },
+      {
+        "phase": "artifact_publish",
+        "seconds": 0.028532422,
+        "since_start_s": 1.102081438
+      },
+      {
+        "phase": "module_load",
+        "seconds": 1.095340493,
+        "since_start_s": 1.102116176
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 1.032297882,
+        "since_start_s": 2.134427534
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 93.695988618,
+        "since_start_s": 95.830461331
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/complete-cold-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.009383909
+      },
+      {
+        "event": "cache_lookup",
+        "hit": false,
+        "since_start_s": 0.009566978
+      },
+      {
+        "event": "go_memory",
+        "heap_alloc": 913221840,
+        "mallocs": 1066014,
+        "num_gc": 28,
+        "pause_total_ns": 15475349,
+        "since_start_s": 95.837169869,
+        "sys": 1433234040,
+        "total_alloc": 2477406880
+      }
+    ]
+  },
+  {
+    "label": "serial-gcstats",
+    "mode": "stats",
+    "seconds": 132.41246584401233,
+    "user_seconds": 134.85318,
+    "system_seconds": 0.560058,
+    "rss_kib": 1266796,
+    "exit": 0,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-stats",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "d5ee89a8fdad733b3b68ddd1a48b3ec6d771a2519e56441a26dcacf1341286e8",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/stats-cold-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      5.5908203125,
+      4.07275390625,
+      3.99853515625
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 2.081e-05,
+        "since_start_s": 0.008904387
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 1.0761e-05,
+        "since_start_s": 0.010359792
+      },
+      {
+        "phase": "native_compile",
+        "seconds": 0.68557076,
+        "since_start_s": 0.695937626
+      },
+      {
+        "phase": "artifact_publish",
+        "seconds": 0.023035045,
+        "since_start_s": 0.719012078
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.710892935,
+        "since_start_s": 0.719032517
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.910428998,
+        "since_start_s": 1.629476775
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 130.704722218,
+        "since_start_s": 132.334238079
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/stats-cold-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.010330114
+      },
+      {
+        "event": "cache_lookup",
+        "hit": false,
+        "since_start_s": 0.010362828
+      },
+      {
+        "event": "go_memory",
+        "heap_alloc": 913538824,
+        "mallocs": 1068054,
+        "num_gc": 28,
+        "pause_total_ns": 2352305,
+        "since_start_s": 132.367668669,
+        "sys": 1361545816,
+        "total_alloc": 2473967944
+      }
+    ]
+  },
+  {
+    "label": "serial-native-bounded",
+    "mode": "stats",
+    "seconds": 137.91259008500492,
+    "user_seconds": 140.309607,
+    "system_seconds": 0.60513,
+    "rss_kib": 1305820,
+    "exit": 0,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-stats",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "bf0d24bd92c8f414174161cd9bb11647fff5221f8dbb04d515f4d1874a1f0a79",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/native-bounded-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      4.6474609375,
+      4.31689453125,
+      4.115234375
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 5.4154e-05,
+        "since_start_s": 0.008064241
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 2.3736e-05,
+        "since_start_s": 0.00923449
+      },
+      {
+        "phase": "native_compile",
+        "seconds": 0.722839309,
+        "since_start_s": 0.732083098
+      },
+      {
+        "phase": "artifact_publish",
+        "seconds": 0.025756772,
+        "since_start_s": 0.75787649
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.751238056,
+        "since_start_s": 0.757907058
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.928306405,
+        "since_start_s": 1.686247077
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 136.150433924,
+        "since_start_s": 137.856745128
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/native-bounded-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.009186969
+      },
+      {
+        "event": "cache_lookup",
+        "hit": false,
+        "since_start_s": 0.009238568
+      },
+      {
+        "event": "go_memory",
+        "heap_alloc": 908279680,
+        "mallocs": 1058436,
+        "num_gc": 28,
+        "pause_total_ns": 1625662,
+        "since_start_s": 137.873554816,
+        "sys": 1433520744,
+        "total_alloc": 2473905328
+      }
+    ],
+    "native_code_sha256": "6eb46b29fbf9bc825a9e82116cbb5ca19c325ff36788780b944746ba74408c0f",
+    "native_code_bytes": 21170004
+  },
+  {
+    "label": "serial-no-global",
+    "mode": "serial",
+    "seconds": 90.9765111769957,
+    "user_seconds": 93.225487,
+    "system_seconds": 0.367156,
+    "rss_kib": 1271692,
+    "exit": 0,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "b9af15510544b71041c0b84cb9a67979ba3c6cefced6138f880f60c3af03636a",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/no-global-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186",
+      "WAGO_PIN_GLOBAL_K": "0"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      2.31591796875,
+      3.35498046875,
+      3.83984375
+    ],
+    "output.wasm_sha256": "89af055df4b2a4e44be109f10f50d98b5e29deb4810194aca234c9e019912fbb",
+    "output.cache_sha256": "c3a9142e2f4a1186fb5d47f78dfea5adcbf1892e52ff0a803a7c3332e7236240",
+    "validated_main": 42,
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 4.5115e-05,
+        "since_start_s": 0.007973913
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 1.1803e-05,
+        "since_start_s": 0.009616342
+      },
+      {
+        "phase": "native_compile",
+        "seconds": 0.666988746,
+        "since_start_s": 0.676612052
+      },
+      {
+        "phase": "artifact_publish",
+        "seconds": 0.024252553,
+        "since_start_s": 0.700912675
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.693843164,
+        "since_start_s": 0.700944185
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.915094615,
+        "since_start_s": 1.61604979
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 89.310964346,
+        "since_start_s": 90.946680668
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/no-global-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.009593178
+      },
+      {
+        "event": "cache_lookup",
+        "hit": false,
+        "since_start_s": 0.009619157
+      },
+      {
+        "event": "go_memory",
+        "heap_alloc": 912646656,
+        "mallocs": 1071175,
+        "num_gc": 28,
+        "pause_total_ns": 1971593,
+        "since_start_s": 90.951539553,
+        "sys": 1365715544,
+        "total_alloc": 2473765192
+      }
+    ],
+    "native_code_sha256": "e7604b05d961d851fbccf4f9e605bff947f40accf5b40f774a7d8fb5c9ce75ec",
+    "native_code_bytes": 20305524
+  },
+  {
+    "label": "serial-warm",
+    "mode": "serial",
+    "seconds": 26.17270879697753,
+    "user_seconds": 26.264185,
+    "system_seconds": 0.16098099999999999,
+    "rss_kib": 549708,
+    "exit": 1,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "2d9944b33f4514afd8628cf8b870274966d3df059f561964efe6afa8e92b1e15",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      7.14990234375,
+      4.73095703125,
+      4.21630859375
+    ],
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 4.4638e-05,
+        "since_start_s": 0.007055603
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 0.022742404,
+        "since_start_s": 0.03104035
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.02496906,
+        "since_start_s": 0.031168915
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 1.04670863,
+        "since_start_s": 1.077889268
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 25.074054562,
+        "since_start_s": 26.151990122
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.008284129
+      },
+      {
+        "event": "cache_lookup",
+        "hit": true,
+        "since_start_s": 0.03107568
+      }
+    ]
+  },
+  {
+    "label": "warm-diagnostic",
+    "mode": "serial",
+    "seconds": 23.560404455987737,
+    "user_seconds": 23.706692,
+    "system_seconds": 0.128753,
+    "rss_kib": 555732,
+    "exit": 1,
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/host-profile",
+      "run",
+      "-p8",
+      "--core",
+      "3",
+      "--local",
+      "--locked",
+      "--no-input",
+      "--gc-heap",
+      "512MiB",
+      "--gc-nursery",
+      "64MiB",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+      ".tmp/wago-profile-2026-10-20/request.bin"
+    ],
+    "host_sha256": "b9af15510544b71041c0b84cb9a67979ba3c6cefced6138f880f60c3af03636a",
+    "compiler_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "request_sha256": "873a02bd62e26ef7e15b5556a78a9ea8315df449aafe1ca109c386de2b7ac721",
+    "environment": {
+      "WAGO_HOME": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home",
+      "DEW_TRANSFORM_WORKERS": "0",
+      "DEW_COMPILER_FINGERPRINT": "a8f29a03453dc2b9dbe85c88bb9e4741a15d1c19da03580b605bbeb89f231186"
+    },
+    "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "loadavg": [
+      2.21337890625,
+      3.26513671875,
+      3.79931640625
+    ],
+    "phases": [
+      {
+        "phase": "prepare_compile",
+        "seconds": 5.9102e-05,
+        "since_start_s": 0.0067976
+      },
+      {
+        "phase": "artifact_lookup",
+        "seconds": 0.021100924,
+        "since_start_s": 0.029437573
+      },
+      {
+        "phase": "module_load",
+        "seconds": 0.02384473,
+        "since_start_s": 0.029548062
+      },
+      {
+        "phase": "instantiate",
+        "seconds": 0.884500572,
+        "since_start_s": 0.914058613
+      },
+      {
+        "phase": "guest_invoke",
+        "seconds": 22.613670398,
+        "since_start_s": 23.547637667
+      }
+    ],
+    "diagnostic_events": [
+      {
+        "cacheable": true,
+        "event": "cache_policy",
+        "generation": true,
+        "path": "/home/dev/Projects/dewdrop/.tmp/wago-profile-2026-10-20/profile-home/cache/dewdrop-transform-check/modules/aa/e7c138bce57b6bd40a423d3101f7c3525f9ec9c372479eb11a255018d44a3f.wago",
+        "since_start_s": 0.008328845
+      },
+      {
+        "event": "cache_lookup",
+        "hit": true,
+        "since_start_s": 0.029471006
+      },
+      {
+        "actual": 0,
+        "body": 18446462598732841654,
+        "code": 102,
+        "declaration": 18446462598732842243,
+        "detail": 4123,
+        "event": "invariant_record",
+        "expected": 72,
+        "expression": 0,
+        "module_id": 4294901760,
+        "phase": 1,
+        "since_start_s": 23.547680908
+      },
+      {
+        "event": "go_memory",
+        "heap_alloc": 417484728,
+        "mallocs": 590015,
+        "num_gc": 9,
+        "pause_total_ns": 430534,
+        "since_start_s": 23.55146553,
+        "sys": 608090536,
+        "total_alloc": 873538168
+      }
+    ],
+    "native_code_sha256": "6eb46b29fbf9bc825a9e82116cbb5ca19c325ff36788780b944746ba74408c0f",
+    "native_code_bytes": 21170004
+  }
+]

@@ -1,0 +1,596 @@
+{
+  "time_utc": "2026-10-21T17:33:42Z",
+  "pull_requests": {
+    "1014": {
+      "headRefName": "fix/arm64-pdfium-branch-range",
+      "headRefOid": "732184d4129641de0ebd74c901c8ba81875af49b",
+      "isDraft": false,
+      "number": 1014,
+      "state": "OPEN",
+      "title": "fix(arm64): compile large functions with long conditional branches",
+      "updatedAt": "2026-10-21T16:59:24Z",
+      "url": "https://github.com/wago-org/wago/pull/1014"
+    },
+    "1012": {
+      "headRefName": "perf/gc-test-first-field",
+      "headRefOid": "6ce8d3ac8fe6a88548fcc044f2d77ca7034ef8e4",
+      "isDraft": false,
+      "number": 1012,
+      "state": "OPEN",
+      "title": "perf(amd64): reuse final type-test resolution for first field reads",
+      "updatedAt": "2026-10-21T14:57:58Z",
+      "url": "https://github.com/wago-org/wago/pull/1012"
+    },
+    "1011": {
+      "headRefName": "fix/gc-defined-type-trap-pins",
+      "headRefOid": "8ab64d4b1dfcfbc80c0abfe72c3e8931e047dff9",
+      "isDraft": false,
+      "number": 1011,
+      "state": "OPEN",
+      "title": "fix(amd64): preserve pins and locations on deferred GC traps",
+      "updatedAt": "2026-10-21T14:57:58Z",
+      "url": "https://github.com/wago-org/wago/pull/1011"
+    },
+    "1010": {
+      "headRefName": "fix/guest-storage-type-isolation",
+      "headRefOid": "61a987c263370e327458e4fbce8adf53e3fbd6f8",
+      "isDraft": false,
+      "number": 1010,
+      "state": "OPEN",
+      "title": "fix(wago): detach GuestStorage type query descriptors",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/1010"
+    },
+    "1009": {
+      "headRefName": "perf/direct-reference-register-abi",
+      "headRefOid": "ec8e26decce5904b4d9875f3c1bdab1243d32548",
+      "isDraft": false,
+      "number": 1009,
+      "state": "OPEN",
+      "title": "perf(amd64): pass private reference calls through registers",
+      "updatedAt": "2026-10-21T13:16:33Z",
+      "url": "https://github.com/wago-org/wago/pull/1009"
+    },
+    "1008": {
+      "headRefName": "perf/direct-forwarder-retarget",
+      "headRefOid": "2cffbac1e23c91618d1b748c88121f8906e85cc1",
+      "isDraft": false,
+      "number": 1008,
+      "state": "CLOSED",
+      "title": "perf(amd64): skip bounded direct forwarding calls",
+      "updatedAt": "2026-10-21T17:04:34Z",
+      "url": "https://github.com/wago-org/wago/pull/1008"
+    },
+    "1007": {
+      "headRefName": "perf/gc-numeric-leaf-inline",
+      "headRefOid": "392af571edca957c5f3c946ed956a14b02ea001a",
+      "isDraft": false,
+      "number": 1007,
+      "state": "OPEN",
+      "title": "perf(amd64): inline bounded GC read helpers and forwarding calls",
+      "updatedAt": "2026-10-21T17:04:29Z",
+      "url": "https://github.com/wago-org/wago/pull/1007"
+    },
+    "1006": {
+      "headRefName": "fix/gc-final-resolver-trap-pins",
+      "headRefOid": "021d36398d2fc78091a3f22045aadbbeb62c6583",
+      "isDraft": false,
+      "number": 1006,
+      "state": "MERGED",
+      "title": "fix(amd64): restore final resolver pins before trap handling",
+      "updatedAt": "2026-10-21T12:33:18Z",
+      "url": "https://github.com/wago-org/wago/pull/1006"
+    },
+    "1005": {
+      "headRefName": "perf/gc-promotion-buckets",
+      "headRefOid": "f553e6fbb1e1e243fb1f47e960e074c9a5e12952",
+      "isDraft": false,
+      "number": 1005,
+      "state": "OPEN",
+      "title": "perf(gc): group promotion plans with bounded stable buckets",
+      "updatedAt": "2026-10-21T14:57:56Z",
+      "url": "https://github.com/wago-org/wago/pull/1005"
+    },
+    "1003": {
+      "headRefName": "perf/gc-abstract-array-length",
+      "headRefOid": "4b530bd1133edbc4b450bff263d608f8e9eda49e",
+      "isDraft": false,
+      "number": 1003,
+      "state": "OPEN",
+      "title": "perf(amd64): combine abstract array casts and length reads",
+      "updatedAt": "2026-10-21T14:57:57Z",
+      "url": "https://github.com/wago-org/wago/pull/1003"
+    },
+    "1002": {
+      "headRefName": "fix/amd64-flush-scratch",
+      "headRefOid": "b76948bf74663ecf196896715acdb7f0c4eced53",
+      "isDraft": false,
+      "number": 1002,
+      "state": "OPEN",
+      "title": "fix(amd64): allocate scratch registers for prefix spill copies",
+      "updatedAt": "2026-10-21T14:57:57Z",
+      "url": "https://github.com/wago-org/wago/pull/1002"
+    },
+    "1001": {
+      "headRefName": "perf/gc-vector-array-access",
+      "headRefOid": "a2c0064929ae75a32f9aeb626a20b7ef8cda7f6a",
+      "isDraft": false,
+      "number": 1001,
+      "state": "OPEN",
+      "title": "perf(amd64): keep vector array access in native code",
+      "updatedAt": "2026-10-21T14:57:57Z",
+      "url": "https://github.com/wago-org/wago/pull/1001"
+    },
+    "1000": {
+      "headRefName": "perf/gc-shared-nursery",
+      "headRefOid": "ae119c8a085266675042de1f232caca4a9bca49b",
+      "isDraft": false,
+      "number": 1000,
+      "state": "OPEN",
+      "title": "perf(amd64): share nursery handle batches with small arrays",
+      "updatedAt": "2026-10-21T14:57:57Z",
+      "url": "https://github.com/wago-org/wago/pull/1000"
+    },
+    "999": {
+      "headRefName": "perf/gc-native-batch-cancel",
+      "headRefOid": "5100f1f12f661fe78f2124564d5fa676c743d567",
+      "isDraft": false,
+      "number": 999,
+      "state": "OPEN",
+      "title": "perf(gc): adapt native struct batches to mixed allocation use",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/999"
+    },
+    "998": {
+      "headRefName": "fix/arm64-large-memory-directory",
+      "headRefOid": "423be1b1889a23e3bd3db347bf527e71a31d2ccb",
+      "isDraft": false,
+      "number": 998,
+      "state": "OPEN",
+      "title": "fix(arm64): encode large selected memory-directory addresses",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/998"
+    },
+    "997": {
+      "headRefName": "fix/gc-extern-local-roots",
+      "headRefOid": "dba9d9670bc2fe1710bd4b83f7c9f70bbbfb1e46",
+      "isDraft": true,
+      "number": 997,
+      "state": "OPEN",
+      "title": "fix(wago): retain live roots across extern conversion and native callers",
+      "updatedAt": "2026-10-21T13:16:34Z",
+      "url": "https://github.com/wago-org/wago/pull/997"
+    },
+    "996": {
+      "headRefName": "perf/native-arm64-scalar-array-set",
+      "headRefOid": "0373c594106306f020df617e44485e803365db60",
+      "isDraft": false,
+      "number": 996,
+      "state": "OPEN",
+      "title": "perf: store ARM64 scalar arrays through checked native leaf",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/996"
+    },
+    "995": {
+      "headRefName": "perf/native-indexed-atomic-wait",
+      "headRefOid": "e7d9555d3e20357f687404d598b262d079f2fdda",
+      "isDraft": false,
+      "number": 995,
+      "state": "OPEN",
+      "title": "perf(amd64,arm64): specialize indexed atomic wait mismatches",
+      "updatedAt": "2026-10-21T13:16:34Z",
+      "url": "https://github.com/wago-org/wago/pull/995"
+    },
+    "994": {
+      "headRefName": "perf/native-arm64-general-array-get",
+      "headRefOid": "6d2cd23a57ed2debd50801cd5941130b56736262",
+      "isDraft": false,
+      "number": 994,
+      "state": "OPEN",
+      "title": "perf: read general ARM64 scalar arrays through checked native leaf",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/994"
+    },
+    "993": {
+      "headRefName": "perf/native-nonroot-elem-drop",
+      "headRefOid": "ee598684aefc22771449aee7d1564c48100a9b28",
+      "isDraft": false,
+      "number": 993,
+      "state": "OPEN",
+      "title": "perf: drop nonzero GC element segments without a helper",
+      "updatedAt": "2026-10-21T13:16:33Z",
+      "url": "https://github.com/wago-org/wago/pull/993"
+    },
+    "992": {
+      "headRefName": "perf/native-null-extern-conversion",
+      "headRefOid": "f2a9a040705ea1c172b1bb10e9118e00b8cd270e",
+      "isDraft": false,
+      "number": 992,
+      "state": "OPEN",
+      "title": "perf(railshot): keep null extern conversions native",
+      "updatedAt": "2026-10-21T13:16:34Z",
+      "url": "https://github.com/wago-org/wago/pull/992"
+    },
+    "991": {
+      "headRefName": "fix/amd64-plugin-input-width",
+      "headRefOid": "9c23da6a3cc4c5a5ebf91d27d5d6bb29c1749230",
+      "isDraft": false,
+      "number": 991,
+      "state": "OPEN",
+      "title": "fix(amd64): mask narrow input-only plugin recipe results",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/991"
+    },
+    "990": {
+      "headRefName": "fix/shared-grow-high-delta-ordering",
+      "headRefOid": "cb0a9d74701c9ec84d1229a43de9e5fa7dbebf78",
+      "isDraft": false,
+      "number": 990,
+      "state": "OPEN",
+      "title": "fix: preserve atomic length read for oversized shared memory64 growth",
+      "updatedAt": "2026-10-21T13:16:34Z",
+      "url": "https://github.com/wago-org/wago/pull/990"
+    },
+    "989": {
+      "headRefName": "perf/bounded-plugin-stack-classifier",
+      "headRefOid": "0354807be660bef15c084cef7ee59848e2a34472",
+      "isDraft": false,
+      "number": 989,
+      "state": "OPEN",
+      "title": "Bound portable instruction stack classification by source size",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/989"
+    },
+    "988": {
+      "headRefName": "perf/native-arm64-packed-struct-set",
+      "headRefOid": "db8c8297846fe0e6a8de93ea3bf1c5e25c11e627",
+      "isDraft": false,
+      "number": 988,
+      "state": "OPEN",
+      "title": "perf: store ARM64 packed struct fields through checked native leaf",
+      "updatedAt": "2026-10-21T13:16:34Z",
+      "url": "https://github.com/wago-org/wago/pull/988"
+    },
+    "987": {
+      "headRefName": "perf/native-large-array-cancel",
+      "headRefOid": "5e7334097112a4ea6beef7dcb38cc0d6c588f272",
+      "isDraft": false,
+      "number": 987,
+      "state": "OPEN",
+      "title": "perf(gc): avoid nursery prefix scans when cancelling large arrays",
+      "updatedAt": "2026-10-21T14:57:57Z",
+      "url": "https://github.com/wago-org/wago/pull/987"
+    },
+    "986": {
+      "headRefName": "perf/native-shared-grow-failure-dynamic",
+      "headRefOid": "fe24cd16e39f29a2e95a5f8d7466faf90b933bb9",
+      "isDraft": false,
+      "number": 986,
+      "state": "OPEN",
+      "title": "perf: handle proven runtime shared memory growth failure natively",
+      "updatedAt": "2026-10-21T13:16:33Z",
+      "url": "https://github.com/wago-org/wago/pull/986"
+    },
+    "985": {
+      "headRefName": "perf/native-arm64-packed-struct-get",
+      "headRefOid": "9666dbef9b0df30155e3387b9a0ac8bc3dfb0498",
+      "isDraft": false,
+      "number": 985,
+      "state": "OPEN",
+      "title": "perf: read ARM64 packed struct fields through checked native leaf",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/985"
+    },
+    "984": {
+      "headRefName": "perf/native-arm64-scalar-struct-set",
+      "headRefOid": "95d239f138be8dedc88445e88add38fbca3034a8",
+      "isDraft": false,
+      "number": 984,
+      "state": "OPEN",
+      "title": "perf: store ARM64 scalar struct fields through checked native leaf",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/984"
+    },
+    "983": {
+      "headRefName": "perf/native-shared-grow-failure",
+      "headRefOid": "3b26badaab5bb3eaaf2d13cc11e10e2d53cc30df",
+      "isDraft": false,
+      "number": 983,
+      "state": "OPEN",
+      "title": "perf: fold proven constant shared memory growth failures",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/983"
+    },
+    "982": {
+      "headRefName": "perf/native-custom-imported-tail",
+      "headRefOid": "ac8163849224dafc9c7efcbf05551f8422d34475",
+      "isDraft": false,
+      "number": 982,
+      "state": "OPEN",
+      "title": "perf: lower custom imported tail calls natively",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/982"
+    },
+    "981": {
+      "headRefName": "perf/native-arm64-scalar-struct-get",
+      "headRefOid": "62b7925a69db76eac1b48b56c67ea12ef8b7bf89",
+      "isDraft": false,
+      "number": 981,
+      "state": "OPEN",
+      "title": "perf: read ARM64 scalar struct fields through checked native leaf",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/981"
+    },
+    "980": {
+      "headRefName": "perf/native-array-len",
+      "headRefOid": "a8b72ce7a0775c5d3d4a642357aec9dfbbb72d57",
+      "isDraft": false,
+      "number": 980,
+      "state": "OPEN",
+      "title": "perf: lower general array.len with checked native resolution",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/980"
+    },
+    "979": {
+      "headRefName": "perf/native-ref-null-i31",
+      "headRefOid": "71b1d0245f1cb433b09dbac5d1abaa614499c56a",
+      "isDraft": false,
+      "number": 979,
+      "state": "OPEN",
+      "title": "perf: run compact null and i31 reference checks natively",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/979"
+    },
+    "978": {
+      "headRefName": "perf/native-shared-grow-zero",
+      "headRefOid": "c578a2ffd9a773e8528c9ebd6d867cae4e3a82ad",
+      "isDraft": false,
+      "number": 978,
+      "state": "OPEN",
+      "title": "perf: return dynamic shared grow zero in native code",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/978"
+    },
+    "977": {
+      "headRefName": "perf/arm64-native-plugin-recipes",
+      "headRefOid": "66af0b935d456c790366acf02c95eee48860be75",
+      "isDraft": false,
+      "number": 977,
+      "state": "OPEN",
+      "title": "perf(arm64): compile portable scalar plugin recipes",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/977"
+    },
+    "976": {
+      "headRefName": "perf/native-branch-cast",
+      "headRefOid": "f7a7d399606434d7bf136fbc71bb31a6527d25c5",
+      "isDraft": false,
+      "number": 976,
+      "state": "MERGED",
+      "title": "perf: specialize GC branch casts on AMD64 and ARM64",
+      "updatedAt": "2026-10-21T13:05:08Z",
+      "url": "https://github.com/wago-org/wago/pull/976"
+    },
+    "975": {
+      "headRefName": "debug/deferred-load-address-check",
+      "headRefOid": "b75c0b7624e906a557018e4660cbae5f042c6aa3",
+      "isDraft": false,
+      "number": 975,
+      "state": "MERGED",
+      "title": "Detect register clobbers in AMD64 and ARM64 checked builds",
+      "updatedAt": "2026-10-20T15:54:20Z",
+      "url": "https://github.com/wago-org/wago/pull/975"
+    },
+    "974": {
+      "headRefName": "fix/pinned-global-load-address",
+      "headRefOid": "526e7ce6ed87e2c244ef46ce48744eca428d1788",
+      "isDraft": false,
+      "number": 974,
+      "state": "MERGED",
+      "title": "Fix AMD64 deferred loads from pinned mutable globals",
+      "updatedAt": "2026-10-20T02:40:29Z",
+      "url": "https://github.com/wago-org/wago/pull/974"
+    },
+    "973": {
+      "headRefName": "fix/host-reentry-depth",
+      "headRefOid": "e3f2be0a0f948cc36b29e86d5b177a7bf4650c56",
+      "isDraft": false,
+      "number": 973,
+      "state": "MERGED",
+      "title": "Allow bounded Component Model adapter chains under standard Go",
+      "updatedAt": "2026-10-20T17:00:31Z",
+      "url": "https://github.com/wago-org/wago/pull/973"
+    },
+    "972": {
+      "headRefName": "fix/inline-stack-arguments",
+      "headRefOid": "d099b1a3addcd47eac5556c2e3dcd72bb130b0f5",
+      "isDraft": false,
+      "number": 972,
+      "state": "CLOSED",
+      "title": "Fix AMD64 deferred load address clobbering in hinted binary results",
+      "updatedAt": "2026-10-21T04:06:58Z",
+      "url": "https://github.com/wago-org/wago/pull/972"
+    },
+    "971": {
+      "headRefName": "fix/imported-start-reentry",
+      "headRefOid": "f93861f4cfde6b41c1177025d1ea1f5933cdb5d2",
+      "isDraft": false,
+      "number": 971,
+      "state": "OPEN",
+      "title": "Fix reentry from imported start callbacks",
+      "updatedAt": "2026-10-21T13:12:40Z",
+      "url": "https://github.com/wago-org/wago/pull/971"
+    },
+    "970": {
+      "headRefName": "jairus/gc-arm64-amd64-parity",
+      "headRefOid": "6b5eba65efa67eb01054221b78a5d8aee298839c",
+      "isDraft": false,
+      "number": 970,
+      "state": "MERGED",
+      "title": "perf(gc): share native optimizations across ARM64 and AMD64",
+      "updatedAt": "2026-10-19T21:58:38Z",
+      "url": "https://github.com/wago-org/wago/pull/970"
+    },
+    "969": {
+      "headRefName": "perf/amd64-atomic-wait-current-main",
+      "headRefOid": "3ec8537344626c1adf923e686dac47af3bb0105f",
+      "isDraft": false,
+      "number": 969,
+      "state": "MERGED",
+      "title": "perf: inline atomic wait returns and trim notify on amd64 and arm64",
+      "updatedAt": "2026-10-19T23:53:44Z",
+      "url": "https://github.com/wago-org/wago/pull/969"
+    },
+    "968": {
+      "headRefName": "jairus/general-amd64-optimization",
+      "headRefOid": "4dc9fa7c841b4f34aa73a6fe04d1dda8a86bf316",
+      "isDraft": true,
+      "number": 968,
+      "state": "CLOSED",
+      "title": "perf(amd64): general compiler and runtime optimization",
+      "updatedAt": "2026-10-19T15:52:32Z",
+      "url": "https://github.com/wago-org/wago/pull/968"
+    },
+    "967": {
+      "headRefName": "perf/hub-w2c2-parity",
+      "headRefOid": "4dc9fa7c841b4f34aa73a6fe04d1dda8a86bf316",
+      "isDraft": true,
+      "number": 967,
+      "state": "CLOSED",
+      "title": "perf(amd64): general compiler and runtime optimization",
+      "updatedAt": "2026-10-19T15:37:42Z",
+      "url": "https://github.com/wago-org/wago/pull/967"
+    },
+    "966": {
+      "headRefName": "perf/amd64-wasmgc-throughput",
+      "headRefOid": "a6b931223b2505f8c36207cdda48658d239d3ada",
+      "isDraft": false,
+      "number": 966,
+      "state": "MERGED",
+      "title": "perf(amd64): accelerate WasmGC allocation and collection",
+      "updatedAt": "2026-10-19T19:46:24Z",
+      "url": "https://github.com/wago-org/wago/pull/966"
+    },
+    "965": {
+      "headRefName": "docs/standardize-changelog-2026-10-15",
+      "headRefOid": "4303b9b2ed4597ab54f7b17306fc44fa8d79ff3b",
+      "isDraft": true,
+      "number": 965,
+      "state": "OPEN",
+      "title": "docs: standardize changelog and link pull requests",
+      "updatedAt": "2026-10-21T13:16:36Z",
+      "url": "https://github.com/wago-org/wago/pull/965"
+    },
+    "964": {
+      "headRefName": "jairus/update-readme",
+      "headRefOid": "0643bf0de3403c9228620336c9396cdf936f4192",
+      "isDraft": false,
+      "number": 964,
+      "state": "MERGED",
+      "title": "Update benchmark link in README",
+      "updatedAt": "2026-10-15T17:32:50Z",
+      "url": "https://github.com/wago-org/wago/pull/964"
+    },
+    "963": {
+      "headRefName": "jairus/wasm3-feature-parity",
+      "headRefOid": "e43241d4e3a527a2e05db2f38696a916ca9b9e3e",
+      "isDraft": false,
+      "number": 963,
+      "state": "MERGED",
+      "title": "feat(wasm): extend native features and general compiler lowering",
+      "updatedAt": "2026-10-15T08:17:14Z",
+      "url": "https://github.com/wago-org/wago/pull/963"
+    },
+    "962": {
+      "headRefName": "feat/rv64-mutable-global-set",
+      "headRefOid": "f27afaaa6f6212668994681e7cdcb634549c1d40",
+      "isDraft": false,
+      "number": 962,
+      "state": "OPEN",
+      "title": "feat(rv64): complete Linux RISC-V64 support",
+      "updatedAt": "2026-10-21T01:43:13Z",
+      "url": "https://github.com/wago-org/wago/pull/962"
+    },
+    "961": {
+      "headRefName": "codex/llvm-boolean-result",
+      "headRefOid": "4d4a2bd73445881bd1b98209530cf91887b767df",
+      "isDraft": false,
+      "number": 961,
+      "state": "MERGED",
+      "title": "Optimize scalar float predicates and sign operations on ARM64 and AMD64",
+      "updatedAt": "2026-10-21T01:35:08Z",
+      "url": "https://github.com/wago-org/wago/pull/961"
+    },
+    "960": {
+      "headRefName": "codex/llvm-bitset-dispatch",
+      "headRefOid": "c0ee51b32b91b657af86b5fcad18e7ad562b0c53",
+      "isDraft": false,
+      "number": 960,
+      "state": "OPEN",
+      "title": "Use bounded bitset dispatch with standard ARM64 branch handling",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/960"
+    },
+    "959": {
+      "headRefName": "codex/llvm-float-select",
+      "headRefOid": "f2bed4b6228477068a35bb2c1aa0c37214ad89b5",
+      "isDraft": false,
+      "number": 959,
+      "state": "OPEN",
+      "title": "Use ARM64 FCSEL and preserve scalar and vector select contracts",
+      "updatedAt": "2026-10-21T13:16:33Z",
+      "url": "https://github.com/wago-org/wago/pull/959"
+    },
+    "958": {
+      "headRefName": "codex/llvm-arithmetic-flags",
+      "headRefOid": "5e50491769b30232daf6d4df03fbe36f07470233",
+      "isDraft": false,
+      "number": 958,
+      "state": "CLOSED",
+      "title": "Fold dead SUB/XOR results into scalar equality comparisons",
+      "updatedAt": "2026-10-13T03:48:20Z",
+      "url": "https://github.com/wago-org/wago/pull/958"
+    },
+    "957": {
+      "headRefName": "codex/llvm-bitfields",
+      "headRefOid": "e0a6b94b5692b43ffbede87346de406ecda9959e",
+      "isDraft": false,
+      "number": 957,
+      "state": "OPEN",
+      "title": "Combine bounded ARM64 shift and mask pairs",
+      "updatedAt": "2026-10-21T13:16:34Z",
+      "url": "https://github.com/wago-org/wago/pull/957"
+    },
+    "956": {
+      "headRefName": "codex/llvm-variable-shifts",
+      "headRefOid": "a55230ec1464da8a25e7520e0571294042e3a27b",
+      "isDraft": false,
+      "number": 956,
+      "state": "OPEN",
+      "title": "Reuse ARM64 registers for variable scalar shifts",
+      "updatedAt": "2026-10-21T13:16:35Z",
+      "url": "https://github.com/wago-org/wago/pull/956"
+    },
+    "949": {
+      "headRefName": "codex/fix-windows-gc-crash",
+      "headRefOid": "3170dc2f618b1788f42b5a13e9efef1c4031c93b",
+      "isDraft": false,
+      "number": 949,
+      "state": "MERGED",
+      "title": "test(amd64): avoid Windows fault recovery in compiler fixtures",
+      "updatedAt": "2026-10-12T12:58:56Z",
+      "url": "https://github.com/wago-org/wago/pull/949"
+    },
+    "948": {
+      "headRefName": "codex/fix-cached-start-and-host-allocations",
+      "headRefOid": "58cbd04c9c95001a479ad264d8c1e0dd47fa8d7f",
+      "isDraft": false,
+      "number": 948,
+      "state": "OPEN",
+      "title": "fix: preserve cached starts and speed up GC-heavy Wasm",
+      "updatedAt": "2026-10-21T14:57:57Z",
+      "url": "https://github.com/wago-org/wago/pull/948"
+    }
+  },
+  "changes": []
+}

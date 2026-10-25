@@ -1,0 +1,36 @@
+{
+  "label": "allocation-mix-structs-batch32-2",
+  "command": [
+    "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+    "run",
+    "--bare",
+    "--offline",
+    "--no-input",
+    "--allow-native-artifact",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "--invoke",
+    "structs",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/allocation-mix.wago",
+    "500000"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+  "seconds": 0.029900452999754634,
+  "user_seconds": 0.020037,
+  "system_seconds": 0.010229,
+  "peak_rss_kib": 160048,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.02197265625,
+    3.76025390625,
+    3.4521484375
+  ],
+  "load_end": [
+    2.02197265625,
+    3.76025390625,
+    3.4521484375
+  ]
+}

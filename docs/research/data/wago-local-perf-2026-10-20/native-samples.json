@@ -1,0 +1,866 @@
+[
+  {
+    "label": "native-fib-base-p1-1",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p1-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.012953641999956744,
+    "user_seconds": 0.001945,
+    "system_seconds": 0.000971,
+    "peak_rss_kib": 18464,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "base",
+    "workers": 1,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 234
+  },
+  {
+    "label": "native-fib-stack-p1-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-stack-p1-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0031968569996934093,
+    "user_seconds": 0.002662,
+    "system_seconds": 0.0,
+    "peak_rss_kib": 18960,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "stack",
+    "workers": 1,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 238
+  },
+  {
+    "label": "native-fib-base-p8-1",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p8-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.003242805000354565,
+    "user_seconds": 0.000909,
+    "system_seconds": 0.001813,
+    "peak_rss_kib": 18960,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "base",
+    "workers": 8,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 234
+  },
+  {
+    "label": "native-fib-stack-p8-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-stack-p8-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0030527459998666018,
+    "user_seconds": 0.001276,
+    "system_seconds": 0.001277,
+    "peak_rss_kib": 18960,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "stack",
+    "workers": 8,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 238
+  },
+  {
+    "label": "native-dew-compiler-base-p1-1",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p1-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.4947904089999611,
+    "user_seconds": 0.479572,
+    "system_seconds": 0.022115,
+    "peak_rss_kib": 157528,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 1,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 25902527
+  },
+  {
+    "label": "native-dew-compiler-stack-p1-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p1-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.494216748999861,
+    "user_seconds": 0.49662799999999996,
+    "system_seconds": 0.014931999999999999,
+    "peak_rss_kib": 165868,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 1,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 31538186
+  },
+  {
+    "label": "native-dew-compiler-base-p8-1",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p8-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.2448215480003455,
+    "user_seconds": 0.6281059999999999,
+    "system_seconds": 0.030706999999999998,
+    "peak_rss_kib": 148428,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 8,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 25902527
+  },
+  {
+    "label": "native-dew-compiler-stack-p8-1",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p8-1.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.2624021859996901,
+    "user_seconds": 0.6604479999999999,
+    "system_seconds": 0.049110999999999995,
+    "peak_rss_kib": 186148,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 8,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 31538186
+  },
+  {
+    "label": "native-fib-stack-p8-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-stack-p8-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.003085145000113698,
+    "user_seconds": 0.001196,
+    "system_seconds": 0.001201,
+    "peak_rss_kib": 21520,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "stack",
+    "workers": 8,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 238
+  },
+  {
+    "label": "native-fib-base-p8-2",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p8-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0031654529998377257,
+    "user_seconds": 0.001808,
+    "system_seconds": 0.0009029999999999999,
+    "peak_rss_kib": 21520,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "base",
+    "workers": 8,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 234
+  },
+  {
+    "label": "native-fib-stack-p1-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-stack-p1-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0028970600001230196,
+    "user_seconds": 0.0,
+    "system_seconds": 0.002415,
+    "peak_rss_kib": 21528,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "stack",
+    "workers": 1,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 238
+  },
+  {
+    "label": "native-fib-base-p1-2",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p1-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0027907139997296326,
+    "user_seconds": 0.0,
+    "system_seconds": 0.002358,
+    "peak_rss_kib": 21528,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "fib",
+    "version": "base",
+    "workers": 1,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 234
+  },
+  {
+    "label": "native-dew-compiler-stack-p8-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p8-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.2525501169998279,
+    "user_seconds": 0.641595,
+    "system_seconds": 0.038669999999999996,
+    "peak_rss_kib": 220596,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 8,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 31538186
+  },
+  {
+    "label": "native-dew-compiler-base-p8-2",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p8-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.24362092799992752,
+    "user_seconds": 0.631081,
+    "system_seconds": 0.046952,
+    "peak_rss_kib": 164536,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 8,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 25902527
+  },
+  {
+    "label": "native-dew-compiler-stack-p1-2",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p1-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.5684203929999967,
+    "user_seconds": 0.48617,
+    "system_seconds": 0.022043999999999998,
+    "peak_rss_kib": 164004,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.41015625,
+      1.97998046875,
+      2.29150390625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 1,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 31538186
+  },
+  {
+    "label": "native-dew-compiler-base-p1-2",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p1-2.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.565731962999962,
+    "user_seconds": 0.466669,
+    "system_seconds": 0.024184,
+    "peak_rss_kib": 157960,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 1,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 25902527
+  },
+  {
+    "label": "native-fib-base-p1-3",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p1-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0030427159999817377,
+    "user_seconds": 0.001298,
+    "system_seconds": 0.001303,
+    "peak_rss_kib": 21528,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "fib",
+    "version": "base",
+    "workers": 1,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 234
+  },
+  {
+    "label": "native-fib-stack-p1-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-stack-p1-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0031677900001341186,
+    "user_seconds": 0.0,
+    "system_seconds": 0.00266,
+    "peak_rss_kib": 21656,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "fib",
+    "version": "stack",
+    "workers": 1,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 238
+  },
+  {
+    "label": "native-fib-base-p8-3",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-base-p8-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.0027063799998359173,
+    "user_seconds": 0.0,
+    "system_seconds": 0.00228,
+    "peak_rss_kib": 21656,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "fib",
+    "version": "base",
+    "workers": 8,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 234
+  },
+  {
+    "label": "native-fib-stack-p8-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-fib-stack-p8-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago/tests/fixtures/wasm/fib.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.002749813999798789,
+    "user_seconds": 0.0,
+    "system_seconds": 0.002159,
+    "peak_rss_kib": 21656,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "fib",
+    "version": "stack",
+    "workers": 8,
+    "module_sha256": "a7ae34ae8d77c812be235f7fdc690eeb2248b348bd5958e120dd755384e7c5f9",
+    "artifact_bytes": 238
+  },
+  {
+    "label": "native-dew-compiler-base-p1-3",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p1-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.5657522609999432,
+    "user_seconds": 0.478595,
+    "system_seconds": 0.014756,
+    "peak_rss_kib": 155912,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 1,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 25902527
+  },
+  {
+    "label": "native-dew-compiler-stack-p1-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p1",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p1-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.5802774620001401,
+    "user_seconds": 0.497142,
+    "system_seconds": 0.021213,
+    "peak_rss_kib": 166176,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 1,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 31538186
+  },
+  {
+    "label": "native-dew-compiler-base-p8-3",
+    "command": [
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/base-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-base-p8-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.322941697999795,
+    "user_seconds": 0.601873,
+    "system_seconds": 0.030427,
+    "peak_rss_kib": 161228,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "dew-compiler",
+    "version": "base",
+    "workers": 8,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 25902527
+  },
+  {
+    "label": "native-dew-compiler-stack-p8-3",
+    "command": [
+      "/home/dev/.local/share/wago/versions/local-gc-e2fe43ffc/standard/normal/wago-runtime",
+      "build",
+      "--bare",
+      "--offline",
+      "--no-input",
+      "-p8",
+      "--output",
+      "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/native-dew-compiler-stack-p8-3.wago",
+      "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm"
+    ],
+    "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20",
+    "seconds": 0.33333430099992256,
+    "user_seconds": 0.652924,
+    "system_seconds": 0.042061999999999995,
+    "peak_rss_kib": 208744,
+    "exit": 0,
+    "timeout": false,
+    "load_start": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "load_end": [
+      2.45751953125,
+      1.9970703125,
+      2.29541015625
+    ],
+    "module": "dew-compiler",
+    "version": "stack",
+    "workers": 8,
+    "module_sha256": "c64fcf044b72cb7356ad598a35670045931337cfa7a6bb9d5916cd304b23fba6",
+    "artifact_bytes": 31538186
+  }
+]

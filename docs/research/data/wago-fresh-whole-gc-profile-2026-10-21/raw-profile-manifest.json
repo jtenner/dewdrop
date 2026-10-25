@@ -1,0 +1,22 @@
+{
+  "profile/cpu.pprof": {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/fresh-whole-gc-profile/profile/cpu.pprof",
+    "bytes": 29783,
+    "sha256": "d4f0cd8b0e3b68a28d7e2e4704cc04a7c2d2230941ed7c49e253efa82561bdb0"
+  },
+  "profile/code-map.json": {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/fresh-whole-gc-profile/profile/code-map.json",
+    "bytes": 46936158,
+    "sha256": "5115613a7e7d376d19ad48d2072254d601fb33fe0df06cf820547fa979bed7cd"
+  },
+  "profile/native-samples.json": {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/fresh-whole-gc-profile/profile/native-samples.json",
+    "bytes": 143018,
+    "sha256": "f9830d0e5532090a84d9683db989f6d1168c40612730102cf63b029ef14e2ead"
+  },
+  "profile/resolved-samples.json": {
+    "path": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/fresh-whole-gc-profile/profile/resolved-samples.json",
+    "bytes": 309368,
+    "sha256": "8f16458407e98aaf246d619d9186776bdc55073b976d9c487c94bcc1ff7ec1c1"
+  }
+}

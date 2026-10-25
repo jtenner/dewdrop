@@ -1,0 +1,650 @@
+{
+  "baseline": {
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=true": {
+      "samples": [
+        {
+          "ns": 442.2,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 458.9,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 461.8,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 458.9
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=false": {
+      "samples": [
+        {
+          "ns": 445.6,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 443.6,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 449.4,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 445.6
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/distance=512": {
+      "samples": [
+        {
+          "ns": 253.7,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 262.9,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 264.3,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 262.9
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/front": {
+      "samples": [
+        {
+          "ns": 114.6,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 99.95,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 99.37,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 99.95
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=true": {
+      "samples": [
+        {
+          "ns": 42561.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 42108.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 44166.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 42561.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=false": {
+      "samples": [
+        {
+          "ns": 41863.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 41564.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 42551.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 41863.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=512": {
+      "samples": [
+        {
+          "ns": 41462.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 43481.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 43356.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 43356.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=1024": {
+      "samples": [
+        {
+          "ns": 43700.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 42788.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 43536.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 43536.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/front": {
+      "samples": [
+        {
+          "ns": 15566.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 15427.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 15361.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 15427.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=true": {
+      "samples": [
+        {
+          "ns": 455358.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 432076.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 411780.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 432076.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=false": {
+      "samples": [
+        {
+          "ns": 415513.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 414398.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 417947.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 415513.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=512": {
+      "samples": [
+        {
+          "ns": 434359.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 428009.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 420056.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 428009.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=1024": {
+      "samples": [
+        {
+          "ns": 423109.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 436982.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 417775.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 423109.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/front": {
+      "samples": [
+        {
+          "ns": 493505.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 501488.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 492966.0,
+          "collector_bytes": 3128.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 493505.0
+    }
+  },
+  "candidate": {
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=true": {
+      "samples": [
+        {
+          "ns": 16.36,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.51,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.52,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 16.51
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/tail=false": {
+      "samples": [
+        {
+          "ns": 17.11,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 17.5,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 17.01,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 17.11
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/distance=512": {
+      "samples": [
+        {
+          "ns": 59.96,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 64.34,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 59.83,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 59.96
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000/front": {
+      "samples": [
+        {
+          "ns": 99.87,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 103.3,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 101.4,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 101.4
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=true": {
+      "samples": [
+        {
+          "ns": 16.65,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.28,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.27,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 16.28
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/tail=false": {
+      "samples": [
+        {
+          "ns": 16.91,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.91,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 17.19,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 16.91
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=512": {
+      "samples": [
+        {
+          "ns": 63.03,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 63.28,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 60.75,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 63.03
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/distance=1024": {
+      "samples": [
+        {
+          "ns": 99.05,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 102.3,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 100.6,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 100.6
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=100000/front": {
+      "samples": [
+        {
+          "ns": 14459.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 15378.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 15562.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 15378.0
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=true": {
+      "samples": [
+        {
+          "ns": 16.37,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 21.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.73,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 16.73
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/tail=false": {
+      "samples": [
+        {
+          "ns": 17.17,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 16.94,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 18.83,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 17.17
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=512": {
+      "samples": [
+        {
+          "ns": 86.62,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 60.24,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 59.55,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 60.24
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/distance=1024": {
+      "samples": [
+        {
+          "ns": 100.5,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 113.2,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 102.1,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 102.1
+    },
+    "BenchmarkNativeLargeArrayCancellation/prefix=1000000/front": {
+      "samples": [
+        {
+          "ns": 474660.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 507262.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        },
+        {
+          "ns": 486828.0,
+          "collector_bytes": 3136.0,
+          "B/op": 0.0,
+          "allocs/op": 0.0
+        }
+      ],
+      "median_ns": 486828.0
+    }
+  }
+}

@@ -1,0 +1,160 @@
+pair=0 experiment=stable variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3336248 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=0 experiment=stable variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3780484 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=0 experiment=canonical variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   3074469 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=0 experiment=canonical variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   9413998 ns/op	   27033 B/op	       0 allocs/op
+PASS
+
+pair=1 experiment=canonical variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	  10076020 ns/op	   27033 B/op	       0 allocs/op
+PASS
+
+pair=1 experiment=canonical variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   3007986 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=1 experiment=stable variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3830047 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=1 experiment=stable variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   2915743 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=2 experiment=stable variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3077109 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=2 experiment=stable variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3821996 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=2 experiment=canonical variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   3237342 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=2 experiment=canonical variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   9794383 ns/op	   27033 B/op	       0 allocs/op
+PASS
+
+pair=3 experiment=canonical variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   9703252 ns/op	   27033 B/op	       0 allocs/op
+PASS
+
+pair=3 experiment=canonical variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   3451925 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=3 experiment=stable variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3861359 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=3 experiment=stable variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3021668 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=4 experiment=stable variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3150642 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=4 experiment=stable variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   4009148 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=4 experiment=canonical variant=base
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   3204746 ns/op	       0 B/op	       0 allocs/op
+PASS
+
+pair=4 experiment=canonical variant=candidate
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkCanonicalRecyclingOrderedCleanup 	      10	   9429773 ns/op	   27033 B/op	       0 allocs/op
+PASS
+

@@ -1,0 +1,28 @@
+{
+  "command": [
+    "claude",
+    "-p",
+    "--model",
+    "opus",
+    "--effort",
+    "max",
+    "--permission-mode",
+    "plan",
+    "--permission-prompts",
+    "none",
+    "--tools",
+    "Read,Glob,Grep",
+    "--allowedTools",
+    "Read,Glob,Grep",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-budget-usd",
+    "8",
+    "Research the largest remaining Wago runtime bottlenecks for the Dewdrop compiler. This is an independent research vector, not a code review. Read-only: no edits, builds, tests, benchmarks, fetches, PRs, or messages. Use only Read/Grep/Glob. Root is coordinating CPU timing lanes and implementation.\nUser goal: compile in about4seconds, known V8 result. DO NOT repeat any V8 measurements. Current Wago full compile remains roughly37\u201340s depending on host conditions. Small 3% wins are useful but we need a larger algorithm change. Distinguish measured evidence from hypotheses and static counts from dynamic counts.\nCurrent installed source /home/dev/Projects/dewdrop/.tmp/wago-local-stack-2026-10-20/wago HEAD61881e2d0d5262e5c8362e024a95b7bec0a963e4. There is an unrelated dirty ARM64 call.go; do not change it or use it as an AMD64 experiment. Mainlinebasecd029409b. PR948 includes latest read fixes; all installed tests/root admission pass.\nAlready installed: pure numeric-leaf inlining under exact GC roots (PR1007); bounded direct-forwarder retargeting(PR1008); private reference register ABI(PR1009) including return global-cell invalidation; GuestStorage.DefinedType deep copies(PR1010); direct byte handle-space loads; checked shift/indexed descriptor loads; fused final cast+struct scalar/ref/packed/FP/vector read; fused final cast+array element read; bounded successful checked field read\u2192actually selected numeric comparison inline\u2192trapping if\u2192covered second field read address reuse. New fulljob isolated effects: descriptor2.72%, guard4.30%; one final combinedpair42.17\u219239.37s is directional, not robust absolute speed claim. Final arrayget hot wrapper has two native resolver calls now, previouslyfour. DO NOT report any of those already-fixed mechanisms as newly absent without checking current source.\nHeld regressions, not installed: stable/canonical free-handle recycling (warmlist regressed~319% in one prototype; canonical fulljob+12.2% slow), simple type-only facts(fulljob~0.35% noisy), exactgetterinline(fulljob~4.7% slower), Old-specific preloads(fulljob~0.75% noisy). Evidence in docs/research. Avoid re-proposing them unchanged. A rooted cross-call logical object certificate is already under Astra research; do not duplicate as your main recommendation.\nPrior Claude report docs/research/wago-claude-bottlenecks-2026-10-21.md has valuable hypotheses but much is stale (F1numeric/forwarder/F4ABI/F5decode now fixed). Read it critically. Profile docs/research/wago-native-profile-2026-10-21.md and data/wago-native-profile-2026-10-21 show older baseline~81% GoCPU samples in generated nativecode,~12%cum minorGC. Native software PC sampling is not hardware CPU time, do not repeat old63% as current measured share. Current profile refresh is being prepared by root. Actual guest source: .tmp/wago-v8-target/compiler.wat (large, use bounded reads/searches); real artifact .tmp/transform-workers/run-rvr6ozve/compiler.wasm frozen. Guest ABI erases refs to eqref; source typed-emission pilot is possible but prioritize Wago changes.\nPlease inspect current source and identify 3\u20135 ranked algorithm/representation changes likely to remove an order of work: handle-table/view indirection layout, native reference/collector representation, bounded read-leaf inlining without prior getter regression, loop redundant read validation, or another well-supported mechanism. Give exact source hooks, proof obligations (roots/moves/call effects/traps/metadata/host API/unsafe/custom/codec), concrete benchmark/admission counters, code/memory impact, rejection cases and smallest first prototype. Explain why each avoids the prior held regressions. Mark compatibility/ABI cost. Aim for a useful implementation plan under1800words, not generic advice. Do not make speed promises without measured evidence. Return your report as final text; root saves it under docs/research. No subagents needed."
+  ],
+  "role": "independent read-only runtime research"
+}

@@ -1,0 +1,21 @@
+[
+  {
+    "ID": 1,
+    "Types": 2619,
+    "Events": 146,
+    "Batches": 1334860,
+    "BaseBatches": 93053,
+    "Stats": {
+      "Allocations": 317075456,
+      "MinorCollections": 146,
+      "FullCollections": 0,
+      "MinorObjectsScanned": 13726920,
+      "MinorRememberedScanned": 35910,
+      "YoungBytesCopied": 459938416,
+      "PromotedBytes": 142101064,
+      "LiveObjects": 4585223,
+      "TenuringThreshold": 3
+    },
+    "TraceBytes": 26680
+  }
+]

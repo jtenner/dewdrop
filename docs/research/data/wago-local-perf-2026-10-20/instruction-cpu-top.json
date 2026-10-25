@@ -1,0 +1,29 @@
+{
+  "label": "instruction-cpu-top",
+  "command": [
+    "go",
+    "tool",
+    "pprof",
+    "-top",
+    "-nodecount=40",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-host",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-profile/cpu.pprof"
+  ],
+  "cwd": "/home/dev/Projects/dewdrop",
+  "seconds": 0.08087300399984088,
+  "user_seconds": 0.163138,
+  "system_seconds": 0.09553299999999999,
+  "peak_rss_kib": 40476,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    14.1337890625,
+    6.333984375,
+    3.74951171875
+  ],
+  "load_end": [
+    14.1337890625,
+    6.333984375,
+    3.74951171875
+  ]
+}

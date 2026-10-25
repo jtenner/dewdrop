@@ -1,0 +1,25 @@
+[
+  {
+    "name": "normal",
+    "command": [
+      "go",
+      "test",
+      "./..."
+    ],
+    "seconds": 35.57442956600062,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/resolver-safety-final-normal.log"
+  },
+  {
+    "name": "checked",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_regalloccheck",
+      "./..."
+    ],
+    "seconds": 34.77666176799903,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/resolver-safety-final-checked.log"
+  }
+]

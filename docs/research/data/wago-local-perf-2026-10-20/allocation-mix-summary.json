@@ -1,0 +1,26 @@
+[
+  {
+    "export": "structs",
+    "batch": 512,
+    "median_seconds": 0.0216115749999517,
+    "median_cpu_seconds": 0.021837
+  },
+  {
+    "export": "structs",
+    "batch": 32,
+    "median_seconds": 0.02932647299985547,
+    "median_cpu_seconds": 0.028709
+  },
+  {
+    "export": "alternating",
+    "batch": 512,
+    "median_seconds": 0.8247605480000857,
+    "median_cpu_seconds": 0.8243109999999999
+  },
+  {
+    "export": "alternating",
+    "batch": 32,
+    "median_seconds": 0.24259443699975236,
+    "median_cpu_seconds": 0.240998
+  }
+]

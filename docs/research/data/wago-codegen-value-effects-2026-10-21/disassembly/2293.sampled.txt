@@ -1,0 +1,103 @@
+48 samples at 628e81: test   r10d,r10d
+  628e66:	41 3b 40 10          	cmp    eax,DWORD PTR [r8+0x10]
+  628e6a:	0f 83 10 01 00 00    	jae    0x628f80
+  628e70:	4d 8b 48 08          	mov    r9,QWORD PTR [r8+0x8]
+  628e74:	48 c1 e0 04          	shl    rax,0x4
+  628e78:	49 01 c1             	add    r9,rax
+  628e7b:	45 0f b6 54 21 0e    	movzx  r10d,BYTE PTR [r9+riz*1+0xe]
+  628e81:	45 85 d2             	test   r10d,r10d
+  628e84:	0f 84 f6 00 00 00    	je     0x628f80
+  628e8a:	41 83 fa 04          	cmp    r10d,0x4
+  628e8e:	0f 87 ec 00 00 00    	ja     0x628f80
+  628e94:	41 c1 e2 04          	shl    r10d,0x4
+
+6 samples at 628ecf: cmp    ecx,edx
+  628eb8:	0f 87 c2 00 00 00    	ja     0x628f80
+  628ebe:	83 f9 10             	cmp    ecx,0x10
+  628ec1:	0f 82 b9 00 00 00    	jb     0x628f80
+  628ec7:	89 cf                	mov    edi,ecx
+  628ec9:	49 01 c3             	add    r11,rax
+  628ecc:	41 8b 0b             	mov    ecx,DWORD PTR [r11]
+  628ecf:	39 d1                	cmp    ecx,edx
+  628ed1:	0f 84 6c 00 00 00    	je     0x628f43
+  628ed7:	4c 8b 83 e8 fe ff ff 	mov    r8,QWORD PTR [rbx-0x118]
+  628ede:	4d 8b 40 08          	mov    r8,QWORD PTR [r8+0x8]
+  628ee2:	89 c8                	mov    eax,ecx
+
+5 samples at 6281b5: mov    r12,rdi
+  62819b:	b9 00 00 00 00       	mov    ecx,0x0
+  6281a0:	be 14 00 00 00       	mov    esi,0x14
+  6281a5:	e8 69 0c 00 00       	call   0x628e13
+  6281aa:	85 c0                	test   eax,eax
+  6281ac:	0f 84 c2 09 00 00    	je     0x628b74
+  6281b2:	8b 7a 10             	mov    edi,DWORD PTR [rdx+0x10]
+  6281b5:	49 89 fc             	mov    r12,rdi
+  6281b8:	4c 89 e7             	mov    rdi,r12
+  6281bb:	48 89 f8             	mov    rax,rdi
+  6281be:	ba 2b 0e 00 00       	mov    edx,0xe2b
+  6281c3:	b9 20 00 00 00       	mov    ecx,0x20
+
+3 samples at 628f1a: mov    eax,edx
+  628f00:	4d 8b 90 a8 00 00 00 	mov    r10,QWORD PTR [r8+0xa8]
+  628f07:	4d 85 d2             	test   r10,r10
+  628f0a:	0f 84 70 00 00 00    	je     0x628f80
+  628f10:	89 c8                	mov    eax,ecx
+  628f12:	48 6b c0 08          	imul   rax,rax,0x8
+  628f16:	4d 8b 0c 02          	mov    r9,QWORD PTR [r10+rax*1]
+  628f1a:	89 d0                	mov    eax,edx
+  628f1c:	48 6b c0 08          	imul   rax,rax,0x8
+  628f20:	4d 8b 14 02          	mov    r10,QWORD PTR [r10+rax*1]
+  628f24:	4c 89 c8             	mov    rax,r9
+  628f27:	48 c1 e8 20          	shr    rax,0x20
+
+2 samples at 629146: test   r10d,r10d
+  62912b:	41 3b 40 10          	cmp    eax,DWORD PTR [r8+0x10]
+  62912f:	0f 83 7d 00 00 00    	jae    0x6291b2
+  629135:	4d 8b 48 08          	mov    r9,QWORD PTR [r8+0x8]
+  629139:	48 c1 e0 04          	shl    rax,0x4
+  62913d:	49 01 c1             	add    r9,rax
+  629140:	45 0f b6 54 21 0e    	movzx  r10d,BYTE PTR [r9+riz*1+0xe]
+  629146:	45 85 d2             	test   r10d,r10d
+  629149:	0f 84 63 00 00 00    	je     0x6291b2
+  62914f:	41 83 fa 04          	cmp    r10d,0x4
+  629153:	0f 87 59 00 00 00    	ja     0x6291b2
+  629159:	41 c1 e2 04          	shl    r10d,0x4
+
+2 samples at 629191: cmp    ecx,edx
+  62917a:	44 39 c1             	cmp    ecx,r8d
+  62917d:	0f 87 2f 00 00 00    	ja     0x6291b2
+  629183:	39 f9                	cmp    ecx,edi
+  629185:	0f 82 27 00 00 00    	jb     0x6291b2
+  62918b:	49 01 c3             	add    r11,rax
+  62918e:	41 8b 0b             	mov    ecx,DWORD PTR [r11]
+  629191:	39 d1                	cmp    ecx,edx
+  629193:	0f 85 19 00 00 00    	jne    0x6291b2
+  629199:	41 8b 4b 04          	mov    ecx,DWORD PTR [r11+0x4]
+  62919d:	39 f9                	cmp    ecx,edi
+  62919f:	0f 82 0d 00 00 00    	jb     0x6291b2
+
+2 samples at 628e9d: mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  628e81:	45 85 d2             	test   r10d,r10d
+  628e84:	0f 84 f6 00 00 00    	je     0x628f80
+  628e8a:	41 83 fa 04          	cmp    r10d,0x4
+  628e8e:	0f 87 ec 00 00 00    	ja     0x628f80
+  628e94:	41 c1 e2 04          	shl    r10d,0x4
+  628e98:	4f 8b 5c 10 18       	mov    r11,QWORD PTR [r8+r10*1+0x18]
+  628e9d:	47 8b 44 10 20       	mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  628ea2:	41 8b 01             	mov    eax,DWORD PTR [r9]
+  628ea5:	44 39 c0             	cmp    eax,r8d
+  628ea8:	0f 87 d2 00 00 00    	ja     0x628f80
+  628eae:	41 29 c0             	sub    r8d,eax
+
+2 samples at 629162: mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  629146:	45 85 d2             	test   r10d,r10d
+  629149:	0f 84 63 00 00 00    	je     0x6291b2
+  62914f:	41 83 fa 04          	cmp    r10d,0x4
+  629153:	0f 87 59 00 00 00    	ja     0x6291b2
+  629159:	41 c1 e2 04          	shl    r10d,0x4
+  62915d:	4f 8b 5c 10 18       	mov    r11,QWORD PTR [r8+r10*1+0x18]
+  629162:	47 8b 44 10 20       	mov    r8d,DWORD PTR [r8+r10*1+0x20]
+  629167:	41 8b 01             	mov    eax,DWORD PTR [r9]
+  62916a:	44 39 c0             	cmp    eax,r8d
+  62916d:	0f 87 3f 00 00 00    	ja     0x6291b2
+  629173:	41 29 c0             	sub    r8d,eax

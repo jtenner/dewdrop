@@ -1,0 +1,14 @@
+{
+  "command": [
+    "go",
+    "test",
+    "./src/core/runtime/gc/native",
+    "-run",
+    "^TestLocalHandleOrderSummary$",
+    "-count=1"
+  ],
+  "seconds": 1.1631666409994068,
+  "exit": 0,
+  "stdout": "ok  \tgithub.com/wago-org/wago/src/core/runtime/gc/native\t0.002s\n",
+  "stderr": ""
+}

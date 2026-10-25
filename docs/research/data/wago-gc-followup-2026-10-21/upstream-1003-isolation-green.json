@@ -1,0 +1,15 @@
+{
+  "command": [
+    "go",
+    "test",
+    "-tags=wago_regalloccheck,wago_codegenstats",
+    "./src/wago",
+    "-run",
+    "GCIncremental|GCAbstractArrayCastLenIncremental|GCNumeric",
+    "-count=1"
+  ],
+  "seconds": 11.333134650001739,
+  "exit": 0,
+  "stdout": "ok  \tgithub.com/wago-org/wago/src/wago\t0.021s\n",
+  "stderr": ""
+}

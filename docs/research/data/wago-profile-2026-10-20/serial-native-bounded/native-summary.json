@@ -1,0 +1,297 @@
+{
+  "samples": 5525,
+  "jit_samples": 2885,
+  "outside_jit_samples": 2640,
+  "jit_tail_samples": 142,
+  "stop_seconds": 0.341881285,
+  "duration_seconds": 137.90292784699704,
+  "errors": {},
+  "native_code_bytes": 21170004,
+  "functions_end": 21169762,
+  "top_function_blocks": [
+    {
+      "local": 158,
+      "name": "array_get_unchecked#18446462654567415815#16",
+      "samples": 328,
+      "entry": 16541
+    },
+    {
+      "local": 2040,
+      "name": "self_host_resolved_imported_callable_at#31052613552057#4294967295",
+      "samples": 145,
+      "entry": 6045712
+    },
+    {
+      "local": 798,
+      "name": "bytes_byte_at#18446462603027808293#4294967295",
+      "samples": 125,
+      "entry": 1037600
+    },
+    {
+      "local": 2056,
+      "name": "intern_function#31052613552101#4294967295",
+      "samples": 114,
+      "entry": 6073408
+    },
+    {
+      "local": 2028,
+      "name": "self_host_index_module_implementations_with_imports#31052613552038#4294967295",
+      "samples": 105,
+      "entry": 5961968
+    },
+    {
+      "local": 134,
+      "name": "get_unchecked#18446462641682513925#42",
+      "samples": 98,
+      "entry": 8247
+    },
+    {
+      "local": 226,
+      "name": "array_iter_next#18446462654567415823#480",
+      "samples": 96,
+      "entry": 60370
+    },
+    {
+      "local": 146,
+      "name": "length#18446462654567415827#0",
+      "samples": 94,
+      "entry": 13746
+    },
+    {
+      "local": 169,
+      "name": "array_length#18446462654567415812#35",
+      "samples": 93,
+      "entry": 20945
+    },
+    {
+      "local": 135,
+      "name": "set_unchecked#18446462641682513927#43",
+      "samples": 53,
+      "entry": 8956
+    },
+    {
+      "local": 225,
+      "name": "array_iter_has_next#18446462654567415822#479",
+      "samples": 53,
+      "entry": 59426
+    },
+    {
+      "local": 2027,
+      "name": "self_host_imported_requirement_identity#31052613552037#4294967295",
+      "samples": 53,
+      "entry": 5957072
+    },
+    {
+      "local": 154,
+      "name": "indexed_get#18446462654567415839#10",
+      "samples": 50,
+      "entry": 15143
+    },
+    {
+      "local": 199,
+      "name": "array_iter_next_option#18446462654567415976#278",
+      "samples": 48,
+      "entry": 31809
+    },
+    {
+      "local": 752,
+      "name": "blake3_mix#18446462826366107657#4294967295",
+      "samples": 43,
+      "entry": 977856
+    },
+    {
+      "local": 865,
+      "name": "byte_at#18446462624502644750#4294967295",
+      "samples": 41,
+      "entry": 1064481
+    },
+    {
+      "local": 200,
+      "name": "array_length#18446462654567415812#279",
+      "samples": 38,
+      "entry": 33081
+    },
+    {
+      "local": 797,
+      "name": "bytes_byte_length#18446462603027808291#4294967295",
+      "samples": 34,
+      "entry": 1036986
+    },
+    {
+      "local": 776,
+      "name": "string_as_bytes_unchecked#18446462603027808256#4294967295",
+      "samples": 31,
+      "entry": 1017337
+    },
+    {
+      "local": 2051,
+      "name": "simple_equal#31052613552096#4294967295",
+      "samples": 29,
+      "entry": 6060432
+    },
+    {
+      "local": 3373,
+      "name": "self_host_source_keyword_matches#31052613553737#4294967295",
+      "samples": 25,
+      "entry": 12288225
+    },
+    {
+      "local": 804,
+      "name": "string_equals#18446462603027808302#4294967295",
+      "samples": 23,
+      "entry": 1042099
+    },
+    {
+      "local": 789,
+      "name": "bytes_builder_append_byte#18446462603027808280#4294967295",
+      "samples": 22,
+      "entry": 1027315
+    },
+    {
+      "local": 2716,
+      "name": "check_type_term#31052613552977#4294967295",
+      "samples": 22,
+      "entry": 8722704
+    },
+    {
+      "local": 792,
+      "name": "bytes_builder_reserve#18446462603027808286#4294967295",
+      "samples": 21,
+      "entry": 1030016
+    },
+    {
+      "local": 152,
+      "name": "length#18446462654567415827#8",
+      "samples": 20,
+      "entry": 14785
+    },
+    {
+      "local": 1700,
+      "name": "first_parameter_index#31052613551625#4294967295",
+      "samples": 19,
+      "entry": 4334400
+    },
+    {
+      "local": 183,
+      "name": "array_get_unchecked#18446462654567415815#94",
+      "samples": 19,
+      "entry": 26354
+    },
+    {
+      "local": 788,
+      "name": "bytes_builder_append#18446462603027808279#4294967295",
+      "samples": 18,
+      "entry": 1024112
+    },
+    {
+      "local": 861,
+      "name": "byte_length#18446462624502644746#4294967295",
+      "samples": 18,
+      "entry": 1063779
+    }
+  ],
+  "top_native_offsets": [
+    [
+      16829,
+      123
+    ],
+    [
+      8440,
+      39
+    ],
+    [
+      60806,
+      32
+    ],
+    [
+      21088,
+      29
+    ],
+    [
+      6047111,
+      26
+    ],
+    [
+      59698,
+      24
+    ],
+    [
+      6047780,
+      24
+    ],
+    [
+      21169948,
+      23
+    ],
+    [
+      60552,
+      21
+    ],
+    [
+      9156,
+      20
+    ],
+    [
+      32440,
+      20
+    ],
+    [
+      6073746,
+      20
+    ],
+    [
+      1064595,
+      18
+    ],
+    [
+      5961264,
+      18
+    ],
+    [
+      13849,
+      17
+    ],
+    [
+      13794,
+      16
+    ],
+    [
+      33224,
+      16
+    ],
+    [
+      16942,
+      13
+    ],
+    [
+      16832,
+      13
+    ],
+    [
+      6047188,
+      13
+    ],
+    [
+      6047871,
+      12
+    ],
+    [
+      5979941,
+      12
+    ],
+    [
+      13791,
+      12
+    ],
+    [
+      8437,
+      11
+    ],
+    [
+      17121,
+      11
+    ]
+  ],
+  "method": "brief ptrace leaf-PC probes of up to 3 CPU-active threads, every 20-30 ms, after code mapping; no stacks; not a hardware CPU profile",
+  "limit": "Function block ranges include entry wrappers and padding. Shared stub/literal tail is separate. Leaf probes are not CPU-time percentages."
+}

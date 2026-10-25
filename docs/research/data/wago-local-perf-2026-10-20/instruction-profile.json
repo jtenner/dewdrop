@@ -1,0 +1,27 @@
+{
+  "seconds": 179.66467669699978,
+  "user_seconds": 174.688177,
+  "system_seconds": 1.061342,
+  "peak_rss_kib": 1230604,
+  "exit": 0,
+  "command": [
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-host",
+    "run",
+    "-p8",
+    "--core",
+    "3",
+    "--local",
+    "--locked",
+    "--no-input",
+    "--gc-heap",
+    "512MiB",
+    "--gc-nursery",
+    "64MiB",
+    "/home/dev/Projects/dewdrop/.tmp/transform-workers/run-rvr6ozve/compiler.wasm",
+    ".tmp/wago-local-perf-2026-10-20/request.bin"
+  ],
+  "host_sha256": "0a921eb80b0d63781e7601f2bb058e2852b1db76ce7bad52669e3e7bc6198151",
+  "sampler_sha256": "d63f6fa90b512ad0f35bb52a50a49339bd4267af4f516ae313cd2a6d718bdf18",
+  "harness_sha256": "3c888ca54d995ca12ce35788ed84ec8e6bae19b8f070a9df9348280c17cbe0b6",
+  "validated_main": 42
+}

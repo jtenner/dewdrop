@@ -1,0 +1,29 @@
+{
+  "label": "build-stack-host",
+  "command": [
+    "go",
+    "build",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=local-perf-e2fe43ffc83d -X main.workerPluginIdentity=1728e8e0021a50467b837352b027e78b99828bcfe76bc4093f979a2c87305074",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/stack-host",
+    "."
+  ],
+  "cwd": "/home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/stack-host-source",
+  "seconds": 4.388178541999878,
+  "user_seconds": 20.181173,
+  "system_seconds": 1.192034,
+  "peak_rss_kib": 568672,
+  "exit": 0,
+  "timeout": false,
+  "load_start": [
+    2.580078125,
+    1.99609375,
+    2.30078125
+  ],
+  "load_end": [
+    2.533203125,
+    1.99658203125,
+    2.298828125
+  ]
+}

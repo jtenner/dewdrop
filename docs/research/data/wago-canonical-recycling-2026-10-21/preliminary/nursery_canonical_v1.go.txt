@@ -1,0 +1,78 @@
+package gc
+
+import (
+	"fmt"
+	"math/bits"
+)
+
+const maxRecyclingBitmapWords = (2 << 20) / 8
+
+// canonicalizeRecycledHandles groups only the newly recycled suffix by ID.
+// The descending free order makes both LIFO allocators consume ascending IDs,
+// including the contiguous base+i form used by native handle batches.
+// Admission bounds both retained scratch and the word scan relative to input.
+func (c *Collector) canonicalizeRecycledHandles(start int) bool {
+	if start < 0 || start > len(c.freeHandles) {
+		panic("gc: invalid recycled suffix boundary")
+	}
+	suffix := c.freeHandles[start:]
+	if len(suffix) < 8 {
+		return false
+	}
+	low, high := ^uint32(0), uint32(0)
+	for _, h := range suffix {
+		if h == 0 || uint64(h) >= uint64(len(c.handles)) {
+			panic(fmt.Sprintf("gc: invalid recycled handle %d", h))
+		}
+		if c.cfg.VerifyAfterCollect && c.handles[h].space != spaceFree {
+			panic(fmt.Sprintf("gc: recycled handle %d still owns an object", h))
+		}
+		low, high = min(low, h), max(high, h)
+	}
+	firstWord := low >> 6
+	words := recyclingWordBudget(low, high, len(suffix))
+	if words == 0 {
+		return false
+	}
+	if cap(c.recyclingBitmap) < words {
+		// Geometric reuse avoids repeated growth on slowly expanding cohorts.
+		capacity := min(maxRecyclingBitmapWords, max(words, 2*cap(c.recyclingBitmap)))
+		c.recyclingBitmap = make([]uint64, capacity)
+	}
+	bitmap := c.recyclingBitmap[:words]
+	// Every successful call clears every used word. New storage starts zero.
+	// Do not overwrite the suffix until every input identity is represented.
+	for _, h := range suffix {
+		word, bit := (h>>6)-firstWord, uint64(1)<<(h&63)
+		if bitmap[word]&bit != 0 {
+			clear(bitmap)
+			panic(fmt.Sprintf("gc: duplicate recycled handle %d", h))
+		}
+		bitmap[word] |= bit
+	}
+	remaining := len(suffix)
+	for i, word := range bitmap {
+		bitmap[i] = 0
+		for word != 0 {
+			if remaining == 0 {
+				panic("gc: recycled bitmap contains extra identities")
+			}
+			remaining--
+			suffix[remaining] = (firstWord+uint32(i))*64 + uint32(bits.TrailingZeros64(word))
+			word &= word - 1
+		}
+	}
+	if remaining != 0 {
+		panic("gc: recycled bitmap lost identities")
+	}
+	return true
+}
+
+// The offset window avoids scanning unrelated lower IDs or the whole table.
+func recyclingWordBudget(low, high uint32, count int) int {
+	words := int((high >> 6) - (low >> 6) + 1)
+	if low > high || words > maxRecyclingBitmapWords || words > count/8 {
+		return 0
+	}
+	return words
+}

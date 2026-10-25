@@ -1,0 +1,48 @@
+[
+  {
+    "name": "normal",
+    "command": [
+      "go",
+      "test",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-count=1"
+    ],
+    "seconds": 40.43634190100056,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-numeric-normal.log"
+  },
+  {
+    "name": "checked",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_regalloccheck",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-count=1"
+    ],
+    "seconds": 41.948457208000036,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-numeric-checked.log"
+  },
+  {
+    "name": "diagnostics",
+    "command": [
+      "go",
+      "test",
+      "-tags=wago_codegenstats,wago_regalloccheck",
+      "./src/core/compiler/backend/railshot/amd64",
+      "./src/core/runtime/gc/native",
+      "./src/wago",
+      "-run",
+      "GCNumeric|GCAbstractArray|GCGeneralArrayLen|GCFinalResolverTrapPreservesGlobalPins|GCVersionedLoop",
+      "-count=1"
+    ],
+    "seconds": 13.813918069001375,
+    "exit": 0,
+    "log": "/home/dev/Projects/dewdrop/.tmp/wago-next-gc-perf/combined-numeric-diagnostics.log"
+  }
+]

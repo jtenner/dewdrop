@@ -1,0 +1,90 @@
+pair=0 variant=base elapsed=0.929467
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	   7472286 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3137999 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=0 variant=candidate elapsed=2.308846
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	  31347304 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   4059874 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=1 variant=candidate elapsed=2.310111
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	  31909756 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3958951 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=1 variant=base elapsed=0.908775
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	   7426964 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3111980 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=2 variant=base elapsed=0.948435
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	   7585043 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3170144 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=2 variant=candidate elapsed=2.447447
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	  31653126 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3984302 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=3 variant=candidate elapsed=2.309032
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	  31306160 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3931974 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=3 variant=base elapsed=0.942098
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	   7596227 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3233505 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=4 variant=base elapsed=0.933963
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	   7539190 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3163539 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+
+pair=4 variant=candidate elapsed=2.400393
+goos: linux
+goarch: amd64
+pkg: github.com/wago-org/wago/src/core/runtime/gc/native
+cpu: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics     
+BenchmarkSparseRecyclingWarmCycles     	      10	  31594665 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSparseRecyclingOrderedCleanup 	      10	   3980768 ns/op	   2097152 handles/op	 5244518 B/op	       0 allocs/op
+PASS
+

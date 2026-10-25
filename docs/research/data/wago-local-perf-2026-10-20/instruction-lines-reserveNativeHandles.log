@@ -1,0 +1,81 @@
+Total: 145.52s
+ROUTINE ======================== github.com/wago-org/wago/src/core/runtime/gc/native.(*Collector).reserveNativeHandles in /home/dev/Projects/dewdrop/.tmp/wago-local-perf-2026-10-20/instruction-source/src/core/runtime/gc/native/native_alloc.go
+     7.20s      8.84s (flat, cum)  6.07% of Total
+         .          .     73:func (c *Collector) reserveNativeHandles(batch int) {
+      20ms       20ms     74:	s := &c.nativeStructAlloc
+      20ms      900ms     75:	clear(s.Handles[:batch])
+         .          .     76:	s.Cursor = 0
+         .          .     77:	s.Count = 0
+         .          .     78:	s.HandleBase = 0
+      10ms       10ms     79:	newHandles := batch - min(len(c.freeHandles), batch)
+         .          .     80:	if newHandles != 0 {
+         .       30ms     81:		c.handles = slices.Grow(c.handles, newHandles)
+         .          .     82:		c.mark = slices.Grow(c.mark, newHandles)
+         .          .     83:		c.tinyGC.color = slices.Grow(c.tinyGC.color, newHandles)
+         .          .     84:	}
+      10ms       20ms     85:	c.nurseryHandles = slices.Grow(c.nurseryHandles, batch)
+      10ms       10ms     86:	if c.checkedHandles != nil {
+         .          .     87:		// The checked API can retire exhausted generations while taking a batch.
+         .          .     88:		for i := range s.Handles[:batch] {
+         .          .     89:			s.Handles[i] = c.newHandle(handleEntry{})
+         .          .     90:		}
+         .          .     91:	} else {
+         .          .     92:		// Native identities have no generation bookkeeping. Extend each parallel
+         .          .     93:		// table once, rather than running the general allocator for every handle.
+         .          .     94:		reused := batch - newHandles
+         .          .     95:		free := c.freeHandles[len(c.freeHandles)-reused:]
+     730ms      730ms     96:		for i := range reused {
+     240ms      240ms     97:			h := free[reused-1-i]
+     5.85s      5.85s     98:			s.Handles[i] = h
+         .          .     99:		}
+      90ms       90ms    100:		c.freeHandles = c.freeHandles[:len(c.freeHandles)-reused]
+      10ms       10ms    101:		base := len(c.handles)
+      10ms       10ms    102:		c.handles = c.handles[:base+newHandles]
+      60ms       70ms    103:		clear(c.handles[base:])
+         .          .    104:		marks := len(c.mark)
+      10ms       10ms    105:		c.mark = c.mark[:marks+newHandles]
+      30ms       40ms    106:		clear(c.mark[marks:])
+         .          .    107:		colors := len(c.tinyGC.color)
+         .          .    108:		c.tinyGC.color = c.tinyGC.color[:colors+newHandles]
+      20ms       20ms    109:		clear(c.tinyGC.color[colors:])
+         .          .    110:		for i := reused; i < batch; i++ {
+      10ms       10ms    111:			s.Handles[i] = uint32(base + i - reused)
+         .          .    112:		}
+         .          .    113:	}
+         .          .    114:	// Reserved free handles participate in this dense list before activation.
+         .          .    115:	// Collection ignores spaceFree entries and compacts them after cancellation.
+      20ms      700ms    116:	c.nurseryHandles = append(c.nurseryHandles, s.Handles[:batch]...)
+         .          .    117:	// A published reservation cannot survive a collection. Normalize pending
+         .          .    118:	// dead-object accounting once here so a nonempty reservation also proves
+         .          .    119:	// that its counters belong to the current full-width collection cycle.
+         .       10ms    120:	cycle := c.collectionCycle()
+      20ms       20ms    121:	if c.nativeView.deadNurseryCycle() != cycle {
+         .          .    122:		c.stats.LiveObjects = 0
+         .          .    123:		c.nativeView.setDeadNurseryCycle(cycle)
+         .          .    124:	}
+         .          .    125:	s.Count = uint32(batch)
+         .          .    126:	base := s.Handles[0]
+         .          .    127:	contiguous := base != 0
+         .          .    128:	for i, h := range s.Handles[:batch] {
+      10ms       10ms    129:		if h != base+uint32(i) {
+         .          .    130:			contiguous = false
+         .          .    131:			break
+         .          .    132:		}
+         .          .    133:	}
+         .          .    134:	if contiguous {
+         .          .    135:		s.HandleBase = base
+         .          .    136:	}
+         .          .    137:	// The nursery ledger already covers every reserved identity. Index native
+         .          .    138:	// publications once at full collection, rather than walking each batch here.
+         .          .    139:	if len(c.majorBlocks) != 0 {
+         .          .    140:		c.majorYoungDirty = true
+         .          .    141:	}
+      10ms       10ms    142:	s.Epoch = c.nativeAllocEpoch
+         .          .    143:
+         .       10ms    144:	c.refreshNativeHandles()
+      10ms       10ms    145:}
+         .          .    146:
+         .          .    147:// PrepareNativeStructAllocation retains the original direct nursery-bump struct
+         .          .    148:// path. Array chunks therefore add no cursor checks or reserved-byte gaps to the
+         .          .    149:// established native struct hot path.
+         .          .    150:func (c *Collector) PrepareNativeStructAllocation(minObjectBytes uint32) bool {

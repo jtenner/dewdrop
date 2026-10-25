@@ -1,0 +1,27 @@
+{
+  "wago_commit": "7cb262b5ea2ee548889b5633695bf15cbbec43ec",
+  "archive_sha256": "809aa6ab57a563605c658ffa8390b37098484c1980f6439bce323444386ff6d5",
+  "source": "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/pr948-build/wago",
+  "patches": {
+    "managed-isolated-fork.patch": "3f016f6442cc891cf982b5edf6f4de9952e7cb03b634c5c40f5c4e7f8842ec87",
+    "facet/host-call-api.patch": "e90c48cf19d354ad553c4a94eaafc16ec113e33de471e5c470524b838cfdd2a7"
+  },
+  "host_source_sha256": "63b7f58974ffac46be47aee050c9336362630645591c026e718fa97e9d33cda6",
+  "runtime_patch_sha256": "0996113028d24be9a8b6463b0f567e8fe7b90c0a8103277f1be22c9aae7446e1",
+  "host_sha256": "f895bb7b465c55a2af6bdc234d53271ae825ee996c40f3fee32b2a85dc4b15e4",
+  "command": [
+    "mise",
+    "exec",
+    "go@1.27.2",
+    "--",
+    "go",
+    "build",
+    "-C",
+    "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/pr948-build/host",
+    "-mod=mod",
+    "-ldflags=-X main.runtimePatchIdentity=0996113028d24be9a8b6463b0f567e8fe7b90c0a8103277f1be22c9aae7446e1 -X main.workerPluginIdentity=63b7f58974ffac46be47aee050c9336362630645591c026e718fa97e9d33cda6",
+    "-o",
+    "/home/dev/Projects/dewdrop/.tmp/wago-investigation-2026-10-20/host-pr948",
+    "."
+  ]
+}

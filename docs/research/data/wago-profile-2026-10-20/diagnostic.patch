@@ -1,0 +1,375 @@
+--- a/wago/cli/runtime/commands/run/command.go
++++ b/wago/cli/runtime/commands/run/command.go
+@@ -4,6 +4,7 @@
+ import (
+ 	"errors"
+ 	"fmt"
++	diag "github.com/wago-org/wago/diagnosticprofile"
+ 	"os"
+ 	"runtime"
+ 	"strings"
+@@ -108,7 +109,9 @@
+ 	}
+ 	runtime := cmd.environment.LoadRuntime(config, positionals)
+ 	defer runtime.Close()
++	finishLoad := diag.Begin("module_load")
+ 	module := mustLoadModule(positionals[0], config, runtime, cmd.environment.ArtifactCache(), ctx.Bool("allow-native-artifact"))
++	finishLoad()
+ 	// Keep the compiled owner live while plugins fork the running module.
+ 	defer module.Close()
+ 	compiled := module.Compiled()
+@@ -148,21 +151,37 @@
+ 		})
+ 		arguments = arguments[count:]
+ 	}
++	if os.Getenv("DEW_WAGO_GCSTATS") == "1" {
++		gc.Telemetry = &wago.GCTelemetry{}
++		configuredGC = true
++	}
++	finishInstantiate := diag.Begin("instantiate")
+ 	instance, err := instantiate(runtime, module, gc, configuredGC)
++	finishInstantiate()
+ 	if err != nil {
+ 		ui.Fatal("%v", friendlyInstantiationError(err))
+ 	}
+ 	defer instance.Close()
++	diag.SaveCodeMap(compiled,instance)
+ 	for _, invocation := range invocations {
++		if os.Getenv("DEW_WAGO_GCSTATS") == "1" && os.Getenv("DEW_TRANSFORM_WORKERS") != "2" {
++			instance.SetGCHelperStatsTracking(true)
++		}
++		finishInvoke := diag.Begin("guest_invoke")
+ 		result, err := instance.Invoke(invocation.export, invocation.values...)
++		finishInvoke()
++		diag.Snapshot("parent", instance)
++		instance.SetGCHelperStatsTracking(false)
+ 		if err != nil {
+ 			if invocation.export == "_start" {
+ 				var exit *wago.ExitError
+ 				if errors.As(err, &exit) {
+ 					instance.Close()
++					diag.Finish()
+ 					os.Exit(int(exit.Code))
+ 				}
+ 			}
++			diag.Finish()
+ 			ui.Fatal("%s %s", ui.Red("trap:"), trapReason(err))
+ 		}
+ 		if output := format(result, invocation.results); output != "" {
+--- a/wago/cli/runtime/internal/artifactcache/cache.go
++++ b/wago/cli/runtime/internal/artifactcache/cache.go
+@@ -6,6 +6,7 @@
+ 	"encoding/binary"
+ 	"encoding/hex"
+ 	"fmt"
++	diag "github.com/wago-org/wago/diagnosticprofile"
+ 	"io"
+ 	"os"
+ 	"path/filepath"
+@@ -57,7 +58,9 @@
+ 	if err := config.Validate(); err != nil {
+ 		return nil, err
+ 	}
++	finishPrepare := diag.Begin("prepare_compile")
+ 	prepared, err := rt.PrepareCompile(source)
++	finishPrepare()
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -74,19 +77,28 @@
+ 	if cacheableGeneration {
+ 		path, cacheable = cache.path(prepared.Source(), config)
+ 	}
++	diag.Event("cache_policy", map[string]any{"cacheable": cacheable, "generation": cacheableGeneration, "path": path})
+ 	if cacheable {
+-		if compiled, hit := loadArtifact(path); hit {
++		finishLookup := diag.Begin("artifact_lookup")
++		compiled, hit := loadArtifact(path)
++		finishLookup()
++		diag.Event("cache_lookup", map[string]any{"hit": hit})
++		if hit {
+ 			return prepared.Adopt(compiled)
+ 		}
+ 	}
+ 
++	finishCompile := diag.Begin("native_compile")
+ 	module, err := prepared.Compile()
++	finishCompile()
+ 	if err != nil {
+ 		return nil, err
+ 	}
+ 	if !cacheable {
+ 		return module, nil
+ 	}
++	finishPublish := diag.Begin("artifact_publish")
++	defer finishPublish()
+ 	if err := publishArtifact(path, module.Compiled()); err != nil {
+ 		if cache.ReportError != nil {
+ 			cache.ReportError(err)
+--- /dev/null
++++ b/wago/diagnosticprofile/profile.go
+@@ -0,0 +1,114 @@
++package diagnosticprofile
++
++import (
++	"context"
++	"encoding/binary"
++	"encoding/json"
++	"fmt"
++	wago "github.com/wago-org/wago"
++	"os"
++	"path/filepath"
++	"runtime"
++	"runtime/pprof"
++	"sync"
++	"time"
++)
++
++var mu sync.Mutex
++var epoch = time.Now()
++var stopProfile func()
++var stopOnce sync.Once
++
++func Finish() {
++	stopOnce.Do(func() {
++		if stopProfile != nil {
++			stopProfile()
++		}
++	})
++}
++
++func Event(name string, fields map[string]any) {
++	if os.Getenv("DEW_WAGO_DIAG") == "" {
++		return
++	}
++	if fields == nil {
++		fields = map[string]any{}
++	}
++	fields["event"] = name
++	fields["since_start_s"] = time.Since(epoch).Seconds()
++	data, err := json.Marshal(fields)
++	if err != nil {
++		panic(err)
++	}
++	mu.Lock()
++	defer mu.Unlock()
++	fmt.Fprintln(os.Stderr, "WAGO_DIAG "+string(data))
++}
++func Begin(name string) func() {
++	start := time.Now()
++	pprof.SetGoroutineLabels(pprof.WithLabels(context.Background(), pprof.Labels("phase", name)))
++	Event("begin", map[string]any{"phase": name})
++	return func() {
++		Event("end", map[string]any{"phase": name, "seconds": time.Since(start).Seconds()})
++		pprof.SetGoroutineLabels(context.Background())
++	}
++}
++func Snapshot(name string, in *wago.Instance) {
++	if data, ok := in.Read(0, 80); ok && binary.LittleEndian.Uint64(data) == 4919706420659244884 && binary.LittleEndian.Uint64(data[8:]) == 1 {
++		diagRecord := map[string]any{"code": binary.LittleEndian.Uint32(data[16:]), "phase": binary.LittleEndian.Uint32(data[20:]), "module_id": binary.LittleEndian.Uint64(data[24:]), "declaration": binary.LittleEndian.Uint64(data[32:]), "body": binary.LittleEndian.Uint64(data[40:]), "expression": binary.LittleEndian.Uint32(data[48:]), "expected": binary.LittleEndian.Uint64(data[56:]), "actual": binary.LittleEndian.Uint64(data[64:]), "detail": binary.LittleEndian.Uint64(data[72:])}
++		Event("invariant_record", diagRecord)
++	}
++
++	value, ok := in.GCTelemetrySnapshot()
++	Event("gc", map[string]any{"name": name, "available": ok, "snapshot": value, "helpers": in.GCHelperStats()})
++}
++func Start() func() {
++	epoch = time.Now()
++	dir := os.Getenv("DEW_WAGO_PROFILE_DIR")
++	if dir == "" {
++		return func() {}
++	}
++	if err := os.MkdirAll(dir, 0755); err != nil {
++		panic(err)
++	}
++	cpu, err := os.Create(filepath.Join(dir, "cpu.pprof"))
++	if err != nil {
++		panic(err)
++	}
++	if os.Getenv("WAGO_NATIVE_SAMPLE")!="1" {
++if err = pprof.StartCPUProfile(cpu); err != nil {
++		panic(err)
++	}
++	}
++ runtime.SetMutexProfileFraction(20)
++	runtime.SetBlockProfileRate(1000000)
++	Event("start", map[string]any{"gomaxprocs": runtime.GOMAXPROCS(0), "gcstats": wago.GCTelemetryAvailable()})
++	stopProfile = func() {
++		if os.Getenv("WAGO_NATIVE_SAMPLE")!="1" {pprof.StopCPUProfile()}
++		cpu.Close()
++		var mem runtime.MemStats
++		runtime.ReadMemStats(&mem)
++		Event("go_memory", map[string]any{"heap_alloc": mem.HeapAlloc, "total_alloc": mem.TotalAlloc, "mallocs": mem.Mallocs, "num_gc": mem.NumGC, "pause_total_ns": mem.PauseTotalNs, "sys": mem.Sys})
++		for _, name := range []string{"allocs", "heap", "mutex", "block"} {
++			f, e := os.Create(filepath.Join(dir, name+".pprof"))
++			if e != nil {
++				panic(e)
++			}
++			if e = pprof.Lookup(name).WriteTo(f, 0); e != nil {
++				panic(e)
++			}
++			f.Close()
++		}
++	}
++	return Finish
++}
++
++func SaveCodeMap(c *wago.Compiled,in *wago.Instance) {
++ dir:=os.Getenv("DEW_WAGO_PROFILE_DIR");if dir=="" { return }
++ base,entries:=in.CodeBase()
++ names:=make([]string,len(entries));for i:=range names {names[i]=c.FuncDebugName(uint32(i+c.NumImports))}
++ data,err:=json.Marshal(map[string]any{"base":uint64(base),"size":c.CodeSize(),"entries":entries,"names":names});if err!=nil {panic(err)}
++ if err=os.WriteFile(filepath.Join(dir,"code-map.json"),data,0644);err!=nil{panic(err)}
++ f,err:=os.Create(filepath.Join(dir,"native-code.bin"));if err!=nil{panic(err)}
++ if _,err=c.WriteCodeTo(f);err!=nil{panic(err)};f.Close()
++}
+--- a/wago/src/core/compiler/backend/railshot/amd64/compile.go
++++ b/wago/src/core/compiler/backend/railshot/amd64/compile.go
+@@ -1936,7 +1936,8 @@
+ 			}
+ 		}
+ 		code := codeBuffer.Bytes()
+-		finalizeModuleNativeSizeAMD64(ms, len(code), functionsEnd, len(literalCode), len(codeBuffer.Mapping()))
++		writeDiagnosticLayoutAMD64(entry, functionsEnd, len(code))
++	finalizeModuleNativeSizeAMD64(ms, len(code), functionsEnd, len(literalCode), len(codeBuffer.Mapping()))
+ 		if err := patchModuleRelocs(code, entry, internalEntry, relocs, stubBase, stubOffsets); err != nil {
+ 			return nil, err
+ 		}
+@@ -2243,6 +2244,7 @@
+ 	}
+ 	directPreparedBounded = resolveBoundedPreparedEntries(m, directPreparedBounded, allHints, relocs, immutableTables)
+ 	directPrepared = retainResolvedPreparedCallers(directPrepared, directPreparedBounded, allHints)
++	writeDiagnosticLayoutAMD64(entry, functionsEnd, len(code))
+ 	finalizeModuleNativeSizeAMD64(ms, len(code), functionsEnd, len(literalCode), 0)
+ 	if ms != nil {
+ 		for i := range states {
+--- /dev/null
++++ b/wago/src/core/compiler/backend/railshot/amd64/diagnostic_layout.go
+@@ -0,0 +1,7 @@
++package amd64
++import("encoding/json";"os";"path/filepath")
++func writeDiagnosticLayoutAMD64(entry []int,end,size int){
++ dir:=os.Getenv("DEW_WAGO_PROFILE_DIR");if dir=="" {return}
++ data,err:=json.Marshal(map[string]any{"entries":entry,"functions_end":end,"size":size});if err!=nil{panic(err)}
++ if err=os.WriteFile(filepath.Join(dir,"native-layout.json"),data,0644);err!=nil{panic(err)}
++}
+--- a/wago/src/core/runtime/gc/native/native_alloc.go
++++ b/wago/src/core/runtime/gc/native/native_alloc.go
+@@ -81,6 +81,7 @@
+ 	s.Epoch = c.nativeAllocEpoch
+ 	if c.telemetryEnabled() {
+ 		c.cfg.Telemetry.paths.HandleRefills++
++ c.cfg.Telemetry.paths.NativeReservedHandles += nativeStructHandleBatch
+ 		c.cfg.Telemetry.paths.ConditionalMediumPaths++
+ 	}
+ 	c.refreshNativeHandles()
+@@ -194,6 +195,12 @@
+ 	if end > uint32(len(s.Handles)) {
+ 		end = uint32(len(s.Handles))
+ 	}
++ if c.telemetryEnabled() && end != 0 {
++  used:=min(s.Cursor,end)
++  c.cfg.Telemetry.paths.NativeConsumedHandles+=uint64(used)
++  c.cfg.Telemetry.paths.NativeCanceledHandles+=uint64(end-used)
++  c.cfg.Telemetry.paths.NativeBatchHistogram[used]++
++ }
+ 	canceled := false
+ 	if end > s.Cursor {
+ 		c.freeHandles = slices.Grow(c.freeHandles, int(end-s.Cursor))
+@@ -248,6 +255,10 @@
+ 			// A failed collection can return before normal nursery compaction, and
+ 			// later handle reuse must not append a duplicate identity to the dense
+ 			// young set.
++ if c.telemetryEnabled() {
++  c.cfg.Telemetry.paths.NativeCompactionFallbacks++
++  c.cfg.Telemetry.paths.NativeCompactionEntries+=uint64(len(c.nurseryHandles))
++ }
+ 			c.compactNurseryHandles()
+ 		}
+ 	}
+--- a/wago/src/core/runtime/gc/native/telemetry.go
++++ b/wago/src/core/runtime/gc/native/telemetry.go
+@@ -166,6 +166,12 @@
+ }
+ 
+ type PathTelemetry struct {
++ NativeReservedHandles uint64 `json:"native_reserved_handles"`
++ NativeConsumedHandles uint64 `json:"native_consumed_handles"`
++ NativeCanceledHandles uint64 `json:"native_canceled_handles"`
++ NativeBatchHistogram [33]uint64 `json:"native_batch_consumed_histogram"`
++ NativeCompactionFallbacks uint64 `json:"native_compaction_fallbacks"`
++ NativeCompactionEntries uint64 `json:"native_compaction_entries"`
+ 	NativeFastAllocations  uint64 `json:"native_fast_allocations"`
+ 	GoAllocationPaths      uint64 `json:"go_allocation_paths"`
+ 	GoHelperTransitions    uint64 `json:"go_helper_transitions"`
+--- a/wago/src/wago/managed_instances.go
++++ b/wago/src/wago/managed_instances.go
+@@ -254,6 +254,9 @@
+ 	hasGC := state != nil && state.gcConfig != nil
+ 	if hasGC {
+ 		gc = *state.gcConfig
++		if isolated && gc.Telemetry != nil {
++			gc.Telemetry = &GCTelemetry{}
++		}
+ 	}
+ 	pluginGCImports := parent.pluginGCImportSet()
+ 	mod, err := buildModule(parent.c, bindings)
+--- a/host/main.go
++++ b/host/main.go
+@@ -6,6 +6,7 @@
+ 	facet "github.com/jtenner/wago-facet/register"
+ 	wago "github.com/wago-org/wago"
+ 	"github.com/wago-org/wago/cli/runtime"
++	diag "github.com/wago-org/wago/diagnosticprofile"
+ 	"os"
+ )
+ 
+@@ -15,6 +16,8 @@
+ var workerPluginIdentity = "unverified"
+ 
+ func main() {
++	finishProfile := diag.Start()
++	defer finishProfile()
+ 	data, err := os.ReadFile("wago-lock.json")
+ 	if err != nil {
+ 		panic(err)
+--- a/host/workers.go
++++ b/host/workers.go
+@@ -4,6 +4,7 @@
+ 	"context"
+ 	"encoding/binary"
+ 	"fmt"
++	diag "github.com/wago-org/wago/diagnosticprofile"
+ 	"os"
+ 	"sync"
+ 	"time"
+@@ -248,6 +249,8 @@
+ // one job at a time, with a fresh input/output slot, and never runs another
+ // Wasm payload. Compiled code is retained and reused by InstanceManager.Fork.
+ func (p *workerPlugin) run(caller wago.HostModule, jobs [][]byte) (result []byte, err error) {
++	finishBatch := diag.Begin("worker_batch")
++	defer finishBatch()
+ 	parent, err := p.callers.InvocationContext(caller)
+ 	if err != nil {
+ 		return nil, err
+@@ -285,7 +288,9 @@
+ 	count := min(workerCount, len(jobs))
+ 	fmt.Fprintf(os.Stderr, "transform workers: %d applications, %d workers\n", len(jobs), count)
+ 	for range count {
++		finishFork := diag.Begin("worker_fork")
+ 		child, forkErr := p.manager.ForkIsolated(ctx, caller)
++		finishFork()
+ 		if forkErr != nil {
+ 			return nil, forkErr
+ 		}
+@@ -308,7 +313,10 @@
+ 				slot := p.slots[child]
+ 				slot.input, slot.output, slot.running, slot.published = jobs[index], nil, true, false
+ 				p.mu.Unlock()
++				finishJob := diag.Begin("worker_invoke")
+ 				_, invokeErr := child.Instance().InvokeContext(ctx, "__dew_transform_worker_run")
++				finishJob()
++				diag.Snapshot(fmt.Sprintf("child_%d_job_%d", workerIndex, index), child.Instance())
+ 				p.mu.Lock()
+ 				if invokeErr == nil && !slot.published {
+ 					invokeErr = fmt.Errorf("worker did not publish its result")
