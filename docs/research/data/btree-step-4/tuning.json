@@ -1,0 +1,4397 @@
+{
+  "gate_summary": {
+    "before-raw": {
+      "lookup": {
+        "median_ns": 17.4357198333333,
+        "samples": 24
+      },
+      "direct-control": {
+        "median_ns": 7.639268499999995,
+        "samples": 24
+      },
+      "contains": {
+        "median_ns": 12.70781483333326,
+        "samples": 24
+      },
+      "replace-unit": {
+        "median_ns": 16.12101883333336,
+        "samples": 24
+      },
+      "fit-bool": {
+        "median_ns": 38.86300596774192,
+        "samples": 24
+      }
+    },
+    "after-raw": {
+      "lookup": {
+        "median_ns": 17.4733563333333,
+        "samples": 24
+      },
+      "direct-control": {
+        "median_ns": 7.66854166666667,
+        "samples": 24
+      },
+      "contains": {
+        "median_ns": 12.664342833333384,
+        "samples": 24
+      },
+      "replace-unit": {
+        "median_ns": 15.900745500000008,
+        "samples": 24
+      },
+      "fit-bool": {
+        "median_ns": 38.822424193548386,
+        "samples": 24
+      }
+    },
+    "before-O4s": {
+      "lookup": {
+        "median_ns": 18.65038716666667,
+        "samples": 24
+      },
+      "direct-control": {
+        "median_ns": 7.6212741666666375,
+        "samples": 24
+      },
+      "contains": {
+        "median_ns": 13.648066333333343,
+        "samples": 24
+      },
+      "replace-unit": {
+        "median_ns": 16.535885000000007,
+        "samples": 24
+      },
+      "fit-bool": {
+        "median_ns": 38.61202629032259,
+        "samples": 24
+      }
+    },
+    "after-O4s": {
+      "lookup": {
+        "median_ns": 18.746747833333337,
+        "samples": 24
+      },
+      "direct-control": {
+        "median_ns": 7.609195833333274,
+        "samples": 24
+      },
+      "contains": {
+        "median_ns": 13.7393696666666,
+        "samples": 24
+      },
+      "replace-unit": {
+        "median_ns": 16.505769500000003,
+        "samples": 24
+      },
+      "fit-bool": {
+        "median_ns": 38.6129587096774,
+        "samples": 24
+      }
+    }
+  },
+  "gate_commands": [
+    {
+      "name": "before-raw-0",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-raw",
+        "cost",
+        "0"
+      ],
+      "exit": 0,
+      "seconds": 2.673323023991543
+    },
+    {
+      "name": "after-raw-0",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-raw",
+        "cost",
+        "0"
+      ],
+      "exit": 0,
+      "seconds": 2.651326542996685
+    },
+    {
+      "name": "before-O4s-0",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-O4s",
+        "cost",
+        "0"
+      ],
+      "exit": 0,
+      "seconds": 2.69082787699881
+    },
+    {
+      "name": "after-O4s-0",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-O4s",
+        "cost",
+        "0"
+      ],
+      "exit": 0,
+      "seconds": 2.7297878910030704
+    },
+    {
+      "name": "after-O4s-1",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-O4s",
+        "cost",
+        "1"
+      ],
+      "exit": 0,
+      "seconds": 2.7049946439947234
+    },
+    {
+      "name": "before-O4s-1",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-O4s",
+        "cost",
+        "1"
+      ],
+      "exit": 0,
+      "seconds": 2.702592339992407
+    },
+    {
+      "name": "after-raw-1",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-raw",
+        "cost",
+        "1"
+      ],
+      "exit": 0,
+      "seconds": 2.6178638889978174
+    },
+    {
+      "name": "before-raw-1",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-raw",
+        "cost",
+        "1"
+      ],
+      "exit": 0,
+      "seconds": 2.6495719049999025
+    },
+    {
+      "name": "before-raw-2",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-raw",
+        "cost",
+        "2"
+      ],
+      "exit": 0,
+      "seconds": 2.634909897999023
+    },
+    {
+      "name": "after-raw-2",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-raw",
+        "cost",
+        "2"
+      ],
+      "exit": 0,
+      "seconds": 2.6097948420065222
+    },
+    {
+      "name": "before-O4s-2",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-O4s",
+        "cost",
+        "2"
+      ],
+      "exit": 0,
+      "seconds": 2.6878648080019047
+    },
+    {
+      "name": "after-O4s-2",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-O4s",
+        "cost",
+        "2"
+      ],
+      "exit": 0,
+      "seconds": 2.690063902991824
+    },
+    {
+      "name": "after-O4s-3",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-O4s",
+        "cost",
+        "3"
+      ],
+      "exit": 0,
+      "seconds": 2.702366363009787
+    },
+    {
+      "name": "before-O4s-3",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-O4s",
+        "cost",
+        "3"
+      ],
+      "exit": 0,
+      "seconds": 2.7920367190090474
+    },
+    {
+      "name": "after-raw-3",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "after-raw",
+        "cost",
+        "3"
+      ],
+      "exit": 0,
+      "seconds": 2.647438328000135
+    },
+    {
+      "name": "before-raw-3",
+      "command": [
+        "node",
+        "tools/btree-fit/run.mjs",
+        "/home/dev/.t3/worktrees/dewdrop/t3-a53e5c96/.tmp/btree-step-4/hint-gate",
+        "before-raw",
+        "cost",
+        "3"
+      ],
+      "exit": 0,
+      "seconds": 2.6284957519965246
+    }
+  ],
+  "gate_samples": {
+    "after-O4s-cost-0": {
+      "variant": "after-O4s",
+      "process": 0,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 56.34871700000008,
+          "ns_per_operation": 18.782905666666693,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 23.198029999999903,
+          "ns_per_operation": 7.7326766666666344,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 40.972757,
+          "ns_per_operation": 13.657585666666666,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 49.378349999999955,
+          "ns_per_operation": 16.459449999999986,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 119.20834600000012,
+          "ns_per_operation": 38.454305161290364,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 121.11587499999996,
+          "ns_per_operation": 39.06963709677418,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 48.90779300000008,
+          "ns_per_operation": 16.302597666666696,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 41.01623800000016,
+          "ns_per_operation": 13.672079333333386,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.651409000000058,
+          "ns_per_operation": 7.550469666666687,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 56.457570999999916,
+          "ns_per_operation": 18.819190333333307,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 56.26261700000009,
+          "ns_per_operation": 18.754205666666696,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.990090999999893,
+          "ns_per_operation": 7.663363666666631,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 41.127895999999964,
+          "ns_per_operation": 13.709298666666655,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 49.63893800000005,
+          "ns_per_operation": 16.546312666666683,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 119.23435399999994,
+          "ns_per_operation": 38.46269483870966,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 118.855235,
+          "ns_per_operation": 38.340398387096776,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.34643099999994,
+          "ns_per_operation": 16.448810333333313,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 41.40929100000017,
+          "ns_per_operation": 13.803097000000054,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 24.45162100000016,
+          "ns_per_operation": 8.150540333333387,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 62.835933999999725,
+          "ns_per_operation": 20.94531133333324,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 58.82483400000001,
+          "ns_per_operation": 19.608278000000002,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.832838999999694,
+          "ns_per_operation": 7.6109463333332315,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 41.19060199999967,
+          "ns_per_operation": 13.730200666666557,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.1468090000003,
+          "ns_per_operation": 16.38226966666677,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 120.50867499999958,
+          "ns_per_operation": 38.87376612903213,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 120.56871600000022,
+          "ns_per_operation": 38.89313419354846,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 50.264438000000155,
+          "ns_per_operation": 16.75481266666672,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 41.37851200000023,
+          "ns_per_operation": 13.792837333333411,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 23.103123999999752,
+          "ns_per_operation": 7.701041333333252,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 56.4081299999998,
+          "ns_per_operation": 18.802709999999934,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "after-O4s-cost-1": {
+      "variant": "after-O4s",
+      "process": 1,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 118.98071100000004,
+          "ns_per_operation": 38.38087451612905,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 49.8519960000001,
+          "ns_per_operation": 16.617332000000033,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 41.31288100000006,
+          "ns_per_operation": 13.770960333333353,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.878715000000057,
+          "ns_per_operation": 7.626238333333352,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 57.08968499999992,
+          "ns_per_operation": 19.02989499999997,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 55.90046099999995,
+          "ns_per_operation": 18.63348699999998,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.630222000000003,
+          "ns_per_operation": 7.5434073333333345,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 41.31634800000006,
+          "ns_per_operation": 13.77211600000002,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 49.21692099999996,
+          "ns_per_operation": 16.40564033333332,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 118.87467599999991,
+          "ns_per_operation": 38.34666967741933,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 118.313717,
+          "ns_per_operation": 38.16571516129032,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 48.959380999999894,
+          "ns_per_operation": 16.319793666666634,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 40.79590600000006,
+          "ns_per_operation": 13.598635333333354,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.556734000000006,
+          "ns_per_operation": 7.518911333333336,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 55.701421999999866,
+          "ns_per_operation": 18.56714066666662,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 55.66134799999986,
+          "ns_per_operation": 18.55378266666662,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.464359999999942,
+          "ns_per_operation": 7.488119999999982,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 41.3708079999999,
+          "ns_per_operation": 13.790269333333299,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 48.555947999999944,
+          "ns_per_operation": 16.18531599999998,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 123.72280100000012,
+          "ns_per_operation": 39.91058096774197,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 124.1567100000002,
+          "ns_per_operation": 40.05055161290329,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 52.737085999999636,
+          "ns_per_operation": 17.579028666666545,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 41.534955999999966,
+          "ns_per_operation": 13.844985333333321,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.79999799999996,
+          "ns_per_operation": 7.59999933333332,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 56.73246900000004,
+          "ns_per_operation": 18.91082300000001,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 57.31227000000035,
+          "ns_per_operation": 19.104090000000117,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.4439739999998,
+          "ns_per_operation": 7.4813246666666,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 41.69341200000008,
+          "ns_per_operation": 13.897804000000027,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 49.33888999999999,
+          "ns_per_operation": 16.446296666666665,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 125.02796899999976,
+          "ns_per_operation": 40.33160290322573,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "after-O4s-cost-2": {
+      "variant": "after-O4s",
+      "process": 2,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 56.21786999999995,
+          "ns_per_operation": 18.739289999999983,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.698942999999986,
+          "ns_per_operation": 7.566314333333328,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 41.53522599999985,
+          "ns_per_operation": 13.845075333333284,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 50.13925599999993,
+          "ns_per_operation": 16.71308533333331,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 118.460421,
+          "ns_per_operation": 38.21303903225807,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 119.02092600000014,
+          "ns_per_operation": 38.393847096774245,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 49.77860200000009,
+          "ns_per_operation": 16.592867333333363,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 41.55120600000009,
+          "ns_per_operation": 13.85040200000003,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.73203699999999,
+          "ns_per_operation": 7.577345666666664,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 55.72381600000017,
+          "ns_per_operation": 18.57460533333339,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 55.93632300000013,
+          "ns_per_operation": 18.64544100000004,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.82233599999995,
+          "ns_per_operation": 7.607445333333318,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 41.24561599999993,
+          "ns_per_operation": 13.748538666666642,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 50.15727900000002,
+          "ns_per_operation": 16.719093000000004,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 118.72198099999991,
+          "ns_per_operation": 38.29741322580642,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 118.86114899999984,
+          "ns_per_operation": 38.3423061290322,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 50.18903999999998,
+          "ns_per_operation": 16.72967999999999,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 41.159763999999996,
+          "ns_per_operation": 13.71992133333333,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.73774800000001,
+          "ns_per_operation": 7.579249333333337,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 55.50351400000022,
+          "ns_per_operation": 18.501171333333406,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 55.91055600000027,
+          "ns_per_operation": 18.63685200000009,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.72130700000025,
+          "ns_per_operation": 7.573769000000085,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 40.70022700000027,
+          "ns_per_operation": 13.566742333333423,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.2133560000002,
+          "ns_per_operation": 16.404452000000067,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 117.21872200000007,
+          "ns_per_operation": 37.81249096774196,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 118.14339900000004,
+          "ns_per_operation": 38.110773870967755,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 50.00277099999994,
+          "ns_per_operation": 16.66759033333331,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 41.13996899999984,
+          "ns_per_operation": 13.713322999999946,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.859084000000166,
+          "ns_per_operation": 7.619694666666723,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 56.43282199999976,
+          "ns_per_operation": 18.810940666666585,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "after-O4s-cost-3": {
+      "variant": "after-O4s",
+      "process": 3,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 121.25063499999999,
+          "ns_per_operation": 39.113108064516126,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 50.243973000000096,
+          "ns_per_operation": 16.74799100000003,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 41.11379099999999,
+          "ns_per_operation": 13.704596999999998,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.960193000000118,
+          "ns_per_operation": 7.653397666666707,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 56.01636399999984,
+          "ns_per_operation": 18.67212133333328,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 56.140176999999994,
+          "ns_per_operation": 18.71339233333333,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.72206899999992,
+          "ns_per_operation": 7.574022999999973,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 41.957416000000194,
+          "ns_per_operation": 13.985805333333397,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 49.32011699999998,
+          "ns_per_operation": 16.440038999999995,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 120.16598999999997,
+          "ns_per_operation": 38.76322258064515,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 121.07013799999982,
+          "ns_per_operation": 39.05488322580639,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 50.64229699999987,
+          "ns_per_operation": 16.880765666666626,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 40.774036000000024,
+          "ns_per_operation": 13.59134533333334,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 23.025726000000077,
+          "ns_per_operation": 7.675242000000026,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 55.8604620000001,
+          "ns_per_operation": 18.62015400000003,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 56.66664999999989,
+          "ns_per_operation": 18.888883333333297,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 23.05574200000001,
+          "ns_per_operation": 7.6852473333333355,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 40.895082,
+          "ns_per_operation": 13.631694,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.39567899999997,
+          "ns_per_operation": 16.465226333333323,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 122.25060399999984,
+          "ns_per_operation": 39.43567870967737,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 121.54567799999995,
+          "ns_per_operation": 39.20828322580644,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.76842600000009,
+          "ns_per_operation": 16.589475333333365,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 41.264602000000195,
+          "ns_per_operation": 13.754867333333397,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.34142699999984,
+          "ns_per_operation": 7.7804756666666135,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 56.84150700000009,
+          "ns_per_operation": 18.94716900000003,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 55.99353199999996,
+          "ns_per_operation": 18.664510666666654,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.88375199999973,
+          "ns_per_operation": 7.627917333333244,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 40.81605499999978,
+          "ns_per_operation": 13.605351666666593,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 49.26762000000008,
+          "ns_per_operation": 16.422540000000026,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 120.47595999999976,
+          "ns_per_operation": 38.86321290322573,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "after-raw-cost-0": {
+      "variant": "after-raw",
+      "process": 0,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 51.75571600000001,
+          "ns_per_operation": 17.251905333333337,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.810465999999906,
+          "ns_per_operation": 7.603488666666635,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 37.862433999999894,
+          "ns_per_operation": 12.620811333333299,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 47.26873899999987,
+          "ns_per_operation": 15.756246333333289,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 120.53040400000009,
+          "ns_per_operation": 38.880775483871,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 120.9861350000001,
+          "ns_per_operation": 39.027785483871,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 48.07550399999991,
+          "ns_per_operation": 16.02516799999997,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 37.89904200000001,
+          "ns_per_operation": 12.633014000000003,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.860918999999967,
+          "ns_per_operation": 7.620306333333322,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 52.43829299999993,
+          "ns_per_operation": 17.479430999999977,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 52.83699700000011,
+          "ns_per_operation": 17.61233233333337,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.99046300000009,
+          "ns_per_operation": 7.663487666666697,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 39.671109000000115,
+          "ns_per_operation": 13.223703000000038,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 49.58754900000008,
+          "ns_per_operation": 16.529183000000028,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 126.65361200000007,
+          "ns_per_operation": 40.85600387096776,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 121.33232199999998,
+          "ns_per_operation": 39.13945870967741,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 47.477718000000095,
+          "ns_per_operation": 15.825906000000032,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 37.866182999999864,
+          "ns_per_operation": 12.622060999999956,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.867651000000023,
+          "ns_per_operation": 7.622550333333341,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 52.192010999999866,
+          "ns_per_operation": 17.397336999999954,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 52.40184499999987,
+          "ns_per_operation": 17.467281666666622,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.020786999999928,
+          "ns_per_operation": 7.673595666666643,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 37.98463400000037,
+          "ns_per_operation": 12.66154466666679,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 48.029107000000295,
+          "ns_per_operation": 16.009702333333433,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 121.03124200000002,
+          "ns_per_operation": 39.042336129032265,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 120.86264699999992,
+          "ns_per_operation": 38.98795064516126,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 47.85142799999994,
+          "ns_per_operation": 15.95047599999998,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 38.55810399999973,
+          "ns_per_operation": 12.852701333333243,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.922565999999733,
+          "ns_per_operation": 7.640855333333244,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 52.85784599999988,
+          "ns_per_operation": 17.61928199999996,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "after-raw-cost-1": {
+      "variant": "after-raw",
+      "process": 1,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 120.17369000000008,
+          "ns_per_operation": 38.76570645161293,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 47.686526000000185,
+          "ns_per_operation": 15.895508666666728,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 38.18599399999994,
+          "ns_per_operation": 12.728664666666647,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.967583000000104,
+          "ns_per_operation": 7.6558610000000344,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 53.18855200000007,
+          "ns_per_operation": 17.72951733333336,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 52.49312400000008,
+          "ns_per_operation": 17.497708000000028,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 23.0836690000001,
+          "ns_per_operation": 7.694556333333367,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 38.47333200000003,
+          "ns_per_operation": 12.82444400000001,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 47.49159200000008,
+          "ns_per_operation": 15.830530666666695,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 119.54876300000001,
+          "ns_per_operation": 38.5641170967742,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 119.39437500000008,
+          "ns_per_operation": 38.514314516129055,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 48.06200899999999,
+          "ns_per_operation": 16.020669666666663,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 37.860104999999976,
+          "ns_per_operation": 12.620034999999993,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.87793499999998,
+          "ns_per_operation": 7.625978333333326,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 51.82887400000004,
+          "ns_per_operation": 17.276291333333347,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 52.86261200000013,
+          "ns_per_operation": 17.620870666666708,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 23.17453999999998,
+          "ns_per_operation": 7.724846666666659,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 37.946056,
+          "ns_per_operation": 12.648685333333333,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 47.967422999999826,
+          "ns_per_operation": 15.989140999999943,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 120.36063999999988,
+          "ns_per_operation": 38.82601290322577,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 119.89837699999998,
+          "ns_per_operation": 38.67689580645161,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 48.10286499999984,
+          "ns_per_operation": 16.03428833333328,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 38.36007900000004,
+          "ns_per_operation": 12.786693000000016,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.416701999999987,
+          "ns_per_operation": 7.805567333333328,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 54.156660999999986,
+          "ns_per_operation": 18.052220333333327,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 53.6671980000001,
+          "ns_per_operation": 17.88906600000003,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.880008999999973,
+          "ns_per_operation": 7.626669666666658,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 38.05979800000023,
+          "ns_per_operation": 12.68659933333341,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 47.66031900000007,
+          "ns_per_operation": 15.886773000000025,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 119.75151300000016,
+          "ns_per_operation": 38.629520322580696,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "after-raw-cost-2": {
+      "variant": "after-raw",
+      "process": 2,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 52.328772999999956,
+          "ns_per_operation": 17.44292433333332,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 23.081268000000023,
+          "ns_per_operation": 7.693756000000008,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 38.0784470000001,
+          "ns_per_operation": 12.692815666666698,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 47.595390999999836,
+          "ns_per_operation": 15.865130333333278,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 120.33839000000012,
+          "ns_per_operation": 38.818835483871005,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 119.82486999999992,
+          "ns_per_operation": 38.653183870967716,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 47.40716100000009,
+          "ns_per_operation": 15.80238700000003,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 38.00142299999993,
+          "ns_per_operation": 12.667140999999978,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 23.077931000000035,
+          "ns_per_operation": 7.692643666666678,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 52.26685599999996,
+          "ns_per_operation": 17.42228533333332,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 52.0791549999999,
+          "ns_per_operation": 17.3597183333333,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 23.251426000000038,
+          "ns_per_operation": 7.750475333333346,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 37.72886400000016,
+          "ns_per_operation": 12.576288000000051,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 47.63708899999983,
+          "ns_per_operation": 15.879029666666613,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 118.93865600000004,
+          "ns_per_operation": 38.367308387096784,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 118.56329400000004,
+          "ns_per_operation": 38.246223870967754,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 47.24259200000006,
+          "ns_per_operation": 15.747530666666686,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 37.62042300000007,
+          "ns_per_operation": 12.540141000000025,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 24.1812910000001,
+          "ns_per_operation": 8.060430333333366,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 52.91887500000007,
+          "ns_per_operation": 17.639625000000024,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 52.375688999999966,
+          "ns_per_operation": 17.458562999999987,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.048425999999836,
+          "ns_per_operation": 7.682808666666612,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 38.15719500000023,
+          "ns_per_operation": 12.719065000000077,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 47.003835999999865,
+          "ns_per_operation": 15.66794533333329,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 117.99206000000004,
+          "ns_per_operation": 38.06195483870969,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 118.6343380000003,
+          "ns_per_operation": 38.26914129032268,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 47.157484999999724,
+          "ns_per_operation": 15.719161666666574,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 37.41488699999991,
+          "ns_per_operation": 12.47162899999997,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.488452000000052,
+          "ns_per_operation": 7.496150666666684,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 51.124201000000085,
+          "ns_per_operation": 17.04140033333336,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "after-raw-cost-3": {
+      "variant": "after-raw",
+      "process": 3,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 120.39039700000001,
+          "ns_per_operation": 38.83561193548387,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 47.71794699999987,
+          "ns_per_operation": 15.905982333333288,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 38.443355999999994,
+          "ns_per_operation": 12.814451999999998,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.85326599999985,
+          "ns_per_operation": 7.617755333333283,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 53.193764999999985,
+          "ns_per_operation": 17.731254999999994,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 52.20714300000009,
+          "ns_per_operation": 17.40238100000003,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.747247000000016,
+          "ns_per_operation": 7.582415666666671,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 39.05114000000003,
+          "ns_per_operation": 13.017046666666676,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 48.394450000000006,
+          "ns_per_operation": 16.131483333333335,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 126.44231100000002,
+          "ns_per_operation": 40.78784225806452,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 124.25098899999989,
+          "ns_per_operation": 40.080964193548354,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 47.43701399999986,
+          "ns_per_operation": 15.812337999999956,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 37.80822899999998,
+          "ns_per_operation": 12.602742999999995,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.84349700000007,
+          "ns_per_operation": 7.614499000000023,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 51.525278999999955,
+          "ns_per_operation": 17.175092999999986,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 51.9013030000001,
+          "ns_per_operation": 17.300434333333367,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 23.676132999999936,
+          "ns_per_operation": 7.892044333333312,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 37.69394599999987,
+          "ns_per_operation": 12.564648666666622,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 48.91607699999986,
+          "ns_per_operation": 16.305358999999953,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 121.32755800000018,
+          "ns_per_operation": 39.13792193548393,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 121.30332200000021,
+          "ns_per_operation": 39.13010387096781,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.41010899999992,
+          "ns_per_operation": 16.470036333333304,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 39.56037200000037,
+          "ns_per_operation": 13.186790666666791,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.080860999999913,
+          "ns_per_operation": 7.693620333333305,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 53.15374299999985,
+          "ns_per_operation": 17.717914333333283,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 53.666017999999895,
+          "ns_per_operation": 17.888672666666633,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 23.029043999999885,
+          "ns_per_operation": 7.676347999999962,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 37.463596999999936,
+          "ns_per_operation": 12.487865666666645,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 48.092759000000115,
+          "ns_per_operation": 16.030919666666705,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 120.15253500000017,
+          "ns_per_operation": 38.75888225806457,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "before-O4s-cost-0": {
+      "variant": "before-O4s",
+      "process": 0,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 54.70816100000002,
+          "ns_per_operation": 18.23605366666667,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.907156999999984,
+          "ns_per_operation": 7.635718999999995,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 40.812454,
+          "ns_per_operation": 13.604151333333334,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 49.810796999999866,
+          "ns_per_operation": 16.603598999999956,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 118.61890900000003,
+          "ns_per_operation": 38.264164193548396,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 119.0383119999999,
+          "ns_per_operation": 38.39945548387094,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 49.416660999999976,
+          "ns_per_operation": 16.472220333333325,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 40.56976000000009,
+          "ns_per_operation": 13.523253333333363,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.945048000000043,
+          "ns_per_operation": 7.648349333333347,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 55.43289600000003,
+          "ns_per_operation": 18.47763200000001,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 59.314424000000145,
+          "ns_per_operation": 19.771474666666712,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.58138000000008,
+          "ns_per_operation": 7.527126666666694,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 39.952868999999964,
+          "ns_per_operation": 13.317622999999987,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 48.4979850000002,
+          "ns_per_operation": 16.165995000000066,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 116.56374299999993,
+          "ns_per_operation": 37.601207419354814,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 117.34287800000016,
+          "ns_per_operation": 37.85254129032263,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.287820999999894,
+          "ns_per_operation": 16.42927366666663,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 40.57152199999996,
+          "ns_per_operation": 13.523840666666652,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 24.02632699999981,
+          "ns_per_operation": 8.008775666666603,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 58.805066000000124,
+          "ns_per_operation": 19.60168866666671,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 57.828407999999854,
+          "ns_per_operation": 19.27613599999995,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.91676499999994,
+          "ns_per_operation": 7.638921666666647,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 41.96540700000014,
+          "ns_per_operation": 13.988469000000046,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.34310400000004,
+          "ns_per_operation": 16.447701333333345,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 117.66064200000028,
+          "ns_per_operation": 37.95504580645171,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 118.57235600000013,
+          "ns_per_operation": 38.24914709677424,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 49.90684599999986,
+          "ns_per_operation": 16.635615333333288,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 40.83473700000013,
+          "ns_per_operation": 13.611579000000045,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.924328999999943,
+          "ns_per_operation": 7.641442999999981,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 56.93820700000015,
+          "ns_per_operation": 18.979402333333383,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "before-O4s-cost-1": {
+      "variant": "before-O4s",
+      "process": 1,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 119.097535,
+          "ns_per_operation": 38.41855967741935,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 50.00596799999994,
+          "ns_per_operation": 16.66865599999998,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 40.759187999999995,
+          "ns_per_operation": 13.586395999999997,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.731491000000005,
+          "ns_per_operation": 7.577163666666668,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 55.84244600000011,
+          "ns_per_operation": 18.614148666666704,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 55.95223099999998,
+          "ns_per_operation": 18.65074366666666,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.713758000000098,
+          "ns_per_operation": 7.571252666666699,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 41.33536400000003,
+          "ns_per_operation": 13.778454666666677,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 48.57460399999991,
+          "ns_per_operation": 16.191534666666637,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 117.94089400000007,
+          "ns_per_operation": 38.04544967741938,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 119.6426449999999,
+          "ns_per_operation": 38.59440161290319,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 49.39054800000008,
+          "ns_per_operation": 16.463516000000027,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 40.943841999999904,
+          "ns_per_operation": 13.6479473333333,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.66173200000003,
+          "ns_per_operation": 7.553910666666677,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 55.626964000000044,
+          "ns_per_operation": 18.542321333333348,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 55.8441600000001,
+          "ns_per_operation": 18.614720000000034,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.82048799999984,
+          "ns_per_operation": 7.60682933333328,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 40.79735900000014,
+          "ns_per_operation": 13.599119666666715,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.021979999999985,
+          "ns_per_operation": 16.340659999999996,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 118.13089300000024,
+          "ns_per_operation": 38.106739677419434,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 121.80427099999997,
+          "ns_per_operation": 39.29170032258064,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.02716899999996,
+          "ns_per_operation": 16.34238966666665,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 40.87113899999986,
+          "ns_per_operation": 13.623712999999952,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.666429999999764,
+          "ns_per_operation": 7.555476666666588,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 55.306587000000036,
+          "ns_per_operation": 18.435529000000013,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 55.66459399999985,
+          "ns_per_operation": 18.554864666666617,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.81270399999994,
+          "ns_per_operation": 7.604234666666647,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 40.62806400000045,
+          "ns_per_operation": 13.54268800000015,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 48.991011999999955,
+          "ns_per_operation": 16.33033733333332,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 122.6225199999999,
+          "ns_per_operation": 39.55565161290319,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "before-O4s-cost-2": {
+      "variant": "before-O4s",
+      "process": 2,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 54.84328900000003,
+          "ns_per_operation": 18.281096333333345,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 25.7186650000001,
+          "ns_per_operation": 8.572888333333367,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 42.3141270000001,
+          "ns_per_operation": 14.104709000000032,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 49.962694000000056,
+          "ns_per_operation": 16.654231333333353,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 120.26099900000008,
+          "ns_per_operation": 38.79387064516132,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 118.02213599999982,
+          "ns_per_operation": 38.07165677419349,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 48.94855000000007,
+          "ns_per_operation": 16.316183333333356,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 40.73636299999998,
+          "ns_per_operation": 13.578787666666662,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.814670999999862,
+          "ns_per_operation": 7.604890333333287,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 55.7111809999999,
+          "ns_per_operation": 18.570393666666632,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 55.114196999999876,
+          "ns_per_operation": 18.371398999999958,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.628922999999986,
+          "ns_per_operation": 7.542974333333328,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 42.236625000000004,
+          "ns_per_operation": 14.078875,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 49.58563200000003,
+          "ns_per_operation": 16.52854400000001,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 119.71886700000005,
+          "ns_per_operation": 38.618989354838725,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 119.67569600000002,
+          "ns_per_operation": 38.605063225806454,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.7823870000002,
+          "ns_per_operation": 16.594129000000066,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 41.52687900000001,
+          "ns_per_operation": 13.842293000000003,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 23.053317000000106,
+          "ns_per_operation": 7.684439000000036,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 56.43716600000016,
+          "ns_per_operation": 18.81238866666672,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 56.738340999999764,
+          "ns_per_operation": 18.912780333333252,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.041181999999935,
+          "ns_per_operation": 7.680393999999979,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 41.63260600000012,
+          "ns_per_operation": 13.877535333333375,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 50.18665400000009,
+          "ns_per_operation": 16.728884666666698,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 120.57783100000006,
+          "ns_per_operation": 38.896074516129055,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 120.3879280000001,
+          "ns_per_operation": 38.834815483871004,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 49.70761900000025,
+          "ns_per_operation": 16.56920633333342,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 41.245183,
+          "ns_per_operation": 13.748394333333334,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.91176200000018,
+          "ns_per_operation": 7.637254000000061,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 56.515793999999914,
+          "ns_per_operation": 18.838597999999973,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "before-O4s-cost-3": {
+      "variant": "before-O4s",
+      "process": 3,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 133.83237699999984,
+          "ns_per_operation": 43.17173451612898,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 50.890331999999944,
+          "ns_per_operation": 16.96344399999998,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 41.66922899999986,
+          "ns_per_operation": 13.889742999999953,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.810095000000047,
+          "ns_per_operation": 7.603365000000016,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 57.13090799999986,
+          "ns_per_operation": 19.043635999999957,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 56.57467900000006,
+          "ns_per_operation": 18.858226333333352,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.96120700000006,
+          "ns_per_operation": 7.6537356666666865,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 41.18597499999987,
+          "ns_per_operation": 13.728658333333291,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 50.04656600000021,
+          "ns_per_operation": 16.682188666666736,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 129.90981299999999,
+          "ns_per_operation": 41.906391290322574,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 129.66882299999997,
+          "ns_per_operation": 41.828652580645155,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 49.62967800000001,
+          "ns_per_operation": 16.543226000000004,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 40.94659999999999,
+          "ns_per_operation": 13.648866666666665,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.709355000000187,
+          "ns_per_operation": 7.569785000000062,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 56.231539999999995,
+          "ns_per_operation": 18.743846666666663,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 56.45007499999997,
+          "ns_per_operation": 18.816691666666657,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 23.012862999999925,
+          "ns_per_operation": 7.670954333333309,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 40.94455600000015,
+          "ns_per_operation": 13.648185333333384,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.656075999999985,
+          "ns_per_operation": 16.55202533333333,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 130.34345499999995,
+          "ns_per_operation": 42.0462758064516,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 129.85350900000003,
+          "ns_per_operation": 41.88822870967743,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.412510999999995,
+          "ns_per_operation": 16.470836999999996,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 40.861582,
+          "ns_per_operation": 13.620527333333333,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.65004500000032,
+          "ns_per_operation": 7.550015000000106,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 55.91249299999981,
+          "ns_per_operation": 18.637497666666604,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 55.95009200000004,
+          "ns_per_operation": 18.65003066666668,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 23.213116999999784,
+          "ns_per_operation": 7.737705666666595,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 42.25310099999979,
+          "ns_per_operation": 14.084366999999931,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 51.288426999999956,
+          "ns_per_operation": 17.09614233333332,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 131.8573019999999,
+          "ns_per_operation": 42.534613548387064,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "before-raw-cost-0": {
+      "variant": "before-raw",
+      "process": 0,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 53.92485499999998,
+          "ns_per_operation": 17.97495166666666,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 23.512133999999946,
+          "ns_per_operation": 7.837377999999982,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 38.79720800000007,
+          "ns_per_operation": 12.93240266666669,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 48.755052000000205,
+          "ns_per_operation": 16.25168400000007,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 123.27745000000004,
+          "ns_per_operation": 39.76691935483873,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 122.09969100000012,
+          "ns_per_operation": 39.38699709677423,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 47.70099400000004,
+          "ns_per_operation": 15.900331333333346,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 38.18650899999989,
+          "ns_per_operation": 12.728836333333296,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 23.066392999999835,
+          "ns_per_operation": 7.688797666666612,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 52.40856400000007,
+          "ns_per_operation": 17.469521333333354,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 52.18275300000005,
+          "ns_per_operation": 17.394251000000015,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.81225799999993,
+          "ns_per_operation": 7.604085999999977,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 38.31095099999993,
+          "ns_per_operation": 12.770316999999977,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 48.24416800000017,
+          "ns_per_operation": 16.08138933333339,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 119.83534299999997,
+          "ns_per_operation": 38.656562258064504,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 120.6594819999998,
+          "ns_per_operation": 38.92241354838703,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 47.91381199999978,
+          "ns_per_operation": 15.971270666666593,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 38.054611999999906,
+          "ns_per_operation": 12.684870666666635,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.925318999999945,
+          "ns_per_operation": 7.641772999999981,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 53.595130000000154,
+          "ns_per_operation": 17.865043333333386,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 54.42267599999968,
+          "ns_per_operation": 18.140891999999894,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 23.262307999999848,
+          "ns_per_operation": 7.754102666666616,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 38.93300099999988,
+          "ns_per_operation": 12.977666999999958,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 48.77878899999996,
+          "ns_per_operation": 16.25959633333332,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 123.79043100000035,
+          "ns_per_operation": 39.93239709677431,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 122.06914499999993,
+          "ns_per_operation": 39.377143548387075,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 48.90129700000034,
+          "ns_per_operation": 16.300432333333447,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 39.73811400000022,
+          "ns_per_operation": 13.246038000000075,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.808520999999928,
+          "ns_per_operation": 7.60284033333331,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 53.09275300000036,
+          "ns_per_operation": 17.697584333333452,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "before-raw-cost-1": {
+      "variant": "before-raw",
+      "process": 1,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 120.91639100000009,
+          "ns_per_operation": 39.005287419354865,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 47.33994099999995,
+          "ns_per_operation": 15.779980333333318,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 37.97413000000006,
+          "ns_per_operation": 12.658043333333353,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 22.81764300000009,
+          "ns_per_operation": 7.605881000000029,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 52.631632999999965,
+          "ns_per_operation": 17.543877666666653,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 54.10431400000016,
+          "ns_per_operation": 18.034771333333385,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.879388999999946,
+          "ns_per_operation": 7.6264629999999825,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 37.80694800000015,
+          "ns_per_operation": 12.60231600000005,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 47.23866199999998,
+          "ns_per_operation": 15.746220666666659,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 120.27383000000009,
+          "ns_per_operation": 38.79800967741939,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 120.29115500000012,
+          "ns_per_operation": 38.80359838709681,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 47.31645600000002,
+          "ns_per_operation": 15.772152000000006,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 37.91175399999997,
+          "ns_per_operation": 12.637251333333323,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 22.72875799999997,
+          "ns_per_operation": 7.576252666666656,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 52.02937100000008,
+          "ns_per_operation": 17.343123666666695,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 52.24463100000003,
+          "ns_per_operation": 17.41487700000001,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.85600700000009,
+          "ns_per_operation": 7.61866900000003,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 37.78111799999988,
+          "ns_per_operation": 12.59370599999996,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 47.37633000000005,
+          "ns_per_operation": 15.792110000000017,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 124.98526000000015,
+          "ns_per_operation": 40.31782580645166,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 120.81256899999971,
+          "ns_per_operation": 38.97179645161281,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 47.13779300000033,
+          "ns_per_operation": 15.712597666666776,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 37.68219500000032,
+          "ns_per_operation": 12.560731666666774,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.89143299999978,
+          "ns_per_operation": 7.630477666666593,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 52.28923399999985,
+          "ns_per_operation": 17.42974466666662,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 51.61794099999997,
+          "ns_per_operation": 17.205980333333322,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.917762999999923,
+          "ns_per_operation": 7.639254333333307,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 37.89900000000034,
+          "ns_per_operation": 12.633000000000115,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 47.436473000000206,
+          "ns_per_operation": 15.812157666666737,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 123.01720700000033,
+          "ns_per_operation": 39.682970000000104,
+          "checksum": "3100000"
+        }
+      ]
+    },
+    "before-raw-cost-2": {
+      "variant": "before-raw",
+      "process": 2,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 52.62901999999997,
+          "ns_per_operation": 17.543006666666656,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 23.60732799999994,
+          "ns_per_operation": 7.869109333333314,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 38.878349999999955,
+          "ns_per_operation": 12.959449999999984,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 48.481944999999996,
+          "ns_per_operation": 16.16064833333333,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 118.54536699999994,
+          "ns_per_operation": 38.24044096774192,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 118.89779399999998,
+          "ns_per_operation": 38.354127096774185,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 49.07540400000016,
+          "ns_per_operation": 16.358468000000055,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 37.893632000000025,
+          "ns_per_operation": 12.631210666666673,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 22.850916000000097,
+          "ns_per_operation": 7.6169720000000325,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 51.38172200000008,
+          "ns_per_operation": 17.127240666666694,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 51.84230099999991,
+          "ns_per_operation": 17.28076699999997,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 23.25490999999988,
+          "ns_per_operation": 7.751636666666627,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 38.030907999999954,
+          "ns_per_operation": 12.676969333333318,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 49.315462000000025,
+          "ns_per_operation": 16.43848733333334,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 119.45637999999985,
+          "ns_per_operation": 38.53431612903221,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 119.13726399999996,
+          "ns_per_operation": 38.43137548387095,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 49.23052499999994,
+          "ns_per_operation": 16.41017499999998,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 38.24872200000004,
+          "ns_per_operation": 12.749574000000015,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.88046200000008,
+          "ns_per_operation": 7.626820666666693,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 51.944704,
+          "ns_per_operation": 17.314901333333335,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 51.79727700000012,
+          "ns_per_operation": 17.26575900000004,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.95616400000017,
+          "ns_per_operation": 7.652054666666724,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 37.79176099999995,
+          "ns_per_operation": 12.59725366666665,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 49.093357000000196,
+          "ns_per_operation": 16.364452333333396,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 119.89704200000006,
+          "ns_per_operation": 38.676465161290345,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 119.64588400000002,
+          "ns_per_operation": 38.595446451612915,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 49.352022000000034,
+          "ns_per_operation": 16.450674000000014,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 38.320606999999654,
+          "ns_per_operation": 12.773535666666552,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.92667799999981,
+          "ns_per_operation": 7.642225999999937,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 52.42524200000025,
+          "ns_per_operation": 17.475080666666752,
+          "checksum": "20250000"
+        }
+      ]
+    },
+    "before-raw-cost-3": {
+      "variant": "before-raw",
+      "process": 3,
+      "warmups": 3,
+      "repetitions": 6,
+      "order": "alternating forward/reverse; initial order varies by process",
+      "inputs": "31 even I32 keys, I64 values equal to key/2; queries cycle 0..63; fit permutation (i*17)%31",
+      "fit_limit": "fit samples include one node clear per 31 writes; no node allocation",
+      "samples": [
+        {
+          "name": "fit-bool",
+          "repetition": 0,
+          "operations": 3100000,
+          "milliseconds": 121.49322000000006,
+          "ns_per_operation": 39.1913612903226,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 47.23625099999981,
+          "ns_per_operation": 15.745416999999938,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 38.176226999999926,
+          "ns_per_operation": 12.725408999999976,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 24.6172610000001,
+          "ns_per_operation": 8.205753666666698,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 0,
+          "operations": 3000000,
+          "milliseconds": 54.489758000000165,
+          "ns_per_operation": 18.163252666666722,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 52.92997500000001,
+          "ns_per_operation": 17.643325000000004,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 23.287648000000218,
+          "ns_per_operation": 7.762549333333405,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 38.530659000000014,
+          "ns_per_operation": 12.843553000000005,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 1,
+          "operations": 3000000,
+          "milliseconds": 49.931184999999914,
+          "ns_per_operation": 16.643728333333303,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 1,
+          "operations": 3100000,
+          "milliseconds": 120.13256899999988,
+          "ns_per_operation": 38.75244161290319,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 2,
+          "operations": 3100000,
+          "milliseconds": 120.73637600000006,
+          "ns_per_operation": 38.94721806451615,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 48.60912399999984,
+          "ns_per_operation": 16.203041333333278,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 39.85652600000003,
+          "ns_per_operation": 13.285508666666676,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 23.965142999999898,
+          "ns_per_operation": 7.988380999999967,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 2,
+          "operations": 3000000,
+          "milliseconds": 51.5981569999999,
+          "ns_per_operation": 17.199385666666636,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 52.272947999999815,
+          "ns_per_operation": 17.424315999999937,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 22.91784800000005,
+          "ns_per_operation": 7.639282666666682,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 38.360480999999936,
+          "ns_per_operation": 12.786826999999978,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 3,
+          "operations": 3000000,
+          "milliseconds": 47.26643799999988,
+          "ns_per_operation": 15.755479333333293,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 3,
+          "operations": 3100000,
+          "milliseconds": 120.7586510000001,
+          "ns_per_operation": 38.95440354838713,
+          "checksum": "3100000"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 4,
+          "operations": 3100000,
+          "milliseconds": 119.6637639999999,
+          "ns_per_operation": 38.60121419354835,
+          "checksum": "3100000"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 51.42930200000001,
+          "ns_per_operation": 17.14310066666667,
+          "checksum": "2999994"
+        },
+        {
+          "name": "contains",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 38.07066199999963,
+          "ns_per_operation": 12.690220666666542,
+          "checksum": "1453125"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 22.71894599999996,
+          "ns_per_operation": 7.572981999999986,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 4,
+          "operations": 3000000,
+          "milliseconds": 52.325084999999945,
+          "ns_per_operation": 17.44169499999998,
+          "checksum": "20250000"
+        },
+        {
+          "name": "lookup",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 52.076730999999654,
+          "ns_per_operation": 17.35891033333322,
+          "checksum": "20250000"
+        },
+        {
+          "name": "direct-control",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 22.815114999999878,
+          "ns_per_operation": 7.605038333333292,
+          "checksum": "20250000"
+        },
+        {
+          "name": "contains",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 37.736377000000175,
+          "ns_per_operation": 12.578792333333391,
+          "checksum": "1453125"
+        },
+        {
+          "name": "replace-unit",
+          "repetition": 5,
+          "operations": 3000000,
+          "milliseconds": 47.207886000000144,
+          "ns_per_operation": 15.735962000000047,
+          "checksum": "2999994"
+        },
+        {
+          "name": "fit-bool",
+          "repetition": 5,
+          "operations": 3100000,
+          "milliseconds": 120.13050699999985,
+          "ns_per_operation": 38.751776451612855,
+          "checksum": "3100000"
+        }
+      ]
+    }
+  },
+  "before_allocation_failure": {
+    "first-leaf-and-root-split": {
+      "arrays": 7,
+      "structs": 9,
+      "original_wasm_instructions": 2762,
+      "sites": {
+        "alloc_0": {
+          "opcode": "array.new_default",
+          "type": 0,
+          "count": 3
+        },
+        "alloc_1": {
+          "opcode": "array.new_default",
+          "type": 1,
+          "count": 1
+        },
+        "alloc_5": {
+          "opcode": "array.new_default",
+          "type": 5,
+          "count": 2
+        },
+        "alloc_6": {
+          "opcode": "array.new_fixed",
+          "type": 5,
+          "count": 1
+        },
+        "alloc_9": {
+          "opcode": "struct.new",
+          "type": 101,
+          "count": 1
+        },
+        "alloc_11": {
+          "opcode": "struct.new",
+          "type": 104,
+          "count": 1
+        },
+        "alloc_14": {
+          "opcode": "struct.new",
+          "type": 116,
+          "count": 1
+        },
+        "alloc_16": {
+          "opcode": "struct.new",
+          "type": 124,
+          "count": 2
+        },
+        "alloc_17": {
+          "opcode": "struct.new",
+          "type": 125,
+          "count": 1
+        },
+        "alloc_23": {
+          "opcode": "struct.new",
+          "type": 27,
+          "count": 2
+        },
+        "alloc_37": {
+          "opcode": "struct.new",
+          "type": 91,
+          "count": 1
+        }
+      }
+    }
+  },
+  "source_files": {
+    "hint-gate-btree.dew": "f0a43f585b4b9f5d4a84a6d68b63d8f0fa435d7554bd638c40ec5d6be50f6749",
+    "shared-commit-btree.dew": "07cf77b1797b3eef02e3564802426663f763f8c84cced2f205a6ef8a0a9b9724"
+  },
+  "discarded_gate": "Inconclusive: process engine versions were not individually pinned. Not adopted.",
+  "structural_commit": "Sharing structural commit across policies saves16,847 raw /12,012 O4s code-section bytes in matched export sets.",
+  "code_sections": {
+    "unshared_raw": 162239,
+    "shared_raw": 145392,
+    "unshared_O4s": 94604,
+    "shared_O4s": 82592
+  },
+  "limits": "Gate run used earlier engine selection; no speed claim across engine versions. Shared-commit gain is code size, not cross-engine runtime."
+}

@@ -32,7 +32,6 @@ instance = await WebAssembly.instantiate(module, imports);
 if (instance.exports.__dew_init) instance.exports.__dew_init();
 const expected = new Map([
   ['B-tree new key at U32 max is diagnostic', /BTree plain leaf insert: U32 length overflow; count=4294967295 capacity=61/],
-  ['B-tree full root has a diagnostic checkpoint boundary', /BTree plain Unit leaf insert: full root leaf; step-3 checkpoint requires split support; count=251 capacity=251 index=251 head=false/],
 ]);
 const messages = {};
 for (const [name, pattern] of expected) {
@@ -45,4 +44,4 @@ for (const [name, pattern] of expected) {
   messages[name] = message;
 }
 fs.writeFileSync(output, JSON.stringify(messages, null, 2) + '\n');
-console.log('Both exact count/capacity/operation diagnostics passed.');
+console.log('Exact count/capacity/operation diagnostics passed.');

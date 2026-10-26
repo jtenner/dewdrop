@@ -1,0 +1,269 @@
+fn split_permutation(index: U32, count: U32) -> U32 {
+  let ordinal = (btree_widen(index) * 7919u64) % btree_widen(count)
+  ordinal.into()
+}
+// Original modules provide runtime samples; instrumented copies inspect slots.
+fn split_numeric_build(count: U32, mode: U32) -> BTree<I32, I64, NaturalComparator> {
+  let tree = btree_plain_new::<I32, I64, NaturalComparator>(natural_comparator(), btree_config(1024u32, 64u32, 64u32))
+  let mut i = 0u32
+  while true {
+    true if i < count => {
+      let ordinal = if mode == 0u32 {
+        i
+      } else if mode == 1u32 {
+        count - i - 1u32
+      } else {
+        split_permutation(i, count)
+      }
+      btree_set(tree, unsafe_bitcast::<U32, I32>(ordinal * 2u32), unsafe_bitcast::<U64, I64>(btree_widen(ordinal * 3u32 + 100u32)))
+      i = i + 1u32
+      continue true
+    }
+    _ => break tree
+  }
+}
+pub fn split_numeric_make(count: U32, mode: U32) -> BTree<I32, I64, NaturalComparator> {
+  split_numeric_build(count, mode)
+}
+pub fn split_numeric_insert(tree: BTree<I32, I64, NaturalComparator>, key: I32, value: I64) -> Bool {
+  btree_insert(tree, key, value)
+}
+pub fn split_numeric_put(tree: BTree<I32, I64, NaturalComparator>, key: I32, value: I64) -> Option<I64> {
+  btree_put(tree, key, value)
+}
+pub fn split_numeric_lookup(tree: BTree<I32, I64, NaturalComparator>, key: I32) -> I64 {
+  match btree_get(tree, key) {
+    Option::Some(value) => value
+    Option::None => -1i64
+  }
+}
+pub fn split_numeric_contains(tree: BTree<I32, I64, NaturalComparator>, key: I32) -> Bool {
+  btree_contains(tree, key)
+}
+pub fn split_numeric_length(tree: BTree<I32, I64, NaturalComparator>) -> U32 {
+  tree.length
+}
+pub fn split_numeric_length_set(tree: BTree<I32, I64, NaturalComparator>, length: U32) -> Unit {
+  tree.length = length
+}
+pub fn split_numeric_clear(tree: BTree<I32, I64, NaturalComparator>) -> Unit {
+  btree_clear(tree)
+}
+pub fn split_numeric_has_root(tree: BTree<I32, I64, NaturalComparator>) -> Bool {
+  match tree.root {
+    Option::Some(_) => true
+    _ => false
+  }
+}
+pub fn split_numeric_root(tree: BTree<I32, I64, NaturalComparator>) -> BTreeNode<I32, I64> {
+  match tree.root {
+    Option::Some(node) => node
+    _ => unreachable()
+  }
+}
+pub fn split_numeric_has_work(tree: BTree<I32, I64, NaturalComparator>) -> Bool {
+  match tree.work {
+    Option::Some(_) => true
+    _ => false
+  }
+}
+pub fn split_numeric_work(tree: BTree<I32, I64, NaturalComparator>) -> BTreeWork<I32, I64> {
+  match tree.work {
+    Option::Some(work) => work
+    _ => unreachable()
+  }
+}
+pub fn split_work_nodes(work: BTreeWork<I32, I64>) -> WasmArray<BTreeNode<I32, I64>> {
+  work.nodes
+}
+pub fn split_work_depth(work: BTreeWork<I32, I64>) -> U32 {
+  work.depth
+}
+pub fn split_work_hinted(work: BTreeWork<I32, I64>) -> Bool {
+  work.hinted
+}
+pub fn split_numeric_drop_hint(tree: BTree<I32, I64, NaturalComparator>) -> Unit {
+  match tree.work {
+    Option::Some(work) => {
+      btree_clear_slots(work.nodes, 15u32, 1u32, 1u32)
+      work.hinted = false
+    }
+    _ => ()
+  }
+}
+pub fn split_numeric_branch(node: BTreeNode<I32, I64>) -> Bool {
+  btree_is_branch(node)
+}
+pub fn split_numeric_count(node: BTreeNode<I32, I64>) -> U32 {
+  node.count
+}
+pub fn split_numeric_head(node: BTreeNode<I32, I64>) -> Bool {
+  node.head
+}
+pub fn split_numeric_keys(node: BTreeNode<I32, I64>) -> WasmArray<I32> {
+  btree_plain_search_keys(node)
+}
+pub fn split_numeric_values(node: BTreeNode<I32, I64>) -> WasmArray<I64> {
+  match node.body {
+    BTreeBody::PlainLeaf(body) => body.values
+    _ => unreachable()
+  }
+}
+pub fn split_numeric_children(node: BTreeNode<I32, I64>) -> WasmArray<BTreeNode<I32, I64>> {
+  match node.body {
+    BTreeBody::PlainBranch(body) => body.children
+    _ => unreachable()
+  }
+}
+pub fn split_cost_lookup(tree: BTree<I32, I64, NaturalComparator>, population: U32, count: U32) -> I64 {
+  let mut i = 0u32
+  let mut sum = 0i64
+  while true {
+    true if i < count => {
+      let ordinal = (i * 7919u32) % population
+      let key = unsafe_bitcast::<U32, I32>(ordinal * 2u32 + (i & 1u32))
+      sum = sum + split_numeric_lookup(tree, key)
+      i = i + 1u32
+      continue true
+    }
+    _ => break sum
+  }
+}
+pub fn split_cost_replace(tree: BTree<I32, I64, NaturalComparator>, population: U32, count: U32) -> U32 {
+  let mut i = 0u32
+  let mut added = 0u32
+  while true {
+    true if i < count => {
+      let key = unsafe_bitcast::<U32, I32>(((i * 7919u32) % population) * 2u32)
+      added = added + unsafe_bitcast::<Bool, U32>(btree_insert(tree, key, 7i64))
+      i = i + 1u32
+      continue true
+    }
+    _ => break added
+  }
+}
+pub fn split_cost_build(count: U32, mode: U32, disable_hint: Bool) -> U32 {
+  let tree = btree_plain_new::<I32, I64, NaturalComparator>(natural_comparator(), btree_config(1024u32, 64u32, 64u32))
+  let mut i = 0u32
+  while true {
+    true if i < count => {
+      if disable_hint {
+        split_numeric_drop_hint(tree)
+      }
+      let ordinal = if mode == 0u32 {
+        i
+      } else {
+        split_permutation(i, count)
+      }
+      btree_set(tree, unsafe_bitcast::<U32, I32>(ordinal * 2u32), 7i64)
+      i = i + 1u32
+      continue true
+    }
+    _ => break tree.length
+  }
+}
+struct BTreeSplitRef {
+  private order: I32
+}
+struct BTreeSplitRefCompare {
+}
+impl Comparator<BTreeSplitRef> for BTreeSplitRefCompare {
+  fn compare(self, left: BTreeSplitRef, right: BTreeSplitRef) -> Ordering {
+    if left.order < right.order {
+      Ordering::Less
+    } else if left.order > right.order {
+      Ordering::Greater
+    } else {
+      Ordering::Equal
+    }
+  }
+}
+pub fn split_ref_make(count: U32, mode: U32) -> BTree<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare> {
+  let tree = btree_plain_new::<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare>(BTreeSplitRefCompare::{
+  }, btree_config(1024u32, 64u32, 64u32))
+  let mut i = 0u32
+  while true {
+    true if i < count => {
+      let ordinal = if mode == 0u32 {
+        i
+      } else if mode == 1u32 {
+        count - i - 1u32
+      } else {
+        split_permutation(i, count)
+      }
+      btree_set(tree, BTreeSplitRef::{
+        order: unsafe_bitcast::<U32, I32>(ordinal * 2u32)
+      }, BTreeSplitRef::{
+        order: unsafe_bitcast::<U32, I32>(ordinal * 6u32 + 100u32)
+      })
+      i = i + 1u32
+      continue true
+    }
+    _ => break tree
+  }
+}
+pub fn split_ref_order(value: BTreeSplitRef) -> I32 {
+  value.order
+}
+pub fn split_ref_has_work(tree: BTree<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare>) -> Bool {
+  match tree.work {
+    Option::Some(_) => true
+    _ => false
+  }
+}
+pub fn split_ref_work(tree: BTree<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare>) -> BTreeWork<BTreeSplitRef, BTreeSplitRef> {
+  match tree.work {
+    Option::Some(work) => work
+    _ => unreachable()
+  }
+}
+pub fn split_ref_work_nodes(work: BTreeWork<BTreeSplitRef, BTreeSplitRef>) -> WasmArray<BTreeNode<BTreeSplitRef, BTreeSplitRef>> {
+  work.nodes
+}
+pub fn split_ref_work_depth(work: BTreeWork<BTreeSplitRef, BTreeSplitRef>) -> U32 {
+  work.depth
+}
+pub fn split_ref_work_hinted(work: BTreeWork<BTreeSplitRef, BTreeSplitRef>) -> Bool {
+  work.hinted
+}
+pub fn split_ref_root(tree: BTree<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare>) -> BTreeNode<BTreeSplitRef, BTreeSplitRef> {
+  match tree.root {
+    Option::Some(root) => root
+    _ => unreachable()
+  }
+}
+pub fn split_ref_count(node: BTreeNode<BTreeSplitRef, BTreeSplitRef>) -> U32 {
+  node.count
+}
+pub fn split_ref_branch(node: BTreeNode<BTreeSplitRef, BTreeSplitRef>) -> Bool {
+  btree_is_branch(node)
+}
+pub fn split_ref_head(node: BTreeNode<BTreeSplitRef, BTreeSplitRef>) -> Bool {
+  node.head
+}
+pub fn split_ref_keys(node: BTreeNode<BTreeSplitRef, BTreeSplitRef>) -> WasmArray<BTreeSplitRef> {
+  btree_plain_search_keys(node)
+}
+pub fn split_ref_values(node: BTreeNode<BTreeSplitRef, BTreeSplitRef>) -> WasmArray<BTreeSplitRef> {
+  match node.body {
+    BTreeBody::PlainLeaf(body) => body.values
+    _ => unreachable()
+  }
+}
+pub fn split_ref_children(node: BTreeNode<BTreeSplitRef, BTreeSplitRef>) -> WasmArray<BTreeNode<BTreeSplitRef, BTreeSplitRef>> {
+  match node.body {
+    BTreeBody::PlainBranch(body) => body.children
+    _ => unreachable()
+  }
+}
+pub fn split_ref_query(order: I32) -> BTreeSplitRef {
+  BTreeSplitRef::{
+    order: order
+  }
+}
+pub fn split_ref_contains(tree: BTree<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare>, key: BTreeSplitRef) -> Bool {
+  btree_contains(tree, key)
+}
+pub fn split_ref_insert(tree: BTree<BTreeSplitRef, BTreeSplitRef, BTreeSplitRefCompare>, key: BTreeSplitRef, value: BTreeSplitRef) -> Bool {
+  btree_insert(tree, key, value)
+}

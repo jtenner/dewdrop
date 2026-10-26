@@ -1,0 +1,742 @@
+// Step 4 uses the exact common source in the private combined module.
+test "B-tree plain leaf split covers every insertion index" {
+  let mut gap = 0u32
+  while true {
+    true if gap <= 61u32 => {
+      let tree = btree_plain_new::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+      let capacity = tree.plan.leaf_capacity
+      assert(capacity == 61u32, "split test uses the derived U64 plan")
+      let mut i = 0u32
+      while true {
+        true if i < capacity => {
+          btree_set(tree, 2u64 * btree_widen(i) + 2u64, btree_widen(i) + 100u64)
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      assert(btree_insert(tree, 2u64 * btree_widen(gap) + 1u64, 999u64), "split adds one key")
+      let root = btree_test_root(tree)
+      assert(root.count == 1u32 && tree.length == capacity + 1u32, "split grows one separator root")
+      let minimum = if capacity / 8u32 > 4u32 {
+        capacity / 8u32
+      } else {
+        4u32
+      }
+      let small = if 2u32 * minimum < capacity / 2u32 {
+        2u32 * minimum
+      } else {
+        capacity / 2u32
+      }
+      let promoted = if gap == 0u32 {
+        small - 1u32
+      } else if gap == capacity {
+        capacity - small
+      } else {
+        capacity / 2u32
+      }
+      assert(btree_node_key(root, 0u32, false) == 2u64 * btree_widen(promoted) + 2u64, "split promotes the existing key")
+      let left = btree_node_child(root, 0u32)
+      let right = btree_node_child(root, 1u32)
+      assert(!left.head && right.head, "split owns only the right head")
+      assert(left.count == promoted + (if gap <= promoted {
+        1u32
+      } else {
+        0u32
+      }), "left split count")
+      assert(right.count == capacity - promoted - (if gap <= promoted {
+        1u32
+      } else {
+        0u32
+      }), "right split count")
+      i = 0u32
+      while true {
+        true if i < capacity => {
+          assert(match btree_get(tree, 2u64 * btree_widen(i) + 2u64) {
+            Option::Some(value) => value == btree_widen(i) + 100u64
+            _ => false
+          }, "split retains all values, including the head")
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      assert(match btree_get(tree, 2u64 * btree_widen(gap) + 1u64) {
+        Option::Some(999u64) => true
+        _ => false
+      }, "split retains inserted value")
+      btree_test_inspect(tree)
+      gap = gap + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}
+// Small forced capacities exercise boundary shapes without changing public planning.
+fn btree_test_small<k, v, c: Comparator<k>>(comparator: c, leaf: U32, branch: U32) -> BTree<k, v, c> {
+  BTree::{
+    root: Option::None
+    length: 0u32
+    work: Option::None
+    comparator: comparator
+    plan: BTreePlan::{
+      leaf_capacity: leaf
+      branch_capacity: branch
+      leaf_budget: 1024u64
+      branch_budget: 1024u64
+      leaf_width: 0u32
+      branch_width: 0u32
+      tags: false
+      pair_bytes: 0u32
+    }
+  }
+}
+fn btree_test_height<k, v, c>(tree: BTree<k, v, c>) -> U32 {
+  let mut node = btree_test_root(tree)
+  let mut depth = 0u32
+  while true {
+    true if btree_is_branch(node) => {
+      depth = depth + 1u32
+      node = btree_node_child(node, 0u32)
+      continue true
+    }
+    _ => break depth
+  }
+}
+test "B-tree leaf split boundary capacities cover all gaps" {
+  let mut capacity = 12u32
+  while true {
+    true if capacity <= 1023u32 => {
+      let mut gap = 0u32
+      while true {
+        true if gap <= capacity => {
+          let tree = btree_test_small::<U32, U32, NaturalComparator>(natural_comparator(), capacity, 13u32)
+          let mut i = 0u32
+          while true {
+            true if i < capacity => {
+              btree_set(tree, 2u32 * i + 2u32, i + 100u32)
+              i = i + 1u32
+              continue true
+            }
+            _ => break ()
+          }
+          btree_set(tree, 2u32 * gap + 1u32, 999u32)
+          btree_test_inspect(tree)
+          i = 0u32
+          while true {
+            true if i < capacity => {
+              assert(match btree_get(tree, 2u32 * i + 2u32) {
+                Option::Some(value) => value == i + 100u32
+                _ => false
+              }, "boundary split retains values")
+              i = i + 1u32
+              continue true
+            }
+            _ => break ()
+          }
+          gap = gap + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      capacity = if capacity < 65u32 {
+        capacity + 1u32
+      } else if capacity == 65u32 {
+        127u32
+      } else if capacity == 127u32 {
+        255u32
+      } else if capacity == 255u32 {
+        1023u32
+      } else {
+        1024u32
+      }
+      continue true
+    }
+    _ => break ()
+  }
+}
+// Each full parent is valid before the write. Trigger a split at each child edge.
+test "B-tree full parent splits at every child edge" {
+  let mut capacity = 12u32
+  while true {
+    true if capacity <= 82u32 => {
+      let mut edge = 0u32
+      while true {
+        true if edge <= capacity => {
+          let tree = btree_test_small::<U32, U32, NaturalComparator>(natural_comparator(), 12u32, capacity)
+          let root = btree_node_new::<U32, U32>(tree.plan, true)
+          match root.body {
+            BTreeBody::PlainBranch(body) => {
+              let mut e = 0u32
+              while true {
+                true if e <= capacity => {
+                  let leaf = btree_node_new::<U32, U32>(tree.plan, false)
+                  let base = e * 26u32
+                  match leaf.body {
+                    BTreeBody::PlainLeaf(columns) => {
+                      if e > 0u32 {
+                        wasm_array_set(body.keys, e - 1u32, base)
+                        wasm_array_set(columns.values, 0u32, base + 1000u32)
+                        leaf.head = true
+                      }
+                      let mut i = 0u32
+                      while true {
+                        true if i < 12u32 => {
+                          wasm_array_set(columns.keys, i, base + 2u32 * i + 2u32)
+                          wasm_array_set(columns.values, i + 1u32, base + 2u32 * i + 1002u32)
+                          i = i + 1u32
+                          continue true
+                        }
+                        _ => break ()
+                      }
+                    }
+                    _ => unreachable()
+                  }
+                  leaf.count = 12u32
+                  wasm_array_set(body.children, e, leaf)
+                  e = e + 1u32
+                  continue true
+                }
+                _ => break ()
+              }
+            }
+            _ => unreachable()
+          }
+          root.count = capacity
+          tree.root = Option::Some(root)
+          tree.length = (capacity + 1u32) * 12u32 + capacity
+          btree_test_inspect(tree)
+          let added = edge * 26u32 + 1u32
+          btree_set(tree, added, added + 1000u32)
+          assert(match btree_get(tree, added) {
+            Option::Some(value) => value == added + 1000u32
+            _ => false
+          }, "every parent edge retains the newly inserted value")
+          btree_test_inspect(tree)
+          assert(btree_test_height(tree) == 2u32, "full parent grows root")
+          let grown = btree_test_root(tree)
+          let j = if edge == 0u32 {
+            btree_edge_half(capacity) - 1u32
+          } else if edge == capacity {
+            capacity - btree_edge_half(capacity)
+          } else {
+            capacity / 2u32
+          }
+          assert(btree_node_key(grown, 0u32, false) == (j + 1u32) * 26u32, "parent promotes existing separator")
+          assert(btree_node_child(grown, 0u32).count == j + (if edge <= j {
+            1u32
+          } else {
+            0u32
+          }), "parent left count follows split index")
+          let mut query = 1u32
+          while true {
+            true if query <= (capacity + 1u32) * 13u32 - 1u32 => {
+              let key = query * 2u32
+              assert(match btree_get(tree, key) {
+                Option::Some(value) => value == key + 1000u32
+                _ => false
+              }, "parent split keeps every separator and leaf value")
+              query = query + 1u32
+              continue true
+            }
+            _ => break ()
+          }
+          edge = edge + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      capacity = if capacity < 24u32 {
+        capacity + 1u32
+      } else if capacity == 24u32 {
+        31u32
+      } else if capacity == 31u32 {
+        39u32
+      } else if capacity == 39u32 {
+        40u32
+      } else if capacity == 40u32 {
+        61u32
+      } else if capacity == 61u32 {
+        64u32
+      } else if capacity == 64u32 {
+        82u32
+      } else {
+        83u32
+      }
+      continue true
+    }
+    _ => break ()
+  }
+}
+struct BTreeReverse {
+}
+impl Comparator<I32> for BTreeReverse {
+  fn compare(self, left: I32, right: I32) -> Ordering {
+    if left > right {
+      Ordering::Less
+    } else if left < right {
+      Ordering::Greater
+    } else {
+      Ordering::Equal
+    }
+  }
+}
+fn btree_test_insert_oracle<c: Comparator<I32>>(comparator: c, mode: U32, leaf: U32, branch: U32) -> Unit {
+  let tree = btree_test_small::<I32, I64, c>(comparator, leaf, branch)
+  let keys = wasm_array_new_default::<I32>(4001u32)
+  let values = wasm_array_new_default::<I64>(4001u32)
+  let mut length = 0u32
+  let mut seed = 137u32
+  let mut step = 0u32
+  while true {
+    true if step < 6500u32 => {
+      seed = seed * 1664525u32 + 1013904223u32
+      let raw = if mode == 0u32 {
+        step % 4000u32
+      } else if mode == 1u32 {
+        3999u32 - step % 4000u32
+      } else {
+        (seed >> 8u32) % 4000u32
+      }
+      let key = unsafe_bitcast::<U32, I32>(raw) - 2000i32
+      let value = unsafe_bitcast::<U64, I64>(btree_widen(step))
+      let mut index = 0u32
+      while true {
+        true if index < length && ordering_is_less(comparator.compare(wasm_array_get(keys, index), key)) => {
+          index = index + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      let found = index < length && ordering_is_equal(comparator.compare(wasm_array_get(keys, index), key))
+      if step % 3u32 == 0u32 {
+        assert(btree_insert(tree, key, value) == !found, "multi-level oracle Bool; seed=137")
+      } else if step % 3u32 == 1u32 {
+        let old = btree_put(tree, key, value)
+        assert(match old {
+          Option::Some(previous) => found && previous == wasm_array_get(values, index)
+          Option::None => !found
+        }, "multi-level oracle old value; seed=137")
+      } else {
+        btree_set(tree, key, value)
+      }
+      if !found {
+        let mut destination = length
+        while true {
+          true if destination > index => {
+            wasm_array_set(keys, destination, wasm_array_get(keys, destination - 1u32))
+            wasm_array_set(values, destination, wasm_array_get(values, destination - 1u32))
+            destination = destination - 1u32
+            continue true
+          }
+          _ => break ()
+        }
+        wasm_array_set(keys, index, key)
+        length = length + 1u32
+      }
+      wasm_array_set(values, index, value)
+      btree_test_inspect(tree)
+      assert(tree.length == length, "multi-level oracle length; seed=137")
+      let mut query = 0u32
+      while true {
+        true if query < length => {
+          let stored = wasm_array_get(keys, query)
+          assert(btree_contains(tree, stored), "multi-level oracle membership; seed=137")
+          assert(match btree_get(tree, stored) {
+            Option::Some(item) => item == wasm_array_get(values, query)
+            _ => false
+          }, "multi-level oracle all values; seed=137")
+          query = query + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      assert(!btree_contains(tree, 2001i32) && !btree_contains(tree, -2001i32), "multi-level oracle outside misses")
+      step = step + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(btree_test_height(tree) >= 3u32, "oracle grows several levels")
+  btree_clear(tree)
+  assert(match tree.work {
+    Option::None => true
+    _ => false
+  }, "clear releases hint and work space")
+  btree_set(tree, 1i32, 1i64)
+  btree_test_inspect(tree)
+}
+test "B-tree sorted reverse and random writes match sorted arrays at several levels" {
+  btree_test_insert_oracle(natural_comparator(), 0u32, 12u32, 13u32)
+  btree_test_insert_oracle(natural_comparator(), 1u32, 13u32, 12u32)
+  btree_test_insert_oracle(natural_comparator(), 2u32, 12u32, 12u32)
+  btree_test_insert_oracle(BTreeReverse::{
+  }, 0u32, 12u32, 13u32)
+  btree_test_insert_oracle(BTreeReverse::{
+  }, 1u32, 13u32, 12u32)
+  btree_test_insert_oracle(BTreeReverse::{
+  }, 2u32, 12u32, 12u32)
+}
+struct BTreeStepCounter {
+  private mut calls: U32
+  private mut work: Option<BTreeWork<I32, I64>>
+}
+impl Comparator<I32> for BTreeStepCounter {
+  fn compare(self, left: I32, right: I32) -> Ordering {
+    self.calls = self.calls + 1u32
+    match self.work {
+      Option::Some(work) => assert(!work.hinted, "hint must be clear before user comparison")
+      Option::None => ()
+    }
+    if left < right {
+      Ordering::Less
+    } else if left > right {
+      Ordering::Greater
+    } else {
+      Ordering::Equal
+    }
+  }
+}
+fn btree_test_work<k, v, c>(tree: BTree<k, v, c>) -> BTreeWork<k, v> {
+  match tree.work {
+    Option::Some(work) => work
+    _ => unreachable()
+  }
+}
+test "B-tree split records a fresh second descent and fitting writes do not" {
+  let counter = BTreeStepCounter::{
+    calls: 0u32
+    work: Option::None
+  }
+  let tree = btree_test_small::<I32, I64, BTreeStepCounter>(counter, 12u32, 13u32)
+  let mut i = 0i32
+  while true {
+    true if i < 12i32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(match tree.work {
+    Option::None => true
+    _ => false
+  }, "fit writes do not create work space")
+  counter.calls = 0u32
+  btree_plain_search(btree_test_root(tree), counter, -1i32)
+  let first = counter.calls
+  counter.calls = 0u32
+  btree_set(tree, -1i32, 2i64)
+  assert(counter.calls == 2u32 * first, "full target performs two full searches")
+  let work = btree_test_work(tree)
+  assert(!work.hinted && work.depth == 0u32, "new minimum split has no hint or saved path")
+  let root = btree_test_root(tree)
+  let leaf = btree_node_child(root, 0u32)
+  counter.calls = 0u32
+  btree_plain_search(root, counter, -2i32)
+  btree_plain_search(leaf, counter, -2i32)
+  let one = counter.calls
+  counter.calls = 0u32
+  btree_set(tree, -2i32, 3i64)
+  assert(counter.calls == one, "fitting leaf uses one descent")
+  btree_test_inspect(tree)
+}
+test "B-tree append hint installs clears restores and keeps only the last leaf" {
+  let counter = BTreeStepCounter::{
+    calls: 0u32
+    work: Option::None
+  }
+  let tree = btree_test_small::<I32, I64, BTreeStepCounter>(counter, 12u32, 13u32)
+  let mut i = 0i32
+  while true {
+    true if i <= 12i32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  let work = btree_test_work(tree)
+  let hint = wasm_array_get(work.nodes, 15u32)
+  assert(work.hinted && hint.head && hint.count == 6u32, "maximum split installs only right leaf")
+  assert(btree_test_same_node(hint, btree_node_child(btree_test_root(tree), 1u32)), "hint is rightmost")
+  assert(btree_contains(tree, 6i32), "separator read")
+  btree_get(tree, 12i32)
+  btree_get_entry(tree, 3i32)
+  assert(work.hinted && btree_test_same_node(hint, wasm_array_get(work.nodes, 15u32)), "read-only operations keep hint")
+  // A user comparator sees the existing work object, with its hint cleared.
+  counter.work = Option::Some(work)
+  counter.calls = 0u32
+  btree_set(tree, 13i32, 13i64)
+  assert(counter.calls == 1u32 && work.hinted, "append uses one comparison and restores only on success")
+  assert(btree_test_same_node(hint, wasm_array_get(work.nodes, 15u32)), "append reuses hint reference")
+  counter.calls = 0u32
+  assert(!btree_insert(tree, 13i32, 14i64), "equal hint key replaces")
+  assert(counter.calls > 1u32 && !work.hinted, "equal key clears hint before ordinary search")
+  btree_set(tree, 14i32, 14i64)
+  assert(!work.hinted, "ordinary fit does not install a hint")
+  i = 15i32
+  while true {
+    true if i <= 19i32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(work.hinted, "next maximum split installs hint")
+  btree_set(tree, -1i32, 1i64)
+  assert(!work.hinted, "smaller key clears hint")
+  i = 20i32
+  while true {
+    true if i <= 26i32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(work.hinted, "later split installs hint")
+  let last = wasm_array_get(work.nodes, 15u32)
+  i = 27i32
+  while true {
+    true if last.count < 12u32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  btree_set(tree, i, 1i64)
+  assert(work.hinted && !btree_test_same_node(last, wasm_array_get(work.nodes, 15u32)), "full hint clears and the new split installs a new leaf")
+  counter.work = Option::None
+  btree_test_inspect(tree)
+  let alias = tree
+  btree_clear(alias)
+  assert(tree.length == 0u32 && match tree.work {
+    Option::None => true
+    _ => false
+  }, "clear releases work and hint through aliases")
+}
+test "B-tree plain separators retain key identity and replace head values" {
+  let tree = btree_test_small::<BTreeIdentityKey, I64, BTreeIdentityComparator>(BTreeIdentityComparator::{
+  }, 12u32, 13u32)
+  let keys = wasm_array_new_default::<BTreeIdentityKey>(400u32)
+  let mut i = 0u32
+  while true {
+    true if i < 400u32 => {
+      let key = BTreeIdentityKey::{
+        order: unsafe_bitcast::<U32, I32>(i)
+        mark: 1i32
+      }
+      wasm_array_set(keys, i, key)
+      btree_set(tree, key, unsafe_bitcast::<U64, I64>(btree_widen(i)))
+      btree_test_inspect(tree)
+      i = i + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(btree_test_height(tree) >= 2u32, "identity test covers ancestor head walks")
+  i = 0u32
+  while true {
+    true if i < 400u32 => {
+      let query = BTreeIdentityKey::{
+        order: unsafe_bitcast::<U32, I32>(i)
+        mark: 2i32
+      }
+      let before = btree_get_entry(tree, query)
+      assert(match btree_put(tree, query, -1i64) {
+        Option::Some(old) => old == unsafe_bitcast::<U64, I64>(btree_widen(i))
+        _ => false
+      }, "head and regular put return original value")
+      assert(!btree_insert(tree, query, -2i64), "head and regular Bool replacements")
+      btree_set(tree, query, -3i64)
+      assert(match btree_get_entry(tree, query) {
+        Option::Some(entry) => btree_test_key_identity(entry.key, wasm_array_get(keys, i)) && entry.key.mark == 1i32 && entry.value == -3i64
+        _ => false
+      }, "equal queries retain actual key home")
+      assert(match before {
+        Option::Some(entry) => entry.value == unsafe_bitcast::<U64, I64>(btree_widen(i))
+        _ => false
+      }, "head snapshots keep old value")
+      btree_test_inspect(tree)
+      i = i + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}
+fn btree_test_split_value<v>(first: v, second: v) -> Option<v> {
+  let tree = btree_test_small::<I32, v, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  let mut i = 0i32
+  while true {
+    true if i < 200i32 => {
+      btree_set(tree, i, first)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  let separator = btree_node_key(btree_test_root(tree), 0u32, false)
+  assert(!btree_insert(tree, separator, second), "carrier separator replacement")
+  let old = btree_put(tree, separator, first)
+  btree_test_inspect(tree)
+  old
+}
+test "B-tree split head values cover all carriers without extra witnesses" {
+  assert(unwrap_option(btree_test_split_value(1i32, -7i32)) == -7i32, "split I32")
+  assert(unwrap_option(btree_test_split_value(1i64, -7i64)) == -7i64, "split I64")
+  assert(wasm_f32_to_bits(unwrap_option(btree_test_split_value(1.0f32, wasm_f32_from_bits(2143289345u32)))) == 2143289345u32, "split F32 bits")
+  assert(wasm_f64_to_bits(unwrap_option(btree_test_split_value(1.0f64, wasm_f64_from_bits(9223372036854775808u64)))) == 9223372036854775808u64, "split F64 bits")
+  let a = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_splat(7u64))
+  let b = unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(wasm_u64x2_splat(11u64), 13u64))
+  let vector = unwrap_option(btree_test_split_value(a, b))
+  assert(btree_extract64(vector, 0u32) == 11u64 && btree_extract64(vector, 1u32) == 13u64, "split V128")
+  let key = BTreeIdentityKey::{
+    order: 1i32
+    mark: 3i32
+  }
+  assert(btree_test_key_identity(unwrap_option(btree_test_split_value(key, key)), key), "split reference")
+  assert(match unwrap_option(btree_test_split_value(Option::Some(1i64), Option::None)) {
+    Option::None => true
+    _ => false
+  }, "split present None")
+  assert(match unwrap_option(btree_test_split_value(Option::Some(Option::None), Option::Some(Option::Some(7i64)))) {
+    Option::Some(Option::Some(7i64)) => true
+    _ => false
+  }, "split nested Option")
+  let unit = unwrap_option(btree_test_split_value((), ()))
+}
+test "B-tree Unit split effects and separator replacement at U32 max" {
+  let effects = BTreeUnitEffects::{
+    count: 0u32
+  }
+  let tree = btree_test_small::<I32, Unit, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  let mut i = 0i32
+  while true {
+    true if i < 200i32 => {
+      btree_set(tree, i, btree_unit_value(effects))
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  assert(effects.count == 200u32, "split evaluates each Unit value once")
+  let key = btree_node_key(btree_test_root(tree), 0u32, false)
+  tree.length = 4294967295u32
+  assert(!btree_insert(tree, key, btree_unit_value(effects)), "separator Bool at max")
+  btree_set(tree, key, btree_unit_value(effects))
+  assert(match btree_put(tree, key, btree_unit_value(effects)) {
+    Option::Some(_) => true
+    _ => false
+  }, "separator old value at max")
+  assert(effects.count == 203u32 && tree.length == 4294967295u32, "Unit effect and no count wrap")
+  tree.length = 200u32
+  btree_test_inspect(tree)
+}
+test "B-tree split path overflow is diagnostic" expect_trap "unreachable" {
+  let tree = btree_test_small::<I32, I64, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  btree_set(tree, 1i32, 1i64)
+  let work = btree_work(tree)
+  work.depth = 15u32
+  btree_path_push(work, btree_test_root(tree), 0u32)
+}
+test "B-tree inspector count failure is diagnostic" expect_trap "unreachable" {
+  let tree = btree_test_small::<I32, I64, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  btree_set(tree, 1i32, 1i64)
+  btree_test_root(tree).count = 13u32
+  btree_test_inspect(tree)
+}
+test "B-tree inspector first head failure is diagnostic" expect_trap "unreachable" {
+  let tree = btree_test_small::<I32, I64, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  btree_set(tree, 1i32, 1i64)
+  btree_test_root(tree).head = true
+  btree_test_inspect(tree)
+}
+test "B-tree inspector length failure is diagnostic" expect_trap "unreachable" {
+  let tree = btree_test_small::<I32, I64, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  btree_set(tree, 1i32, 1i64)
+  tree.length = 2u32
+  btree_test_inspect(tree)
+}
+test "B-tree inspector occupancy failure is diagnostic" expect_trap "unreachable" {
+  let tree = btree_test_small::<I32, I64, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  let mut i = 0i32
+  while true {
+    true if i <= 12i32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  btree_node_child(btree_test_root(tree), 0u32).count = 3u32
+  btree_test_inspect(tree)
+}
+
+test "B-tree inspector low global length failure is diagnostic" expect_trap "unreachable" {
+  let tree = btree_test_small::<I32, I64, NaturalComparator>(natural_comparator(), 12u32, 13u32)
+  let mut i = 0i32
+  while true {
+    true if i <= 12i32 => {
+      btree_set(tree, i, 1i64)
+      i = i + 1i32
+      continue true
+    }
+    _ => break ()
+  }
+  tree.length = 0u32
+  btree_test_inspect(tree)
+}
+
+// Use the actual forced-plain default budgets, not a small test capacity.
+test "B-tree default plain plan grows branches for sorted and permuted inputs" {
+  let mut mode = 0u32
+  while true {
+    true if mode < 2u32 => {
+      let tree = btree_plain_new::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+      assert(tree.plan.leaf_capacity == 61u32 && tree.plan.branch_capacity == 61u32, "default plain capacity model")
+      let model = wasm_array_new_default::<U64>(4096u32)
+      let mut i = 0u32
+      while true {
+        true if i < 4096u32 => {
+          let ordinal = if mode == 0u32 {
+            i
+          } else {
+            (i * 7919u32) % 4096u32
+          }
+          let key = btree_widen(ordinal) * 2u64
+          let value = btree_widen(i) + 100u64
+          wasm_array_set(model, ordinal, value)
+          assert(btree_insert(tree, key, value), "default plan inserts each unique key")
+          assert(match btree_get(tree, key) {
+            Option::Some(stored) => stored == value
+            _ => false
+          }, "default plan keeps each new value")
+          btree_test_inspect(tree)
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      assert(btree_test_height(tree) >= 2u32, "default plan splits a branch and grows the root")
+      i = 0u32
+      while true {
+        true if i < 4096u32 => {
+          assert(match btree_get(tree, btree_widen(i) * 2u64) {
+            Option::Some(value) => value == wasm_array_get(model, i)
+            _ => false
+          }, "default plan matches the independent sorted-array model")
+          assert(!btree_contains(tree, btree_widen(i) * 2u64 + 1u64), "default plan odd gaps remain absent")
+          i = i + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      mode = mode + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}

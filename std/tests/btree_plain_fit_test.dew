@@ -8,36 +8,166 @@ fn btree_test_root<k, v, c>(tree: BTree<k, v, c>) -> BTreeNode<k, v> {
     }
   }
 }
+struct BTreeTestInspection<k, v> {
+  private mut previous: Option<k>
+  private mut keys: U64
+  private mut leaves: U32
+  private mut leaf_depth: U32
+  private mut seen: WasmArray<BTreeNode<k, v>>
+  private mut nodes: U32
+}
+fn btree_test_inspect_key<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, state: BTreeTestInspection<k, v>, node: BTreeNode<k, v>, index: U32) -> Unit {
+  let key = btree_node_key(node, index, false)
+  match state.previous {
+    Option::Some(previous) => {
+      if !ordering_is_less(tree.comparator.compare(previous, key)) {
+        btree_node_failure(node, index, "inspect order: keys are not strictly ordered")
+      }
+    }
+    Option::None => ()
+  }
+  state.previous = Option::Some(key)
+  state.keys = state.keys + 1u64
+}
+fn btree_test_inspect_node<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, state: BTreeTestInspection<k, v>, node: BTreeNode<k, v>, depth: U32) -> Unit {
+  if depth >= 15u32 {
+    btree_node_failure(node, depth, "inspect depth: exceeds U32 height bound")
+  }
+  let mut seen = 0u32
+  while true {
+    true if seen < state.nodes => {
+      if btree_test_same_node(wasm_array_get(state.seen, seen), node) {
+        btree_node_failure(node, seen, "inspect ownership: node has more than one home")
+      }
+      seen = seen + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+  if state.nodes == wasm_array_len(state.seen) {
+    let old_capacity = wasm_array_len(state.seen)
+    if old_capacity > 2147483647u32 {
+      btree_node_failure(node, state.nodes, "inspect ownership: node recorder capacity overflow")
+    }
+    let grown = wasm_array_new_default::<BTreeNode<k, v>>(old_capacity * 2u32)
+    wasm_array_copy(grown, 0u32, state.seen, 0u32, state.nodes)
+    state.seen = grown
+  }
+  wasm_array_set(state.seen, state.nodes, node)
+  state.nodes = state.nodes + 1u32
+  let branch = btree_is_branch(node)
+  let capacity = if branch {
+    tree.plan.branch_capacity
+  } else {
+    tree.plan.leaf_capacity
+  }
+  if node.count > capacity {
+    btree_node_failure(node, depth, "inspect count: exceeds capacity")
+  }
+  if depth > 0u32 && node.count < btree_minimum(capacity) {
+    btree_node_failure(node, depth, "inspect occupancy: non-root below minimum")
+  }
+  if node.prefix != 0u32 {
+    btree_node_failure(node, depth, "inspect prefix: plain node must have zero prefix")
+  }
+  if branch {
+    if node.head || node.count == 0u32 {
+      btree_node_failure(node, depth, "inspect branch: head or empty branch")
+    }
+    match node.body {
+      BTreeBody::PlainBranch(body) => {
+        if wasm_array_len(body.keys) != capacity + 1u32 || wasm_array_len(body.children) != capacity + 2u32 {
+          btree_node_failure(node, depth, "inspect branch columns: wrong capacity")
+        }
+      }
+      _ => btree_node_failure(node, depth, "inspect branch: expected plain storage")
+    }
+    let mut edge = 0u32
+    while true {
+      true if edge <= node.count => {
+        btree_test_inspect_node(tree, state, btree_node_child(node, edge), depth + 1u32)
+        if edge < node.count {
+          if !btree_head_leaf(node, edge).head {
+            btree_node_failure(node, edge, "inspect separator: missing owned leaf head")
+          }
+          btree_test_inspect_key(tree, state, node, edge)
+        }
+        edge = edge + 1u32
+        continue true
+      }
+      _ => break ()
+    }
+  } else {
+    if node.head != (state.leaves > 0u32) {
+      btree_node_failure(node, depth, "inspect leaf head: only the first leaf has no head")
+    }
+    if state.leaf_depth == 4294967295u32 {
+      state.leaf_depth = depth
+    } else if state.leaf_depth != depth {
+      btree_node_failure(node, depth, "inspect depth: leaves have different depths")
+    }
+    match node.body {
+      BTreeBody::PlainLeaf(body) => {
+        if is_unit::<v>() || wasm_array_len(body.keys) != capacity + 1u32 || wasm_array_len(body.values) != capacity + 2u32 {
+          btree_node_failure(node, depth, "inspect columns: carrier or capacity")
+        }
+      }
+      BTreeBody::PlainKeys(body) => {
+        if !is_unit::<v>() || wasm_array_len(body.keys) != capacity + 1u32 {
+          btree_node_failure(node, depth, "inspect Unit: carrier or capacity")
+        }
+      }
+      _ => btree_node_failure(node, depth, "inspect leaf: expected plain storage")
+    }
+    let mut index = 0u32
+    while true {
+      true if index < node.count => {
+        btree_test_inspect_key(tree, state, node, index)
+        index = index + 1u32
+        continue true
+      }
+      _ => break ()
+    }
+    state.leaves = state.leaves + 1u32
+  }
+}
 fn btree_test_inspect<k, v, c: Comparator<k>>(tree: BTree<k, v, c>) -> Unit {
+  assert(tree.plan.leaf_width == 0u32 && tree.plan.branch_width == 0u32 && !tree.plan.tags, "BTree inspector: expected plain plan")
   match tree.root {
     Option::None => assert(tree.length == 0u32, "BTree empty inspector: count without a root")
     Option::Some(node) => {
-      if node.count != tree.length || node.count > tree.plan.leaf_capacity || node.head || node.prefix != 0u32 || tree.plan.leaf_width != 0u32 {
-        btree_node_failure(node, 0u32, "inspect root: count/capacity/head/prefix/plan")
+      let state = BTreeTestInspection::{
+        previous: Option::None
+        keys: 0u64
+        leaves: 0u32
+        leaf_depth: 4294967295u32
+        seen: wasm_array_new_default::<BTreeNode<k, v>>(16u32)
+        nodes: 0u32
       }
-      match node.body {
-        BTreeBody::PlainLeaf(body) => {
-          if is_unit::<v>() || wasm_array_len(body.keys) != tree.plan.leaf_capacity + 1u32 || wasm_array_len(body.values) != tree.plan.leaf_capacity + 2u32 {
-            btree_node_failure(node, 0u32, "inspect columns: carrier or capacity")
-          }
-        }
-        BTreeBody::PlainKeys(body) => {
-          if !is_unit::<v>() || wasm_array_len(body.keys) != tree.plan.leaf_capacity + 1u32 {
-            btree_node_failure(node, 0u32, "inspect Unit: carrier or capacity")
-          }
-        }
-        _ => btree_node_failure(node, 0u32, "inspect root: expected plain leaf")
+      btree_test_inspect_node(tree, state, node, 0u32)
+      if state.keys != btree_widen(tree.length) {
+        btree_node_failure(node, 0u32, "inspect length: all-node key sum differs from map length")
       }
-      let mut i = 1u32
-      while true {
-        true if i < node.count => {
-          if !ordering_is_less(tree.comparator.compare(btree_node_key(node, i - 1u32, false), btree_node_key(node, i, false))) {
-            btree_node_failure(node, i, "inspect order: keys are not strictly ordered")
+      match tree.work {
+        Option::None => ()
+        Option::Some(work) => {
+          if work.depth != 0u32 || wasm_array_len(work.nodes) != 17u32 || wasm_array_len(work.edges) != 15u32 {
+            btree_node_failure(node, work.depth, "inspect work: path not empty or wrong bounded storage")
           }
-          i = i + 1u32
-          continue true
+          if work.hinted {
+            let mut last = node
+            while true {
+              true if btree_is_branch(last) => {
+                last = btree_node_child(last, last.count)
+                continue true
+              }
+              _ => break ()
+            }
+            if !btree_test_same_node(last, wasm_array_get(work.nodes, 15u32)) {
+              btree_node_failure(node, 15u32, "inspect hint: not the rightmost leaf")
+            }
+          }
         }
-        _ => break ()
       }
     }
   }
@@ -144,9 +274,12 @@ test "B-tree Unit root fills exactly to capacity" {
   }, "Unit live read has Some")
 }
 test "B-tree new key at U32 max is diagnostic" expect_trap "unreachable" {
-  btree_checked_growth(4294967295u32, 61u32)
+  let tree = btree_plain_new::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+  btree_set(tree, 1u64, 1u64)
+  tree.length = 4294967295u32
+  btree_insert(tree, 2u64, 2u64)
 }
-test "B-tree full root has a diagnostic checkpoint boundary" expect_trap "unreachable" {
+test "B-tree full Unit root grows and retains its head value" {
   let tree = btree_plain_new::<I32, Unit, NaturalComparator>(natural_comparator(), btree_default_config())
   let mut i = 0u32
   while true {
@@ -157,6 +290,9 @@ test "B-tree full root has a diagnostic checkpoint boundary" expect_trap "unreac
     }
     _ => break ()
   }
+  assert(btree_is_branch(btree_test_root(tree)), "full Unit root grows")
+  assert(tree.length == tree.plan.leaf_capacity + 1u32, "Unit split length")
+  btree_test_inspect(tree)
 }
 // Linear model. It has its own search and shifts; it never calls tree search.
 test "B-tree plain deterministic writes match a sorted-array oracle" {

@@ -1,5 +1,16 @@
 # B-tree build status
 
+## Current R1 scope override (2026-10-26)
+
+Joshua transferred step 4 through `ba9c30dc6` to `fix/burn-dewdrop-r1`.
+Correctness and tests now decide B-tree acceptance. The historical lease and
+measurement holds below no longer apply to this work. R1 does not merge or
+push master and does not run full project suites or benchmarks. Its live
+record is [burn-fix-dewdrop-r1.md](../burn-fix-dewdrop-r1.md).
+Step-4 raw and optimized tests and reference-work harness checks pass on R1.
+The current branch holds this acceptance; master is unchanged.
+
+
 Design authority: [btree-design.md](btree-design.md), selected at
 `5922ea1a12ede3913f97b9b7bdac1f90343240f1`.
 Upstream authority: bbtree `8adae97a0ed97e5c98fa2790312eb0aec9719846`.
@@ -33,8 +44,8 @@ Initial remote master: `b54e394e82d0320bbb56c1466c0dfc8144ec99ad`.
 | --- | --- | --- | --- | --- |
 | 1 | Storage probes | `feat/btree-step-1-storage-primitives` | `341e653bd4be5a042bd9d1f80370c07e555d7fc9` | stage-landed on master `6582b71b927ceb8e56207306edc05e00a1baa8eb`; pushed |
 | 2 | Plans and providers | `feat/btree-step-2-plans-providers` | `8ac0ef46259275a9dd2d3ce468d7fdbee9647129` | stage-landed on master `484cfba12aa3664e1c06dcdcda706f0ec63272d6`; pushed |
-| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `8beddc761964613ec915a9f67d749c5826ecf3cf` | integrated; full stage gate pending |
-| 4 | Plain splits | `feat/btree-step-4-plain-splits` | — | in flight |
+| 3 | Plain fit writes | `feat/btree-step-3-plain-fit-writes` | `8beddc761964613ec915a9f67d749c5826ecf3cf` | stage-landed on master `20f902acb6caa56a49712df832aeb0c46ec520b8`; pushed |
+| 4 | Plain splits | `feat/btree-step-4-plain-splits` | `ad5dae27514641d034cb7a58fc06014feab98624` | verified on `fix/burn-dewdrop-r1`; raw/O4s and reference-work controls pass; not landed |
 | 5 | Plain deletion | `feat/btree-step-5-plain-deletion` | — | queued |
 | 6 | Inline search | `feat/btree-step-6-inline-search` | — | queued |
 | 7 | Prefix insertion | `feat/btree-step-7-prefix-insert` | — | queued |
@@ -273,7 +284,7 @@ The completed run used Python timing plus the script's per-command measurements.
 | 1, before master rebase | `5f8bfb43e034ecbfd7cf6c11542c9a46239b63eb` | 1,925 passed, 0 failed; 541.639 s | — | new gate required after rebase |
 | 1, after master rebase | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | 1,925 passed, 0 failed; 523.325 s | `6582b71b927ceb8e56207306edc05e00a1baa8eb` | stage-landed; pushed to origin/master |
 | 2 | `484cfba12aa3664e1c06dcdcda706f0ec63272d6` | 1,925 passed, 0 failed; 567.337 s | `484cfba12aa3664e1c06dcdcda706f0ec63272d6` | stage-landed; pushed to origin/master |
-| 3 | gate starting after current-master rebase | pending | — | integrated; not landed |
+| 3 | `20f902acb6caa56a49712df832aeb0c46ec520b8` | 1,925 passed, 0 failed; 640.002 s | `20f902acb6caa56a49712df832aeb0c46ec520b8` | stage-landed; pushed to origin/master |
 
 ### Owner landing updates and stage-1 rebase
 
@@ -410,3 +421,175 @@ None reported.
   Differential insertion and no-private-allocation warm fit evidence are
   required. No later-step implementation or new design departure is allowed.
 - State: running. No worker result or design-fact blocker is claimed.
+
+### Stage 3 landing
+
+- Integration was rebased with merges preserved onto current local master
+  `484cfba12aa3664e1c06dcdcda706f0ec63272d6`. The combined tested head was
+  `20f902acb6caa56a49712df832aeb0c46ec520b8`.
+- Fresh generated-source gate passed (20.453 s). Full routine native suite
+  passed: 1,925 tests, zero failed, 304 measured commands, 26 zero-test groups,
+  640.002 s. Every native command stayed below 30 seconds. Integration skips
+  remain separate from the previously passed focused backend checks.
+- Parent confirmed clean integration and main checkouts and the unchanged
+  tested master base. Main-checkout fast-forward merge returned 0. Normal
+  `git push origin master` returned 0. Both local and remote master are now
+  `20f902acb6caa56a49712df832aeb0c46ec520b8`; the main checkout is clean.
+- Evidence: `.tmp/btree-integration/stage-3/`, including exact tested and base
+  heads, full gate logs/times/status, `landing.json`, `merge.*` and `push.*`.
+  No force push was used. Step 4 remains in flight in its isolated worktree.
+
+### Step 4 worker report
+
+- Clean reported head: `ad5dae27514641d034cb7a58fc06014feab98624`, on
+  `feat/btree-step-4-plain-splits`, base
+  `e102287f61dd75e70e18a5be34c2301e60a1726d`. Four commits, 20 changed files.
+- Worker reports 40 private and 8 public tests green in raw/O4s, six focused
+  native cases green, zero private constructors on checked warm paths, and
+  split constructor bounds green. No design-fact blocker is reported.
+- The worker's runtime timings had no exclusive lease. They are uncontrolled
+  local samples; no quiet-host acceptance is claimed. Heap/GC bytes remain
+  unmeasured. Parent will obtain the designated coordinator's current lease
+  before any new timing, including tests/builds/calibration, and arrange a
+  quiet host through competing work owners. No owned timing is running now.
+- Worker Claude review has partial coverage; exact limits are in the step-4
+  note and committed `reviews.json`. Parent independent reviews and focused
+  integration acceptance remain pending. No stage-4 landing is claimed.
+
+### Step 4 independent review launch
+
+- Codex task service probe and one direct delegation failed before a child
+  started: `provider_unavailable`, app-server process exited with code 1.
+  No Codex review coverage is claimed from that failed attempt.
+- The configured alternate Sol route accepted the read-only review:
+  provider `opencode`, model `openrouter/openai/gpt-6.1-sol`, advertised
+  `variant=high`. Task ID:
+  `node:delegated-task:command%3Amcp%3A11f906aa-2fa4-4041-b2b6-3ead904ef2e8%3Adelegate-task%3Abtree-step-4-review-sol-opencode-r1`.
+  Scope is all four commits and 20 changed files at exact worker head ad5dae275,
+  including raw/committed evidence. No tests, timings or builds are allowed
+  in this review without the parent's current exclusive lease.
+- Parent Claude Code Opus/high review is running with normal authentication,
+  Read/Glob/Grep only, no shell/edit/MCP tools and no permission bypass.
+  Exact base/head, full diff, file list and hash identity are in
+  `/tmp/dewdrop-btree-step4-review-ad5dae275/`, with saved prompt/stdout/stderr
+  and eventual exit status. The worker worktree and intended worktree Git
+  metadata directory are explicitly allowed. No result is claimed yet.
+- Current timing lease owner is being resolved from shared project records.
+  The old Dewdrop perf wave delegates measurements to an external lease
+  administrator and does not name that administrator. No timing lease is
+  self-granted; no B-tree timing process is running.
+
+### Step 4 queued measurement handoff
+
+- Parent sent lease-contact/queue request to the active Starshine gate owner
+  `mcp:2f5fe748-37b4-4a01-9a1e-494c29e0609d`. That owner uses the shared
+  external tender. Message ID ends `btree-step4-global-lease-contact-r1`.
+  Requested slot: about 25 minutes after current gate work. This is a request,
+  not a grant. Administrator identity and current lease are still pending.
+- Frozen candidate: `ad5dae27514641d034cb7a58fc06014feab98624`.
+  Shared performance-sensitive callers: plain lookup/contains/get-entry,
+  value replacement and all Bool/Unit/old-value writes, branch/head walks,
+  full-target second descent, split propagation and append-hint checks.
+- Queued run: exact matched prior/current root-leaf controls, raw and unchanged
+  O4s; multi-level half-hit lookup/replacement at 4,096 and 1M keys; sorted
+  hint/drop-hint and permuted builds; all-carrier constructor/cleared-slot
+  checks; focused native/private tests; full native stage gate after integration
+  and current-master rebase. Save every command, stderr, exit, source/tool/hash,
+  runtime identity, sample and lease grant/release record. No source or binary
+  mismatch may be dismissed without investigation.
+- Parent owns no timing process. Read-only reviewers must not start tests or
+  timing runs. Before any grant or handoff, the designated coordinator must
+  arrange the quiet host through competing build/test owners. Any hold or
+  release must wait for owned timing processes to stop and report completion.
+- Steps 1–3 remain landed and pushed. Step 4 is not accepted or landed yet.
+
+### Global lease queue confirmation
+
+- Current global lease holder/contact is the DAE landing orchestrator
+  `mcp:2f5fe748-37b4-4a01-9a1e-494c29e0609d`. The overnight tender granted
+  that lease explicitly; its administrator thread ID is not available here.
+- The holder confirms Starshine-versus-Binaryen comparison is reserved
+  immediately after DAE. B-tree step 4 is recorded after that reserved slot
+  for tender confirmation: about 25 minutes, frozen candidate
+  `ad5dae27514641d034cb7a58fc06014feab98624`.
+- This confirms the queue request only. It is not a lease grant and permits
+  no timing, build, test or calibration. Parent has no owned timing processes.
+  No interruption of the current holder was requested. The holder will retain
+  this request in the lease-release handoff. Read-only review can continue.
+
+### Step 4 independent Sol review result
+
+- Alternate-route Sol/high review completed at exact frozen head
+  `ad5dae27514641d034cb7a58fc06014feab98624`: no confirmed finding and
+  no valid reachable row-4 defect requiring a source change.
+- All four commits and 20 changed files were checked. Full design hash,
+  packet diff/file hashes, decoded source mirror, saved tools/module hashes,
+  and final test-source identities match. The source follows head ownership,
+  fresh second descent, exact split rules, hint lifecycle, bounds, clearing,
+  carrier and result-policy rules. Added split tests reach the stated cases.
+- All 816 saved samples agree with raw records and summaries. Six WAT modules
+  have complete constructor-site coverage; removing counters restores original
+  prefixes. Numeric split bounds and separate API/provider allocation costs
+  agree with the records. Final saved compile: 18.296 s, below 30 seconds.
+- Limits: no fresh tests/builds/timings/runtimes ran. Saved timing remains
+  uncontrolled and requires the queued leased run. Exact heap/GC bytes remain
+  unmeasured. Full structural constructor bounds cover numeric paths; other
+  carriers have warm allocation checks and split correctness, not that full
+  structural matrix. No claim is expanded beyond this evidence.
+- No changed file was wholly unread. Historical scratch/measure/hint-gate
+  artifacts and supporting compiler/suites were partial or unread. Binaries
+  were hashed, not fully disassembled; manual instruction tracing covered
+  selected raw paths, not every optimized forwarding function.
+- Parent Claude review and leased parent acceptance remain pending. No
+  integration acceptance, stage-4 landing or timing permission is claimed.
+
+### Step 4 provisional integration preparation
+
+- Parent prepared a merge of the completed step-4 branch in plan order.
+  The worker head remains frozen at
+  `ad5dae27514641d034cb7a58fc06014feab98624` and is retained at
+  `refs/btree-build/step-4-original`. The worker checkout was not rebased,
+  edited or built during independent review.
+- This is preparation only. Step 4 does not count as integrated until focused
+  checks pass on integration. Parent Claude review and the global timing
+  lease remain pending. No build, test, benchmark or calibration was run.
+- No local-master merge or push was made. Stages 1–3 remain the landed stages.
+
+### Step 4 parent Claude review and integration fixes
+
+- Parent Claude Code review completed with exit 0, no denied read and no
+  authentication failure. It found no engine correctness defect. Coverage is
+  partial: all changed engine lines/tests/new harness files were read, while
+  large raw samples, WAT/binaries, mirror bytes and several support files were
+  partial or unread. The independent Sol identity/sample/WAT checks remain
+  separate evidence, not implied Claude coverage. Full report and stderr:
+  `/tmp/dewdrop-btree-step4-review-ad5dae275/claude.*`.
+- Parent confirmed two harness gaps. The runner's pin comes from its checkout,
+  not from the optimizer executable. It now labels that field explicitly as
+  `checkout_starshine_pin` and records that binary build provenance requires
+  separate evidence. The reported optimizer binary hash matches the known
+  parent build; both relevant checkouts remain pinned at 1b237952. There is
+  no confirmed binary/source mismatch in the recorded run.
+- Parent confirmed that physical workspace-slot checks ran only for numeric
+  trees. Small integration changes add typed reference-work probe access,
+  check both tree kinds after inspection, and inject retained path/default
+  references to require exact diagnostic failures. Engine source is unchanged.
+- These changes are written but NOT run. Under the lease, demonstrate the
+  new corruption checks fail with reference-work inspection disabled, then
+  pass with it enabled, using the same freshly compiled module. Save exact
+  failures/stdout/stderr/status. This is queued red/green validation, not a
+  claimed test pass. The old frozen worker head remains intact.
+- Numeric inactive slots already compare against the required zero default.
+  A retained zero bit pattern is identical to that correct post-state; this
+  observation does not establish missed reference clearing. Reference slot
+  checks and fault injection are the retained-reference evidence.
+- Cost findings remain queued: repeated node-body dispatch and hint checks,
+  policy-specialized second descent, and clear-then-overwrite copies are
+  visible source/instruction work. Unleased timings do not establish their
+  runtime effect. Module growth also includes new balancing functionality;
+  it does not isolate policy duplication cost. Obtain fresh leased evidence
+  before selecting engine tuning or claiming an unavoidable engine limit.
+- Claude's routine-lane cost, deep custom-comparator cost, optimized forwarding,
+  structural carrier matrix and exact heap/GC limits remain explicit queued
+  checks or later delivery evidence. No performance rule is waived and no
+  required feature is removed.

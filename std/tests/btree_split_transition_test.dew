@@ -1,0 +1,23 @@
+// Keep this test compatible with the step-3 private engine for a direct red/green check.
+test "B-tree grows past one full leaf and preserves every entry" {
+  let tree = btree_plain_new::<U64, U64, NaturalComparator>(natural_comparator(), btree_default_config())
+  let count = tree.plan.leaf_capacity + 1u32
+  while 0u32 {
+    index if index < count => {
+      assert(btree_insert(tree, btree_widen(index), btree_widen(index) + 100u64), "new split key must be inserted")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  assert(tree.length == count, "split must retain the total length")
+  while 0u32 {
+    index if index < count => {
+      assert(match btree_get(tree, btree_widen(index)) {
+        Option::Some(value) => value == btree_widen(index) + 100u64
+        Option::None => false
+      }, "split must retain each key and its value")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}

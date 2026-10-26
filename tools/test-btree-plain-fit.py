@@ -124,7 +124,7 @@ def main():
         unit_type = int(re.search(r"\(result \(ref (\d+)\)\)", functions[exports["unit_body"]])[1])
         tree_type = int(re.search(r"\(result \(ref (\d+)\)\)", functions[exports["make_empty"]])[1])
         assert types[unit_type].count("(field ") == 1, "Unit body contains only its key array"
-        assert types[tree_type].count("(field ") == 9, "root/count, six generic comparator carrier fields, and plan; no prefix/path object"
+        assert types[tree_type].count("(field ") == 10, "root/count/work, six generic comparator carrier fields, and plan; lazy work reference only"
         (output / f"{variant}-gc-shapes.json").write_text(json.dumps(dict(unit_body=types[unit_type], plain_tree=types[tree_type]), indent=2) + "\n")
         search_bodies = {}
         for name in ("search_numeric", "search_text"):
@@ -152,30 +152,14 @@ def main():
         run(variant + "-strip", ["wasm-tools", "strip", binary, "-o", output / f"{variant}-stripped.wasm"])
         if variant == "raw":
             assert "call_ref" not in wat, "source specialization has no indirect comparator or policy calls"
-        # Count executed instructions in a copy, including all GC constructor forms.
-        sites = sorted(set(re.findall(r"\b(array\.new_default|array\.new_fixed|array\.new_data|array\.new_elem|array\.new|struct\.new_default|struct\.new) (\d+)\b", wat)))
-        extra = []
-        for i, (opcode, type_index) in enumerate(sites):
-            extra += [f'  (global $alloc_{i} (mut i64) (i64.const 0))',
-                      f'  (export "alloc_{i}" (global $alloc_{i}))']
-            pattern = rf"^(\s*{re.escape(opcode)} {type_index}(?: \d+)?)$"
-            wat = re.sub(pattern, rf"\1\n    global.get $alloc_{i}\n    i64.const 1\n    i64.add\n    global.set $alloc_{i}", wat, flags=re.M)
-        extra += ['  (func (export "reset_allocations")']
-        for i in range(len(sites)):
-            extra.append(f"    i64.const 0 global.set $alloc_{i}")
-        extra += ["  )"]
-        arrays = {}
-        for i, kind in re.findall(r"\(type \(;(\d+);\) \(array \(mut (i32|i64|eqref)\)\)\)", wat):
-            arrays.setdefault(kind, int(i))
-        assert {"i32", "i64", "eqref"} <= arrays.keys()
-        extra += [
-            f'  (func (export "slot_null") (param eqref i32) (result i32) local.get 0 ref.cast (ref {arrays["eqref"]}) local.get 1 array.get {arrays["eqref"]} ref.is_null)',
-            f'  (func (export "slots_length") (param eqref) (result i32) local.get 0 ref.cast (ref array) array.len)',
-            f'  (func (export "slot_i64") (param eqref i32) (result i64) local.get 0 ref.cast (ref {arrays["i64"]}) local.get 1 array.get {arrays["i64"]})',
-        ]
+        # Shared recorder includes every array/struct constructor form.
+        recorder_spec = importlib.util.spec_from_file_location("btree_record", ROOT / "tools/btree-fit/record.py")
+        recorder = importlib.util.module_from_spec(recorder_spec)
+        recorder_spec.loader.exec_module(recorder)
+        inspected_wat, sites = recorder.instrument(wat)
         instrumented = output / f"{variant}-inspect.wat"
-        instrumented.write_text(wat.rstrip()[:-1] + "\n" + "\n".join(extra) + "\n)\n")
-        (output / f"{variant}-sites.json").write_text(json.dumps({f"alloc_{i}": dict(opcode=op, type=int(t)) for i, (op, t) in enumerate(sites)}, indent=2) + "\n")
+        instrumented.write_text(inspected_wat)
+        (output / f"{variant}-sites.json").write_text(json.dumps(sites, indent=2) + "\n")
         run(variant + "-instrument", ["wasm-tools", "parse", instrumented, "-o", output / f"{variant}-inspect.wasm"])
         run(variant + "-inspect-validate", ["wasm-tools", "validate", output / f"{variant}-inspect.wasm"])
         run(variant + "-allocations", ["node", ROOT / "tools/btree-fit/run.mjs", output, variant, "inspect"], collect_failure=True)
@@ -192,7 +176,7 @@ def main():
     (output / "failed-checks.json").write_text(json.dumps(failures, indent=2) + "\n")
     if failures:
         raise AssertionError(f"Required allocation checks failed: {failures}; evidence saved in {output}")
-    print("Step-3 root-leaf checks passed. Split and multi-level support remain pending.")
+    print("Root-leaf control checks passed; see the step-4 runner for split evidence.")
 
 
 if __name__ == "__main__":

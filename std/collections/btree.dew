@@ -916,11 +916,19 @@ struct BTreeNode<k, v> {
   private mut head: Bool
   private body: BTreeBody<k, v>
 }
-// Step-3 engine state. Only forced-plain construction is wired at this checkpoint.
-// No path, hint, or shared-prefix object is needed by a plain root leaf.
+// Plain checkpoint engine. Path storage is made only for a splitting write.
+// Slots 0..14 are a bounded path; slot 15 is the rightmost-leaf hint;
+// slot 16 is the permanent default. A hint holds no key or cached count.
+struct BTreeWork<k, v> {
+  private nodes: WasmArray<BTreeNode<k, v>>
+  private edges: WasmArray<U32>
+  private mut depth: U32
+  private mut hinted: Bool
+}
 struct BTree<k, v, c> {
   private mut root: Option<BTreeNode<k, v>>
   private mut length: U32
+  private mut work: Option<BTreeWork<k, v>>
   private comparator: c
   private plan: BTreePlan
 }
@@ -932,6 +940,7 @@ fn btree_plain_new<k, v, c: Comparator<k>>(comparator: c, config: BTreeConfig) -
   BTree::{
     root: Option::None
     length: 0u32
+    work: Option::None
     comparator: comparator
     plan: btree_plan_policy::<k, v, c>(comparator, config, true)
   }
@@ -1002,21 +1011,69 @@ fn btree_plain_search<k, v, c: Comparator<k>>(node: BTreeNode<k, v>, comparator:
     }
   }
 }
+fn btree_is_branch<k, v>(node: BTreeNode<k, v>) -> Bool {
+  match node.body {
+    BTreeBody::PlainBranch(_) => true
+    BTreeBody::InlineBranch(_) => true
+    _ => false
+  }
+}
+// A separator owns its key here. Its value is in the leftmost leaf of edge i+1.
+fn btree_head_leaf<k, v>(branch: BTreeNode<k, v>, index: U32) -> BTreeNode<k, v> {
+  let mut node = btree_node_child(branch, index + 1u32)
+  while true {
+    true if btree_is_branch(node) => {
+      node = btree_node_child(node, 0u32)
+      continue true
+    }
+    _ => break node
+  }
+}
 fn btree_contains<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Bool {
   match tree.root {
     Option::None => false
-    Option::Some(node) => btree_search_found(btree_plain_search(node, tree.comparator, key))
+    Option::Some(root) => {
+      let mut node = root
+      while true {
+        true => {
+          let result = btree_plain_search(node, tree.comparator, key)
+          if btree_search_found(result) {
+            break true
+          } else if btree_is_branch(node) {
+            node = btree_node_child(node, btree_search_index(result))
+            continue true
+          } else {
+            break false
+          }
+        }
+        _ => unreachable()
+      }
+    }
   }
 }
 fn btree_get<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Option<v> {
   match tree.root {
     Option::None => Option::None
-    Option::Some(node) => {
-      let result = btree_plain_search(node, tree.comparator, key)
-      if btree_search_found(result) {
-        Option::Some(btree_node_value(node, btree_search_index(result), false))
-      } else {
-        Option::None
+    Option::Some(root) => {
+      let mut node = root
+      while true {
+        true => {
+          let result = btree_plain_search(node, tree.comparator, key)
+          let index = btree_search_index(result)
+          if btree_search_found(result) {
+            break Option::Some(if btree_is_branch(node) {
+              btree_node_value(btree_head_leaf(node, index), 0u32, true)
+            } else {
+              btree_node_value(node, index, false)
+            })
+          } else if btree_is_branch(node) {
+            node = btree_node_child(node, index)
+            continue true
+          } else {
+            break Option::None
+          }
+        }
+        _ => unreachable()
       }
     }
   }
@@ -1024,16 +1081,29 @@ fn btree_get<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Option<v> 
 fn btree_get_entry<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k) -> Option<BTreeSnapshot<k, v>> {
   match tree.root {
     Option::None => Option::None
-    Option::Some(node) => {
-      let result = btree_plain_search(node, tree.comparator, key)
-      if btree_search_found(result) {
-        let index = btree_search_index(result)
-        Option::Some(BTreeSnapshot::{
-          key: btree_node_key(node, index, false)
-          value: btree_node_value(node, index, false)
-        })
-      } else {
-        Option::None
+    Option::Some(root) => {
+      let mut node = root
+      while true {
+        true => {
+          let result = btree_plain_search(node, tree.comparator, key)
+          let index = btree_search_index(result)
+          if btree_search_found(result) {
+            break Option::Some(BTreeSnapshot::{
+              key: btree_node_key(node, index, false)
+              value: if btree_is_branch(node) {
+                btree_node_value(btree_head_leaf(node, index), 0u32, true)
+              } else {
+                btree_node_value(node, index, false)
+              }
+            })
+          } else if btree_is_branch(node) {
+            node = btree_node_child(node, index)
+            continue true
+          } else {
+            break Option::None
+          }
+        }
+        _ => unreachable()
       }
     }
   }
@@ -1052,14 +1122,14 @@ fn btree_checked_growth(length: U32, capacity: U32) -> U32 {
 // Shared write policies read an old value only when the caller asks for it.
 trait BTreeWritePolicy<k, v, r> {
   fn inserted(self) -> r
-  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> r
+  fn replaced(self, node: BTreeNode<k, v>, index: U32, head: Bool) -> r
 }
 // Unit is the policy token. The explicit result type selects the impl.
 impl<k, v> BTreeWritePolicy<k, v, Bool> for Unit {
   fn inserted(self) -> Bool {
     true
   }
-  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> Bool {
+  fn replaced(self, node: BTreeNode<k, v>, index: U32, head: Bool) -> Bool {
     false
   }
 }
@@ -1067,7 +1137,7 @@ impl<k, v> BTreeWritePolicy<k, v, Unit> for Unit {
   fn inserted(self) -> Unit {
     ()
   }
-  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> Unit {
+  fn replaced(self, node: BTreeNode<k, v>, index: U32, head: Bool) -> Unit {
     ()
   }
 }
@@ -1075,26 +1145,34 @@ impl<k, v> BTreeWritePolicy<k, v, Option<v>> for Unit {
   fn inserted(self) -> Option<v> {
     Option::None
   }
-  fn replaced(self, node: BTreeNode<k, v>, index: U32) -> Option<v> {
-    Option::Some(btree_node_value(node, index, false))
+  fn replaced(self, node: BTreeNode<k, v>, index: U32, head: Bool) -> Option<v> {
+    Option::Some(btree_node_value(node, index, head))
   }
 }
-fn btree_plain_value_set<k, v>(node: BTreeNode<k, v>, index: U32, value: v) -> Unit {
-  if index >= node.count {
+fn btree_plain_value_set<k, v>(node: BTreeNode<k, v>, index: U32, head: Bool, value: v) -> Unit {
+  if !(if head {
+    node.head
+  } else {
+    index < node.count
+  }) {
     btree_node_failure(node, index, "replace: slot is not live")
   }
   if is_unit::<v>() {
     ()
   } else {
     match node.body {
-      BTreeBody::PlainLeaf(body) => wasm_array_set(body.values, index + 1u32, value)
+      BTreeBody::PlainLeaf(body) => wasm_array_set(body.values, if head {
+        0u32
+      } else {
+        index + 1u32
+      }, value)
       _ => btree_node_failure(node, index, "replace: expected plain value column")
     }
   }
 }
 fn btree_plain_fit_insert<k, v>(node: BTreeNode<k, v>, capacity: U32, index: U32, key: k, value: v) -> Unit {
   if node.count >= capacity {
-    btree_node_failure(node, index, "insert: full root leaf; step-3 checkpoint requires split support")
+    btree_node_failure(node, index, "fit insert: leaf is full")
   }
   if index > node.count {
     btree_node_failure(node, index, "insert: gap exceeds live count")
@@ -1119,28 +1197,291 @@ fn btree_plain_fit_insert<k, v>(node: BTreeNode<k, v>, capacity: U32, index: U32
   }
   node.count = node.count + 1u32
 }
-fn btree_write<k, v, c: Comparator<k>, r, p: BTreeWritePolicy<k, v, r>>(tree: BTree<k, v, c>, key: k, value: v, policy: p) -> r {
-  match tree.root {
+fn btree_work<k, v, c>(tree: BTree<k, v, c>) -> BTreeWork<k, v> {
+  match tree.work {
+    Option::Some(work) => work
     Option::None => {
-      let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
-      let node = btree_node_new::<k, v>(tree.plan, false)
-      btree_plain_fit_insert(node, tree.plan.leaf_capacity, 0u32, key, value)
-      tree.root = Option::Some(node)
-      tree.length = length
-      policy.inserted()
+      let work = BTreeWork::{
+        nodes: wasm_array_new_default::<BTreeNode<k, v>>(17u32)
+        edges: wasm_array_new_default::<U32>(15u32)
+        depth: 0u32
+        hinted: false
+      }
+      tree.work = Option::Some(work)
+      work
     }
-    Option::Some(node) => {
+  }
+}
+fn btree_path_push<k, v>(work: BTreeWork<k, v>, node: BTreeNode<k, v>, edge: U32) -> Unit {
+  if work.depth >= 15u32 {
+    btree_node_failure(node, edge, "split path push: exceeds 15 slots")
+  }
+  wasm_array_set(work.nodes, work.depth, node)
+  wasm_array_set(work.edges, work.depth, edge)
+  work.depth = work.depth + 1u32
+}
+fn btree_path_clear<k, v>(work: BTreeWork<k, v>) -> Unit {
+  btree_clear_slots(work.nodes, 0u32, work.depth, 1u32)
+  work.depth = 0u32
+}
+// No Option is made or replaced when the hint is taken or restored.
+fn btree_try_append<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k, value: v) -> Bool {
+  match tree.work {
+    Option::None => false
+    Option::Some(work) => {
+      if work.hinted {
+        let leaf = wasm_array_get(work.nodes, 15u32)
+        work.hinted = false
+        btree_clear_slots(work.nodes, 15u32, 1u32, 1u32)
+        // Clear before any provider/user comparison. A full hint is never reused.
+        if leaf.count < tree.plan.leaf_capacity && leaf.count > 0u32 && btree_key_less(tree.comparator, btree_node_key(leaf, leaf.count - 1u32, false), key) {
+          let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
+          btree_plain_fit_insert(leaf, tree.plan.leaf_capacity, leaf.count, key, value)
+          tree.length = length
+          wasm_array_set(work.nodes, 15u32, leaf)
+          work.hinted = true
+          true
+        } else {
+          false
+        }
+      } else {
+        false
+      }
+    }
+  }
+}
+fn btree_key_less<k, c: Comparator<k>>(comparator: c, left: k, right: k) -> Bool {
+  if type_equal::<c, NaturalComparator>() && (is_integer::<k>() || is_float::<k>()) && implements::<k, Lt>() {
+    left < right
+  } else {
+    ordering_is_less(comparator.compare(left, right))
+  }
+}
+fn btree_split_index(capacity: U32, index: U32) -> U32 {
+  if index > capacity {
+    assert(false, "BTree split index: insertion gap exceeds capacity")
+  }
+  if index == 0u32 {
+    btree_edge_half(capacity) - 1u32
+  } else if index == capacity {
+    capacity - btree_edge_half(capacity)
+  } else {
+    capacity / 2u32
+  }
+}
+// Move existing entries BEFORE inserting. The promoted key is held in a local.
+fn btree_plain_split<k, v>(left: BTreeNode<k, v>, right: BTreeNode<k, v>, capacity: U32, separator: U32) -> Unit {
+  if left.count != capacity || right.count != 0u32 || separator >= capacity {
+    btree_node_failure(left, separator, "split: expected full source and empty destination")
+  }
+  let regular = capacity - separator - 1u32
+  // Match each existing body directly: a tuple match makes a scratch array
+  // in raw Dew emission, which is not required node/work-space storage.
+  match left.body {
+    BTreeBody::PlainLeaf(source) => match right.body {
+      BTreeBody::PlainLeaf(target) => {
+        wasm_array_copy(target.keys, 0u32, source.keys, separator + 1u32, regular)
+        // Promoted value becomes head 0, followed by right regular values.
+        wasm_array_copy(target.values, 0u32, source.values, separator + 1u32, regular + 1u32)
+        btree_clear_slots(source.keys, separator, regular + 1u32, 1u32)
+        btree_clear_slots(source.values, separator + 1u32, regular + 1u32, 1u32)
+        right.head = true
+      }
+      _ => btree_node_failure(right, separator, "split: expected matching plain leaf")
+    }
+    BTreeBody::PlainKeys(source) => match right.body {
+      BTreeBody::PlainKeys(target) => {
+        if !is_unit::<v>() {
+          btree_node_failure(left, separator, "split: Unit storage/type mismatch")
+        }
+        wasm_array_copy(target.keys, 0u32, source.keys, separator + 1u32, regular)
+        btree_clear_slots(source.keys, separator, regular + 1u32, 1u32)
+        right.head = true
+      }
+      _ => btree_node_failure(right, separator, "split: expected matching plain Unit leaf")
+    }
+    BTreeBody::PlainBranch(source) => match right.body {
+      BTreeBody::PlainBranch(target) => {
+        wasm_array_copy(target.keys, 0u32, source.keys, separator + 1u32, regular)
+        wasm_array_copy(target.children, 0u32, source.children, separator + 1u32, regular + 1u32)
+        btree_clear_slots(source.keys, separator, regular + 1u32, 1u32)
+        btree_clear_slots(source.children, separator + 1u32, regular + 1u32, 1u32)
+      }
+      _ => btree_node_failure(right, separator, "split: expected matching plain branch")
+    }
+    _ => btree_node_failure(left, separator, "split: expected plain source")
+  }
+  left.count = separator
+  right.count = regular
+}
+fn btree_plain_branch_insert<k, v>(node: BTreeNode<k, v>, capacity: U32, index: U32, key: k, right: BTreeNode<k, v>) -> Unit {
+  if node.count >= capacity || index > node.count {
+    btree_node_failure(node, index, "branch insert: full node or invalid gap")
+  }
+  match node.body {
+    BTreeBody::PlainBranch(body) => {
+      let moved = node.count - index
+      btree_move_slots(body.keys, index + 1u32, index, moved, 1u32)
+      btree_move_slots(body.children, index + 2u32, index + 1u32, moved, 1u32)
+      wasm_array_set(body.keys, index, key)
+      wasm_array_set(body.children, index + 1u32, right)
+    }
+    _ => btree_node_failure(node, index, "branch insert: expected plain branch")
+  }
+  node.count = node.count + 1u32
+}
+// Structural commit is shared by Bool, Unit and old-value policies.
+// Result handling stays in the fresh descent; balancing has no result type.
+fn btree_plain_split_commit<k, v, c>(tree: BTree<k, v, c>, work: BTreeWork<k, v>, root: BTreeNode<k, v>, node: BTreeNode<k, v>, index: U32, key: k, value: v, append: Bool) -> Unit {
+  let separator = btree_split_index(tree.plan.leaf_capacity, index)
+  let mut promoted = btree_node_key(node, separator, false)
+  let leaf_right = btree_node_new::<k, v>(tree.plan, false)
+  let mut right = leaf_right
+  btree_plain_split(node, right, tree.plan.leaf_capacity, separator)
+  if index <= separator {
+    btree_plain_fit_insert(node, tree.plan.leaf_capacity, index, key, value)
+  } else {
+    btree_plain_fit_insert(right, tree.plan.leaf_capacity, index - separator - 1u32, key, value)
+  }
+  while true {
+    true if work.depth > 0u32 => {
+      work.depth = work.depth - 1u32
+      let parent = wasm_array_get(work.nodes, work.depth)
+      let edge = wasm_array_get(work.edges, work.depth)
+      btree_clear_slots(work.nodes, work.depth, 1u32, 1u32)
+      if parent.count < tree.plan.branch_capacity {
+        btree_plain_branch_insert(parent, tree.plan.branch_capacity, edge, promoted, right)
+        btree_path_clear(work)
+        break ()
+      } else {
+        let middle = btree_split_index(tree.plan.branch_capacity, edge)
+        let next_key = btree_node_key(parent, middle, false)
+        let next_right = btree_node_new::<k, v>(tree.plan, true)
+        btree_plain_split(parent, next_right, tree.plan.branch_capacity, middle)
+        if edge <= middle {
+          btree_plain_branch_insert(parent, tree.plan.branch_capacity, edge, promoted, right)
+        } else {
+          btree_plain_branch_insert(next_right, tree.plan.branch_capacity, edge - middle - 1u32, promoted, right)
+        }
+        promoted = next_key
+        right = next_right
+        continue true
+      }
+    }
+    _ => {
+      let grown = btree_node_new::<k, v>(tree.plan, true)
+      match grown.body {
+        BTreeBody::PlainBranch(body) => wasm_array_set(body.children, 0u32, root)
+        _ => btree_node_failure(grown, 0u32, "root growth: expected plain branch")
+      }
+      btree_plain_branch_insert(grown, tree.plan.branch_capacity, 0u32, promoted, right)
+      tree.root = Option::Some(grown)
+      break ()
+    }
+  }
+  if append {
+    wasm_array_set(work.nodes, 15u32, leaf_right)
+    work.hinted = true
+  }
+}
+fn btree_plain_split_write<k, v, c: Comparator<k>, r, p: BTreeWritePolicy<k, v, r>>(tree: BTree<k, v, c>, root: BTreeNode<k, v>, key: k, value: v, policy: p) -> r {
+  let work = btree_work(tree)
+  if work.depth != 0u32 {
+    btree_node_failure(root, work.depth, "split descent: work path is not empty")
+  }
+  let mut node = root
+  let mut all_last = true
+  while true {
+    true => {
+      // Fresh result from the recorded second descent, never the first index.
       let result = btree_plain_search(node, tree.comparator, key)
       let index = btree_search_index(result)
       if btree_search_found(result) {
-        let old = policy.replaced(node, index)
-        btree_plain_value_set(node, index, value)
-        old
+        btree_path_clear(work)
+        let head = btree_is_branch(node)
+        let leaf = if head {
+          btree_head_leaf(node, index)
+        } else {
+          node
+        }
+        let position = if head {
+          0u32
+        } else {
+          index
+        }
+        let old = policy.replaced(leaf, position, head)
+        btree_plain_value_set(leaf, position, head, value)
+        break old
+      } else if btree_is_branch(node) {
+        all_last = all_last && index == node.count
+        btree_path_push(work, node, index)
+        node = btree_node_child(node, index)
+        continue true
       } else {
         let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
-        btree_plain_fit_insert(node, tree.plan.leaf_capacity, index, key, value)
+        if node.count < tree.plan.leaf_capacity {
+          btree_plain_fit_insert(node, tree.plan.leaf_capacity, index, key, value)
+          btree_path_clear(work)
+        } else {
+          btree_plain_split_commit(tree, work, root, node, index, key, value, all_last && index == node.count)
+        }
+        tree.length = length
+        break policy.inserted()
+      }
+    }
+    _ => unreachable()
+  }
+}
+fn btree_write<k, v, c: Comparator<k>, r, p: BTreeWritePolicy<k, v, r>>(tree: BTree<k, v, c>, key: k, value: v, policy: p) -> r {
+  if btree_try_append(tree, key, value) {
+    policy.inserted()
+  } else {
+    match tree.root {
+      Option::None => {
+        let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
+        let node = btree_node_new::<k, v>(tree.plan, false)
+        btree_plain_fit_insert(node, tree.plan.leaf_capacity, 0u32, key, value)
+        tree.root = Option::Some(node)
         tree.length = length
         policy.inserted()
+      }
+      Option::Some(root) => {
+        let mut node = root
+        while true {
+          true => {
+            let result = btree_plain_search(node, tree.comparator, key)
+            let index = btree_search_index(result)
+            if btree_search_found(result) {
+              let head = btree_is_branch(node)
+              let leaf = if head {
+                btree_head_leaf(node, index)
+              } else {
+                node
+              }
+              let position = if head {
+                0u32
+              } else {
+                index
+              }
+              let old = policy.replaced(leaf, position, head)
+              btree_plain_value_set(leaf, position, head, value)
+              break old
+            } else if btree_is_branch(node) {
+              node = btree_node_child(node, index)
+              continue true
+            } else {
+              let length = btree_checked_growth(tree.length, tree.plan.leaf_capacity)
+              if node.count < tree.plan.leaf_capacity {
+                btree_plain_fit_insert(node, tree.plan.leaf_capacity, index, key, value)
+                tree.length = length
+                break policy.inserted()
+              } else {
+                break btree_plain_split_write(tree, root, key, value, policy)
+              }
+            }
+          }
+          _ => unreachable()
+        }
       }
     }
   }
@@ -1157,6 +1498,7 @@ fn btree_put<k, v, c: Comparator<k>>(tree: BTree<k, v, c>, key: k, value: v) -> 
 fn btree_clear<k, v, c>(tree: BTree<k, v, c>) -> Unit {
   // Root detachment releases all map-held entry references in constant time.
   tree.root = Option::None
+  tree.work = Option::None
   tree.length = 0u32
 }
 fn btree_leaf_storage<k, v>(capacity: U32) -> BTreeLeafStorage<k, v> {
