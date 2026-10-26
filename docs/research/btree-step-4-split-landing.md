@@ -64,3 +64,13 @@ Step 4 source commit: `d23570464feaef37be7876e4d210516865d118e5`.
 ## Acceptance
 
 B-tree work has a performance-measurement exemption from Joshua on 2026-10-26. This landing uses correctness tests only. No runtime benchmark is needed. The semantic-version fixes keep their measurement hold.
+
+## Stage 2 test-count repair
+
+Joshua approved this test-only scope change on 2026-10-26. It is a separate commit from step 4. Change only the wildcard module count from 79 to 80 and its dependency count from 76 to 77 in `src/semantic/module_system_wbtest.mbt`. No compiler or runtime code changes.
+
+Stage 2 commit `4e5fa46fa9e208c47407a0abff07bdef684d1fab` added `dew.std.collections.btree` to wildcard imports but did not update these counts. It is an ancestor of master `20f902acb6caa56a49712df832aeb0c46ec520b8`. The full unchanged-master native suite passes 1,925/1,925 tests. Its integration lane passes 274/275 tests; the original wildcard test fails at `80 != 79`.
+
+The original test stops at its first failed check. Two independent probes repeat its exact manifest setup and each old count. Run them on unchanged master with Moon's in-memory white-box test overlay, selecting the semantic package. Both fail: module count `80 != 79`, dependency count `77 != 76` (2 tests, 0 passed, 2 failed; exit 2; 8.974 seconds). Master's tracked files and worktree remain unchanged. This proves both count failures predate step 4. The probe source, command, stdout, stderr, source hash and exit status are in `/tmp/dewdrop-btree-step4-landing/probes/`.
+
+The repair changes test expectations only. It has no production runtime path, allocation, or memory change.
