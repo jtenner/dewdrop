@@ -41,6 +41,7 @@ before sending them to a reader. That would erase duplicate and escaped keys.
 | `requirement` | Request string | `accept` |
 | `requirement-match` | `{requirement,version}` with valid strings | `accept:true`, `matches` |
 | `manifest` | Raw JSON string | `accept`, optional normalized `dependencies` object |
+| `lock` | Raw JSON string | `accept` for the existing local v1 lock schema |
 | `artifact-paths` | Array of source paths, in record order | `accept` |
 | `source-selection` | `{entries:[{type,path,text?,target?}]}` | `accept`, compiler and artifact path arrays on success |
 | `artifact-budget` | Numeric preflight fields | `accept` |

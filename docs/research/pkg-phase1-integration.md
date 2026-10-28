@@ -132,3 +132,23 @@ pairwise name scan for both decode and encode. This adds temporary set storage
 proportional to record count and avoids quadratic duplicate comparisons. No
 source bytes are copied. Measure 0, 1, 256, and 4,096 records, including invalid
 and duplicate records, after the quiet-host lease. No performance claim is made.
+
+## Strict JavaScript lock parser
+
+`tools/dew-package-lock.mjs` preserves decoded duplicate keys and validates all
+original v1 records before any path rewriting. It shares the manifest name and
+SemVer functions, keeps 8 MiB for a local lock (1 MiB remains the manifest cap),
+and caps the local graph at 4,096 records. A 16-level JSON limit, 65,536-value
+limit, and 4,096-byte JSON string limit match the existing standard lock reader.
+The parser returns only schema-checked data and uses no network or filesystem.
+
+The new parser passes 22 focused checks, including raw syntax, duplicate decoded
+fields, invalid records, exact 8 MiB bytes, and 4,096/4,097 records. The shared
+JavaScript adapter now calls it for the 16 lock cases. The ten original-snapshot
+rejections remain a pending integration check until the snapshot commit merges
+and calls this parser. No pack-fix claim is made at this checkpoint.
+
+This parser adds one bounded metadata parse and a package-name set to local
+pack/publish preparation. It does not parse each lock twice or copy source
+contents. Measure lock parse/capture with large materialized graphs after the
+hold. File I/O, UTF-8 rejection, and snapshot cleanup still need the caller checks.

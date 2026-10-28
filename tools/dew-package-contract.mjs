@@ -63,6 +63,9 @@ function validateRequirement(value) {
   validateVersion(value[0] === "^" || value[0] === "~" ? value.slice(1) : value, "dependency requirement version");
 }
 
+// Reuse the exact value rules for the existing materialized lock format.
+export { validateName as validatePackageName, validateVersion as validatePackageVersion };
+
 function objectFields(value, field) {
   if (!value || typeof value !== "object" ||
       (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) {

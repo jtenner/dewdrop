@@ -107,6 +107,8 @@ host filesystem can create a 4,096-byte single path segment.
 | SemVer text | 255 bytes |
 | Dependency request | 2,048 bytes |
 | Manifest | 1,048,576 bytes |
+| Local lockfile | 8,388,608 bytes |
+| Local locked packages | 4,096 |
 | Direct dependencies | 256 |
 | Logical source path | 4,096 bytes |
 | One source file | 16,777,216 bytes |
@@ -139,11 +141,11 @@ Shared path/budget vectors do not alone prove binary decode or restoration.
 
 ## Open rule points for the coordinator
 
-The owner instructions settle strict SemVer and full sorted paths. Baseline Dew
-parser source appears to accept a trailing `-` or `+`; that observation has NOT
-been executed in Dew during this hold. The old JS capsule probe does accept
-those versions, because that function does not check SemVer. Workers must test
-the Dew parser itself before claiming that parser defect is reproduced.
+The owner instructions settle strict SemVer and full sorted paths. The
+integration runner reproduced baseline Dew acceptance of trailing `-` and `+`,
+then showed the same cases passing after a shared parser fix. See
+`pkg-phase1-integration.md`. This uses explicit source overrides and an existing
+compiler whose source commit is unknown; no fresh compiler build is claimed.
 
 The old JS collector returns directory-first order for `src/a/z.dew` versus
 `src/a.dew`. The shared case requires full logical path sorting. This is a

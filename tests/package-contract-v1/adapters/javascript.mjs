@@ -4,12 +4,13 @@ import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { fixtureRoot } from '../vectors.mjs';
+import { parsePackageLock } from '../../../tools/dew-package-lock.mjs';
 
 const modulePath = path.resolve(process.env.DEW_CONTRACT_JS_MODULE ?? path.join(fixtureRoot, '../../tools/dew-package-contract.mjs'));
 const api = await import(pathToFileURL(modulePath).href);
 const entry = process.env.DEW_CONTRACT_JS_ENTRY ?? 'parse';
 if (!['parse', 'read'].includes(entry)) throw new Error('DEW_CONTRACT_JS_ENTRY must be parse or read');
-export const kinds = ['manifest', 'name', 'semver', 'requirement', 'source-selection', 'artifact-paths'];
+export const kinds = ['manifest', 'lock', 'name', 'semver', 'requirement', 'source-selection', 'artifact-paths'];
 const limits = JSON.parse(await fs.readFile(path.join(fixtureRoot, 'limits.json'), 'utf8'));
 for (const [exportName, key] of Object.entries({
   MAX_MANIFEST_BYTES: 'manifestBytes', MAX_NAME_BYTES: 'nameBytes', MAX_VERSION_BYTES: 'semverBytes',
@@ -25,12 +26,13 @@ const reasonPatterns = {
   'strict-semver': /package version/i, 'semver-byte-limit': /package version.*bytes/i,
   'requirement-grammar': /dependency requirement/i, 'requirement-byte-limit': /dependency requirement.*bytes/i,
   'nested-semver-limit': /dependency requirement version.*bytes/i,
-  'unknown-field': /unknown package manifest field/i, 'required-name': /package name/i,
+  'unknown-field': /unknown (package manifest|lockfile|locked package) field/i, 'required-name': /package name/i,
   'required-version': /package version/i, 'name-type': /name.*string/i, 'version-type': /version.*string/i,
   'dependency-object': /invalid manifest JSON: expected '\{'/i, 'dependency-name': /dependency name/i,
   'dependency-string': /dependency requirement must be a string/i,
   'manifest-object': /invalid manifest JSON: expected '\{'/i,
-  'duplicate-decoded-key': /duplicate (manifest|dependency) key/i,
+  'duplicate-decoded-key': /duplicate (manifest|dependency) key|duplicate decoded field/i,
+  'locked-record': /locked package/i, 'duplicate-locked-name': /duplicate locked package name/i,
   'json-syntax': /invalid manifest JSON/i, 'dependency-count': /dependencies exceed/i,
   'manifest-byte-limit': /package manifest exceeds/i,
   'file-count': /capsule files must contain/i, 'relative-path': /invalid source path/i,
@@ -63,6 +65,10 @@ async function withPackage(action) {
 }
 
 export async function evaluate(kind, input, test) {
+  if (kind === 'lock') return observed(() => {
+    parsePackageLock(input);
+    return { accept: true };
+  }, test);
   if (kind === 'source-selection') return withPackage(async root => {
     for (const item of input.entries) {
       const target = path.resolve(root, item.path);
