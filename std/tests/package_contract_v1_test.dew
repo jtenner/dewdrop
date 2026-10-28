@@ -250,3 +250,110 @@ test "contract v1 public caret checks SemVer text" {
 test "contract v1 public tilde checks SemVer text" {
   contract_expect_requirement_invalid(PackageRequirement::Tilde(contract_unchecked_version("1.0.0-alpha..one")))
 }
+
+test "contract v1 artifact rejects drive-root absolute sources" {
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), contract_files("C:/main.dew")), "drive-root absolute source accepted")
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), contract_files("z:/main.dew")), "lowercase drive-root absolute source accepted")
+}
+
+test "contract v1 names versions and requirement byte limits" {
+  let name = StringBuilder::new()
+  name.append("@s/")
+  while 3u32 {
+    length if length < package_name_max_bytes() => {
+      name.append("a")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  let maximum_name = name.finish()
+  assert(package_name_is_valid(maximum_name), "255-byte name rejected")
+  assert(!package_name_is_valid(maximum_name.concat("a")), "256-byte name accepted")
+  assert(!package_name_is_valid("@S/a"), "uppercase scope accepted")
+  assert(!package_name_is_valid("@s/"), "empty package side accepted")
+  assert(!package_name_is_valid("@/a"), "empty scope accepted")
+  let version = StringBuilder::new()
+  version.append("1.0.0+")
+  while 6u32 {
+    length if length < semver_max_bytes() => {
+      version.append("a")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  let maximum_version = version.finish()
+  assert(semver_parse(maximum_version) is Result::Ok(_), "255-byte version rejected")
+  assert(semver_parse(maximum_version.concat("a")) is Result::Err(SemVerParseError::TooLong(256u32, 255u32)), "256-byte version accepted")
+  assert(semver_parse("1.0.0-4294967296") is Result::Err(SemVerParseError::NumberOverflow(_)), "prerelease numeric overflow accepted")
+  let requirement = StringBuilder::new()
+  requirement.append("git+x#")
+  while 6u32 {
+    length if length < package_requirement_max_bytes() => {
+      requirement.append("r")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  let maximum_requirement = requirement.finish()
+  assert(package_requirement_parse(maximum_requirement) is Result::Ok(PackageRequirement::Git(_)), "2048-byte Git requirement rejected")
+  assert(package_requirement_parse(maximum_requirement.concat("r")) is Result::Err(_), "2049-byte requirement accepted")
+  assert(package_requirement_parse("git+x#") is Result::Err(_), "empty Git ref accepted")
+  assert(package_requirement_parse("git+#ref") is Result::Err(_), "empty Git source accepted")
+}
+
+test "contract v1 source limit is enforced before reading declared contents" {
+  let output = BytesBuilder::new()
+  package_artifact_write_u32(output, package_artifact_max_source_bytes() + 1u32)
+  let reader = PackageArtifactReader::{
+    bytes: output.finish()
+    offset: 0u32
+    failed: false
+  }
+  let _ = package_artifact_read_bytes(reader, package_artifact_max_source_bytes())
+  assert(reader.failed, "oversize declared source accepted")
+  assert(reader.offset == 4u32, "oversize source payload was read")
+}
+
+test "contract v1 local codec keeps a separate encoded byte cap" {
+  // Share one 1 MiB byte value. Validate/Encode must use encoded length without
+  // allocating a 256 MiB capsule, and the local policy must permit over 64 MiB.
+  let block = BytesBuilder::new()
+  let chunk = b"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  while 0u32 {
+    index if index < 16384u32 => {
+      block.append(chunk)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let contents = block.finish()
+  let files = Array::new()
+  while 0u32 {
+    index if index < 65u32 => {
+      let path = StringBuilder::new()
+      path.append("file-")
+      path.append_u32(index)
+      path.append(".dew")
+      files.push(package_artifact_file(path.finish(), contents))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let local = contract_artifact("@s/app", Array::new(), files)
+  assert(package_artifact_encoded_size(local) > 67108864u64, "local boundary fixture is too small")
+  assert(local.validate() is Result::Ok(_), "local artifact applied the public 64 MiB policy")
+  while 65u32 {
+    index if index < 256u32 => {
+      let path = StringBuilder::new()
+      path.append("file-")
+      path.append_u32(index)
+      path.append(".dew")
+      files.push(package_artifact_file(path.finish(), contents))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let excess = contract_artifact("@s/app", Array::new(), files)
+  assert(excess.validate() is Result::Err(FormatValidationErr::ByteLimitExceeded("package artifact bytes", _, 268435456u64)), "encoded local cap ignored")
+  assert(excess.encode() is Result::Err(FormatEncodeError::Validation(FormatValidationErr::ByteLimitExceeded("package artifact bytes", _, 268435456u64))), "oversize local capsule encoded")
+}
