@@ -85,3 +85,24 @@ Gap 3 is local pack only in Phase 1; network install/discovery is Phase 5. Gap 5
 persistence/listing is Phase 4. Gap 7 expiry/revoke is Phase 3 and untouched.
 Other workers must supply real reader red-to-green evidence after this fixture
 commit integrates. This area cannot honestly report that production green yet.
+
+## Checkpoint 2: JSONL bridge checks, before implementation
+
+Fixture checkpoint: `7bcb9edd0377e3c0f0b914fd72f22ff2d9caf785`.
+The next test-only feature is a batch JSONL bridge for a separately built reader.
+One process receives expanded inputs with IDs, without expected answers. It must
+return one result for each ID. This avoids a compiler process per vector and
+lets other workers keep their own reader APIs.
+
+`harness.test.mjs` first checks raw escaped-key preservation, positive/negative
+results, missing/duplicate/unknown replies, malformed JSON, subprocess stderr
+and exit status, and missing executables. `support/jsonl-reader.mjs` is only a
+protocol fixture, not a contract parser. Existing helper checks also cover
+path-order mismatch detection, rejection diagnostics, compact recipe bounds,
+exact manifest byte boundaries, and fixture inventory.
+
+The new bridge is absent at this checkpoint. The recorded red test therefore
+shows missing bridge support, not a production reader defect. The SAME test file
+will run after the bridge is added. The record under `evidence/harness-red.*`
+contains the exact command, source head, stdout, stderr, and exit status.
+No compiler or timing workload runs.
