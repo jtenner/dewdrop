@@ -1,6 +1,11 @@
 # Phase 1 package contract report
 
-Status: **READY TO MEASURE, on HOLD**.
+Status: **IMPLEMENTED; post-release validation in progress**.
+
+The V20 hold is released. Broader correctness checks have now run and exposed
+SDK compile errors in unchanged source. See
+[`pkg-phase1-post-release.md`](pkg-phase1-post-release.md) for current results.
+No new timing lease is granted. The original held handoff is recorded below.
 
 Branch: `coordinate/dewdrop-pkg-phase1`.
 Base master: `20f902acb6caa56a49712df832aeb0c46ec520b8`.

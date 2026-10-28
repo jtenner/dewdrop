@@ -1,0 +1,12 @@
+{
+  "head": "d86ffde55b4800481c83cf88d268a1bb949922fd",
+  "command": [
+    "bash",
+    "tools/test-native.sh"
+  ],
+  "purpose": "routine correctness validation, not a performance comparison",
+  "ledger_generation": 20,
+  "pid": 2829864,
+  "exit": 1,
+  "wall_seconds": 303.5719506829628
+}
