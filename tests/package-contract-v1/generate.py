@@ -76,6 +76,9 @@ for id, value in [("empty", ""), ("npm-x", "1.x"), ("npm-partial", "^1.2"),
                   ("git-empty-source", "git+#main"), ("git-nul", "git+x#r\0"),
                   ("bad-version", "^01.0.0"), ("overflow", "~1.0.4294967296")]:
     requirements.append(case(id, value, False, "requirement-grammar"))
+for suffix, version in [("empty-prerelease", "1.0.0-"), ("empty-build", "1.0.0+")]:
+    for form, prefix in [("exact", ""), ("caret", "^"), ("tilde", "~")]:
+        requirements.append(case(f"{form}-{suffix}", prefix + version, False, "requirement-grammar"))
 requirements += [case("bytes-2048", concat("git+x#", repeat("r", 2042)), True, "requirement-byte-limit"),
                  case("bytes-2049", concat("git+x#", repeat("r", 2043)), False, "requirement-byte-limit"),
                  case("caret-semver-255", concat("^1.0.0+", repeat("a", 249)), True, "nested-semver-limit"),
@@ -129,6 +132,10 @@ for id, value, rule in [
     ("root-array", [], "manifest-object"), ("root-null", None, "manifest-object"),
 ]:
     manifest.append(case(id, raw(value), False, rule))
+for suffix, version in [("empty-prerelease", "1.0.0-"), ("empty-build", "1.0.0+")]:
+    manifest.append(case(f"version-{suffix}", raw({**base, "version": version}), False, "strict-semver"))
+    for form, prefix in [("exact", ""), ("caret", "^"), ("tilde", "~")]:
+        manifest.append(case(f"dependency-{form}-{suffix}", raw({**base, "dependencies": {"@c/d": prefix + version}}), False, "requirement-grammar"))
 for id, value in [
     ("duplicate-name", '{"name":"@a/b","name":"@c/d","version":"1.0.0","dependencies":{}}'),
     ("duplicate-name-escaped", '{"name":"@a/b","na\\u006de":"@c/d","version":"1.0.0","dependencies":{}}'),

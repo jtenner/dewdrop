@@ -170,6 +170,70 @@
       "rule": "manifest-object"
     },
     {
+      "id": "version-empty-prerelease",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0-\"}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "dependency-exact-empty-prerelease",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"dependencies\":{\"@c/d\":\"1.0.0-\"}}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "dependency-caret-empty-prerelease",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"dependencies\":{\"@c/d\":\"^1.0.0-\"}}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "dependency-tilde-empty-prerelease",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"dependencies\":{\"@c/d\":\"~1.0.0-\"}}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "version-empty-build",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0+\"}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "dependency-exact-empty-build",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"dependencies\":{\"@c/d\":\"1.0.0+\"}}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "dependency-caret-empty-build",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"dependencies\":{\"@c/d\":\"^1.0.0+\"}}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "dependency-tilde-empty-build",
+      "input": "{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"dependencies\":{\"@c/d\":\"~1.0.0+\"}}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
       "id": "duplicate-name",
       "input": "{\"name\":\"@a/b\",\"name\":\"@c/d\",\"version\":\"1.0.0\",\"dependencies\":{}}",
       "expected": {

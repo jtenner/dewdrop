@@ -1,0 +1,38 @@
+FAIL main::shared_contract_test.dew::artifact-paths/empty-set: unexpected trap unreachable: assertion failed: artifact-paths/empty-set: file-count: decode
+FAIL main::shared_contract_test.dew::artifact-paths/empty: unexpected trap unreachable: assertion failed: artifact-paths/empty: path-segments: decode
+FAIL main::shared_contract_test.dew::artifact-paths/absolute: unexpected trap unreachable: assertion failed: artifact-paths/absolute: relative-path: decode
+FAIL main::shared_contract_test.dew::artifact-paths/windows-absolute: unexpected trap unreachable: assertion failed: artifact-paths/windows-absolute: relative-path: decode
+FAIL main::shared_contract_test.dew::artifact-paths/backslash: unexpected trap unreachable: assertion failed: artifact-paths/backslash: slash-path: decode
+FAIL main::shared_contract_test.dew::artifact-paths/nul: unexpected trap unreachable: assertion failed: artifact-paths/nul: path-nul: decode
+FAIL main::shared_contract_test.dew::artifact-paths/empty-segment: unexpected trap unreachable: assertion failed: artifact-paths/empty-segment: path-segments: decode
+FAIL main::shared_contract_test.dew::artifact-paths/dot: unexpected trap unreachable: assertion failed: artifact-paths/dot: path-segments: decode
+FAIL main::shared_contract_test.dew::artifact-paths/dot-inner: unexpected trap unreachable: assertion failed: artifact-paths/dot-inner: path-segments: decode
+FAIL main::shared_contract_test.dew::artifact-paths/dotdot: unexpected trap unreachable: assertion failed: artifact-paths/dotdot: path-segments: decode
+FAIL main::shared_contract_test.dew::artifact-paths/trailing-slash: unexpected trap unreachable: assertion failed: artifact-paths/trailing-slash: path-segments: decode
+FAIL main::shared_contract_test.dew::artifact-paths/not-dew: unexpected trap unreachable: assertion failed: artifact-paths/not-dew: source-extension: decode
+FAIL main::shared_contract_test.dew::artifact-paths/uppercase-extension: unexpected trap unreachable: assertion failed: artifact-paths/uppercase-extension: source-extension: decode
+FAIL main::shared_contract_test.dew::artifact-paths/manifest-file: unexpected trap unreachable: assertion failed: artifact-paths/manifest-file: source-extension: decode
+FAIL main::shared_contract_test.dew::artifact-paths/manifest-prefix: unexpected trap unreachable: assertion failed: artifact-paths/manifest-prefix: reserved-manifest-prefix: decode
+FAIL main::shared_contract_test.dew::artifact-paths/duplicate: unexpected trap unreachable: assertion failed: artifact-paths/duplicate: duplicate-path: decode
+FAIL main::shared_contract_test.dew::artifact-paths/prefix-forward: unexpected trap unreachable: assertion failed: artifact-paths/prefix-forward: path-prefix-conflict: decode
+FAIL main::shared_contract_test.dew::artifact-paths/prefix-reverse: unexpected trap unreachable: assertion failed: artifact-paths/prefix-reverse: path-prefix-conflict: decode
+FAIL main::shared_contract_test.dew::artifact-paths/prefix-deep: unexpected trap unreachable: assertion failed: artifact-paths/prefix-deep: path-prefix-conflict: decode
+FAIL main::shared_contract_test.dew::manifest/bad-name: unexpected trap unreachable: assertion failed: manifest/bad-name: name-grammar
+FAIL main::shared_contract_test.dew::manifest/dependency-name: unexpected trap unreachable: assertion failed: manifest/dependency-name: dependency-name
+FAIL main::shared_contract_test.dew::manifest/version-empty-prerelease: unexpected trap unreachable: assertion failed: manifest/version-empty-prerelease: strict-semver
+FAIL main::shared_contract_test.dew::manifest/dependency-exact-empty-prerelease: unexpected trap unreachable: assertion failed: manifest/dependency-exact-empty-prerelease: requirement-grammar
+FAIL main::shared_contract_test.dew::manifest/dependency-caret-empty-prerelease: unexpected trap unreachable: assertion failed: manifest/dependency-caret-empty-prerelease: requirement-grammar
+FAIL main::shared_contract_test.dew::manifest/dependency-tilde-empty-prerelease: unexpected trap unreachable: assertion failed: manifest/dependency-tilde-empty-prerelease: requirement-grammar
+FAIL main::shared_contract_test.dew::manifest/version-empty-build: unexpected trap unreachable: assertion failed: manifest/version-empty-build: strict-semver
+FAIL main::shared_contract_test.dew::manifest/dependency-exact-empty-build: unexpected trap unreachable: assertion failed: manifest/dependency-exact-empty-build: requirement-grammar
+FAIL main::shared_contract_test.dew::manifest/dependency-caret-empty-build: unexpected trap unreachable: assertion failed: manifest/dependency-caret-empty-build: requirement-grammar
+FAIL main::shared_contract_test.dew::manifest/dependency-tilde-empty-build: unexpected trap unreachable: assertion failed: manifest/dependency-tilde-empty-build: requirement-grammar
+FAIL main::shared_contract_test.dew::requirement/exact-empty-prerelease: unexpected trap unreachable: assertion failed: requirement/exact-empty-prerelease: requirement-grammar
+FAIL main::shared_contract_test.dew::requirement/caret-empty-prerelease: unexpected trap unreachable: assertion failed: requirement/caret-empty-prerelease: requirement-grammar
+FAIL main::shared_contract_test.dew::requirement/tilde-empty-prerelease: unexpected trap unreachable: assertion failed: requirement/tilde-empty-prerelease: requirement-grammar
+FAIL main::shared_contract_test.dew::requirement/exact-empty-build: unexpected trap unreachable: assertion failed: requirement/exact-empty-build: requirement-grammar
+FAIL main::shared_contract_test.dew::requirement/caret-empty-build: unexpected trap unreachable: assertion failed: requirement/caret-empty-build: requirement-grammar
+FAIL main::shared_contract_test.dew::requirement/tilde-empty-build: unexpected trap unreachable: assertion failed: requirement/tilde-empty-build: requirement-grammar
+FAIL main::shared_contract_test.dew::semver/empty-prerelease: unexpected trap unreachable: assertion failed: semver/empty-prerelease: strict-semver
+FAIL main::shared_contract_test.dew::semver/empty-build: unexpected trap unreachable: assertion failed: semver/empty-build: strict-semver
+shared package contract: 132 passed, 37 failed

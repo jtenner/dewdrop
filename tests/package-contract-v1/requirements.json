@@ -179,6 +179,54 @@
       "rule": "requirement-grammar"
     },
     {
+      "id": "exact-empty-prerelease",
+      "input": "1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "caret-empty-prerelease",
+      "input": "^1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "tilde-empty-prerelease",
+      "input": "~1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "exact-empty-build",
+      "input": "1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "caret-empty-build",
+      "input": "^1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "tilde-empty-build",
+      "input": "~1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
       "id": "bytes-2048",
       "input": {
         "concat": [
