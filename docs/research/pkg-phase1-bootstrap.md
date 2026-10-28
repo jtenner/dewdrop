@@ -228,3 +228,71 @@ Costs and limits:
 
 Files are confined to `manifest.mbt`, `package_artifact.mbt`, new bootstrap
 contract/helper/test inputs, `platform.c`, `platform_native.mbt`, and this note.
+
+## Frozen validation and handoff
+
+Worktree: `/home/dev/.t3/worktrees/dewdrop/t3-94f5b2ae`.
+Branch: `t3/bootstrap-manifest-contract`.
+Base: `20f902acb6caa56a49712df832aeb0c46ec520b8`.
+Tested implementation: `97678a88fa35ea27e858d8d68f4001388e41e333`.
+
+All checkpoints, in order:
+
+1. `9e2d120ed85946c2719e13f9730979ddbf3879ab`: first failing checks and note.
+2. `0a76aa9b1b89b91f33bc8b03f18f43b8c63703a1`: wider source/cache checks.
+3. `0fc3e2cc4e3bba3b3e86cbcd7807c87885d8ce80`: canonical and field-bound checks.
+4. `77692bbcf3eda06d61d707e12fa6551b3ef77465`: path agreement checks.
+5. `b62a405bc11f0d127b2091ee582bfdf62af8c422`: strict text regression checks.
+6. `411fed668ecabc300f1af888bbd0b831cc1707b6`: shared adapter and marker checks.
+7. `97678a88fa35ea27e858d8d68f4001388e41e333`: implementation and updated note.
+
+Final command, built from that committed source:
+
+```
+python3 src/dew_bootstrap/package_contract_check.py --vectors /home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1/tests/package-contract-v1 --evidence /tmp/pkg-phase1-bootstrap-evidence/green-frozen > /tmp/pkg-phase1-bootstrap-evidence/green-frozen.stdout 2> /tmp/pkg-phase1-bootstrap-evidence/green-frozen.stderr
+```
+
+Exit 0. All 157 bootstrap checks and 181 supported shared cases pass. The 12
+`artifact-budget` cases remain explicitly unsupported. This includes all 18
+shared requirement-match cases and the root's new trailing-marker cases.
+Narrow native build exit 0; wall time 0.835449 seconds. Binary SHA-256:
+`72e62fd2c9481ad5f790963981fbb8f9887fc04cedb7f6358ac163329cfbacf4`.
+The outer stderr is empty. Build warnings remain in the JSON evidence.
+
+The exact same final own-suite checks on base have 100 failed named checks and
+8 extra failed pre-write-state assertions, 108 failed expectations in total.
+Raw red evidence is `red-freeze/results.json`; raw green evidence is
+`green-frozen/results.json`, both under `/tmp/pkg-phase1-bootstrap-evidence/`.
+Each record includes command, stdout, stderr, exit status, check name and result.
+The green JSON also stores the expanded shared-vector digest, unsupported IDs,
+source hashes and executable hash. Temporary fixture/build directories are
+removed after each run. The evidence is retained outside production source.
+
+All copied production source hashes except the deliberately replaced `main.mbt`
+entry match the tested checkout. The harness retains production main helpers
+and replaces only command dispatch with the test driver. There is no production
+test hook. This last documentation commit changes no compiler or test source.
+
+Final file list:
+
+- `src/dew_bootstrap/manifest.mbt`
+- `src/dew_bootstrap/package_artifact.mbt`
+- `src/dew_bootstrap/package_contract.mbt`
+- `src/dew_bootstrap/platform.c`
+- `src/dew_bootstrap/platform_native.mbt`
+- `src/dew_bootstrap/package_contract_check.py`
+- `src/dew_bootstrap/package_contract_driver.mbt.fixture`
+- `docs/research/pkg-phase1-bootstrap.md`
+
+The shared JSON reader also serves legacy module manifests. It now has strict
+UTF-8, duplicate detection, parent-path checks and the existing Dew 4 MiB module
+manifest bound. No full legacy compiler invocation was run. Include legacy
+module manifests in the queued integration checks and metadata measurements.
+
+Coordinator handoff: merge this branch after the shared/JS commits, then run
+the standard and snapshot areas in the stated order. The test script will find
+shared vectors at the merged repo path by default. Keep the full native,
+integration, stress, LLVM/platform and performance lanes held until owner steer.
+The measurement proposal above is queued, not executed. Native compiler output,
+interface matching for real programs, large-cap codec enforcement, allocation
+and RSS measurements, and cross-platform behavior are not claimed by this work.
