@@ -209,10 +209,16 @@ identity again after the read, and reject changed source directories. Collection
 alone does not freeze files. Encoding will use supplied buffers only.
 
 Shared callers after integration: pack, publish, source snapshot, integrity,
-compiler manifest preparation, and local artifact restore. The module will
-validate bytes in O(input bytes), walk source directories, sort paths by UTF-8
-bytes, and copy each source buffer once into one checked output buffer. The
-source input buffers remain owned by the caller. No cost claim is measured.
+compiler manifest preparation, and local artifact restore. Manifest validation
+scans bounded input bytes. Source collection adds `lstat` and `realpath` checks
+for each selected file and directory. UTF-8 path keys allocate once per file;
+the comparator does not allocate. Sorting costs O(n log n) comparisons.
+Prefix checks inspect ancestor segments and copy prefix strings. Deep paths can
+therefore cost more than linear in path bytes, with each path capped at 4096
+bytes. Encoding copies each supplied source buffer once into one checked output
+buffer, then hashes that buffer in place. Input buffers stay owned by the caller.
+The module also allocates bounded manifest descriptors, dependency records, path
+sets, UTF-8 path keys, and a 32-byte digest. No runtime or memory gain is measured.
 
 Hold: all native lanes, compiler builds, cross-platform builds, stress tests,
 and all benchmark/timing work. No compiler check is needed for this module.
@@ -223,3 +229,212 @@ head. Use tiny manifests and sources, 256 dependencies, deep/wide source trees,
 65,536 empty files, 16 MiB sources, near-64 MiB capsules, and rejected excess
 inputs. Record raw time, RSS, allocations, I/O, runtime version, and exact source
 and executable IDs. Include pack and publish snapshot callers after integration.
+
+
+## Green implementation checkpoint
+
+Red checkpoint: `158dd834088f598e9a629cb8f89dcb2d28c9f90a`.
+Validated module Git blob: `315b772bc0fb4b5629fe41c83c1a4b440328c3fa`.
+The checkpoint commit containing this section is the code checkpoint; use its
+commit ID as the implementation head. A file cannot contain its own commit ID.
+
+Frozen public API:
+
+- `readPackageManifest(manifestPath)` is async and returns validated manifest data.
+- `parsePackageManifest(text)` is sync and returns the same data.
+- `collectSourceFiles(packageRoot)` is async and returns sorted
+  `{path, absolutePath, size}` records. `path` uses relative slashes.
+- `encodeCapsule({manifest, files, source, interfaceFingerprint, integrity})`
+  is sync and returns a Buffer. Files contain `{path, contents: Buffer}`.
+  It reads no disk and does not recompute source integrity or the interface.
+- `MAX_MANIFEST_BYTES`, `MAX_NAME_BYTES`, `MAX_VERSION_BYTES`,
+  `MAX_REQUIREMENT_BYTES`, `MAX_DEPENDENCIES`, `MAX_PATH_BYTES`,
+  `MAX_SOURCE_BYTES`, `MAX_FILES`, `MAX_CAPSULE_BYTES`, and
+  `MAX_LOCAL_ARTIFACT_BYTES` expose the limits. The last two are 64 MiB and
+  256 MiB. The encoder enforces the 64 MiB publish policy, not the local cap.
+
+JSON parsing is limited to the two-level manifest schema and checks decoded
+keys before it stores values. Escaped duplicates cannot disappear in JSON.parse.
+Encoding also validates object inputs using own data descriptors. Inherited
+fields and getters cannot supply manifest data. Returned dependencies default
+to an own empty plain object. Names and SemVer follow the current Dew rules.
+Git requirements retain Dew's bounded `git+source#ref` check; this adds no URL
+scheme, npm range, or registry resolution semantics.
+
+Source selection uses a directory `src` recursively, or regular root `.dew`
+files when `src` is absent or is a regular file. Errors under `src` stay errors.
+A directory `src` with no sources cannot fall back. Test sources stay included.
+Root fallback ignores unselected directories. Recursive selection rejects every
+symlink it encounters. Root fallback rejects symlink `.dew` entries and a
+symlink `src`, but does not inspect unrelated root directories. Selected paths
+are checked again by realpath and directory inode checks. This is an inventory,
+not a race-free source snapshot. Ancestors above the requested root can be
+canonicalized with realpath; the requested root itself cannot be a symlink.
+
+Path validation rejects slash-rooted paths and Windows drive-rooted paths,
+backslashes, NUL, empty/dot/dotdot segments, non-`.dew` paths, `dew.json/`,
+duplicates, and file/directory prefix conflicts. It retains all other existing
+Dew logical-path characters. It does not add a Windows filename portability
+policy for colons, reserved names, or trailing spaces. A future Windows
+materializer must preserve the agreed logical-path semantics without allowing
+a drive-relative path to escape. Tell the coordinator if that caller needs a
+shared physical-path validation API; the four frozen exports stay unchanged.
+
+The manifest disk reader uses no-follow/nonblocking open when the platform
+supplies those flags, validates the regular open file against lstat, reads only
+size plus one byte up to 1 MiB plus one, checks identity/size/timestamps again,
+and rejects invalid UTF-8. It keeps filesystem errors visible. Source reads
+remain the snapshot consumer's job. No source bytes are read by collection.
+
+Commands:
+
+- `node tools/test_dew_package_contract.mjs`: 106 pass, 0 fail, exit **0**.
+- `bun tools/test_dew_package_contract.mjs`: 106 pass, 0 fail, exit **0**.
+- `git diff --check`: exit **0**, stdout and stderr empty.
+
+Both functional commands use the same 106 check names from the red checkpoint.
+Bun version: `1.4.4`. Both stderr streams are empty. Full exact outputs are at
+`/tmp/dew-phase1-javascript-e477a636/green.{stdout,stderr,exit}` and
+`/tmp/dew-phase1-javascript-e477a636/green-bun.{stdout,stderr,exit}`.
+No timing or compiler run was used. The shell wrapper saves the subprocess exit
+status separately; the wrapper's own exit status is not the test result.
+Node stdout is below. Bun stdout has the same named results and summary.
+
+### Green stdout
+
+```text
+ok manifest: absent dependencies means own empty object
+ok manifest: valid plain result
+ok manifest: reject unknown field
+ok manifest: reject duplicate field
+ok manifest: reject escaped duplicate field
+ok manifest: reject duplicate dependency
+ok manifest: reject escaped duplicate dependency
+ok manifest: reject proto field
+ok manifest: reject proto dependency
+ok manifest: reject null dependencies
+ok manifest: reject array dependencies
+ok manifest: reject malformed JSON
+ok manifest: reject trailing JSON
+ok manifest: reject nested dependency
+ok name: reject "scope/name"
+ok name: reject "@/name"
+ok name: reject "@scope/"
+ok name: reject "@a/b/c"
+ok name: reject "@A/b"
+ok name: reject "@a/b!"
+ok name: reject "@a/é"
+ok name: reject "@a/b\n"
+ok name: reject "@a/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+ok name: punctuation and 255 byte boundary
+ok version: accept 0.0.0
+ok version: accept 4294967295.4294967295.4294967295
+ok version: accept 1.2.3-4294967295
+ok version: accept 1.2.3-alpha.1-x+00.99999999999999999999
+ok version: accept 1.2.3+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ok version: reject "1.2"
+ok version: reject "v1.2.3"
+ok version: reject "1.02.3"
+ok version: reject "1.2.3.4"
+ok version: reject "4294967296.0.0"
+ok version: reject "1.2.3-4294967296"
+ok version: reject "1.2.3-01"
+ok version: reject "1.2.3-"
+ok version: reject "1.2.3+"
+ok version: reject "1.2.3-a..b"
+ok version: reject "1.2.3+a+b"
+ok version: reject "1.2.3_foo"
+ok version: reject "1.2.3\n"
+ok version: reject "1.2.3+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+ok requirement: accept *
+ok requirement: accept 1.2.3
+ok requirement: accept ^0.2.3
+ok requirement: accept ~1.2.3-alpha+build
+ok requirement: accept git+x#r
+ok requirement: accept git+https://example.test/repo#tag
+ok requirement: accept git+xxxxxxxxxxxxxxxxxxxxxxxxxx (2048 bytes)
+ok requirement: reject ""
+ok requirement: reject "latest"
+ok requirement: reject "1.x"
+ok requirement: reject ">=1.2.3"
+ok requirement: reject "^1.2"
+ok requirement: reject "~1.02.3"
+ok requirement: reject "1.2.3-4294967296"
+ok requirement: reject "git+#r"
+ok requirement: reject "git+x#"
+ok requirement: reject "git+x"
+ok requirement: reject "git+x#r\u0000"
+ok requirement: reject "git+xxxxxxxxxxxxxxxxxxxxxxxxxx (2049 bytes)"
+ok dependencies: reject invalid name
+ok dependencies: 256 accepted, 257 rejected
+ok manifest: 1 MiB text boundary
+ok manifest: disk reader uses the same strict parser
+ok manifest: disk reader rejects oversized file
+ok manifest: disk reader rejects symlink
+ok manifest: missing file keeps read error
+ok sources: recursive src, tests included, global byte order
+ok sources: root fallback is regular files only
+ok sources: regular src file uses root fallback
+ok sources: empty src does not fall back
+ok sources: reject symlink src
+ok sources: reject symlink nested directory
+ok sources: reject symlink nested source
+ok sources: reject symlink root source
+ok sources: reject symlink package root
+ok sources: unreadable src error stays visible
+ok sources: 16 MiB bound before content read
+ok capsule: v1 bytes and canonical order from supplied buffers
+ok capsule: omitted dependencies
+ok capsule path: reject "/x.dew"
+ok capsule path: reject "C:/x.dew"
+ok capsule path: reject "a\\b.dew"
+ok capsule path: reject "a\u0000.dew"
+ok capsule path: reject "a//b.dew"
+ok capsule path: reject "./x.dew"
+ok capsule path: reject "a/../b.dew"
+ok capsule path: reject "a/./b.dew"
+ok capsule path: reject "x.dew/"
+ok capsule path: reject "README"
+ok capsule path: reject "dew.json/x.dew"
+ok capsule path: reject "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (4097 bytes)"
+ok capsule path: 4096 byte boundary
+ok capsule path: reject duplicate
+ok capsule path: reject prefix conflict
+ok capsule: reject empty files
+ok capsule: reject 65537 files before encoding
+ok capsule: 16 MiB per source limit
+ok capsule: preflight 64 MiB before output allocation
+ok capsule: reject source length 0
+ok capsule: reject source length 2049
+ok capsule: invalid provenance
+ok capsule: inherited manifest fields cannot supply values
+ok capsule: unknown object key
+checks=106 passed=106 failed=0 mode=module
+```
+
+## Deferred checks and integration limits
+
+No compiler/native lane, platform compilation, server, publication, PR, push,
+master merge, or benchmark ran. Shared vectors were absent at validation time.
+The 65,537-file rejection and oversized source/capsule checks are functional
+boundary checks, not stress or timing measurements. The preflight guard proves
+that the over-limit output is rejected before an oversized buffer allocation.
+It does not prove a measured RSS reduction. Maximum-count filesystem inventory
+and an exact 64 MiB successful capsule remain deferred boundary coverage.
+
+The assigned source files are new modules only. Existing pack/publish callers
+are not changed here. The snapshot owner must import these exports, bound each
+source read with lstat/open/fstat checks and `MAX_SOURCE_BYTES`, retain exactly
+one frozen input set, and use collection's test files for integrity and capsule.
+Compiler preparation must filter `_test.dew` only for compilation. The snapshot
+owner must preflight aggregate sizes before it reads all contents, using encoded
+metadata/path/length overhead, not just total source bytes. The encoder performs
+its own complete encoded-size preflight again before allocating output.
+
+The 256 MiB local artifact bound remains an exported, distinct codec policy.
+No local compiler cache codec is edited in this area. Module encoding uses the
+64 MiB publish cap and cannot replace a 256 MiB local codec writer as-is.
+
+The coordinator still owns native and affected-platform validation, shared
+vector integration, caller integration, and the quiet-host measurement handoff.
+The workload proposal above covers each performance-sensitive shared caller.
