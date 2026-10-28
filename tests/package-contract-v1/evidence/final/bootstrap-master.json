@@ -1,0 +1,2521 @@
+{
+  "head": "b62a405bc11f0d127b2091ee582bfdf62af8c422",
+  "checks": [
+    {
+      "name": "manifest absent dependencies",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/1/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "dependencies=0",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "manifest unknown field",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/2/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unknown",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest uppercase name",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/3/dew.json"
+      ],
+      "stdout": "ok @Fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "name",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest unicode name",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/4/dew.json"
+      ],
+      "stdout": "ok @fixture/r\u00f8ot@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "name",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest long name",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/5/dew.json"
+      ],
+      "stdout": "ok @fixture/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "name",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 01.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/6/dew.json"
+      ],
+      "stdout": "ok @fixture/root@01.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.2",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/7/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.2 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 4294967296.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/8/dew.json"
+      ],
+      "stdout": "ok @fixture/root@4294967296.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.0.0-4294967296",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/9/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-4294967296 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.0.0-01",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/10/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-01 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.0.0+",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/11/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0+ dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.0.0-",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/12/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0- dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.0.0+a+b",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/13/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0+a+b dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest version 1.0.0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/14/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement ",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/15/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement latest",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/16/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"latest\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement ^1.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/17/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"^1.0\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement git+url",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/18/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"git+url\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement git+#ref",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/19/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"git+#ref\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement git+url#",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/20/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"git+url#\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement git+url#ref\u0000",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/21/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"git+url#ref\\u0000\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest requirement xxxxxxxxxxxxxxxxxxxxxxxxx",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/22/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest dependency count",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/23/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=257\n{\"@fixture/d0\":\"*\",\"@fixture/d1\":\"*\",\"@fixture/d2\":\"*\",\"@fixture/d3\":\"*\",\"@fixture/d4\":\"*\",\"@fixture/d5\":\"*\",\"@fixture/d6\":\"*\",\"@fixture/d7\":\"*\",\"@fixture/d8\":\"*\",\"@fixture/d9\":\"*\",\"@fixture/d10\":\"*\",\"@fixture/d11\":\"*\",\"@fixture/d12\":\"*\",\"@fixture/d13\":\"*\",\"@fixture/d14\":\"*\",\"@fixture/d15\":\"*\",\"@fixture/d16\":\"*\",\"@fixture/d17\":\"*\",\"@fixture/d18\":\"*\",\"@fixture/d19\":\"*\",\"@fixture/d20\":\"*\",\"@fixture/d21\":\"*\",\"@fixture/d22\":\"*\",\"@fixture/d23\":\"*\",\"@fixture/d24\":\"*\",\"@fixture/d25\":\"*\",\"@fixture/d26\":\"*\",\"@fixture/d27\":\"*\",\"@fixture/d28\":\"*\",\"@fixture/d29\":\"*\",\"@fixture/d30\":\"*\",\"@fixture/d31\":\"*\",\"@fixture/d32\":\"*\",\"@fixture/d33\":\"*\",\"@fixture/d34\":\"*\",\"@fixture/d35\":\"*\",\"@fixture/d36\":\"*\",\"@fixture/d37\":\"*\",\"@fixture/d38\":\"*\",\"@fixture/d39\":\"*\",\"@fixture/d40\":\"*\",\"@fixture/d41\":\"*\",\"@fixture/d42\":\"*\",\"@fixture/d43\":\"*\",\"@fixture/d44\":\"*\",\"@fixture/d45\":\"*\",\"@fixture/d46\":\"*\",\"@fixture/d47\":\"*\",\"@fixture/d48\":\"*\",\"@fixture/d49\":\"*\",\"@fixture/d50\":\"*\",\"@fixture/d51\":\"*\",\"@fixture/d52\":\"*\",\"@fixture/d53\":\"*\",\"@fixture/d54\":\"*\",\"@fixture/d55\":\"*\",\"@fixture/d56\":\"*\",\"@fixture/d57\":\"*\",\"@fixture/d58\":\"*\",\"@fixture/d59\":\"*\",\"@fixture/d60\":\"*\",\"@fixture/d61\":\"*\",\"@fixture/d62\":\"*\",\"@fixture/d63\":\"*\",\"@fixture/d64\":\"*\",\"@fixture/d65\":\"*\",\"@fixture/d66\":\"*\",\"@fixture/d67\":\"*\",\"@fixture/d68\":\"*\",\"@fixture/d69\":\"*\",\"@fixture/d70\":\"*\",\"@fixture/d71\":\"*\",\"@fixture/d72\":\"*\",\"@fixture/d73\":\"*\",\"@fixture/d74\":\"*\",\"@fixture/d75\":\"*\",\"@fixture/d76\":\"*\",\"@fixture/d77\":\"*\",\"@fixture/d78\":\"*\",\"@fixture/d79\":\"*\",\"@fixture/d80\":\"*\",\"@fixture/d81\":\"*\",\"@fixture/d82\":\"*\",\"@fixture/d83\":\"*\",\"@fixture/d84\":\"*\",\"@fixture/d85\":\"*\",\"@fixture/d86\":\"*\",\"@fixture/d87\":\"*\",\"@fixture/d88\":\"*\",\"@fixture/d89\":\"*\",\"@fixture/d90\":\"*\",\"@fixture/d91\":\"*\",\"@fixture/d92\":\"*\",\"@fixture/d93\":\"*\",\"@fixture/d94\":\"*\",\"@fixture/d95\":\"*\",\"@fixture/d96\":\"*\",\"@fixture/d97\":\"*\",\"@fixture/d98\":\"*\",\"@fixture/d99\":\"*\",\"@fixture/d100\":\"*\",\"@fixture/d101\":\"*\",\"@fixture/d102\":\"*\",\"@fixture/d103\":\"*\",\"@fixture/d104\":\"*\",\"@fixture/d105\":\"*\",\"@fixture/d106\":\"*\",\"@fixture/d107\":\"*\",\"@fixture/d108\":\"*\",\"@fixture/d109\":\"*\",\"@fixture/d110\":\"*\",\"@fixture/d111\":\"*\",\"@fixture/d112\":\"*\",\"@fixture/d113\":\"*\",\"@fixture/d114\":\"*\",\"@fixture/d115\":\"*\",\"@fixture/d116\":\"*\",\"@fixture/d117\":\"*\",\"@fixture/d118\":\"*\",\"@fixture/d119\":\"*\",\"@fixture/d120\":\"*\",\"@fixture/d121\":\"*\",\"@fixture/d122\":\"*\",\"@fixture/d123\":\"*\",\"@fixture/d124\":\"*\",\"@fixture/d125\":\"*\",\"@fixture/d126\":\"*\",\"@fixture/d127\":\"*\",\"@fixture/d128\":\"*\",\"@fixture/d129\":\"*\",\"@fixture/d130\":\"*\",\"@fixture/d131\":\"*\",\"@fixture/d132\":\"*\",\"@fixture/d133\":\"*\",\"@fixture/d134\":\"*\",\"@fixture/d135\":\"*\",\"@fixture/d136\":\"*\",\"@fixture/d137\":\"*\",\"@fixture/d138\":\"*\",\"@fixture/d139\":\"*\",\"@fixture/d140\":\"*\",\"@fixture/d141\":\"*\",\"@fixture/d142\":\"*\",\"@fixture/d143\":\"*\",\"@fixture/d144\":\"*\",\"@fixture/d145\":\"*\",\"@fixture/d146\":\"*\",\"@fixture/d147\":\"*\",\"@fixture/d148\":\"*\",\"@fixture/d149\":\"*\",\"@fixture/d150\":\"*\",\"@fixture/d151\":\"*\",\"@fixture/d152\":\"*\",\"@fixture/d153\":\"*\",\"@fixture/d154\":\"*\",\"@fixture/d155\":\"*\",\"@fixture/d156\":\"*\",\"@fixture/d157\":\"*\",\"@fixture/d158\":\"*\",\"@fixture/d159\":\"*\",\"@fixture/d160\":\"*\",\"@fixture/d161\":\"*\",\"@fixture/d162\":\"*\",\"@fixture/d163\":\"*\",\"@fixture/d164\":\"*\",\"@fixture/d165\":\"*\",\"@fixture/d166\":\"*\",\"@fixture/d167\":\"*\",\"@fixture/d168\":\"*\",\"@fixture/d169\":\"*\",\"@fixture/d170\":\"*\",\"@fixture/d171\":\"*\",\"@fixture/d172\":\"*\",\"@fixture/d173\":\"*\",\"@fixture/d174\":\"*\",\"@fixture/d175\":\"*\",\"@fixture/d176\":\"*\",\"@fixture/d177\":\"*\",\"@fixture/d178\":\"*\",\"@fixture/d179\":\"*\",\"@fixture/d180\":\"*\",\"@fixture/d181\":\"*\",\"@fixture/d182\":\"*\",\"@fixture/d183\":\"*\",\"@fixture/d184\":\"*\",\"@fixture/d185\":\"*\",\"@fixture/d186\":\"*\",\"@fixture/d187\":\"*\",\"@fixture/d188\":\"*\",\"@fixture/d189\":\"*\",\"@fixture/d190\":\"*\",\"@fixture/d191\":\"*\",\"@fixture/d192\":\"*\",\"@fixture/d193\":\"*\",\"@fixture/d194\":\"*\",\"@fixture/d195\":\"*\",\"@fixture/d196\":\"*\",\"@fixture/d197\":\"*\",\"@fixture/d198\":\"*\",\"@fixture/d199\":\"*\",\"@fixture/d200\":\"*\",\"@fixture/d201\":\"*\",\"@fixture/d202\":\"*\",\"@fixture/d203\":\"*\",\"@fixture/d204\":\"*\",\"@fixture/d205\":\"*\",\"@fixture/d206\":\"*\",\"@fixture/d207\":\"*\",\"@fixture/d208\":\"*\",\"@fixture/d209\":\"*\",\"@fixture/d210\":\"*\",\"@fixture/d211\":\"*\",\"@fixture/d212\":\"*\",\"@fixture/d213\":\"*\",\"@fixture/d214\":\"*\",\"@fixture/d215\":\"*\",\"@fixture/d216\":\"*\",\"@fixture/d217\":\"*\",\"@fixture/d218\":\"*\",\"@fixture/d219\":\"*\",\"@fixture/d220\":\"*\",\"@fixture/d221\":\"*\",\"@fixture/d222\":\"*\",\"@fixture/d223\":\"*\",\"@fixture/d224\":\"*\",\"@fixture/d225\":\"*\",\"@fixture/d226\":\"*\",\"@fixture/d227\":\"*\",\"@fixture/d228\":\"*\",\"@fixture/d229\":\"*\",\"@fixture/d230\":\"*\",\"@fixture/d231\":\"*\",\"@fixture/d232\":\"*\",\"@fixture/d233\":\"*\",\"@fixture/d234\":\"*\",\"@fixture/d235\":\"*\",\"@fixture/d236\":\"*\",\"@fixture/d237\":\"*\",\"@fixture/d238\":\"*\",\"@fixture/d239\":\"*\",\"@fixture/d240\":\"*\",\"@fixture/d241\":\"*\",\"@fixture/d242\":\"*\",\"@fixture/d243\":\"*\",\"@fixture/d244\":\"*\",\"@fixture/d245\":\"*\",\"@fixture/d246\":\"*\",\"@fixture/d247\":\"*\",\"@fixture/d248\":\"*\",\"@fixture/d249\":\"*\",\"@fixture/d250\":\"*\",\"@fixture/d251\":\"*\",\"@fixture/d252\":\"*\",\"@fixture/d253\":\"*\",\"@fixture/d254\":\"*\",\"@fixture/d255\":\"*\",\"@fixture/d256\":\"*\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "dependencies",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest duplicate",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/24/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest escaped duplicate",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/25/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest dependency duplicate",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/26/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"*\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest byte bound",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/27/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "valid version 0.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/28/dew.json"
+      ],
+      "stdout": "ok @fixture/root@0.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid version 4294967295.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/29/dew.json"
+      ],
+      "stdout": "ok @fixture/root@4294967295.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid version 1.0.0-4294967295+01",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/30/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-4294967295+01 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid version 1.0.0-alpha.1+build",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/31/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-alpha.1+build dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid requirement *",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/32/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"*\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid requirement ^0.0.1",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/33/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"^0.0.1\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid requirement ~1.2.3",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/34/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"~1.2.3\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid requirement 1.0.0+build",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/35/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"1.0.0+build\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid requirement git+https://host/repo#main",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/36/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"git+https://host/repo#main\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "lock extra 1",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/37/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unknown",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock name '@Fixture/dep'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/38/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "name",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock version '01.0.0'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/39/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock source ''",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/40/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "source",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock source 'xxxxxxxxxxxxxxxxxxxx'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/41/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "source",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock source 'bad\\x00source'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/42/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "source",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock path '../outside'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/43/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "path",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock path '/outside'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/44/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "path",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock path 'dep\\\\escape'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/45/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "path",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock path 'C:/outside'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/46/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "path",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock path 'dep//nested'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/47/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "path",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock integrity 'sha256-zzzzzzzzzzzzz'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/48/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "integrity",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock interface 'zzzzzzzzzzzzzzzzzzzz'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/49/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "interface",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock unknown root",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/50/dew.lock"
+      ],
+      "stdout": "ok packages=0\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unknown",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock duplicate root",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/51/dew.lock"
+      ],
+      "stdout": "ok packages=0\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock escaped duplicate",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/52/dew.lock"
+      ],
+      "stdout": "ok packages=0\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock version spelling",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/53/dew.lock"
+      ],
+      "stdout": "ok packages=0\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock count",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/54/dew.lock"
+      ],
+      "stdout": "dew: duplicate locked package: @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "count",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "sources symlink source",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/55/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/55/main.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "link",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "sources symlink directory",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/56/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/56/src/main.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "link",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "sources root directory .dew",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/57/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/57/main.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/57/folder.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "main.dew",
+      "exact_lines": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/57/main.dew"
+      ],
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "sources oversize source",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/58/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/58/main.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "integrity symlink source",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/59/dew.json"
+      ],
+      "stdout": "sha256-648e6c2a6231e8584e77efd817d685fc513b29d8467b888235b93a94f388c826\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "link",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "integrity symlink directory",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/60/dew.json"
+      ],
+      "stdout": "sha256-926fd44c8df606aed60922898919cc24513ef16e8a9aa0bb8815d82f5e34651a\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "link",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "integrity root directory .dew",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/61/dew.json"
+      ],
+      "stdout": "dew: cannot read package source //tmp/dew-bootstrap-contract-mgczfck1/workspace/61/folder.dew: No such file or directory\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "sha256-",
+      "exact_lines": null,
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "integrity oversize source",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/62/dew.json"
+      ],
+      "stdout": "sha256-11fb6bb0bc9d24c66f2348b3c06b7e9fa37f2e281af3a20a921d8979b67db050\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "source excludes tests",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/63/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/63/src/z.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "z.dew",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "source includes tests",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/63/dew.json",
+        "true"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/63/src/z.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/63/src/a_test.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "a_test.dew",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph range",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/64/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "graph wildcard prerelease",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/65/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "graph git",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/66/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "source",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "graph identity",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/67/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "identity",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "graph version identity",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/68/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "identity",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "graph symlink existing",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/69/dew.json"
+      ],
+      "stdout": "dew: dependency integrity mismatch for @fixture/dep@1.0.0: expected sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, got sha256-9fa2ddd1711b85aa6eab09e16dbeb1042345cd4ff0e0aa2b9b822c1b9803b223\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "link",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "graph symlink missing restore",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/70/dew.json"
+      ],
+      "stdout": "dew: locked package source is unavailable and no installed artifact exists for @fixture/dep@1.0.0: /tmp/dew-bootstrap-contract-mgczfck1/cache/packages/v1-a4bb3ace04b58fd979dacdf8ce9ac012124bfd4cd596ed1864bf5603fb678070.dpa\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "link",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore bad dependency",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/71/dew.lock"
+      ],
+      "stdout": "dew: restored installed package artifact failed integrity for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "dependency",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore bad requirement",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/72/dew.lock"
+      ],
+      "stdout": "dew: restored installed package artifact failed integrity for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore duplicate dependency",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/73/dew.lock"
+      ],
+      "stdout": "dew: restored installed package artifact failed integrity for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore oversize file",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/74/dew.lock"
+      ],
+      "stdout": "dew: restored installed package artifact failed integrity for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore prefix conflict",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/75/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact source path is also a directory: a.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "directory",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "restore reverse prefix conflict",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/76/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact source path is also a directory: a.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "directory",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "restore duplicate path",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/77/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact has duplicate source path: main.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "restore drive path",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/78/dew.lock"
+      ],
+      "stdout": "dew: package @fixture/dep has no conventional .dew sources\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "source exact global order",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/dew.json",
+        "true"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a/nested.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/z_test.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "",
+      "exact_lines": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a.dew",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a/nested.dew",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/z_test.dew"
+      ],
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "source exact compile inventory",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a/nested.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "",
+      "exact_lines": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a.dew",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a/nested.dew"
+      ],
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "source ignores large non-source file",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a/nested.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "",
+      "exact_lines": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a.dew",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/79/src/a/nested.dew"
+      ],
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "manifest exact byte limit",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/80/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid version edge 1.0.0+4294967296",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/81/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0+4294967296 dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid version edge 1.0.0-123abc",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/82/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-123abc dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "valid version edge 1.0.0-aaaaaaaaaaaaaaaaaaaaaaaa",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/83/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa dependencies=0\n{}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range ^1.2.3 -> 1.9.9",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/84/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore ^1.2.3 -> 1.9.9",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/84/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range ^1.2.3 -> 2.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/85/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ^0.2.3 -> 0.2.9",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/86/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore ^0.2.3 -> 0.2.9",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/86/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range ^0.2.3 -> 0.3.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/87/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ^0.0.3 -> 0.0.3+build",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/88/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore ^0.0.3 -> 0.0.3+build",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/88/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range ^0.0.3 -> 0.0.4",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/89/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ~1.2.3 -> 1.2.9",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/90/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore ~1.2.3 -> 1.2.9",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/90/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range ~1.2.3 -> 1.3.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/91/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ~1.2.3 -> 1.2.2",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/92/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ~1.2.3 -> 1.2.4-alpha",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/93/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range 1.2.3+build -> 1.2.3+other",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/94/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore 1.2.3+build -> 1.2.3+other",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/94/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range 1.2.3 -> 1.2.4",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/95/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range 1.2.3-alpha.9 -> 1.2.3-alpha.10",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/96/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ^1.2.3-alpha.9 -> 1.2.3-alpha.10",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/97/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "range ^1.2.3-alpha.9 -> 1.2.3",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/98/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore ^1.2.3-alpha.9 -> 1.2.3",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/98/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range ^1.2.3-alpha.9 -> 1.2.3-alpha.9+build",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/99/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore ^1.2.3-alpha.9 -> 1.2.3-alpha.9+build",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/99/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "range git+url#main -> 1.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/100/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "graph cached restore git+url#main -> 1.0.0",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "graph",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/100/dew.json"
+      ],
+      "stdout": "ok modules=2\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "restore nested parent order",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/101/dew.lock"
+      ],
+      "stdout": "ok @fixture/dep@1.0.0\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "restore integrity nested parent order",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/101/dep/dew.json"
+      ],
+      "stdout": "sha256-e062698e6f6b00f6e09c1ecf85148238feb4af4eb0863b5c7fe51882fbcff214\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "sha256-e062698e6f6b00f6e09c1ecf85148238feb4af4eb0863b5c7fe51882fbcff214",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "restore root test files",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/102/dew.lock"
+      ],
+      "stdout": "ok @fixture/dep@1.0.0\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "ok",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "restore integrity root test files",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/102/dep/dew.json"
+      ],
+      "stdout": "sha256-47f4f821ab7bf060ccad76c2c325436a7672981621ee7a6b0804129c5e0283e4\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "sha256-47f4f821ab7bf060ccad76c2c325436a7672981621ee7a6b0804129c5e0283e4",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "restore mixed inventory",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/103/dew.lock"
+      ],
+      "stdout": "dew: restored installed package artifact failed integrity for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "nonconventional",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore nonconventional tree",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/104/dew.lock"
+      ],
+      "stdout": "dew: package @fixture/dep has no conventional .dew sources\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "nonconventional",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore bad source integrity",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/105/dew.lock"
+      ],
+      "stdout": "dew: restored installed package artifact failed integrity for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "integrity",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "restore unsafe dot path",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/106/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact source path is unsafe: ./main.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "restore unsafe backslash path",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/107/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact source path is unsafe: src\\main.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "restore unsafe manifest prefix",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/108/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact source path is unsafe: dew.json/main.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": false,
+      "pass": true
+    },
+    {
+      "name": "lock canonical integrity",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/109/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "integrity",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock canonical interface",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/109/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "interface",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock canonical source",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/109/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "source",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock entry escaped duplicate",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/109/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "duplicate",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "manifest exact dependency count",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/110/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=256\n{\"@fixture/d0\":\"*\",\"@fixture/d1\":\"*\",\"@fixture/d2\":\"*\",\"@fixture/d3\":\"*\",\"@fixture/d4\":\"*\",\"@fixture/d5\":\"*\",\"@fixture/d6\":\"*\",\"@fixture/d7\":\"*\",\"@fixture/d8\":\"*\",\"@fixture/d9\":\"*\",\"@fixture/d10\":\"*\",\"@fixture/d11\":\"*\",\"@fixture/d12\":\"*\",\"@fixture/d13\":\"*\",\"@fixture/d14\":\"*\",\"@fixture/d15\":\"*\",\"@fixture/d16\":\"*\",\"@fixture/d17\":\"*\",\"@fixture/d18\":\"*\",\"@fixture/d19\":\"*\",\"@fixture/d20\":\"*\",\"@fixture/d21\":\"*\",\"@fixture/d22\":\"*\",\"@fixture/d23\":\"*\",\"@fixture/d24\":\"*\",\"@fixture/d25\":\"*\",\"@fixture/d26\":\"*\",\"@fixture/d27\":\"*\",\"@fixture/d28\":\"*\",\"@fixture/d29\":\"*\",\"@fixture/d30\":\"*\",\"@fixture/d31\":\"*\",\"@fixture/d32\":\"*\",\"@fixture/d33\":\"*\",\"@fixture/d34\":\"*\",\"@fixture/d35\":\"*\",\"@fixture/d36\":\"*\",\"@fixture/d37\":\"*\",\"@fixture/d38\":\"*\",\"@fixture/d39\":\"*\",\"@fixture/d40\":\"*\",\"@fixture/d41\":\"*\",\"@fixture/d42\":\"*\",\"@fixture/d43\":\"*\",\"@fixture/d44\":\"*\",\"@fixture/d45\":\"*\",\"@fixture/d46\":\"*\",\"@fixture/d47\":\"*\",\"@fixture/d48\":\"*\",\"@fixture/d49\":\"*\",\"@fixture/d50\":\"*\",\"@fixture/d51\":\"*\",\"@fixture/d52\":\"*\",\"@fixture/d53\":\"*\",\"@fixture/d54\":\"*\",\"@fixture/d55\":\"*\",\"@fixture/d56\":\"*\",\"@fixture/d57\":\"*\",\"@fixture/d58\":\"*\",\"@fixture/d59\":\"*\",\"@fixture/d60\":\"*\",\"@fixture/d61\":\"*\",\"@fixture/d62\":\"*\",\"@fixture/d63\":\"*\",\"@fixture/d64\":\"*\",\"@fixture/d65\":\"*\",\"@fixture/d66\":\"*\",\"@fixture/d67\":\"*\",\"@fixture/d68\":\"*\",\"@fixture/d69\":\"*\",\"@fixture/d70\":\"*\",\"@fixture/d71\":\"*\",\"@fixture/d72\":\"*\",\"@fixture/d73\":\"*\",\"@fixture/d74\":\"*\",\"@fixture/d75\":\"*\",\"@fixture/d76\":\"*\",\"@fixture/d77\":\"*\",\"@fixture/d78\":\"*\",\"@fixture/d79\":\"*\",\"@fixture/d80\":\"*\",\"@fixture/d81\":\"*\",\"@fixture/d82\":\"*\",\"@fixture/d83\":\"*\",\"@fixture/d84\":\"*\",\"@fixture/d85\":\"*\",\"@fixture/d86\":\"*\",\"@fixture/d87\":\"*\",\"@fixture/d88\":\"*\",\"@fixture/d89\":\"*\",\"@fixture/d90\":\"*\",\"@fixture/d91\":\"*\",\"@fixture/d92\":\"*\",\"@fixture/d93\":\"*\",\"@fixture/d94\":\"*\",\"@fixture/d95\":\"*\",\"@fixture/d96\":\"*\",\"@fixture/d97\":\"*\",\"@fixture/d98\":\"*\",\"@fixture/d99\":\"*\",\"@fixture/d100\":\"*\",\"@fixture/d101\":\"*\",\"@fixture/d102\":\"*\",\"@fixture/d103\":\"*\",\"@fixture/d104\":\"*\",\"@fixture/d105\":\"*\",\"@fixture/d106\":\"*\",\"@fixture/d107\":\"*\",\"@fixture/d108\":\"*\",\"@fixture/d109\":\"*\",\"@fixture/d110\":\"*\",\"@fixture/d111\":\"*\",\"@fixture/d112\":\"*\",\"@fixture/d113\":\"*\",\"@fixture/d114\":\"*\",\"@fixture/d115\":\"*\",\"@fixture/d116\":\"*\",\"@fixture/d117\":\"*\",\"@fixture/d118\":\"*\",\"@fixture/d119\":\"*\",\"@fixture/d120\":\"*\",\"@fixture/d121\":\"*\",\"@fixture/d122\":\"*\",\"@fixture/d123\":\"*\",\"@fixture/d124\":\"*\",\"@fixture/d125\":\"*\",\"@fixture/d126\":\"*\",\"@fixture/d127\":\"*\",\"@fixture/d128\":\"*\",\"@fixture/d129\":\"*\",\"@fixture/d130\":\"*\",\"@fixture/d131\":\"*\",\"@fixture/d132\":\"*\",\"@fixture/d133\":\"*\",\"@fixture/d134\":\"*\",\"@fixture/d135\":\"*\",\"@fixture/d136\":\"*\",\"@fixture/d137\":\"*\",\"@fixture/d138\":\"*\",\"@fixture/d139\":\"*\",\"@fixture/d140\":\"*\",\"@fixture/d141\":\"*\",\"@fixture/d142\":\"*\",\"@fixture/d143\":\"*\",\"@fixture/d144\":\"*\",\"@fixture/d145\":\"*\",\"@fixture/d146\":\"*\",\"@fixture/d147\":\"*\",\"@fixture/d148\":\"*\",\"@fixture/d149\":\"*\",\"@fixture/d150\":\"*\",\"@fixture/d151\":\"*\",\"@fixture/d152\":\"*\",\"@fixture/d153\":\"*\",\"@fixture/d154\":\"*\",\"@fixture/d155\":\"*\",\"@fixture/d156\":\"*\",\"@fixture/d157\":\"*\",\"@fixture/d158\":\"*\",\"@fixture/d159\":\"*\",\"@fixture/d160\":\"*\",\"@fixture/d161\":\"*\",\"@fixture/d162\":\"*\",\"@fixture/d163\":\"*\",\"@fixture/d164\":\"*\",\"@fixture/d165\":\"*\",\"@fixture/d166\":\"*\",\"@fixture/d167\":\"*\",\"@fixture/d168\":\"*\",\"@fixture/d169\":\"*\",\"@fixture/d170\":\"*\",\"@fixture/d171\":\"*\",\"@fixture/d172\":\"*\",\"@fixture/d173\":\"*\",\"@fixture/d174\":\"*\",\"@fixture/d175\":\"*\",\"@fixture/d176\":\"*\",\"@fixture/d177\":\"*\",\"@fixture/d178\":\"*\",\"@fixture/d179\":\"*\",\"@fixture/d180\":\"*\",\"@fixture/d181\":\"*\",\"@fixture/d182\":\"*\",\"@fixture/d183\":\"*\",\"@fixture/d184\":\"*\",\"@fixture/d185\":\"*\",\"@fixture/d186\":\"*\",\"@fixture/d187\":\"*\",\"@fixture/d188\":\"*\",\"@fixture/d189\":\"*\",\"@fixture/d190\":\"*\",\"@fixture/d191\":\"*\",\"@fixture/d192\":\"*\",\"@fixture/d193\":\"*\",\"@fixture/d194\":\"*\",\"@fixture/d195\":\"*\",\"@fixture/d196\":\"*\",\"@fixture/d197\":\"*\",\"@fixture/d198\":\"*\",\"@fixture/d199\":\"*\",\"@fixture/d200\":\"*\",\"@fixture/d201\":\"*\",\"@fixture/d202\":\"*\",\"@fixture/d203\":\"*\",\"@fixture/d204\":\"*\",\"@fixture/d205\":\"*\",\"@fixture/d206\":\"*\",\"@fixture/d207\":\"*\",\"@fixture/d208\":\"*\",\"@fixture/d209\":\"*\",\"@fixture/d210\":\"*\",\"@fixture/d211\":\"*\",\"@fixture/d212\":\"*\",\"@fixture/d213\":\"*\",\"@fixture/d214\":\"*\",\"@fixture/d215\":\"*\",\"@fixture/d216\":\"*\",\"@fixture/d217\":\"*\",\"@fixture/d218\":\"*\",\"@fixture/d219\":\"*\",\"@fixture/d220\":\"*\",\"@fixture/d221\":\"*\",\"@fixture/d222\":\"*\",\"@fixture/d223\":\"*\",\"@fixture/d224\":\"*\",\"@fixture/d225\":\"*\",\"@fixture/d226\":\"*\",\"@fixture/d227\":\"*\",\"@fixture/d228\":\"*\",\"@fixture/d229\":\"*\",\"@fixture/d230\":\"*\",\"@fixture/d231\":\"*\",\"@fixture/d232\":\"*\",\"@fixture/d233\":\"*\",\"@fixture/d234\":\"*\",\"@fixture/d235\":\"*\",\"@fixture/d236\":\"*\",\"@fixture/d237\":\"*\",\"@fixture/d238\":\"*\",\"@fixture/d239\":\"*\",\"@fixture/d240\":\"*\",\"@fixture/d241\":\"*\",\"@fixture/d242\":\"*\",\"@fixture/d243\":\"*\",\"@fixture/d244\":\"*\",\"@fixture/d245\":\"*\",\"@fixture/d246\":\"*\",\"@fixture/d247\":\"*\",\"@fixture/d248\":\"*\",\"@fixture/d249\":\"*\",\"@fixture/d250\":\"*\",\"@fixture/d251\":\"*\",\"@fixture/d252\":\"*\",\"@fixture/d253\":\"*\",\"@fixture/d254\":\"*\",\"@fixture/d255\":\"*\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "dependencies=256",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "integrity dependency byte order",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "integrity",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/111/dew.json"
+      ],
+      "stdout": "sha256-3638db7a875496f42da6da255db2d699c98907dd1a6b4e77de6fd8afe0408767\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "sha256-1265218be2e6bdbdb2ca00dd43b0e47a37125d755109bef387b467a07c9911cb",
+      "exact_lines": null,
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "source Unicode byte order",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "sources",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/112/dew.json",
+        "false"
+      ],
+      "stdout": "//tmp/dew-bootstrap-contract-mgczfck1/workspace/112/src/\ue000.dew\n//tmp/dew-bootstrap-contract-mgczfck1/workspace/112/src/\ud800\udc00.dew\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "",
+      "exact_lines": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/112/src/\ue000.dew",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/112/src/\ud800\udc00.dew"
+      ],
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "restore field byte bound name",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/113/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact provenance mismatch for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore field byte bound version",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/114/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact provenance mismatch for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore field byte bound source",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/115/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact provenance mismatch for @fixture/dep\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "restore field byte bound path",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "restore",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/116/dew.lock"
+      ],
+      "stdout": "dew: installed package artifact source path is unsafe: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.dew\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "bound",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "logical path 'a:x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"a:x.dew\""
+      ],
+      "stdout": "valid\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "valid",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path '1:/x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"1:/x.dew\""
+      ],
+      "stdout": "valid\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "valid",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'C:/x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"C:/x.dew\""
+      ],
+      "stdout": "valid\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "logical path 'z:/x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"z:/x.dew\""
+      ],
+      "stdout": "valid\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": false
+    },
+    {
+      "name": "logical path '/x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"/x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path '../x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"../x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'a//x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"a//x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'a/./x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"a/./x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'a/../x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"a/../x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'a\\\\x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"a\\\\x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'a\\x00x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"a\\u0000x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'dew.json/x.dew'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"dew.json/x.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.dew\""
+      ],
+      "stdout": "valid\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "valid",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "logical path 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "path",
+        "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.dew\""
+      ],
+      "stdout": "unsafe\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "unsafe",
+      "exact_lines": null,
+      "valid": true,
+      "pass": true
+    },
+    {
+      "name": "manifest invalid UTF-8",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/117/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "UTF-8",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "lock invalid UTF-8",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/118/dew.lock"
+      ],
+      "stdout": "dew: invalid lockfile /tmp/dew-bootstrap-contract-mgczfck1/workspace/118/dew.lock: Invalid character 'p' at line 1, column 100\n",
+      "stderr": "",
+      "exit": 2,
+      "expected": "UTF-8",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker requirement 1.0.0-",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/119/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"1.0.0-\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker requirement ^1.0.0-",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/120/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"^1.0.0-\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker requirement ~1.0.0-",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/121/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"~1.0.0-\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker lock 1.0.0-",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/122/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker requirement 1.0.0+",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/123/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"1.0.0+\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker requirement ^1.0.0+",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/124/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"^1.0.0+\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker requirement ~1.0.0+",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "manifest",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/125/dew.json"
+      ],
+      "stdout": "ok @fixture/root@1.0.0 dependencies=1\n{\"@fixture/dep\":\"~1.0.0+\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "requirement",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "trailing marker lock 1.0.0+",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "lock",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/126/dew.lock"
+      ],
+      "stdout": "ok packages=1\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "version",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    },
+    {
+      "name": "store identity",
+      "command": [
+        "/tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe",
+        "store",
+        "/tmp/dew-bootstrap-contract-mgczfck1/workspace/127/dew.lock"
+      ],
+      "stdout": "ok stored\n",
+      "stderr": "",
+      "exit": 0,
+      "expected": "identity",
+      "exact_lines": null,
+      "valid": false,
+      "pass": false
+    }
+  ],
+  "production_revision": "20f902acb6caa56a49712df832aeb0c46ec520b8",
+  "build": {
+    "command": [
+      "moon",
+      "build",
+      "--target",
+      "native",
+      "src"
+    ],
+    "wall_seconds": 1.0795599920093082,
+    "exit": 0,
+    "stdout": "Artifacts:\n  fixture/bootstrap-contract  native  /tmp/dew-bootstrap-contract-mgczfck1/_build/native/debug/build/bootstrap-contract.exe\n",
+    "stderr": "Using cached moonbitlang/x@0.5.5\nWarning: [0020]\n    \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/build_cache.mbt:34:9 ]\n    \u2502\n 34 \u2502   match @sys.get_env_var(\"DEW_CACHE_DIR\") {\n    \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n    \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/build_cache.mbt:121:39 ]\n     \u2502\n 121 \u2502     bootstrap_write_hash_string(hash, @sys.get_env_var(name).unwrap_or(\"\"))\n     \u2502                                       \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                                               \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n    \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:76:9 ]\n    \u2502\n 76 \u2502         @sys.get_env_var(\"DEW_WORKING_DIRECTORY\").unwrap_or(\".\"),\n    \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n    \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:190:11 ]\n     \u2502\n 190 \u2502     match @sys.get_env_var(\"DEW_PACKAGE_ROOTS\") {\n     \u2502           \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                   \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:247:9 ]\n     \u2502\n 247 \u2502         @sys.get_env_var(\"DEW_WORKING_DIRECTORY\").unwrap_or(\".\"),\n     \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:260:9 ]\n     \u2502\n 260 \u2502         @sys.unset_env_var(\"DEW_DEPENDENCY_INTERFACE_KEY\")\n     \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.unset_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:262:9 ]\n     \u2502\n 262 \u2502         @sys.set_env_var(\"DEW_DEPENDENCY_INTERFACE_KEY\", loaded.dependency_key)\n     \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.set_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:339:5 ]\n     \u2502\n 339 \u2502     @sys.set_env_var(\"DEW_BOOTSTRAP_STD\", \"1\")\n     \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.set_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:340:5 ]\n     \u2502\n 340 \u2502     @sys.unset_env_var(\"DEW_STD_ROOT\")\n     \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502              \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.unset_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:342:5 ]\n     \u2502\n 342 \u2502     @sys.unset_env_var(\"DEW_BOOTSTRAP_STD\")\n     \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502              \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.unset_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:343:5 ]\n     \u2502\n 343 \u2502     @sys.set_env_var(\"DEW_STD_ROOT\", bootstrap_standard_root(repository, roots))\n     \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.set_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:365:23 ]\n     \u2502\n 365 \u2502   let standard_root = @sys.get_env_var(\"DEW_STD_ROOT\").unwrap_or(repository)\n     \u2502                       \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                               \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:367:3 ]\n     \u2502\n 367 \u2502   @sys.set_env_var(\"DEW_COMPILER_FINGERPRINT\", fingerprint)\n     \u2502   \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502           \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.set_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:479:5 ]\n     \u2502\n 479 \u2502     @sys.get_env_var(\"HOME\").unwrap_or(\"/nonexistent-dew-home\"),\n     \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0001]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:499:4 ]\n     \u2502\n 499 \u2502 fn bootstrap_clean(repository : String, dry_run : Bool) -> Unit {\n     \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502           \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'bootstrap_clean'\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:501:5 ]\n     \u2502\n 501 \u2502     @sys.get_env_var(\"DEW_WORKING_DIRECTORY\").unwrap_or(\".\"),\n     \u2502     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0001]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:549:4 ]\n     \u2502\n 549 \u2502 fn bootstrap_emit_wat(repository : String, arguments : Array[String]) -> Int32 {\n     \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502             \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'bootstrap_emit_wat'\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0001]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:590:4 ]\n     \u2502\n 590 \u2502 fn bootstrap_run_command(\n     \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502              \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'bootstrap_run_command'\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0001]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:617:4 ]\n     \u2502\n 617 \u2502 fn bootstrap_test_command(\n     \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502               \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'bootstrap_test_command'\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/main.mbt:725:14 ]\n     \u2502\n 725 \u2502   let args = @sys.get_cli_args()\n     \u2502              \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                      \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.args()` from `moonbitlang/core/env` instead. On the JavaScript backend, `@env.args()` returns `process.argv` unchanged, while this function omits `process.argv[0]`, the JavaScript runtime executable.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0029]\n   \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/moon.pkg:2:3 ]\n   \u2502\n 2 \u2502   \"moonbitlang/core/bench\",\n   \u2502   \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n   \u2502               \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_package): Unused package 'moonbitlang/core/bench'\n\u2500\u2500\u2500\u256f\nWarning: [0029]\n   \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/moon.pkg:6:3 ]\n   \u2502\n 6 \u2502   \"moonbitlang/core/buffer\",\n   \u2502   \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n   \u2502               \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_package): Unused package 'moonbitlang/core/buffer'\n\u2500\u2500\u2500\u256f\nWarning: [0007]\n   \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/optimization.mbt:6:3 ]\n   \u2502\n 6 \u2502   print_passes : Bool\n   \u2502   \u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500  \n   \u2502         \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_field): Field 'print_passes' is never read\n\u2500\u2500\u2500\u256f\nWarning: [0001]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/optimization.mbt:143:4 ]\n     \u2502\n 143 \u2502 fn bootstrap_print_optimization(plan : BootstrapOptimization) -> Unit {\n     \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'bootstrap_print_optimization'\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/optimization.mbt:171:9 ]\n     \u2502\n 171 \u2502   match @sys.get_env_var(\"DEW_STARSHINE\") {\n     \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0001]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/optimization.mbt:252:4 ]\n     \u2502\n 252 \u2502 fn bootstrap_optimize_command(\n     \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'bootstrap_optimize_command'\n\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0020]\n     \u256d\u2500[ /tmp/dew-bootstrap-contract-mgczfck1/src/package_artifact.mbt:175:9 ]\n     \u2502\n 175 \u2502         @sys.get_env_var(\"DEW_REPOSITORY_ROOT\").unwrap_or(\".\"),\n     \u2502         \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n     \u2502                 \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (deprecated): Use `@env.get_env_var()` from `moonbitlang/core/env` instead.\n\u2500\u2500\u2500\u2500\u2500\u256f\nFinished. moon: ran 38 tasks, now up to date (27 warnings, 0 errors)\n"
+  },
+  "binary_sha256": "e4a2318ca3f0a5489bc8d02cbb91733b12e5644a55f4a383ec8723dce4927776",
+  "source_sha256": {
+    "moon.pkg": "b90333c72ce24d82475baccddce7f8593efb15a974f99f1d753bc504d04a7211",
+    "manifest.mbt": "48c6aec7b422c147bc8bd1f5b637a6f3ea6b24762ac5f289064b3db18dfe5297",
+    "build_cache.mbt": "502b382bf8af62fa15d93993fd01e348183e9155d471aa8ea34b28c19d4b12e5",
+    "main.mbt": "f7a88707211759462b0067fdef2f99e7ea3305793b7326506e26118b7f5585cb",
+    "platform.c": "92e63a7895121583927cdf892317c5a3fba4742356944358966d38b452acafc9",
+    "optimization.mbt": "0929c9c779e09794b4974359c9196f092b7358675586b41bc83c2da2641900bf",
+    "package_artifact.mbt": "126790901b2f4cc1e73c113c41c1e64e65c66393ee0cbfc865efb001ecdbc9bd",
+    "platform_native.mbt": "c39191d4097e6ebf0f4e231c26dfd32eeee03732b20958985171faabc1508fd8"
+  },
+  "failures": [
+    "manifest unknown field",
+    "manifest uppercase name",
+    "manifest unicode name",
+    "manifest long name",
+    "manifest version 01.0.0",
+    "manifest version 1.2",
+    "manifest version 4294967296.0.0",
+    "manifest version 1.0.0-4294967296",
+    "manifest version 1.0.0-01",
+    "manifest version 1.0.0+",
+    "manifest version 1.0.0-",
+    "manifest version 1.0.0+a+b",
+    "manifest version 1.0.0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "manifest requirement ",
+    "manifest requirement latest",
+    "manifest requirement ^1.0",
+    "manifest requirement git+url",
+    "manifest requirement git+#ref",
+    "manifest requirement git+url#",
+    "manifest requirement git+url#ref\u0000",
+    "manifest requirement xxxxxxxxxxxxxxxxxxxxxxxxx",
+    "manifest dependency count",
+    "manifest duplicate",
+    "manifest escaped duplicate",
+    "manifest dependency duplicate",
+    "manifest byte bound",
+    "lock extra 1",
+    "lock name '@Fixture/dep'",
+    "lock version '01.0.0'",
+    "lock source ''",
+    "lock source 'xxxxxxxxxxxxxxxxxxxx'",
+    "lock source 'bad\\x00source'",
+    "lock path '../outside'",
+    "lock path '/outside'",
+    "lock path 'dep\\\\escape'",
+    "lock path 'C:/outside'",
+    "lock path 'dep//nested'",
+    "lock integrity 'sha256-zzzzzzzzzzzzz'",
+    "lock interface 'zzzzzzzzzzzzzzzzzzzz'",
+    "lock unknown root",
+    "lock duplicate root",
+    "lock escaped duplicate",
+    "lock version spelling",
+    "lock count",
+    "sources symlink source",
+    "sources symlink directory",
+    "sources root directory .dew",
+    "sources oversize source",
+    "integrity symlink source",
+    "integrity symlink directory",
+    "integrity root directory .dew",
+    "integrity oversize source",
+    "graph range",
+    "graph wildcard prerelease",
+    "graph git",
+    "graph identity",
+    "graph version identity",
+    "graph symlink existing",
+    "graph symlink missing restore",
+    "restore bad dependency",
+    "restore wrote before validating bad dependency",
+    "restore bad requirement",
+    "restore wrote before validating bad requirement",
+    "restore duplicate dependency",
+    "restore wrote before validating duplicate dependency",
+    "restore oversize file",
+    "restore wrote before validating oversize file",
+    "restore drive path",
+    "restore wrote before validating drive path",
+    "source exact global order",
+    "source exact compile inventory",
+    "source ignores large non-source file",
+    "range ^1.2.3 -> 2.0.0",
+    "range ^0.2.3 -> 0.3.0",
+    "range ^0.0.3 -> 0.0.4",
+    "range ~1.2.3 -> 1.3.0",
+    "range ~1.2.3 -> 1.2.2",
+    "range ~1.2.3 -> 1.2.4-alpha",
+    "range 1.2.3 -> 1.2.4",
+    "range 1.2.3-alpha.9 -> 1.2.3-alpha.10",
+    "range ^1.2.3-alpha.9 -> 1.2.3-alpha.10",
+    "restore mixed inventory",
+    "restore wrote before inventory validation mixed inventory",
+    "restore nonconventional tree",
+    "restore wrote before inventory validation nonconventional tree",
+    "restore wrote before validation bad source integrity",
+    "lock canonical integrity",
+    "lock canonical interface",
+    "lock canonical source",
+    "lock entry escaped duplicate",
+    "integrity dependency byte order",
+    "restore field byte bound name",
+    "restore field byte bound version",
+    "restore field byte bound source",
+    "restore field byte bound path",
+    "logical path 'C:/x.dew'",
+    "logical path 'z:/x.dew'",
+    "manifest invalid UTF-8",
+    "lock invalid UTF-8",
+    "trailing marker requirement 1.0.0-",
+    "trailing marker requirement ^1.0.0-",
+    "trailing marker requirement ~1.0.0-",
+    "trailing marker lock 1.0.0-",
+    "trailing marker requirement 1.0.0+",
+    "trailing marker requirement ^1.0.0+",
+    "trailing marker requirement ~1.0.0+",
+    "trailing marker lock 1.0.0+",
+    "store identity"
+  ],
+  "exit": 1
+}

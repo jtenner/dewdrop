@@ -192,3 +192,10 @@ It builds a small driver from the real input functions, not the full compiler.
 It covers filesystem selection, lock traversal, integrity, cache store/restore,
 request matching, and lock input schema. It lists unsupported large budget cases.
 These narrow checks are separate from the full native lanes and measurements.
+
+The integrated report is `docs/research/pkg-phase1-report.md`. Saved final raw
+streams and result records are in `evidence/final/`. They retain the initial
+harness count failure, its repair, master results, source hashes, and the limits
+of the saved Dew test compiler. The owner hold stops all new laptop builds,
+tests, guest runs, and timings until `RELEASE`. Reading the saved records does
+not authorize a new run.
