@@ -56,3 +56,25 @@ whole-file reads for size checks.
 Native and LLVM share `platform_native.mbt` plus `platform.c`. Other bootstrap
 platform implementations are absent at base. Their execution and the full
 native compiler lanes remain held. No performance or platform pass is claimed.
+
+## Wider failure checkpoint
+
+The test driver can now read production files from an exact Git revision. This
+keeps baseline checks independent of pending source edits. The production input
+was again `20f902acb6caa56a49712df832aeb0c46ec520b8`:
+
+```
+python3 src/dew_bootstrap/package_contract_check.py --revision 20f902acb6caa56a49712df832aeb0c46ec520b8 --evidence /tmp/pkg-phase1-bootstrap-evidence/red-expanded > /tmp/pkg-phase1-bootstrap-evidence/red-expanded.stdout 2> /tmp/pkg-phase1-bootstrap-evidence/red-expanded.stderr
+```
+
+The expanded checks cover exact source order and inventory, valid and invalid
+caret/tilde/exact/Git requests, build metadata and prerelease rules, cache-backed
+graph restoration, nested source directories, conventional source inventory,
+pre-write integrity, and the exact manifest byte limit. The script normalizes
+only leading slashes in source output before an exact inventory comparison; base
+`bootstrap_dirname` can print two leading slashes. No path-normalization fix is
+in scope. Raw output remains in the evidence.
+
+The first test checkpoint is `9e2d120ed`. The second checkpoint records only
+expanded tests and this note; production edits remain uncommitted until the
+same checks pass. A native test build timeout now kills the full process group.
