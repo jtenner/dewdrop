@@ -249,7 +249,7 @@ export async function preparePackage({ manifestPath, source, repositoryRoot, run
     const { root, graph, lock } = await captureGraph(resolve(manifestPath), packageRoot, source);
     const standard = await captureStandard(repositoryRoot, standardRoot, environment);
     await freezeDirectories(packageRoot); await freezeDirectories(standardRoot);
-    const env = { ...environment, DEW_CACHE_DIR: join(temporary, "cache"), DEW_PACKAGE_ROOTS: standardRoot };
+    const env = { ...environment, DEW_CACHE_DIR: join(temporary, "cache"), DEW_PACKAGE_ROOTS: standardRoot, DEW_PACKAGE_OFFLINE: "1" };
     const wasm = join(temporary, "package.wasm");
     await run([join(repositoryRoot, "tools/dew"), "build", "--manifest", root.manifestPath, "--package-root", standardRoot, "-o", wasm], { cwd: packageRoot, env });
     const abiText = await run(["node", join(repositoryRoot, "tools/dew-abi.mjs"), wasm, "interface"], { cwd: packageRoot, env, capture: true, message: "could not read the compiled package interface" });

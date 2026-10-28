@@ -80,3 +80,15 @@ build controls, and the prepared compiler environment. Before the fix, three
 ordinary-build controls pass and four offline-policy checks fail, exit 1.
 Raw evidence is `/tmp/pkg-phase1-post-release/offline-red.*`.
 These tests prove forwarding and environment policy, not an observed HTTP leak.
+
+The fix sets a private package-preparation environment flag and forwards
+`--frozen` through both compiler launchers. This disables Moon dependency sync
+for bootstrap, JS, and WasmGC compiler calls during pack/publish preparation.
+Ordinary build behavior is unchanged. No Dew source or codec bytes change.
+The extra branch/argument work is constant per compiler launch, with no added
+source or graph copy. It must be included in the queued preparation measurement.
+
+The identical seven offline checks now pass, exit 0. All 34 existing pack checks
+also pass. Their raw streams are `offline-green.*` and `pack-after-offline.*`
+in `/tmp/pkg-phase1-post-release/`. This is a script/environment policy fix; no
+compiler-lowering or dependency source changed.

@@ -15,15 +15,19 @@ for argument in "$@"; do
       ;;
   esac
 done
+compiler_dependency_options=()
+if [[ "${DEW_PACKAGE_OFFLINE:-}" == 1 ]]; then
+  compiler_dependency_options+=(--frozen)
+fi
 cd "$root"
 if [[ "$target" == wasm-gc ]]; then
-  moon run --target-dir "$target_dir" --target wasm-gc --release -j 8 \
+  moon run "${compiler_dependency_options[@]}" --target-dir "$target_dir" --target wasm-gc --release -j 8 \
     --build-only src/dew_cli >/dev/null
   exec moonrun --stack-size 65500 \
     "$target_dir/wasm-gc/release/build/jtenner/dewdrop/dew_cli/dew_cli.wasm" \
     -- "$@"
 fi
-moon run --target-dir "$target_dir" --target js --release -j 8 \
+moon run "${compiler_dependency_options[@]}" --target-dir "$target_dir" --target js --release -j 8 \
   --build-only src/dew_cli >/dev/null
 exec node --stack-size=65500 --enable-source-maps \
   "$target_dir/js/release/build/jtenner/dewdrop/dew_cli/dew_cli.js" "$@"
