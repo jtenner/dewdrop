@@ -68,15 +68,39 @@ fn bootstrap_json_object(value : Json, context : String) -> Map[String, Json] {
 
 ///|
 fn bootstrap_read_json(path : String, context : String) -> Map[String, Json] {
-  let text = @fs.read_file_to_string(path) catch {
+  let limit = if context == "lockfile" {
+    8388608
+  } else if context == "package definition" {
+    1048576
+  } else {
+    4194304
+  }
+  if bootstrap_contract_path_info(path, limit, true) != 1 {
+    bootstrap_fail("\{context} must be a regular file: \{path}")
+  }
+  let bytes = @fs.read_file_to_bytes(path) catch {
     error => {
       bootstrap_fail(
         "cannot read \{context} \{path}: \{bootstrap_fs_error_message(error)}",
       )
+      b""
+    }
+  }
+  if bytes.length() > limit {
+    bootstrap_fail("\{context} exceeds byte bound")
+  }
+  let text = @utf8.decode(bytes) catch {
+    _ => {
+      bootstrap_fail("invalid \{context} UTF-8: \{path}")
       ""
     }
   }
-  let value = @json.parse(text) catch {
+  let value = @json.parse(
+    text,
+    reject_duplicate_keys=true,
+    preserve_number_repr=true,
+    max_nesting_depth=64,
+  ) catch {
     error => {
       bootstrap_fail("invalid \{context} \{path}: \{error}")
       Json::null()
@@ -110,11 +134,27 @@ fn bootstrap_package_module_name(name : String) -> String {
 
 ///|
 fn bootstrap_valid_package_name(name : String) -> Bool {
-  if !name.has_prefix("@") {
+  let bytes = @utf8.encode(name)
+  if bytes.length() < 4 || bytes.length() > 255 || bytes[0] != b'@' {
     return false
   }
-  let parts = name[1:].to_owned().split("/").to_array()
-  parts.length() == 2 && parts[0].length() > 0 && parts[1].length() > 0
+  let mut slash = -1
+  for index in 1..<bytes.length() {
+    let byte = bytes[index]
+    if byte == b'/' {
+      if slash >= 0 || index == 1 || index + 1 == bytes.length() {
+        return false
+      }
+      slash = index
+    } else if !(byte >= b'a' && byte <= b'z') &&
+      !(byte >= b'0' && byte <= b'9') &&
+      byte != b'.' &&
+      byte != b'_' &&
+      byte != b'-' {
+      return false
+    }
+  }
+  slash >= 0
 }
 
 ///|
@@ -126,17 +166,28 @@ fn bootstrap_load_package(path : String) -> BootstrapPackage {
     path
   }
   let fields = bootstrap_read_json(manifest, "package definition")
+  bootstrap_contract_known_fields(
+    fields,
+    ["name", "version", "dependencies"],
+    "package definition",
+  )
   let name = bootstrap_json_string(fields.get("name"), "package name")
   let version = bootstrap_json_string(fields.get("version"), "package version")
   if !bootstrap_valid_package_name(name) {
     bootstrap_fail("package name must use @scope/name")
   }
+  if bootstrap_contract_semver(version) is None {
+    bootstrap_fail("invalid package version: \{version}")
+  }
   let dependencies : Array[BootstrapDependencyRequest] = []
   match fields.get("dependencies") {
     None => ()
     Some(Object(values)) => {
+      if values.length() > 256 {
+        bootstrap_fail("package dependencies exceed count bound")
+      }
       let names = values.keys().to_array()
-      names.sort()
+      names.sort_by(bootstrap_contract_path_compare)
       for dependency_name in names {
         if !bootstrap_valid_package_name(dependency_name) {
           bootstrap_fail(
@@ -154,21 +205,38 @@ fn bootstrap_load_package(path : String) -> BootstrapPackage {
     }
     _ => bootstrap_fail("package dependencies must be an object")
   }
+  bootstrap_contract_dependencies(dependencies)
   { manifest, name, version, dependencies, }
 }
 
 ///|
 fn bootstrap_collect_dew_sources(root : String, output : Array[String]) -> Unit {
-  if !@fs.path_exists(root) {
-    return
+  let entries = @fs.read_dir(root).to_owned() catch {
+    error => {
+      bootstrap_fail(
+        "cannot read source directory \{root}: \{bootstrap_fs_error_message(error)}",
+      )
+      []
+    }
   }
-  let entries = @fs.read_dir(root).to_owned() catch { _ => [] }
   entries.sort()
   for entry in entries {
     let path = bootstrap_join(root, entry)
-    if (@fs.is_dir(path) catch { _ => false }) {
+    let kind = bootstrap_contract_path_info(
+      path,
+      if entry.has_suffix(".dew") {
+        BOOTSTRAP_PACKAGE_SOURCE_MAX_BYTES
+      } else {
+        -1
+      },
+      false,
+    )
+    if kind == 2 {
       bootstrap_collect_dew_sources(path, output)
-    } else if entry.has_suffix(".dew") {
+    } else if kind == 1 && entry.has_suffix(".dew") {
+      if output.length() >= BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES {
+        bootstrap_fail("package source file count exceeds bound")
+      }
       output.push(path)
     }
   }
@@ -180,22 +248,46 @@ fn bootstrap_package_sources(
   include_tests : Bool,
 ) -> Array[String] {
   let root = bootstrap_dirname(package_.manifest)
+  ignore(bootstrap_contract_path_info(root, -1, true))
   let source_root = bootstrap_join(root, "src")
   let files : Array[String] = []
-  if @fs.path_exists(source_root) &&
-    (@fs.is_dir(source_root) catch { _ => false }) {
+  let kind = bootstrap_contract_path_info(source_root, -1, false)
+  if kind == 2 {
     bootstrap_collect_dew_sources(source_root, files)
   } else {
-    let entries = @fs.read_dir(root).to_owned() catch { _ => [] }
-    entries.sort()
+    let entries = @fs.read_dir(root).to_owned() catch {
+      error => {
+        bootstrap_fail(
+          "cannot read package directory: \{bootstrap_fs_error_message(error)}",
+        )
+        []
+      }
+    }
     for entry in entries {
       if entry.has_suffix(".dew") {
-        files.push(bootstrap_join(root, entry))
+        let path = bootstrap_join(root, entry)
+        if bootstrap_contract_path_info(
+            path,
+            BOOTSTRAP_PACKAGE_SOURCE_MAX_BYTES,
+            false,
+          ) ==
+          1 {
+          if files.length() >= BOOTSTRAP_PACKAGE_ARTIFACT_MAX_FILES {
+            bootstrap_fail("package source file count exceeds bound")
+          }
+          files.push(path)
+        }
       }
     }
   }
+  // Full-path order, not per-directory walk order (a.dew sorts before a/b.dew).
+  files.sort_by(bootstrap_contract_path_compare)
   let selected : Array[String] = []
   for file in files {
+    let logical = file[root.length() + 1:].to_owned()
+    if !bootstrap_package_artifact_source_path_valid(logical) {
+      bootstrap_fail("unsafe package source path: \{logical}")
+    }
     if include_tests || !file.has_suffix("_test.dew") {
       selected.push(file)
     }
@@ -204,6 +296,30 @@ fn bootstrap_package_sources(
     bootstrap_fail("package \{package_.name} has no conventional .dew sources")
   }
   selected
+}
+
+///|
+fn bootstrap_read_package_source(path : String) -> Bytes {
+  if bootstrap_contract_path_info(
+      path,
+      BOOTSTRAP_PACKAGE_SOURCE_MAX_BYTES,
+      true,
+    ) !=
+    1 {
+    bootstrap_fail("package source must be a regular file: \{path}")
+  }
+  let bytes = @fs.read_file_to_bytes(path) catch {
+    error => {
+      bootstrap_fail(
+        "cannot read package source \{path}: \{bootstrap_fs_error_message(error)}",
+      )
+      b""
+    }
+  }
+  if bytes.length() > BOOTSTRAP_PACKAGE_SOURCE_MAX_BYTES {
+    bootstrap_fail("package source exceeds byte bound: \{path}")
+  }
+  bytes
 }
 
 ///|
@@ -218,7 +334,9 @@ fn bootstrap_hash_u32(hash : @crypto.SHA256, value : Int32) -> Unit {
 }
 
 ///|
-fn bootstrap_package_integrity(package_ : BootstrapPackage) -> String {
+fn bootstrap_package_integrity_header(
+  package_ : BootstrapPackage,
+) -> @crypto.SHA256 {
   let hash = @crypto.SHA256::new()
   hash.update(b"DEW_PACKAGE_INTEGRITY_V1\x00")
   bootstrap_write_hash_string(hash, package_.name)
@@ -227,6 +345,12 @@ fn bootstrap_package_integrity(package_ : BootstrapPackage) -> String {
     hash,
     bootstrap_package_module_name(package_.name),
   )
+  hash
+}
+
+///|
+fn bootstrap_package_integrity(package_ : BootstrapPackage) -> String {
+  let hash = bootstrap_package_integrity_header(package_)
   let root = bootstrap_dirname(package_.manifest)
   let files = bootstrap_package_sources(package_, true)
   for file in files {
@@ -235,23 +359,24 @@ fn bootstrap_package_integrity(package_ : BootstrapPackage) -> String {
     } else {
       file
     }
-    let bytes = @fs.read_file_to_bytes(file) catch {
-      error => {
-        bootstrap_fail(
-          "cannot read package source \{file}: \{bootstrap_fs_error_message(error)}",
-        )
-        b""
-      }
-    }
+    let bytes = bootstrap_read_package_source(file)
     bootstrap_write_hash_string(hash, logical)
     bootstrap_hash_u32(hash, bytes.length())
     hash.update(bytes)
   }
-  for dependency in package_.dependencies {
+  bootstrap_package_integrity_dependencies(hash, package_.dependencies)
+  "sha256-" + @crypto.bytes_to_hex_string(hash.finalize())
+}
+
+///|
+fn bootstrap_package_integrity_dependencies(
+  hash : @crypto.SHA256,
+  dependencies : Array[BootstrapDependencyRequest],
+) -> Unit {
+  for dependency in dependencies {
     bootstrap_write_hash_string(hash, dependency.name)
     bootstrap_write_hash_string(hash, dependency.requirement)
   }
-  "sha256-" + @crypto.bytes_to_hex_string(hash.finalize())
 }
 
 ///|
@@ -260,17 +385,30 @@ fn bootstrap_load_lockfile(
   package_root : String,
 ) -> Map[String, BootstrapLockedPackage] {
   let fields = bootstrap_read_json(path, "lockfile")
+  bootstrap_contract_known_fields(
+    fields,
+    ["lockfileVersion", "packages"],
+    "lockfile",
+  )
   match fields.get("lockfileVersion") {
-    Some(Number(value, ..)) if value == 1.0 => ()
+    Some(Number(value, repr=Some("1"))) if value == 1.0 => ()
     _ => bootstrap_fail("lockfileVersion must be 1")
   }
   let result : Map[String, BootstrapLockedPackage] = Map([])
   match fields.get("packages") {
-    Some(Array(entries)) =>
+    Some(Array(entries)) => {
+      if entries.length() > 4096 {
+        bootstrap_fail("lockfile package count exceeds bound")
+      }
       for index, entry in entries {
         let package_fields = bootstrap_json_object(
           entry,
           "locked package \{index}",
+        )
+        bootstrap_contract_known_fields(
+          package_fields,
+          ["name", "version", "source", "path", "integrity", "interface"],
+          "locked package",
         )
         let name = bootstrap_json_string(
           package_fields.get("name"),
@@ -280,6 +418,9 @@ fn bootstrap_load_lockfile(
           package_fields.get("path"),
           "locked package path",
         )
+        if !bootstrap_package_relative_path_valid(logical) {
+          bootstrap_fail("unsafe locked package path: \{logical}")
+        }
         if result.contains(name) {
           bootstrap_fail("duplicate locked package: \{name}")
         }
@@ -291,7 +432,7 @@ fn bootstrap_load_lockfile(
         } else {
           bootstrap_join(manifest_path, "dew.json")
         }
-        result[name] = {
+        let item : BootstrapLockedPackage = {
           name,
           version: bootstrap_json_string(
             package_fields.get("version"),
@@ -311,7 +452,11 @@ fn bootstrap_load_lockfile(
             "locked package interface",
           ),
         }
+        bootstrap_contract_lock(item)
+        ignore(bootstrap_contract_path_info(item.manifest, 1048576, true))
+        result[name] = item
       }
+    }
     _ => bootstrap_fail("lockfile packages must be an array")
   }
   result
@@ -397,17 +542,23 @@ fn bootstrap_load_package_manifest(
           abort("missing lock")
         }
       }
+      if !bootstrap_contract_request_matches(
+          dependency.requirement,
+          dependency_lock,
+        ) {
+        bootstrap_fail(
+          "dependency requirement or Git source mismatch for \{dependency.name}",
+        )
+      }
+      ignore(
+        bootstrap_contract_path_info(dependency_lock.manifest, 1048576, true),
+      )
       let dependency_package = if @fs.path_exists(dependency_lock.manifest) {
         bootstrap_load_package(dependency_lock.manifest)
       } else {
         bootstrap_restore_package_artifact(dependency_lock)
       }
-      let actual = bootstrap_package_integrity(dependency_package)
-      if actual != dependency_lock.integrity {
-        bootstrap_fail(
-          "dependency integrity mismatch for \{dependency_lock.name}@\{dependency_lock.version}: expected \{dependency_lock.integrity}, got \{actual}",
-        )
-      }
+      bootstrap_contract_identity(dependency_package, dependency_lock)
       bootstrap_store_package_artifact(dependency_package, dependency_lock)
       visit(
         dependency_package,
