@@ -311,6 +311,46 @@ def main():
             if (folder / 'dep').exists():
                 failures.append('restore wrote before validation ' + name)
 
+        folder = package()
+        for field, value in [('integrity', 'sha256-' + 'A'*64), ('interface', 'B'*64), ('source', 'git+url#')]:
+            lock(folder, **{field: value})
+            check('lock canonical ' + field, 'lock', folder / 'dew.lock', field)
+        obj = lock(folder)
+        encoded = json.dumps(obj).replace('"name": "@fixture/dep"', '"name": "@fixture/dep", "na\\u006de": "@fixture/dep"')
+        (folder / 'dew.lock').write_text(encoded)
+        check('lock entry escaped duplicate', 'lock', folder / 'dew.lock', 'duplicate')
+
+        folder = package({'name': '@fixture/root', 'version': '1.0.0', 'dependencies': {f'@fixture/d{i}': '*' for i in range(256)}})
+        check('manifest exact dependency count', 'manifest', folder / 'dew.json', 'dependencies=256', True)
+        files = [('main.dew', b'canonical')]
+        deps = [('@fixture/a-long', '*'), ('@fixture/z', '^1.0.0')]
+        folder = package({'name': '@fixture/dep', 'version': '1.0.0', 'dependencies': dict(deps)})
+        (folder / 'main.dew').write_bytes(files[0][1])
+        entry = {'name': '@fixture/dep', 'version': '1.0.0'}
+        check('integrity dependency byte order', 'integrity', folder / 'dew.json', source_integrity(entry, deps, files), True)
+
+        folder = package()
+        (folder / 'src').mkdir()
+        (folder / 'src/\ue000.dew').write_text('bmp')
+        (folder / 'src/\U00010000.dew').write_text('astral')
+        check('source Unicode byte order', 'sources', folder / 'dew.json', '', True, ('false',), [str(folder / 'src/\ue000.dew'), str(folder / 'src/\U00010000.dew')])
+        for name, key, value, files in [
+            ('name', 'name', '@fixture/' + 'a'*248, [('main.dew', b'x')]),
+            ('version', 'version', '1.0.0+' + 'a'*250, [('main.dew', b'x')]),
+            ('source', 'source', 'x'*2049, [('main.dew', b'x')]),
+            ('path', None, None, [('a'*4093 + '.dew', b'x')]),
+        ]:
+            folder = package()
+            obj = lock(folder)
+            _, result = run('artifact-path', folder / 'dew.lock')
+            artifact = Path(result.stdout.strip())
+            artifact.parent.mkdir(parents=True, exist_ok=True)
+            entry = dict(obj['packages'][0])
+            if key:
+                entry[key] = value
+            artifact.write_bytes(capsule(entry, [], files))
+            check('restore field byte bound ' + name, 'restore', folder / 'dew.lock', 'bound')
+
         # Local artifacts above the 64 MiB public cap still fit the 256 MiB codec.
         # Inspect the constant only here; near-limit I/O is a held workload.
         constant_source = (source / 'package_artifact.mbt').read_text()

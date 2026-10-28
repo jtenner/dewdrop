@@ -78,3 +78,21 @@ in scope. Raw output remains in the evidence.
 The first test checkpoint is `9e2d120ed`. The second checkpoint records only
 expanded tests and this note; production edits remain uncommitted until the
 same checks pass. A native test build timeout now kills the full process group.
+
+## Final failure coverage
+
+The wider failure command was run again with evidence directory
+`/tmp/pkg-phase1-bootstrap-evidence/red-final` (and matching `.stdout` and
+`.stderr` files). It adds lowercase hash syntax, escaped duplicate lock-entry
+keys, the exact direct-dependency limit, dependency byte order in integrity,
+Unicode source byte order, and artifact field bounds before copies. These use
+the same base revision. The test checkpoint before these additions is
+`0a76aa9b1`. Counts and wall duration are in the raw JSON and will be copied to
+the final validation record.
+
+The source-order fix also applies to dependency order. Moon's `Compare for
+String` is length-first. It must not select the canonical byte order of package
+sources or dependencies. This can change old source-integrity hashes for
+packages with different-length source paths or dependency names. No v2 is added;
+this aligns unreleased v1 with the contract. Recreate affected local locks and
+artifacts using the aligned contract.
