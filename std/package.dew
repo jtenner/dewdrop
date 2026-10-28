@@ -6,6 +6,7 @@ open dew.std.format
 open dew.std.json
 open dew.std.ordering
 open dew.std.semver
+open dew.std.set
 open dew.std.string
 
 pub enum PackageRequirement {
@@ -684,7 +685,13 @@ pub fn package_lock_entries(
   output: Array<LockedPackage>,
 ) -> Result<PackageLock, FormatDecodeError> {
   if index >= entries.length() {
-    Result::Ok(package_lock(output))
+    let value = package_lock(output)
+    match value.validate() {
+      Result::Ok(_) => Result::Ok(value)
+      Result::Err(FormatValidationErr::InvalidField(field)) => Result::Err(FormatDecodeError::InvalidSyntax(field))
+      Result::Err(FormatValidationErr::Duplicate(_)) => Result::Err(FormatDecodeError::InvalidSyntax("duplicate locked package"))
+      Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package lock"))
+    }
   } else {
     match package_json_object(entries.get_unchecked(index), "locked package") {
       Result::Err(error) => Result::Err(error)
@@ -725,35 +732,40 @@ pub fn package_lock_validate_entries(
   packages: Array<LockedPackage>,
   index: U32,
 ) -> Result<Unit, FormatValidationErr> {
-  if index >= packages.length() {
-    Result::Ok(package_unit())
-  } else {
-    let item = packages.get_unchecked(index)
+  let seen = Set::empty()
+  while 0u32 {
+    earlier if earlier < index && earlier < packages.length() => {
+      seen.insert(packages.get_unchecked(earlier).name())
+      continue earlier + 1u32
+    }
+    _ => break package_unit()
+  }
+  while index {
+    current if current < packages.length() => {
+    let item = packages.get_unchecked(current)
     let item_name = item.name()
     let item_source = item.source()
     let item_path = item.path()
     let item_integrity = item.integrity()
     let item_interface = item.interface_fingerprint()
-    if !package_name_is_valid(item_name) || !package_relative_path_is_valid(item_path) ||
+    let drive_root = item_path.byte_length() >= 3u32 &&
+      ((item_path.byte_at(0u32) >= 65u8 && item_path.byte_at(0u32) <= 90u8) ||
+      (item_path.byte_at(0u32) >= 97u8 && item_path.byte_at(0u32) <= 122u8)) &&
+      item_path.byte_at(1u32) == 58u8 && item_path.byte_at(2u32) == 47u8
+    if !package_name_is_valid(item_name) || !package_relative_path_is_valid(item_path) || drive_root ||
       !item_integrity.starts_with("sha256-") || item_integrity.byte_length() != 71u32 ||
       !package_is_hex(item_integrity.slice(7u32, 71u32), 64u32) || !package_is_hex(item_interface, 64u32) ||
       item_source.byte_length() == 0u32 || item_source.byte_length() > package_requirement_max_bytes() {
-      Result::Err(FormatValidationErr::InvalidField("locked package"))
+      break Result::Err(FormatValidationErr::InvalidField("locked package"))
+    } else if !(semver_parse(item.version().to_string()) is Result::Ok(_)) {
+      break Result::Err(FormatValidationErr::InvalidField("locked package version"))
+    } else if !seen.insert(item_name) {
+      break Result::Err(FormatValidationErr::Duplicate(item_name))
     } else {
-      let duplicate = while 0u32 {
-        earlier if earlier < index => if packages.get_unchecked(earlier).name().equals(item_name) {
-          break true
-        } else {
-          continue earlier + 1u32
-        }
-        _ => break false
-      }
-      if duplicate {
-        Result::Err(FormatValidationErr::Duplicate(item_name))
-      } else {
-        package_lock_validate_entries(packages, index + 1u32)
-      }
+      continue current + 1u32
     }
+    }
+    _ => break Result::Ok(package_unit())
   }
 }
 

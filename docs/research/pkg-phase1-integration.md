@@ -114,3 +114,21 @@ SemVer text and drive-root paths, and use a name set instead of a pairwise scan.
 The added public-constructor tests are
 `std/tests/package_lock_contract_v1_test.dew`. No change to module-manifest path
 semantics is needed. Network resolution and install remain outside Phase 1.
+
+The public-constructor regression ran before the fix: one valid control passed,
+two tests failed with `invalid public lock version validated` and `drive-root
+lock path validated`, exit 1. Compile exit was 0 with empty stderr. The compile
+and run streams are `/tmp/pkg-phase1-public-lock-red*`.
+
+After the fix, the same 185 shared cases show **164 pass and 21 fail**, exit 1.
+Every `lock/` case passes. The 21 remaining failures belong to the unmerged
+manifest/artifact codec worker. All three identical public-lock tests pass,
+exit 0, with empty compile stderr. The generated source mirror is current.
+Shared results are in `/tmp/pkg-phase1-shared-std-lock-fixed/result.json`.
+
+Successful lock decode now performs validation. Validation parses each bounded
+version text and checks each path/provenance once. A name set replaces the old
+pairwise name scan for both decode and encode. This adds temporary set storage
+proportional to record count and avoids quadratic duplicate comparisons. No
+source bytes are copied. Measure 0, 1, 256, and 4,096 records, including invalid
+and duplicate records, after the quiet-host lease. No performance claim is made.
