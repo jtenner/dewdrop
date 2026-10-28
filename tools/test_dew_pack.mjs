@@ -2,7 +2,7 @@
 // Narrow CLI checks. All compiler children and HTTP calls are mocks.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const registry = join(here, "dew-registry.mjs");
+const registry = process.env.DEW_TEST_REGISTRY_MODULE ?? join(here, "dew-registry.mjs");
 const hex = "a".repeat(64);
 const digest = bytes => createHash("sha256").update(bytes).digest("hex");
 const moduleName = name => name.slice(1).replaceAll("/", ".").replaceAll("-", "_");
@@ -74,9 +74,10 @@ async function driver(specPath) {
   let builtManifest;
   const mutations = async stage => {
     if (spec.mutate === stage) {
-      await writeFile(spec.liveSource, `// changed at ${stage}\n`);
+      if (spec.mutateRoot !== false) await writeFile(spec.liveSource, `// changed at ${stage}\n`);
       if (spec.dependencySource) await writeFile(spec.dependencySource, "// changed dependency\n");
       if (spec.lock) await writeFile(spec.lock, '{"lockfileVersion":1,"packages":[]}');
+      if (spec.mutateManifest) await writeFile(spec.manifest, JSON.stringify({ name: "@test/pack", version: "2.0.0" }));
     }
   };
   Bun.spawn = (argv, options) => {
@@ -107,6 +108,15 @@ async function driver(specPath) {
         const manifest = JSON.parse(await readFile(argv[2], "utf8"));
         const files = await sources(dirname(argv[2]));
         assert.deepEqual(files, built, "integrity sources differ from build inputs");
+        if (builtGraph.length) {
+          const lock = JSON.parse(await readFile(join(dirname(argv[2]), "dew.lock"), "utf8"));
+          const current = [];
+          for (const entry of lock.packages) {
+            const path = resolve(dirname(argv[2]), entry.path);
+            current.push({ name: entry.name, files: await sources(path.endsWith("dew.json") ? dirname(path) : path) });
+          }
+          assert.deepEqual(current, builtGraph, "dependency graph differs from build inputs");
+        }
         const text = integrity(manifest, files);
         await mutations("integrity");
         return { status: 0, output: text };
@@ -120,7 +130,7 @@ async function driver(specPath) {
     };
   };
   globalThis.fetch = async (url, options) => {
-    assert.equal(spec.command, "publish", "pack must not use network");
+    assert.ok(spec.command === "publish" && !spec.args.includes("--dry-run"), "local preparation must not use network");
     assert.equal(url, "http://127.0.0.1:1/api/cli/packages");
     const capsule = decode(Buffer.from(options.body));
     assert.deepEqual(capsule.files, built, "capsule sources differ from build inputs");
@@ -132,6 +142,19 @@ async function driver(specPath) {
     await writeFile(spec.upload, Buffer.from(options.body));
     return new Response(JSON.stringify({ name: capsule.name, version: capsule.version, url: "/fixture" }));
   };
+  if (spec.cleanupFailure) {
+    const { preparePackage } = await import(join(here, "dew-package-snapshot.mjs"));
+    try {
+      await preparePackage({ manifestPath: spec.manifest, repositoryRoot: resolve(here, ".."), source: "registry:http://127.0.0.1:1", run: async (argv, options) => {
+        const child = Bun.spawn(argv, options);
+        const output = await new Response(child.stdout).text();
+        const status = await child.exited;
+        if (status) throw new Error(`mock child failed (exit ${status})`);
+        return output;
+      } }, { remove: async (path, options) => { await rm(path, options); throw new Error("mock cleanup failure"); } });
+    } catch (error) { console.error(error.message); process.exitCode = 1; }
+    return;
+  }
   process.argv = [process.execPath, registry, spec.command, ...spec.args];
   await import(registry);
 }
@@ -168,7 +191,7 @@ if (process.argv[2] === "--driver") {
     const scratch = join(root, "tmp"); await mkdir(scratch);
     async function run(command = spec.command, args = []) {
       spec.command = command;
-      spec.args = ["--manifest", manifest, "--registry", "http://127.0.0.1:1", ...args];
+      spec.args = [...(spec.defaultManifest ? [] : ["--manifest", manifest]), "--registry", "http://127.0.0.1:1", ...args];
       const path = join(root, "spec.json"); await writeFile(path, JSON.stringify(spec));
       return spawnSync("bun", [fileURLToPath(import.meta.url), "--driver", path], { cwd: pkg, env: { ...process.env, TMPDIR: scratch, DEW_CONFIG_HOME: config, DEW_PACKAGE_ROOTS: "" }, encoding: "utf8", timeout: 15_000 });
     }
@@ -184,7 +207,7 @@ if (process.argv[2] === "--driver") {
     const f = await fixture(t, { mutate: "integrity" }); success(await f.run());
   });
   test("snapshot fixes dependency graph and rewrites lock paths", async t => {
-    const f = await fixture(t, { dependency: true, mutate: "build", alternate: true });
+    const f = await fixture(t, { dependency: true, mutate: "build", mutateRoot: false, alternate: true });
     success(await f.run());
     const trace = JSON.parse(await readFile(f.trace, "utf8"));
     assert.notEqual(trace.manifest, f.manifest);
@@ -198,6 +221,20 @@ if (process.argv[2] === "--driver") {
   });
   test("src regular file uses root sources", async t => {
     const f = await fixture(t); await writeFile(join(f.pkg, "src"), "regular file"); success(await f.run());
+  });
+  test("manifest changes after build cannot change capsule identity", async t => {
+    const f = await fixture(t, { mutate: "build", mutateRoot: false, mutateManifest: true });
+    success(await f.run()); assert.equal(decode(await readFile(f.upload)).version, "1.0.0");
+  });
+  test("default manifest with absent dependencies is accepted", async t => {
+    const f = await fixture(t, { defaultManifest: true });
+    await writeFile(f.manifest, JSON.stringify({ name: "@test/pack", version: "1.0.0" }));
+    success(await f.run()); assert.deepEqual(decode(await readFile(f.upload)).dependencies, {});
+  });
+  test("snapshot rejects invalid UTF-8 manifest bytes before build", async t => {
+    const f = await fixture(t);
+    await writeFile(f.manifest, Buffer.concat([Buffer.from('{"name":"@test/pack","version":"1.0.0","dependencies":{"@test/dep":"git+https://example.invalid/repo#'), Buffer.from([255]), Buffer.from('"}}')]));
+    rejected(await f.run(), /UTF-8/); assert.ok(!existsSync(f.trace));
   });
   test("pack retains capsule and local INPUTS without credentials or network", async t => {
     const f = await fixture(t, { command: "pack", alternate: true, src: true, mutate: "build", dependency: true });
@@ -230,16 +267,30 @@ if (process.argv[2] === "--driver") {
     rejected(await f.run("pack", ["--output", output]), /mock compiler failed/);
     assert.ok(!existsSync(output)); assert.deepEqual(await readdir(f.scratch), []);
   });
+  test("output parent loss reports a write failure without changing input", async t => {
+    const f = await fixture(t); const parent = join(f.root, "output-parent"); await mkdir(parent);
+    f.spec.removeOutputParent = parent;
+    rejected(await f.run("pack", ["--output", join(parent, "packed")]), /ENOENT/);
+    assert.equal(await readFile(f.liveSource, "utf8"), "// root before\n");
+    assert.deepEqual(await readdir(f.scratch), []);
+  });
+  for (const buildFailure of [false, true]) test(`cleanup failure remains visible (build failure: ${buildFailure})`, async t => {
+    const f = await fixture(t, { cleanupFailure: true, buildFailure });
+    const result = await f.run(); rejected(result, /could not remove private package snapshot.*mock cleanup failure/);
+    if (buildFailure) assert.match(result.stderr, /mock child failed \(exit 7\)/);
+    assert.deepEqual(await readdir(f.scratch), []); assert.ok(!existsSync(f.upload));
+  });
   test("publish dry-run uses local preparation with no auth or upload", async t => {
     const f = await fixture(t); await writeFile(join(f.config, "credentials.json"), "must not be read");
     const output = join(f.root, "dry"); success(await f.run("publish", ["--dry-run", "--output", output]));
     assert.ok(existsSync(join(output, "INPUTS.json"))); assert.ok(!existsSync(f.upload));
   });
-  test("publish rejects unknown, duplicate, missing and positional options", async t => {
+  for (const [label, args] of [
+    ["unknown", ["--typo"]], ["duplicate", ["--registry", "http://127.0.0.1:1"]],
+    ["missing", ["--output"]], ["positional", ["extra"]], ["output without dry-run", ["--output", "unused"]],
+  ]) test(`publish rejects ${label} options`, async t => {
     const f = await fixture(t);
-    for (const args of [["--typo"], ["--manifest", f.manifest], ["--output"], ["extra"], ["--output", join(f.root, "out")]]) {
-      const result = await f.run("publish", args); rejected(result, /unknown|duplicate|requires|unexpected|dry-run/i); assert.equal(result.status, 2);
-    }
+    const result = await f.run("publish", args); rejected(result, /unknown|duplicate|requires|unexpected|dry-run/i); assert.equal(result.status, 2);
   });
   test("pack help is local and strict", async t => {
     const f = await fixture(t); const result = await f.run("pack", ["--help"]); success(result);
@@ -250,15 +301,54 @@ if (process.argv[2] === "--driver") {
     const f = await fixture(t); await truncate(f.liveSource, 16 * 1024 * 1024 + 1);
     rejected(await f.run(), /16 MiB|source.*(?:limit|bound|large)/i); assert.ok(!existsSync(f.trace));
   });
-  test("reject source and directory symlinks", async t => {
-    for (const kind of ["source", "directory", "manifest", "dependency"]) {
+  test("64 MiB publish cap is checked before build", async t => {
+    const f = await fixture(t);
+    for (let index = 0; index < 4; index++) {
+      const path = index ? join(f.pkg, `file${index}.dew`) : f.liveSource;
+      await writeFile(path, ""); await truncate(path, 16 * 1024 * 1024);
+    }
+    rejected(await f.run(), /64 MiB.*(?:publish|upload)|64 MiB.*limit/);
+    assert.ok(!existsSync(f.trace), "over-limit package reached the build");
+  });
+  for (const kind of ["escape", "identity", "integrity", "cycle", "missing"]) test(`snapshot rejects ${kind} graph inputs`, async t => {
+    const f = await fixture(t, { dependency: true });
+    const lock = JSON.parse(await readFile(f.lock, "utf8"));
+    if (kind === "escape") lock.packages[0].path = "../outside";
+    if (kind === "identity") lock.packages[0].version = "2.0.0";
+    if (kind === "integrity") lock.packages[0].integrity = `sha256-${"0".repeat(64)}`;
+    if (kind === "missing") lock.packages = [];
+    if (kind === "cycle") {
+      const manifest = { name: "@test/dep", version: "1.0.0", dependencies: { "@test/pack": "1.0.0" } };
+      await writeFile(join(dirname(f.dependencySource), "dew.json"), JSON.stringify(manifest));
+      lock.packages[0].integrity = integrity(manifest, await sources(dirname(f.dependencySource)));
+    }
+    await writeFile(f.lock, JSON.stringify(lock));
+    rejected(await f.run(), /escapes package workspace|identity mismatch|integrity mismatch|dependency cycle|missing from dew.lock/);
+    assert.ok(!existsSync(f.trace)); assert.deepEqual(await readdir(f.scratch), []);
+  });
+  test("snapshot captures a shared diamond once", async t => {
+    const f = await fixture(t); const entries = [];
+    await writeFile(f.manifest, JSON.stringify({ name: "@test/pack", version: "1.0.0", dependencies: { "@test/a": "*", "@test/b": "*" } }));
+    for (const name of ["a", "b", "c"]) {
+      const root = join(f.pkg, ".deps", name); await mkdir(root, { recursive: true });
+      const manifest = { name: `@test/${name}`, version: "1.0.0", dependencies: name === "c" ? {} : { "@test/c": "*" } };
+      await writeFile(join(root, "dew.json"), JSON.stringify(manifest)); await writeFile(join(root, "main.dew"), `// ${name}\n`);
+      entries.push({ name: manifest.name, version: manifest.version, source: "registry:http://127.0.0.1:1", path: `.deps/${name}`, integrity: integrity(manifest, await sources(root)), interface: hex });
+    }
+    await writeFile(join(f.pkg, "dew.lock"), JSON.stringify({ lockfileVersion: 1, packages: entries }));
+    const output = join(f.root, "diamond"); success(await f.run("pack", ["--output", output]));
+    const inputs = JSON.parse(await readFile(join(output, "INPUTS.json"), "utf8"));
+    assert.deepEqual(inputs.dependencies.map(p => p.name), ["@test/a", "@test/b", "@test/c"]);
+    assert.equal(new Set(inputs.lock.packages.map(p => p.path)).size, 3);
+    assert.ok(inputs.lock.packages.every(p => !p.path.includes("..") && !p.path.startsWith("/")));
+  });
+  for (const kind of ["source", "directory", "manifest", "dependency"]) test(`reject ${kind} symlinks`, async t => {
       const f = await fixture(t, { src: true, dependency: kind === "dependency" });
       if (kind === "source") await symlink(f.liveSource, join(f.pkg, "src/alias.dew"));
       if (kind === "directory") await symlink(join(f.pkg, "src"), join(f.pkg, "src/alias"));
       if (kind === "manifest") { await writeFile(join(f.root, "real.json"), await readFile(f.manifest)); await rm(f.manifest); await symlink(join(f.root, "real.json"), f.manifest); }
       if (kind === "dependency") { const dep = dirname(f.dependencySource); await rm(f.dependencySource); await symlink(f.liveSource, f.dependencySource); assert.ok(existsSync(dep)); }
       rejected(await f.run(), /symlink|symbolic|unsafe/i); assert.ok(!existsSync(f.trace));
-    }
   });
   test("shell routes pack to the script without a native build", async t => {
     const f = await fixture(t); const bin = join(f.root, "bin"); await mkdir(bin);
