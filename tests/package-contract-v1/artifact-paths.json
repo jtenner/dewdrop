@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 1,
+  "kind": "artifact-paths",
+  "cases": [
+    {
+      "id": "root",
+      "input": [
+        "main.dew"
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "logical-source-path"
+    },
+    {
+      "id": "nested",
+      "input": [
+        "src/a.dew",
+        "src/z/b_test.dew"
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "logical-source-path"
+    },
+    {
+      "id": "utf8",
+      "input": [
+        "src/caf\u00e9.dew"
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "logical-source-path"
+    },
+    {
+      "id": "case-sensitive",
+      "input": [
+        "a.dew",
+        "A.dew"
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "logical-source-path"
+    },
+    {
+      "id": "not-prefix",
+      "input": [
+        "a.dew",
+        "a.dewx/b.dew"
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "logical-source-path"
+    },
+    {
+      "id": "empty-set",
+      "input": [],
+      "expected": {
+        "accept": false
+      },
+      "rule": "file-count"
+    },
+    {
+      "id": "empty",
+      "input": [
+        ""
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-segments"
+    },
+    {
+      "id": "absolute",
+      "input": [
+        "/main.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "relative-path"
+    },
+    {
+      "id": "windows-absolute",
+      "input": [
+        "C:/main.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "relative-path"
+    },
+    {
+      "id": "backslash",
+      "input": [
+        "src\\main.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "slash-path"
+    },
+    {
+      "id": "nul",
+      "input": [
+        "src/a\u0000.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-nul"
+    },
+    {
+      "id": "empty-segment",
+      "input": [
+        "src//a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-segments"
+    },
+    {
+      "id": "dot",
+      "input": [
+        "./a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-segments"
+    },
+    {
+      "id": "dot-inner",
+      "input": [
+        "src/./a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-segments"
+    },
+    {
+      "id": "dotdot",
+      "input": [
+        "src/../a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-segments"
+    },
+    {
+      "id": "trailing-slash",
+      "input": [
+        "a.dew/"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-segments"
+    },
+    {
+      "id": "not-dew",
+      "input": [
+        "src/a.txt"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "source-extension"
+    },
+    {
+      "id": "uppercase-extension",
+      "input": [
+        "src/a.DEW"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "source-extension"
+    },
+    {
+      "id": "manifest-file",
+      "input": [
+        "dew.json"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "source-extension"
+    },
+    {
+      "id": "manifest-prefix",
+      "input": [
+        "dew.json/a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "reserved-manifest-prefix"
+    },
+    {
+      "id": "duplicate",
+      "input": [
+        "a.dew",
+        "a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "duplicate-path"
+    },
+    {
+      "id": "prefix-forward",
+      "input": [
+        "a.dew",
+        "a.dew/b.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-prefix-conflict"
+    },
+    {
+      "id": "prefix-reverse",
+      "input": [
+        "a.dew/b.dew",
+        "a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-prefix-conflict"
+    },
+    {
+      "id": "prefix-deep",
+      "input": [
+        "a.dew/x/b.dew",
+        "z.dew",
+        "a.dew"
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-prefix-conflict"
+    },
+    {
+      "id": "bytes-4096",
+      "input": [
+        {
+          "concat": [
+            {
+              "repeat": "a",
+              "count": 4092
+            },
+            ".dew"
+          ]
+        }
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "path-byte-limit"
+    },
+    {
+      "id": "bytes-4097",
+      "input": [
+        {
+          "concat": [
+            {
+              "repeat": "a",
+              "count": 4093
+            },
+            ".dew"
+          ]
+        }
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-byte-limit"
+    },
+    {
+      "id": "utf8-bytes-4096",
+      "input": [
+        {
+          "concat": [
+            {
+              "repeat": "\u00e9",
+              "count": 2046
+            },
+            ".dew"
+          ]
+        }
+      ],
+      "expected": {
+        "accept": true
+      },
+      "rule": "path-byte-limit"
+    },
+    {
+      "id": "utf8-bytes-4098",
+      "input": [
+        {
+          "concat": [
+            {
+              "repeat": "\u00e9",
+              "count": 2047
+            },
+            ".dew"
+          ]
+        }
+      ],
+      "expected": {
+        "accept": false
+      },
+      "rule": "path-byte-limit"
+    }
+  ]
+}

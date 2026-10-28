@@ -1,0 +1,100 @@
+{
+  "sdk": "/tmp/pkg-phase1-post-release/sdk-nightly",
+  "purpose": "SDK setup and correctness checks only",
+  "checks": [
+    {
+      "name": "master-module-system",
+      "command": [
+        "bash",
+        "tools/test-integration-native.sh"
+      ],
+      "cwd": "/tmp/pkg-phase1-post-release/master-20f902ac",
+      "env": {
+        "DEW_INTEGRATION_TEST_FILES": "src/semantic/module_system_wbtest.mbt"
+      },
+      "exit": 127,
+      "wall_seconds": 0.0038230300415307283,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-core-native",
+      "command": [
+        "/tmp/pkg-phase1-post-release/sdk-nightly/bin/moon",
+        "-C",
+        "/tmp/pkg-phase1-post-release/sdk-nightly/lib/core",
+        "bundle",
+        "--target",
+        "native",
+        "--warn-list",
+        "-a"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly"
+      },
+      "exit": 0,
+      "wall_seconds": 1.320999165007379,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-core-js",
+      "command": [
+        "/tmp/pkg-phase1-post-release/sdk-nightly/bin/moon",
+        "-C",
+        "/tmp/pkg-phase1-post-release/sdk-nightly/lib/core",
+        "bundle",
+        "--target",
+        "js",
+        "--warn-list",
+        "-a"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly"
+      },
+      "exit": 0,
+      "wall_seconds": 1.070668404980097,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-core-wasm-gc",
+      "command": [
+        "/tmp/pkg-phase1-post-release/sdk-nightly/bin/moon",
+        "-C",
+        "/tmp/pkg-phase1-post-release/sdk-nightly/lib/core",
+        "bundle",
+        "--target",
+        "wasm-gc",
+        "--warn-list",
+        "-a"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly"
+      },
+      "exit": 0,
+      "wall_seconds": 1.0697373269940726,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-core-llvm",
+      "command": [
+        "/tmp/pkg-phase1-post-release/sdk-nightly/bin/moon",
+        "-C",
+        "/tmp/pkg-phase1-post-release/sdk-nightly/lib/core",
+        "bundle",
+        "--target",
+        "llvm",
+        "--warn-list",
+        "-a"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly"
+      },
+      "exit": 0,
+      "wall_seconds": 1.3169885849929415,
+      "ledger_generation": 20
+    }
+  ]
+}

@@ -249,7 +249,11 @@ pub fn semver_parse_without_build(
   build_start: U32,
 ) -> Result<SemVer, SemVerParseError> {
   match semver_find_byte(value, 0u32, main_end, 45u8) {
-    Option::Some(dash) => semver_finish_parse(value, length, dash, dash + 1u32, build_start)
+    Option::Some(dash) => if dash + 1u32 == main_end {
+      Result::Err(SemVerParseError::EmptyIdentifier(dash + 1u32))
+    } else {
+      semver_finish_parse(value, length, dash, dash + 1u32, build_start)
+    }
     Option::None => semver_finish_parse(value, length, main_end, length, build_start)
   }
 }
@@ -265,6 +269,8 @@ pub fn semver_parse(value: String) -> Result<SemVer, SemVerParseError> {
       Option::None => semver_parse_without_build(value, length, length, length)
       Option::Some(plus) => if semver_find_byte(value, plus + 1u32, length, 43u8) is Option::Some(_) {
         Result::Err(SemVerParseError::DuplicateBuild)
+      } else if plus + 1u32 == length {
+        Result::Err(SemVerParseError::EmptyIdentifier(plus + 1u32))
       } else {
         semver_parse_without_build(value, length, plus, plus + 1u32)
       }

@@ -1,0 +1,103 @@
+{
+  "head": "fcb50e441468c1804293029a66411173ceae12c4",
+  "purpose": "final correctness checks only; no performance comparison",
+  "checks": [
+    {
+      "name": "final-js",
+      "command": [
+        "node",
+        "tools/test_dew_package_contract.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.11916497902711853,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-shared-js",
+      "command": [
+        "node",
+        "tests/package-contract-v1/run.mjs",
+        "tests/package-contract-v1/adapters/javascript.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.08582996600307524,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-offline",
+      "command": [
+        "node",
+        "--test",
+        "tools/test_dew_pack_offline.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.2912050180020742,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-pack",
+      "command": [
+        "node",
+        "--test",
+        "tools/test_dew_pack.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 5.3597805090248585,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-lock",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/lock.test.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.22334825800498948,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-snapshot-lock",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/snapshot-inputs.test.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.13573584501864389,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-harness",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/harness.test.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.24788282305235043,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-generated",
+      "command": [
+        "python3",
+        "tools/generate_package_std.py",
+        "--check"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.02675681299297139,
+      "ledger_generation": 20
+    },
+    {
+      "name": "final-registry-smoke",
+      "command": [
+        "python3",
+        "tools/test_dew_registry_cli.py"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.13727921497775242,
+      "ledger_generation": 20
+    }
+  ]
+}

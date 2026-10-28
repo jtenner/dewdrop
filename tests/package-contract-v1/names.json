@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "kind": "name",
+  "cases": [
+    {
+      "id": "short",
+      "input": "@a/b",
+      "expected": {
+        "accept": true
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "punctuation",
+      "input": "@a.b_c-d/e.f_g-h",
+      "expected": {
+        "accept": true
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "digits",
+      "input": "@0/9",
+      "expected": {
+        "accept": true
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "dots-are-name-bytes",
+      "input": "@./..",
+      "expected": {
+        "accept": true
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "empty",
+      "input": "",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "unscoped",
+      "input": "a/b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "scope-empty",
+      "input": "@/b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "name-empty",
+      "input": "@a/",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "no-slash",
+      "input": "@ab",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "two-slashes",
+      "input": "@a/b/c",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "upper-scope",
+      "input": "@A/b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "upper-name",
+      "input": "@a/B",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "space",
+      "input": "@a/b c",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "unicode",
+      "input": "@a/caf\u00e9",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "nul",
+      "input": "@a/b\u0000",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "backslash",
+      "input": "@a/b\\c",
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-grammar"
+    },
+    {
+      "id": "bytes-255",
+      "input": {
+        "concat": [
+          "@a/",
+          {
+            "repeat": "b",
+            "count": 252
+          }
+        ]
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "name-byte-limit"
+    },
+    {
+      "id": "bytes-256",
+      "input": {
+        "concat": [
+          "@a/",
+          {
+            "repeat": "b",
+            "count": 253
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "name-byte-limit"
+    }
+  ]
+}

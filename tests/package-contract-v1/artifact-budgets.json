@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "kind": "artifact-budget",
+  "cases": [
+    {
+      "id": "dependencyCount-256",
+      "input": {
+        "dependencyCount": 256
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "artifact-count-or-source-bound"
+    },
+    {
+      "id": "dependencyCount-257",
+      "input": {
+        "dependencyCount": 257
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "artifact-count-or-source-bound"
+    },
+    {
+      "id": "fileCount-65536",
+      "input": {
+        "fileCount": 65536
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "artifact-count-or-source-bound"
+    },
+    {
+      "id": "fileCount-65537",
+      "input": {
+        "fileCount": 65537
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "artifact-count-or-source-bound"
+    },
+    {
+      "id": "sourceBytes-16777216",
+      "input": {
+        "sourceBytes": 16777216
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "artifact-count-or-source-bound"
+    },
+    {
+      "id": "sourceBytes-16777217",
+      "input": {
+        "sourceBytes": 16777217
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "artifact-count-or-source-bound"
+    },
+    {
+      "id": "zero-files",
+      "input": {
+        "fileCount": 0
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "file-count"
+    },
+    {
+      "id": "publish-67108864",
+      "input": {
+        "policy": "publish",
+        "encodedBytes": 67108864
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "encoded-artifact-policy"
+    },
+    {
+      "id": "publish-67108865",
+      "input": {
+        "policy": "publish",
+        "encodedBytes": 67108865
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "encoded-artifact-policy"
+    },
+    {
+      "id": "local-268435456",
+      "input": {
+        "policy": "local",
+        "encodedBytes": 268435456
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "encoded-artifact-policy"
+    },
+    {
+      "id": "local-268435457",
+      "input": {
+        "policy": "local",
+        "encodedBytes": 268435457
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "encoded-artifact-policy"
+    },
+    {
+      "id": "local-above-publish",
+      "input": {
+        "policy": "local",
+        "encodedBytes": 67108865
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "distinct-local-cap"
+    }
+  ]
+}

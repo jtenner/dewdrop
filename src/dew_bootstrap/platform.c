@@ -118,6 +118,40 @@ MOONBIT_FFI_EXPORT int dewdrop_bootstrap_rename(
   return -errno;
 }
 
+/* Inspect without following links. With parents set, inspect every existing
+ * prefix before callers read sources or restore a missing package. */
+MOONBIT_FFI_EXPORT int dewdrop_bootstrap_path_info(
+    moonbit_bytes_t path, int limit, int parents) {
+  size_t length = Moonbit_array_length(path);
+  if (length == 0 || memchr(path, '\0', length) != NULL) return -EINVAL;
+  char *text = malloc(length + 1);
+  if (text == NULL) return -ENOMEM;
+  memcpy(text, path, length);
+  text[length] = '\0';
+  struct stat status;
+  if (parents) {
+    for (size_t i = 1; i < length; ++i) {
+      if (text[i] != '/') continue;
+      text[i] = '\0';
+      int result = lstat(text, &status);
+      int saved = errno;
+      text[i] = '/';
+      if (result != 0) { free(text); return saved == ENOENT ? 0 : -saved; }
+      if (S_ISLNK(status.st_mode)) { free(text); return -ELOOP; }
+      if (!S_ISDIR(status.st_mode)) { free(text); return -ENOTDIR; }
+    }
+  }
+  if (lstat(text, &status) != 0) {
+    int saved = errno; free(text); return saved == ENOENT ? 0 : -saved;
+  }
+  free(text);
+  if (S_ISLNK(status.st_mode)) return -ELOOP;
+  if (S_ISDIR(status.st_mode)) return 2;
+  if (!S_ISREG(status.st_mode)) return -EINVAL;
+  if (limit >= 0 && status.st_size > limit) return -EFBIG;
+  return 1;
+}
+
 #ifdef __cplusplus
 }
 #endif

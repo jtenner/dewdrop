@@ -1,0 +1,96 @@
+{
+  "source_head": "788cf198b9397e29833ae317df220be2e78f6a95",
+  "compiler_sha256": "73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626",
+  "compiler_source_commit": null,
+  "checks": [
+    {
+      "name": "std-area-compile",
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/tmp/pkg-phase1-final/std-area-frozen.wasm",
+        "main",
+        "main",
+        "std/tests/package_contract_v1_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1/std/tests/package_contract_v1_test.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.6259968480444513,
+      "test_source_sha256": "5682c6cb1b3c1d0a8db5d1c92c4f63b2a5667d552363472683235f006315c32a"
+    },
+    {
+      "name": "std-area-run",
+      "command": [
+        "node",
+        "--no-liftoff",
+        "tools/dew-test/run.mjs",
+        "--wasm",
+        "/tmp/pkg-phase1-final/std-area-frozen.wasm",
+        "--label",
+        "std-area"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.26240753202000633,
+      "test_source_sha256": "5682c6cb1b3c1d0a8db5d1c92c4f63b2a5667d552363472683235f006315c32a"
+    },
+    {
+      "name": "std-lock-compile",
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/tmp/pkg-phase1-final/std-lock-frozen.wasm",
+        "main",
+        "main",
+        "std/tests/package_lock_contract_v1_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1/std/tests/package_lock_contract_v1_test.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.48586283600889146,
+      "test_source_sha256": "641601d6eef34d833e5d935dac9cf00d6a22357eccafef3a1c772b4581d72228"
+    },
+    {
+      "name": "std-lock-run",
+      "command": [
+        "node",
+        "--no-liftoff",
+        "tools/dew-test/run.mjs",
+        "--wasm",
+        "/tmp/pkg-phase1-final/std-lock-frozen.wasm",
+        "--label",
+        "std-lock"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.07910445699235424,
+      "test_source_sha256": "641601d6eef34d833e5d935dac9cf00d6a22357eccafef3a1c772b4581d72228"
+    },
+    {
+      "name": "std-existing-roundtrip-compile",
+      "command": [
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "/tmp/pkg-phase1-final/std-existing-roundtrip-frozen.wasm",
+        "main",
+        "main",
+        "std/tests/10_package_format_test.dew",
+        "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1/std/tests/10_package_format_test.dew"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.5722660309984349,
+      "test_source_sha256": "661f1819b26322e09a3533850eae22c2a4cec862ee0271375386919ce77cd1bd"
+    },
+    {
+      "name": "std-existing-roundtrip-run",
+      "command": [
+        "node",
+        "--no-liftoff",
+        "tools/dew-test/run.mjs",
+        "--wasm",
+        "/tmp/pkg-phase1-final/std-existing-roundtrip-frozen.wasm",
+        "--label",
+        "std-existing-roundtrip",
+        "--filter",
+        "encode decode"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.16723564098356292,
+      "test_source_sha256": "661f1819b26322e09a3533850eae22c2a4cec862ee0271375386919ce77cd1bd"
+    }
+  ]
+}

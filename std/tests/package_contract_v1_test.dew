@@ -1,0 +1,374 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.decode
+open dew.std.encode
+open dew.std.format
+open dew.std.fixed_array
+open dew.std.integrity.sha256
+open dew.std.package
+open dew.std.package.artifact
+open dew.std.semver
+open dew.std.string
+open dew.std.string_builder
+
+fn contract_version() -> SemVer {
+  match semver_parse("1.0.0") {
+    Result::Ok(value) => value
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn contract_artifact(name: String, dependencies: Array<PackageDependency>, files: Array<PackageArtifactFile>) -> PackageArtifact {
+  package_artifact(name, contract_version(), "file:app", "sha256-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", dependencies, files)
+}
+
+fn contract_files(path: String) -> Array<PackageArtifactFile> {
+  let files = Array::new()
+  files.push(package_artifact_file(path, b""))
+  files
+}
+
+// Deliberately bypass Encode validation. Decoder tests must reach semantic checks
+// with correct framing and checksum, rather than fail for unrelated corruption.
+fn contract_raw_artifact(value: PackageArtifact) -> Bytes {
+  let output = BytesBuilder::new()
+  output.append(b"DEWPKG1\x00")
+  package_artifact_write_string(output, value.name())
+  package_artifact_write_string(output, value.version().to_string())
+  package_artifact_write_string(output, value.source())
+  package_artifact_write_string(output, value.integrity())
+  package_artifact_write_string(output, value.interface_fingerprint())
+  package_artifact_write_u32(output, value.dependencies().length())
+  while 0u32 {
+    index if index < value.dependencies().length() => {
+      let dependency = value.dependencies().get_unchecked(index)
+      package_artifact_write_string(output, dependency.name())
+      package_artifact_write_string(output, package_requirement_to_string(dependency.requirement()))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  package_artifact_write_u32(output, value.files().length())
+  while 0u32 {
+    index if index < value.files().length() => {
+      let file = value.files().get_unchecked(index)
+      package_artifact_write_string(output, file.path())
+      package_artifact_write_bytes(output, file.contents())
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let payload = output.finish()
+  let complete = BytesBuilder::new()
+  complete.append(payload)
+  let digest = sha256(payload)
+  while 0u32 {
+    index if index < 32u32 => {
+      complete.append_byte(digest.get_unchecked(index))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  complete.finish()
+}
+
+fn contract_expect_artifact_invalid(value: PackageArtifact, reason: String) -> Unit {
+  assert(value.validate() is Result::Err(_), reason)
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), reason)
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(_), reason)
+}
+
+test "contract v1 manifest decode rejects invalid package name" {
+  assert(package_manifest_try_decode(b"{\"name\":\"bad\",\"version\":\"1.0.0\"}") is Result::Err(FormatDecodeError::InvalidSyntax("package name")), "manifest decoder accepted invalid package name")
+}
+
+test "contract v1 manifest decode rejects invalid dependency name" {
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"version\":\"1.0.0\",\"dependencies\":{\"bad\":\"*\"}}") is Result::Err(FormatDecodeError::InvalidSyntax("dependency name")), "manifest decoder accepted invalid dependency name")
+}
+
+test "contract v1 manifest syntax remains strict and missing deps work" {
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"version\":\"1.0.0\"}") is Result::Ok(_), "missing dependencies rejected")
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"version\":\"1.0.0\",\"other\":0}") is Result::Err(_), "unknown field accepted")
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"name\":\"@s/app\",\"version\":\"1.0.0\"}") is Result::Err(_), "duplicate name accepted")
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"n\\u0061me\":\"@s/app\",\"version\":\"1.0.0\"}") is Result::Err(_), "escaped duplicate name accepted")
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"version\":\"1.0.0\",\"dependencies\":{\"@s/a\":\"*\",\"@s/\\u0061\":\"*\"}}") is Result::Err(_), "escaped duplicate dependency accepted")
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"version\":\"01.0.0\"}") is Result::Err(_), "invalid version accepted")
+  assert(package_manifest_try_decode(b"{\"name\":\"@s/app\",\"version\":\"1.0.0\",\"dependencies\":{\"@s/a\":\"1.0\"}}") is Result::Err(_), "invalid requirement accepted")
+}
+
+test "contract v1 public manifest rejects invalid Git enum strings" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@s/a", PackageRequirement::Git("garbage")))
+  let value = package_manifest("@s/app", contract_version(), dependencies)
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("dependency requirement")), "invalid Git requirement validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid Git requirement encoded")
+}
+
+test "contract v1 public artifact rejects invalid Git enum strings" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@s/a", PackageRequirement::Git("garbage")))
+  let value = contract_artifact("@s/app", dependencies, contract_files("main.dew"))
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("artifact dependency requirement")), "artifact invalid Git requirement validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "artifact invalid Git requirement encoded")
+}
+
+test "contract v1 artifact decode rejects invalid package name" {
+  let value = contract_artifact("bad", Array::new(), contract_files("main.dew"))
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("package artifact provenance")), "artifact decoder accepted invalid package name")
+}
+
+test "contract v1 artifact decode rejects invalid dependency name" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("bad", PackageRequirement::Any))
+  let value = contract_artifact("@s/app", dependencies, contract_files("main.dew"))
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("artifact dependency")), "artifact decoder accepted invalid dependency name")
+}
+
+test "contract v1 artifact decode rejects duplicate dependencies" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@s/a", PackageRequirement::Any))
+  dependencies.push(package_dependency("@s/a", PackageRequirement::Any))
+  let value = contract_artifact("@s/app", dependencies, contract_files("main.dew"))
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("duplicate artifact entry")), "artifact decoder accepted duplicate dependencies")
+}
+
+test "contract v1 artifact decode rejects duplicate sources" {
+  let files = contract_files("main.dew")
+  files.push(package_artifact_file("main.dew", b""))
+  let value = contract_artifact("@s/app", Array::new(), files)
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("duplicate artifact entry")), "artifact decoder accepted duplicate sources")
+}
+
+test "contract v1 artifact requires Dew sources" {
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), contract_files("README.md")), "non-Dew source accepted")
+}
+
+test "contract v1 artifact rejects reserved manifest directory" {
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), contract_files("dew.json/main.dew")), "manifest directory source accepted")
+}
+
+test "contract v1 artifact rejects forward path prefix conflicts" {
+  let files = contract_files("a.dew")
+  files.push(package_artifact_file("a.dew/b.dew", b""))
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), files), "forward path prefix conflict accepted")
+}
+
+test "contract v1 artifact rejects reverse path prefix conflicts" {
+  let reverse = contract_files("a.dew/b.dew")
+  reverse.push(package_artifact_file("a.dew", b""))
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), reverse), "reverse path prefix conflict accepted")
+}
+
+test "contract v1 artifact decode checks unsafe paths" {
+  let paths = Array::new()
+  paths.push("/main.dew")
+  paths.push("../main.dew")
+  paths.push("src/./main.dew")
+  paths.push("src//main.dew")
+  paths.push("src\\main.dew")
+  paths.push("src/\x00main.dew")
+  while 0u32 {
+    index if index < paths.length() => {
+      let value = contract_artifact("@s/app", Array::new(), contract_files(paths.get_unchecked(index)))
+      assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("artifact file")), "unsafe source path decoded")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}
+
+test "contract v1 artifact decode rejects empty source set" {
+  assert(package_artifact_try_decode(contract_raw_artifact(contract_artifact("@s/app", Array::new(), Array::new()))) is Result::Err(_), "empty source set decoded")
+}
+
+test "contract v1 accepted artifact includes tests and shared directories" {
+  let files = contract_files("src/main.dew")
+  files.push(package_artifact_file("src/main_test.dew", b""))
+  files.push(package_artifact_file("src/dew.json/helper.dew", b""))
+  let value = contract_artifact("@s/app", Array::new(), files)
+  assert(value.validate() is Result::Ok(_), "valid shared directory paths rejected")
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Ok(_), "valid artifact rejected")
+  assert(package_artifact_max_bytes() == 268435456u32, "local codec cap changed")
+}
+
+
+test "contract v1 Git enum must retain its variant" {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@s/a", PackageRequirement::Git("1.0.0")))
+  assert(package_manifest("@s/app", contract_version(), dependencies).validate() is Result::Err(_), "Git enum accepted exact version text")
+  assert(contract_artifact("@s/app", dependencies, contract_files("main.dew")).validate() is Result::Err(_), "artifact Git enum accepted exact version text")
+}
+
+test "contract v1 artifact decoder checks provenance" {
+  let value = package_artifact("@s/app", contract_version(), "", "sha256-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Array::new(), contract_files("main.dew"))
+  assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("package artifact provenance")), "artifact decoder accepted empty source")
+}
+
+fn contract_unchecked_version(text: String) -> SemVer {
+  SemVer::{
+    major: 1u32
+    minor: 0u32
+    patch: 0u32
+    prerelease: Array::new()
+    build: Array::new()
+    text: text
+  }
+}
+
+fn contract_expect_requirement_invalid(requirement: PackageRequirement) -> Unit {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@s/a", requirement))
+  let manifest = package_manifest("@s/app", contract_version(), dependencies)
+  assert(manifest.validate() is Result::Err(FormatValidationErr::InvalidField("dependency requirement")), "invalid public SemVer requirement validated")
+  assert(manifest.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public SemVer requirement encoded")
+  let artifact = contract_artifact("@s/app", dependencies, contract_files("main.dew"))
+  assert(artifact.validate() is Result::Err(FormatValidationErr::InvalidField("artifact dependency requirement")), "invalid public artifact SemVer requirement validated")
+  assert(artifact.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public artifact SemVer requirement encoded")
+}
+
+test "contract v1 public manifest checks SemVer text" {
+  let value = package_manifest("@s/app", contract_unchecked_version("01.0.0"), Array::new())
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("package version")), "invalid public manifest version validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public manifest version encoded")
+}
+
+test "contract v1 public artifact checks SemVer text" {
+  let value = package_artifact("@s/app", contract_unchecked_version("1.0.0-4294967296"), "file:app", "sha256-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Array::new(), contract_files("main.dew"))
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("package artifact version")), "invalid public artifact version validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public artifact version encoded")
+}
+
+test "contract v1 public exact checks SemVer text" {
+  contract_expect_requirement_invalid(PackageRequirement::Exact(contract_unchecked_version("1.0")))
+}
+
+test "contract v1 public caret checks SemVer text" {
+  contract_expect_requirement_invalid(PackageRequirement::Caret(contract_unchecked_version("4294967296.0.0")))
+}
+
+test "contract v1 public tilde checks SemVer text" {
+  contract_expect_requirement_invalid(PackageRequirement::Tilde(contract_unchecked_version("1.0.0-alpha..one")))
+}
+
+test "contract v1 artifact rejects drive-root absolute sources" {
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), contract_files("C:/main.dew")), "drive-root absolute source accepted")
+  contract_expect_artifact_invalid(contract_artifact("@s/app", Array::new(), contract_files("z:/main.dew")), "lowercase drive-root absolute source accepted")
+}
+
+test "contract v1 names versions and requirement byte limits" {
+  let name = StringBuilder::new()
+  name.append("@s/")
+  while 3u32 {
+    length if length < package_name_max_bytes() => {
+      name.append("a")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  let maximum_name = name.finish()
+  assert(package_name_is_valid(maximum_name), "255-byte name rejected")
+  assert(!package_name_is_valid(maximum_name.concat("a")), "256-byte name accepted")
+  assert(!package_name_is_valid("@S/a"), "uppercase scope accepted")
+  assert(!package_name_is_valid("@s/"), "empty package side accepted")
+  assert(!package_name_is_valid("@/a"), "empty scope accepted")
+  let version = StringBuilder::new()
+  version.append("1.0.0+")
+  while 6u32 {
+    length if length < semver_max_bytes() => {
+      version.append("a")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  let maximum_version = version.finish()
+  assert(semver_parse(maximum_version) is Result::Ok(_), "255-byte version rejected")
+  assert(semver_parse(maximum_version.concat("a")) is Result::Err(SemVerParseError::TooLong(256u32, 255u32)), "256-byte version accepted")
+  assert(semver_parse("1.0.0-4294967296") is Result::Err(SemVerParseError::NumberOverflow(_)), "prerelease numeric overflow accepted")
+  let requirement = StringBuilder::new()
+  requirement.append("git+x#")
+  while 6u32 {
+    length if length < package_requirement_max_bytes() => {
+      requirement.append("r")
+      continue length + 1u32
+    }
+    _ => break ()
+  }
+  let maximum_requirement = requirement.finish()
+  assert(package_requirement_parse(maximum_requirement) is Result::Ok(PackageRequirement::Git(_)), "2048-byte Git requirement rejected")
+  assert(package_requirement_parse(maximum_requirement.concat("r")) is Result::Err(_), "2049-byte requirement accepted")
+  assert(package_requirement_parse("git+x#") is Result::Err(_), "empty Git ref accepted")
+  assert(package_requirement_parse("git+#ref") is Result::Err(_), "empty Git source accepted")
+}
+
+test "contract v1 source limit is enforced before reading declared contents" {
+  let mut contents = b"x"
+  while 0u32 {
+    index if index < 24u32 => {
+      contents = contents.concat(contents)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  contents = contents.concat(b"x")
+  assert(contents.byte_length() == package_artifact_max_source_bytes() + 1u32, "source bound fixture has wrong size")
+  let output = BytesBuilder::new()
+  package_artifact_write_bytes(output, contents)
+  let reader = PackageArtifactReader::{
+    bytes: output.finish()
+    offset: 0u32
+    failed: false
+  }
+  let _ = package_artifact_read_bytes(reader, package_artifact_max_source_bytes())
+  assert(reader.failed, "oversize declared source accepted")
+  assert(reader.offset == 4u32, "oversize source payload was read")
+  let files = Array::new()
+  files.push(package_artifact_file("main.dew", contents))
+  let value = contract_artifact("@s/app", Array::new(), files)
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("artifact file")), "oversize public source validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(FormatValidationErr::InvalidField("artifact file"))), "oversize public source encoded")
+}
+
+test "contract v1 local codec keeps a separate encoded byte cap" {
+  // Share one 1 MiB byte value. Validate/Encode must use encoded length without
+  // allocating a 256 MiB capsule, and the local policy must permit over 64 MiB.
+  let block = BytesBuilder::new()
+  let chunk = b"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  while 0u32 {
+    index if index < 16384u32 => {
+      block.append(chunk)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let contents = block.finish()
+  let files = Array::new()
+  while 0u32 {
+    index if index < 65u32 => {
+      let path = StringBuilder::new()
+      path.append("file-")
+      path.append_u32(index)
+      path.append(".dew")
+      files.push(package_artifact_file(path.finish(), contents))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let local = contract_artifact("@s/app", Array::new(), files)
+  assert(package_artifact_encoded_size(local) > 67108864u64, "local boundary fixture is too small")
+  assert(local.validate() is Result::Ok(_), "local artifact applied the public 64 MiB policy")
+  while 65u32 {
+    index if index < 256u32 => {
+      let path = StringBuilder::new()
+      path.append("file-")
+      path.append_u32(index)
+      path.append(".dew")
+      files.push(package_artifact_file(path.finish(), contents))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let excess = contract_artifact("@s/app", Array::new(), files)
+  assert(excess.validate() is Result::Err(FormatValidationErr::ByteLimitExceeded("package artifact bytes", _, 268435456u64)), "encoded local cap ignored")
+  assert(excess.encode() is Result::Err(FormatEncodeError::Validation(FormatValidationErr::ByteLimitExceeded("package artifact bytes", _, 268435456u64))), "oversize local capsule encoded")
+}

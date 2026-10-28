@@ -1,0 +1,77 @@
+{
+  "head": "ce1055b7d5a8cd9198e04f5fe3c6619551c0fe1b",
+  "purpose": "correctness checks only",
+  "checks": [
+    {
+      "name": "master-module-system-fixed",
+      "command": [
+        "bash",
+        "tools/test-integration-native.sh"
+      ],
+      "cwd": "/tmp/pkg-phase1-post-release/master-20f902ac",
+      "env": {
+        "DEW_INTEGRATION_TEST_FILES": "src/semantic/module_system_wbtest.mbt"
+      },
+      "exit": 1,
+      "wall_seconds": 14.847972262010444,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-transforms",
+      "command": [
+        "bash",
+        "tools/test-native.sh"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly",
+        "DEW_NATIVE_TEST_PACKAGES": "transforms"
+      },
+      "exit": 1,
+      "wall_seconds": 0.03202292800415307,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-real-pack",
+      "command": [
+        "bun",
+        "--preload",
+        "/tmp/pkg-phase1-post-release/deny-network.mjs",
+        "tools/dew-registry.mjs",
+        "pack",
+        "--manifest",
+        "/tmp/pkg-phase1-post-release/real-pack-fixture/dew.json",
+        "--output",
+        "/tmp/pkg-phase1-post-release/nightly-pack-output"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly",
+        "DEW_CONFIG_HOME": "/tmp/pkg-phase1-post-release/invalid-config",
+        "TMPDIR": "/tmp/pkg-phase1-post-release/pack-temp"
+      },
+      "exit": 1,
+      "wall_seconds": 0.31458908604690805,
+      "ledger_generation": 20,
+      "snapshot_entries_after_exit": [],
+      "output_exists": false
+    },
+    {
+      "name": "nightly-llvm-bootstrap",
+      "command": [
+        "/tmp/pkg-phase1-post-release/sdk-nightly/bin/moon",
+        "build",
+        "--target",
+        "llvm",
+        "src/dew_bootstrap"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk-nightly"
+      },
+      "exit": 255,
+      "wall_seconds": 0.004002570000011474,
+      "ledger_generation": 20
+    }
+  ]
+}

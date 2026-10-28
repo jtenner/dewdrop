@@ -1,0 +1,32 @@
+{
+  "head": "d86ffde55b4800481c83cf88d268a1bb949922fd",
+  "purpose": "correctness checks only; compiler elapsed records are diagnostic, not performance evidence",
+  "checks": [
+    {
+      "package": "dew_bootstrap",
+      "command": [
+        "bash",
+        "tools/test-native.sh"
+      ],
+      "env": {
+        "DEW_NATIVE_TEST_PACKAGES": "dew_bootstrap"
+      },
+      "ledger_generation": 20,
+      "exit": 0,
+      "wall_seconds": 1.5202635320019908
+    },
+    {
+      "package": "standard_sources",
+      "command": [
+        "bash",
+        "tools/test-native.sh"
+      ],
+      "env": {
+        "DEW_NATIVE_TEST_PACKAGES": "standard_sources"
+      },
+      "ledger_generation": 20,
+      "exit": 0,
+      "wall_seconds": 0.5653585490072146
+    }
+  ]
+}

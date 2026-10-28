@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "kind": "requirement",
+  "cases": [
+    {
+      "id": "any",
+      "input": "*",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "exact",
+      "input": "1.2.3",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "caret",
+      "input": "^1.2.3",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "tilde",
+      "input": "~0.2.3",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "pre",
+      "input": "^1.0.0-alpha.1",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-https",
+      "input": "git+https://example.invalid/a.git#main",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-ssh",
+      "input": "git+ssh://git@example.invalid/a#abc123",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-minimal-source",
+      "input": "git+x#r",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-ref-hash",
+      "input": "git+x#r#s",
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "empty",
+      "input": "",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "npm-x",
+      "input": "1.x",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "npm-partial",
+      "input": "^1.2",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "comparator",
+      "input": ">=1.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "union",
+      "input": "1.0.0 || 2.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "space",
+      "input": " ^1.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "bare-git",
+      "input": "https://example.invalid/a#main",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-no-ref",
+      "input": "git+x",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-empty-ref",
+      "input": "git+x#",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-empty-source",
+      "input": "git+#main",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "git-nul",
+      "input": "git+x#r\u0000",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "bad-version",
+      "input": "^01.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "overflow",
+      "input": "~1.0.4294967296",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "exact-empty-prerelease",
+      "input": "1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "caret-empty-prerelease",
+      "input": "^1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "tilde-empty-prerelease",
+      "input": "~1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "exact-empty-build",
+      "input": "1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "caret-empty-build",
+      "input": "^1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "tilde-empty-build",
+      "input": "~1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-grammar"
+    },
+    {
+      "id": "bytes-2048",
+      "input": {
+        "concat": [
+          "git+x#",
+          {
+            "repeat": "r",
+            "count": 2042
+          }
+        ]
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "requirement-byte-limit"
+    },
+    {
+      "id": "bytes-2049",
+      "input": {
+        "concat": [
+          "git+x#",
+          {
+            "repeat": "r",
+            "count": 2043
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "requirement-byte-limit"
+    },
+    {
+      "id": "caret-semver-255",
+      "input": {
+        "concat": [
+          "^1.0.0+",
+          {
+            "repeat": "a",
+            "count": 249
+          }
+        ]
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "nested-semver-limit"
+    },
+    {
+      "id": "caret-semver-256",
+      "input": {
+        "concat": [
+          "^1.0.0+",
+          {
+            "repeat": "a",
+            "count": 250
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "nested-semver-limit"
+    }
+  ]
+}

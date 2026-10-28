@@ -106,3 +106,35 @@ fn bootstrap_rename(
     Err("cannot rename \{source} to \{destination}: errno \{-result}")
   }
 }
+
+///|
+#borrow(path)
+extern "C" fn bootstrap_path_info_ffi(
+  path : Bytes,
+  limit : Int32,
+  parents : Int32,
+) -> Int32 = "dewdrop_bootstrap_path_info"
+
+///|
+/// 0 missing, 1 regular file, 2 directory. Errors never become empty inputs.
+fn bootstrap_contract_path_info(
+  path : String,
+  limit : Int32,
+  parents : Bool,
+) -> Int32 {
+  let result = bootstrap_path_info_ffi(
+    @utf8.encode(path),
+    limit,
+    if parents {
+      1
+    } else {
+      0
+    },
+  )
+  if result < 0 {
+    bootstrap_fail(
+      "unsafe link, file type or byte bound at \{path}: errno \{-result}",
+    )
+  }
+  result
+}

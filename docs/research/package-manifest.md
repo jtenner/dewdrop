@@ -55,6 +55,15 @@ If `src/` exists, source files are the lexicographically sorted recursive
 immediate `*.dew` files beside `dew.json`. The fallback keeps small packages
 minimal without accidentally collecting nested dependency checkouts.
 
+`src` selects recursion only when it is a real directory. A regular file named
+`src` uses the root fallback. An empty `src` directory does not fall back.
+Sort complete logical paths by UTF-8 byte order. Selected files and directories,
+package paths, and their ancestors must not be symbolic links. Read errors stay
+visible. Source paths must be safe relative slash paths that end in `.dew`.
+They cannot have empty, `.` or `..` parts, NUL, backslashes, absolute drive
+roots, duplicate entries, or file/directory conflicts. `dew.json/` is reserved.
+Source paths have a 4,096-byte limit. Each source has a 16 MiB limit.
+
 `check`, `build`, and `run` exclude `_test.dew`; `test` includes it only for the root package, not dependencies. Package integrity covers both production and test sources so changing any published Dew
 source changes the package digest.
 
@@ -122,6 +131,43 @@ Package integrity version 1 hashes package identity/version, derived module iden
 ordered conventional logical paths and exact source bytes, and sorted dependency
 requests. It intentionally does not hash `dew.lock`: changing only where an
 identical dependency is materialized does not change package source identity.
+
+Phase 1 aligns byte ordering across JavaScript and the bootstrap. Old local
+locks or cache artifacts made with length-first ordering can need regeneration.
+The unreleased format stays version 1.
+
+## Local package preparation
+
+```text
+tools/dew pack --manifest path/to/dew.json --output new-pack-directory
+tools/dew publish --dry-run --manifest path/to/dew.json --output new-pack-directory
+```
+
+Both commands build and check one private source snapshot. They also capture
+the materialized dependency graph and standard-library sources used by the
+build. They do not read credentials or make a network request. The compiler and
+its installed dependencies must already be available. Preparation uses frozen
+compiler dependencies, so it cannot install missing compiler packages. Use
+`--help` for options.
+
+The output directory must be new; its parent must exist. It contains:
+
+- `package.dpa`: the checked version 1 source capsule.
+- `INPUTS.json`: local identity, source and interface hashes, source inventory,
+  capsule hash and byte count, validation graph, standard source identity, and
+  build output data.
+
+The CLI prints these checked inputs. The compiler build identity is currently
+unavailable in ABI metadata and is marked absent. The input record is not a
+public release descriptor. GitHub source/tag checks and public release metadata
+belong to the publish phase. A public release requires a public GitHub repository
+and an existing remote version tag; local pack does not prove those facts.
+
+The complete publish capsule has a 64 MiB bound, including framing and checksum.
+Local compiler artifacts keep their separate 256 MiB codec bound. Manifest input
+has a 1 MiB bound, local locks have an 8 MiB bound, direct dependencies have a
+256-record bound, and local lock graphs have a 4,096-record bound. No network
+install, version resolver, or auth change is part of Phase 1.
 
 The persistent interface-cache key separately hashes every resolved dependency's
 name, exact version, source, package integrity, and expected interface fingerprint.

@@ -4,7 +4,7 @@ export DEW_WORKING_DIRECTORY="$PWD"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 export DEW_REPOSITORY_ROOT="$root"
 case "${1:-}" in
-  login|logout|whoami|publish)
+  login|logout|whoami|pack|publish)
     exec bun "$root/tools/dew-registry.mjs" "$@"
     ;;
 esac
@@ -13,6 +13,10 @@ case "$bootstrap_target_dir" in
   /*) ;;
   *) bootstrap_target_dir="$root/$bootstrap_target_dir" ;;
 esac
+compiler_dependency_options=()
+if [[ "${DEW_PACKAGE_OFFLINE:-}" == 1 ]]; then
+  compiler_dependency_options+=(--frozen)
+fi
 cd "$root"
-exec moon run --target-dir "$bootstrap_target_dir" --target native --release \
+exec moon run "${compiler_dependency_options[@]}" --target-dir "$bootstrap_target_dir" --target native --release \
   -j 8 src/dew_bootstrap -- "$@"

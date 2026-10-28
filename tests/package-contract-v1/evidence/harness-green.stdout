@@ -1,0 +1,19 @@
+✔ bridge runs one reader and preserves raw escaped duplicate keys (29.936685ms)
+✔ bridge returns positive and negative reader results with their IDs (30.316267ms)
+✔ bridge exposes omit output as an error (38.607457ms)
+✔ bridge exposes duplicate output as an error (35.836569ms)
+✔ bridge exposes unknown output as an error (31.134965ms)
+✔ bridge exposes malformed output as an error (30.488361ms)
+✔ bridge exposes fail output as an error (29.547856ms)
+✔ bridge reports a missing executable as setup failure (2.8427ms)
+✔ runner requires a diagnostic and checks source path order (1.045645ms)
+✔ text recipes count UTF-8 bytes and reject excessive expansion (1.427442ms)
+✔ manifest byte boundaries and one-case rule controls stay exact (22.513047ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 323.929664

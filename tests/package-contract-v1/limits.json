@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "nameBytes": 255,
+  "semverBytes": 255,
+  "requirementBytes": 2048,
+  "manifestBytes": 1048576,
+  "directDependencies": 256,
+  "logicalPathBytes": 4096,
+  "sourceBytes": 16777216,
+  "publishEncodedBytes": 67108864,
+  "localArtifactEncodedBytes": 268435456,
+  "files": 65536,
+  "semverNumericMax": 4294967295
+}

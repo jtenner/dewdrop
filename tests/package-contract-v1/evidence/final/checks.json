@@ -1,0 +1,237 @@
+{
+  "source_head": "3ac2506d9b13a033979470e0a344a8977a0f0190",
+  "purpose": "narrow functional checks only; full lanes and timing remain held",
+  "sha256": {
+    "docs/research/package-contract-v1.md": "f721ee8ba9619765828281f2125e23fbc6c7cf723e230dff64911d9cf33a53c1",
+    "docs/research/package-manifest.md": "196256c3418d2add89573359dbcd218bcbd36b6c19d7b364941837def7fddc6e",
+    "docs/research/pkg-phase1-bootstrap.md": "1e1a90ec59ffbf6e8c981ec0fcdf694a869bc156e7a3de03c87047c8b34b2b42",
+    "docs/research/pkg-phase1-contract.md": "d0ae389b85509208420bde43279ad632cf9388c64d9b2bddefe1162c287440e4",
+    "docs/research/pkg-phase1-integration.md": "0102ca4664f7168a970281905346d45933feb946c60649c5a2e7922b4cefc649",
+    "docs/research/pkg-phase1-javascript.md": "0bf894e26d62b99bd495a508e0fd59cd466025f87e92e1f6652bb0689852e79e",
+    "docs/research/pkg-phase1-pack.md": "92555f8cdb1ef9018501fc5fca5a8a1144439488f2e46eb800a2c63b1aade755",
+    "docs/research/pkg-phase1-std.md": "4b779eeadc04ac447a0930088f689cc4faf9a7558043fe6e689392b98a2ebc3d",
+    "src/dew_bootstrap/manifest.mbt": "fb64e8d687d51be735b28879dbecd7dc6f9e75b8cc910a0aa59d458eb406cf5b",
+    "src/dew_bootstrap/package_artifact.mbt": "c102c798e4827b487ad21e0d21f7e2b10939d1cbf73294ef8d0a1cb13c42e7ab",
+    "src/dew_bootstrap/package_contract.mbt": "ae9795d2f2089ada7152db38916f80d7a940c463af2378254542beae9bed88a3",
+    "src/dew_bootstrap/package_contract_check.py": "9a2de7100f0ee25ff4b0c1111cb2292d33925f35533d8acefe793c7a7486409d",
+    "src/dew_bootstrap/package_contract_driver.mbt.fixture": "21d79b8bf85c4ee64e5abe223d1b4c28004bbb28cfa58aed216e24148b9e57a4",
+    "src/dew_bootstrap/platform.c": "be80b2dab2c3166f977243af1ff47109600b0e0798ae31f7288cb11fb826403b",
+    "src/dew_bootstrap/platform_native.mbt": "b5f36f2a68665a0c25de2724c5b5404e2b3a16c221aa9f7e21c70ac70f320b71",
+    "src/standard_sources/standard_package_sources.mbt": "6f60d91bd0377765a36f21ea976a4ae4e66ce5d84e7b99284e560b507c40290f",
+    "std/package.dew": "872e6e403bfadab3b44c290eb0f30d7afe06c90547da12e22d4ce63fa2141df2",
+    "std/package/artifact.dew": "c4945c18438409499825011835cb4ebb1094ce3c35139194412d04e96699e5aa",
+    "std/semver.dew": "da97e27e4d805aff8bcfd738022b8166c73143c79c60c987c5182eee9f17e332",
+    "std/tests/package_contract_v1_test.dew": "5682c6cb1b3c1d0a8db5d1c92c4f63b2a5667d552363472683235f006315c32a",
+    "std/tests/package_lock_contract_v1_test.dew": "641601d6eef34d833e5d935dac9cf00d6a22357eccafef3a1c772b4581d72228",
+    "tests/package-contract-v1/README.md": "0f9ef74089e0827814c870bf6f787e394072ba8a030689c217723120d0751c75",
+    "tests/package-contract-v1/adapters/baseline-registry.mjs": "bb2d4ab5f8d8eaac9f3bfaa27bdecbdfdffbf53d99475999c1472fd8b19eb355",
+    "tests/package-contract-v1/adapters/javascript.mjs": "02f7cb7a58f537a0c3e4a0f75893a1a3fd2f61432ca63b5dad0a9af83cd9b3cc",
+    "tests/package-contract-v1/adapters/jsonl-reader.mjs": "42393b2d96fd19e3008b3b388dd87b2fe75639ee00989f539b65ed0d1ea586de",
+    "tests/package-contract-v1/artifact-budgets.json": "d8d3ca5d61b8c1c67a495db03228677d49233015cadc88e225bef9443fba3dea",
+    "tests/package-contract-v1/artifact-paths.json": "7bc35b56422c25b8e56d99a7d51bf7fc4202fe24aca192a678d91a39ef6174b7",
+    "tests/package-contract-v1/emit.mjs": "2aeb6136c47d96b7749e1696594dfc22f24ad7c4c413f7c10f83392dc618b756",
+    "tests/package-contract-v1/evidence/baseline.json": "7c89d327f86fb10565f035299024d6184fe3e2837a51c924133ea65f226d1618",
+    "tests/package-contract-v1/evidence/baseline.stderr": "66666777b33633136415ab85246148c1134b02054907d58d96fda0a7e5b17a26",
+    "tests/package-contract-v1/evidence/baseline.stdout": "2c9af0d3ad7c7a0da9c9521a01870304ed482cdae3f01726741a16795599ad7a",
+    "tests/package-contract-v1/evidence/functional.json": "c405e397ef2703d79e874f21197ecf07e8adb6e7238d2c7a3f27d679adf91b35",
+    "tests/package-contract-v1/evidence/harness-green.json": "a837191ebcd10099d0bcb7097a9e9f6e44d4d40b59f68f737501c33c44f0fcb7",
+    "tests/package-contract-v1/evidence/harness-green.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/package-contract-v1/evidence/harness-green.stdout": "ba2164e356a4f303f06959495b6a19750f09f39be7ca718ccec4207b52217efb",
+    "tests/package-contract-v1/evidence/harness-red.json": "92d01466fef729881f6de6a49b3bb762e33918a76d636f69caa75512183429aa",
+    "tests/package-contract-v1/evidence/harness-red.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/package-contract-v1/evidence/harness-red.stdout": "3b5cab05ff269215be17d0e9391090093293808c0d84e794d4dbbe44c6f72a5c",
+    "tests/package-contract-v1/evidence/javascript-parse.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/package-contract-v1/evidence/javascript-parse.stdout": "6072f2bf749d4327cfe7eb0bbf1bb24be1a0a0d3a5bf61185500a2a6a10953aa",
+    "tests/package-contract-v1/evidence/javascript-read.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/package-contract-v1/evidence/javascript-read.stdout": "6072f2bf749d4327cfe7eb0bbf1bb24be1a0a0d3a5bf61185500a2a6a10953aa",
+    "tests/package-contract-v1/evidence/javascript.json": "2f37b0067fa3d00e78cc62863bfd25c4a39919aa0750a68357ad8cbaaaafb80a",
+    "tests/package-contract-v1/evidence/std-shared-red.json": "b1a5c43f1318a26815a53fb9671a69ac42d9c4e88c9bc3fa7c0ab50bd4568ac3",
+    "tests/package-contract-v1/evidence/std-shared-red.stderr": "22123ccab99d4d6bb68de5a83b6e4d4bae0dcfbe42fd87c3de24af29fd39e248",
+    "tests/package-contract-v1/evidence/std-shared-red.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/package-contract-v1/generate.py": "d944d3afb5f409640926a93c928fec126a84ede18971147bdd8930d89e3b56be",
+    "tests/package-contract-v1/harness.test.mjs": "56f360d4f169aef87552f957a7990e1188411bbca47bb10b608789d5c03b5e82",
+    "tests/package-contract-v1/jsonl.mjs": "18a52610c5b43e53a6ba21a6db07b5a7efa99f26e64f7635bb55531a2f262479",
+    "tests/package-contract-v1/limits.json": "697815667f8331e94b9eca86c50f469fa33c318d2d24c31de13a43648cbd6da8",
+    "tests/package-contract-v1/lock.test.mjs": "353e19029c34c6b694e0a74841bd9ad547e5eac986d3a8afd5ba733573b3f3ec",
+    "tests/package-contract-v1/locks.json": "c20cf3329ad235b7f38acdc67f8d62adeb03688f115dbf1dde89817699cd6d01",
+    "tests/package-contract-v1/manifests.json": "470722fcd574eb4167c68332e359a0340c94e166030841d92c9e80fc0a0dc80a",
+    "tests/package-contract-v1/names.json": "b276b0dd9f604399bf7fdd1b16447b4752f02e6fa39b93900f3676d3906e1436",
+    "tests/package-contract-v1/requirement-matches.json": "9cbdb382bfefe63c3db2e50fce18ca49fd3d46bc499c8ecd0a2a5130b95000f1",
+    "tests/package-contract-v1/requirements.json": "3faee7790d5e391eb7bdd6ff4a66db59d51e293328b42bf55337a85177fe25ce",
+    "tests/package-contract-v1/run-std.py": "b479b1d847d4e221da866cc6bc30892e0d7cd5eecfcc3e6c7b1ac9545f6921bb",
+    "tests/package-contract-v1/run.mjs": "add8dd27bef161673b00bfa6ec6e1b0308d87d3e3f6bfd794bd2649a77387b06",
+    "tests/package-contract-v1/semver.json": "126df97dcd73843286cdde46eaa3115ae34f479be9b9e71bed2ec45b508a7869",
+    "tests/package-contract-v1/snapshot-inputs.test.mjs": "b164cfec15782820865a7389d5b3d59d532bab672b208017569e291291c2b166",
+    "tests/package-contract-v1/source-selection.json": "ee020f53e7b6818b83c45ee57f09af8ff0f5351d98bde45223a69a84834d31b2",
+    "tests/package-contract-v1/support/jsonl-reader.mjs": "b004c4a711680244077846fae0c0cfe68c2552bec359d3d68dd114ca95726bc9",
+    "tests/package-contract-v1/vectors.mjs": "e119906659f7b64b3d225ab86f6eeb850551792ed35c382ab3a1bdbfadfcb3cd",
+    "tools/dew": "abfe52397e36b39ee012a467de1a3e1d5e16df897c68c7bdbb51f9e03431b133",
+    "tools/dew-package-contract.mjs": "31bb12b41bc56d19681a287ce859d00c9f1faa94b1309f7393b0da59848340fe",
+    "tools/dew-package-lock.mjs": "6ada2646652f7381f38fcfd0372c750da14f61d190bf12d99ebc9393eeaec0bd",
+    "tools/dew-package-snapshot.mjs": "90f5ee4d70333ee296794861b15370afcb99f8be7042b7dd4157f298a0dd2c0d",
+    "tools/dew-registry.mjs": "ec16833f266c7f20a7bd13879aeae4b821c293fedeba74cd727711abb900f57f",
+    "tools/test_dew_pack.mjs": "5c728af9df9c32f33bbccd866eb4badaa5e008c4a0fe113b82d2fdb710cbce08",
+    "tools/test_dew_package_contract.mjs": "858563e8a8bfa029c295a79947dda54a4c448715fad1a4ca7939fc71fbc8b5c3"
+  },
+  "checks": [
+    {
+      "name": "bootstrap",
+      "command": [
+        "python3",
+        "src/dew_bootstrap/package_contract_check.py",
+        "--evidence",
+        "/tmp/pkg-phase1-final/bootstrap"
+      ],
+      "exit": 0,
+      "wall_seconds": 1.8273146460414864,
+      "stdout": "/tmp/pkg-phase1-final/bootstrap.stdout",
+      "stderr": "/tmp/pkg-phase1-final/bootstrap.stderr"
+    },
+    {
+      "name": "std-shared",
+      "command": [
+        "python3",
+        "tests/package-contract-v1/run-std.py",
+        "--compiler",
+        "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe",
+        "--evidence",
+        "/tmp/pkg-phase1-final/std-shared"
+      ],
+      "exit": 0,
+      "wall_seconds": 1.1062874149647541,
+      "stdout": "/tmp/pkg-phase1-final/std-shared.stdout",
+      "stderr": "/tmp/pkg-phase1-final/std-shared.stderr"
+    },
+    {
+      "name": "javascript",
+      "command": [
+        "node",
+        "tools/test_dew_package_contract.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.11389931995654479,
+      "stdout": "/tmp/pkg-phase1-final/javascript.stdout",
+      "stderr": "/tmp/pkg-phase1-final/javascript.stderr"
+    },
+    {
+      "name": "javascript-bun",
+      "command": [
+        "bun",
+        "tools/test_dew_package_contract.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.2147266659885645,
+      "stdout": "/tmp/pkg-phase1-final/javascript-bun.stdout",
+      "stderr": "/tmp/pkg-phase1-final/javascript-bun.stderr"
+    },
+    {
+      "name": "shared-javascript",
+      "command": [
+        "node",
+        "tests/package-contract-v1/run.mjs",
+        "tests/package-contract-v1/adapters/javascript.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.0750835289945826,
+      "stdout": "/tmp/pkg-phase1-final/shared-javascript.stdout",
+      "stderr": "/tmp/pkg-phase1-final/shared-javascript.stderr"
+    },
+    {
+      "name": "shared-javascript-read",
+      "command": [
+        "env",
+        "DEW_CONTRACT_JS_ENTRY=read",
+        "node",
+        "tests/package-contract-v1/run.mjs",
+        "tests/package-contract-v1/adapters/javascript.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.17399763903813437,
+      "stdout": "/tmp/pkg-phase1-final/shared-javascript-read.stdout",
+      "stderr": "/tmp/pkg-phase1-final/shared-javascript-read.stderr"
+    },
+    {
+      "name": "pack",
+      "command": [
+        "node",
+        "--test",
+        "tools/test_dew_pack.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 6.974526503006928,
+      "stdout": "/tmp/pkg-phase1-final/pack.stdout",
+      "stderr": "/tmp/pkg-phase1-final/pack.stderr"
+    },
+    {
+      "name": "strict-lock",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/lock.test.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.21967485500499606,
+      "stdout": "/tmp/pkg-phase1-final/strict-lock.stdout",
+      "stderr": "/tmp/pkg-phase1-final/strict-lock.stderr"
+    },
+    {
+      "name": "snapshot-lock",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/snapshot-inputs.test.mjs"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.13729511003475636,
+      "stdout": "/tmp/pkg-phase1-final/snapshot-lock.stdout",
+      "stderr": "/tmp/pkg-phase1-final/snapshot-lock.stderr"
+    },
+    {
+      "name": "harness",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/harness.test.mjs"
+      ],
+      "exit": 1,
+      "wall_seconds": 0.244796151004266,
+      "stdout": "/tmp/pkg-phase1-final/harness.stdout",
+      "stderr": "/tmp/pkg-phase1-final/harness.stderr"
+    }
+  ],
+  "hold": "Owner hold: no new laptop builds, tests, guest runs, or timings until RELEASE. All owned processes have exited. Evidence archive made by static file operations only.",
+  "validation_head": "788cf198b9397e29833ae317df220be2e78f6a95",
+  "followup_checks": [
+    {
+      "name": "harness-repaired",
+      "command": [
+        "node",
+        "--test",
+        "tests/package-contract-v1/harness.test.mjs"
+      ],
+      "exit": 0,
+      "exit_evidence": "The set -e command completed with exit 0. Raw streams are archived."
+    },
+    {
+      "name": "registry-smoke",
+      "command": [
+        "python3",
+        "tools/test_dew_registry_cli.py"
+      ],
+      "exit": 0,
+      "exit_evidence": "The set -e command completed with exit 0. Raw streams are archived."
+    },
+    {
+      "name": "generated",
+      "command": [
+        "python3",
+        "tools/generate_package_std.py",
+        "--check"
+      ],
+      "exit": 0,
+      "exit_evidence": "The set -e command completed with exit 0. Raw streams are archived."
+    }
+  ],
+  "source_verification": "Static hash comparison: every recorded src/, std/, and tools/ input still matches frozen source head. Only harness and report documentation changed after it.",
+  "current_harness_sha256": "1be3d8420af837dca4db9b8239aa070c2f7e10a1b2486daa80cdd564af070a86"
+}

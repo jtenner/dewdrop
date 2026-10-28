@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "kind": "lock",
+  "cases": [
+    {
+      "id": "empty",
+      "input": "{\"lockfileVersion\":1,\"packages\":[]}",
+      "expected": {
+        "accept": true
+      },
+      "rule": "lock-v1"
+    },
+    {
+      "id": "valid-record",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": true
+      },
+      "rule": "lock-v1"
+    },
+    {
+      "id": "bad-name",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@A/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "bad-version",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0-\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "empty-source",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "absolute-path",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"/fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "drive-path",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"C:/fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "parent-path",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"../fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "empty-path-part",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"a//fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "dot-path-part",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"a/./fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "bad-integrity",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-wrong\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "bad-interface",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"wrong\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "unknown-record-field",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"extra\":\"value\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "locked-record"
+    },
+    {
+      "id": "duplicate-record",
+      "input": "{\"lockfileVersion\":1,\"packages\":[{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},{\"name\":\"@a/b\",\"version\":\"1.0.0\",\"source\":\"file:fixture\",\"path\":\"fixture\",\"integrity\":\"sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"interface\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "duplicate-locked-name"
+    },
+    {
+      "id": "unknown-field",
+      "input": "{\"lockfileVersion\":1,\"packages\":[],\"extra\":0}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "unknown-field"
+    },
+    {
+      "id": "duplicate-field",
+      "input": "{\"lockfileVersion\":1,\"lockfileVersi\\u006fn\":1,\"packages\":[]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "duplicate-decoded-key"
+    },
+    {
+      "id": "decimal-version",
+      "input": "{\"lockfileVersion\":1.0,\"packages\":[]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "lock-version"
+    },
+    {
+      "id": "exponent-version",
+      "input": "{\"lockfileVersion\":1e0,\"packages\":[]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "lock-version"
+    }
+  ]
+}
