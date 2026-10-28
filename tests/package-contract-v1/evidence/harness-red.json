@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "command": [
+    "node",
+    "--test",
+    "tests/package-contract-v1/harness.test.mjs"
+  ],
+  "sourceHeadBeforeTestAddition": "7bcb9edd0377e3c0f0b914fd72f22ff2d9caf785",
+  "exitStatus": 1,
+  "stdout": "harness-red.stdout",
+  "stderr": "harness-red.stderr",
+  "compilerInvoked": false,
+  "networkInvoked": false
+}

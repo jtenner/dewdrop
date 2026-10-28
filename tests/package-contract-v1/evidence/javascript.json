@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "fixtureHeadBeforeAdapter": "0714abd2c81b9c230579458d8074c6e1e0f3eec5",
+  "productionHead": "588cf363c2f9970ca698d44639c57d7a23bce731",
+  "productionPath": "/home/dev/.t3/worktrees/dewdrop/t3-e477a636/tools/dew-package-contract.mjs",
+  "productionSha256": "c914ceac8f601d1f41f05ba47319a8dd225dd6e0f04551a4c5451d5946440fae",
+  "adapterSha256": "045eab505f35f5dc6878857717c1053756db4a6e0abd527e17ce07f5d72ca487",
+  "compilerInvoked": false,
+  "networkInvoked": false,
+  "checks": [
+    {
+      "entry": "parse",
+      "command": [
+        "node",
+        "tests/package-contract-v1/run.mjs",
+        "tests/package-contract-v1/adapters/javascript.mjs"
+      ],
+      "environmentOverrides": {
+        "DEW_CONTRACT_JS_MODULE": "/home/dev/.t3/worktrees/dewdrop/t3-e477a636/tools/dew-package-contract.mjs",
+        "DEW_CONTRACT_JS_ENTRY": "parse"
+      },
+      "exitStatus": 0,
+      "stdout": "javascript-parse.stdout",
+      "stderr": "javascript-parse.stderr"
+    },
+    {
+      "entry": "read",
+      "command": [
+        "node",
+        "tests/package-contract-v1/run.mjs",
+        "tests/package-contract-v1/adapters/javascript.mjs"
+      ],
+      "environmentOverrides": {
+        "DEW_CONTRACT_JS_MODULE": "/home/dev/.t3/worktrees/dewdrop/t3-e477a636/tools/dew-package-contract.mjs",
+        "DEW_CONTRACT_JS_ENTRY": "read"
+      },
+      "exitStatus": 0,
+      "stdout": "javascript-read.stdout",
+      "stderr": "javascript-read.stderr"
+    }
+  ]
+}

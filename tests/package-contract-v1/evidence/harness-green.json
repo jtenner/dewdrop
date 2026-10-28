@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "command": [
+    "node",
+    "--test",
+    "tests/package-contract-v1/harness.test.mjs"
+  ],
+  "headBeforeImplementation": "1f1084e0cd3837c787a390cc6c30376b68ad77ad",
+  "exitStatus": 0,
+  "stdout": "harness-green.stdout",
+  "stderr": "harness-green.stderr",
+  "compilerInvoked": false,
+  "networkInvoked": false,
+  "testedFileSha256": {
+    "tests/package-contract-v1/adapters/baseline-registry.mjs": "bb2d4ab5f8d8eaac9f3bfaa27bdecbdfdffbf53d99475999c1472fd8b19eb355",
+    "tests/package-contract-v1/adapters/jsonl-reader.mjs": "42393b2d96fd19e3008b3b388dd87b2fe75639ee00989f539b65ed0d1ea586de",
+    "tests/package-contract-v1/artifact-budgets.json": "d8d3ca5d61b8c1c67a495db03228677d49233015cadc88e225bef9443fba3dea",
+    "tests/package-contract-v1/artifact-paths.json": "7bc35b56422c25b8e56d99a7d51bf7fc4202fe24aca192a678d91a39ef6174b7",
+    "tests/package-contract-v1/emit.mjs": "2aeb6136c47d96b7749e1696594dfc22f24ad7c4c413f7c10f83392dc618b756",
+    "tests/package-contract-v1/generate.py": "327c56f96ec9d1c49a9818e95ecb4955fd74bc6c9b7d35b95ab10ff2d87809a5",
+    "tests/package-contract-v1/harness.test.mjs": "56f360d4f169aef87552f957a7990e1188411bbca47bb10b608789d5c03b5e82",
+    "tests/package-contract-v1/jsonl.mjs": "18a52610c5b43e53a6ba21a6db07b5a7efa99f26e64f7635bb55531a2f262479",
+    "tests/package-contract-v1/limits.json": "697815667f8331e94b9eca86c50f469fa33c318d2d24c31de13a43648cbd6da8",
+    "tests/package-contract-v1/manifests.json": "c3c200af460b8f6a3f5e8691e9b59d92d178dd105bfa1f43e86939778ec32b63",
+    "tests/package-contract-v1/names.json": "b276b0dd9f604399bf7fdd1b16447b4752f02e6fa39b93900f3676d3906e1436",
+    "tests/package-contract-v1/requirement-matches.json": "9cbdb382bfefe63c3db2e50fce18ca49fd3d46bc499c8ecd0a2a5130b95000f1",
+    "tests/package-contract-v1/requirements.json": "134919afbe68dbcc5f210f5b06f74bbb3dbc4a38958a83c8836839eb5a819335",
+    "tests/package-contract-v1/run.mjs": "add8dd27bef161673b00bfa6ec6e1b0308d87d3e3f6bfd794bd2649a77387b06",
+    "tests/package-contract-v1/semver.json": "126df97dcd73843286cdde46eaa3115ae34f479be9b9e71bed2ec45b508a7869",
+    "tests/package-contract-v1/source-selection.json": "ee020f53e7b6818b83c45ee57f09af8ff0f5351d98bde45223a69a84834d31b2",
+    "tests/package-contract-v1/support/jsonl-reader.mjs": "b004c4a711680244077846fae0c0cfe68c2552bec359d3d68dd114ca95726bc9",
+    "tests/package-contract-v1/vectors.mjs": "e119906659f7b64b3d225ab86f6eeb850551792ed35c382ab3a1bdbfadfcb3cd"
+  }
+}

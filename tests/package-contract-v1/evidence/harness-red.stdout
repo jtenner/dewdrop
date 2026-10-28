@@ -1,0 +1,157 @@
+✖ bridge runs one reader and preserves raw escaped duplicate keys (1.36794ms)
+✖ bridge returns positive and negative reader results with their IDs (0.478089ms)
+✖ bridge exposes omit output as an error (0.357581ms)
+✖ bridge exposes duplicate output as an error (0.34609ms)
+✖ bridge exposes unknown output as an error (0.348314ms)
+✖ bridge exposes malformed output as an error (0.297619ms)
+✖ bridge exposes fail output as an error (0.219713ms)
+✖ bridge reports a missing executable as setup failure (0.318478ms)
+✔ runner requires a diagnostic and checks source path order (0.905422ms)
+✔ text recipes count UTF-8 bytes and reject excessive expansion (4.081106ms)
+✔ manifest byte boundaries and one-case rule controls stay exact (18.733588ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 3
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 83.79693
+
+✖ failing tests:
+
+test at tests/package-contract-v1/harness.test.mjs:13:1
+✖ bridge runs one reader and preserves raw escaped duplicate keys (1.36794ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:21:1
+✖ bridge returns positive and negative reader results with their IDs (0.478089ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:34:3
+✖ bridge exposes omit output as an error (0.357581ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:34:3
+✖ bridge exposes duplicate output as an error (0.34609ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:34:3
+✖ bridge exposes unknown output as an error (0.348314ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:34:3
+✖ bridge exposes malformed output as an error (0.297619ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:34:3
+✖ bridge exposes fail output as an error (0.219713ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
+
+test at tests/package-contract-v1/harness.test.mjs:40:1
+✖ bridge reports a missing executable as setup failure (0.318478ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs' imported from /home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/harness.test.mjs
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:705:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:725:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:763:56)
+      at #resolve (node:internal/modules/esm/loader:687:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:607:35)
+      at node:internal/modules/esm/loader:636:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:370:14) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///home/dev/.t3/worktrees/dewdrop/t3-21590465/tests/package-contract-v1/jsonl.mjs'
+  }
