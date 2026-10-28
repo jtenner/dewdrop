@@ -38,3 +38,7 @@ test('lock parser admits 4096 valid records and rejects 4097', () => {
   packages.push({ ...entry, name: '@test/extra' });
   assert.throws(() => parsePackageLock(lock(packages)), /4096/);
 });
+
+for (const version of ['1.0', '1e0']) test(`lock version requires literal JSON 1: ${version}`, () => {
+  assert.throws(() => parsePackageLock(`{"lockfileVersion":${version},"packages":[]}`), /lockfileVersion/);
+});

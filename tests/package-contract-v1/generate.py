@@ -168,6 +168,8 @@ for id, field, value in [
 locks.append(case("duplicate-record", raw({"lockfileVersion": 1, "packages": [locked, locked]}), False, "duplicate-locked-name"))
 locks.append(case("unknown-field", raw({"lockfileVersion": 1, "packages": [], "extra": 0}), False, "unknown-field"))
 locks.append(case("duplicate-field", '{"lockfileVersion":1,"lockfileVersi\\u006fn":1,"packages":[]}', False, "duplicate-decoded-key"))
+for id, value in [("decimal-version", "1.0"), ("exponent-version", "1e0")]:
+    locks.append(case(id, '{"lockfileVersion":' + value + ',"packages":[]}', False, "lock-version"))
 write("locks", "lock", locks)
 
 paths = []

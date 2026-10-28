@@ -33,6 +33,7 @@ const reasonPatterns = {
   'manifest-object': /invalid manifest JSON: expected '\{'/i,
   'duplicate-decoded-key': /duplicate (manifest|dependency) key|duplicate decoded field/i,
   'locked-record': /locked package/i, 'duplicate-locked-name': /duplicate locked package name/i,
+  'lock-version': /lockfileVersion/i,
   'json-syntax': /invalid manifest JSON/i, 'dependency-count': /dependencies exceed/i,
   'manifest-byte-limit': /package manifest exceeds/i,
   'file-count': /capsule files must contain/i, 'relative-path': /invalid source path/i,

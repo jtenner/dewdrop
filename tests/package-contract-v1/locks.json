@@ -129,6 +129,22 @@
         "accept": false
       },
       "rule": "duplicate-decoded-key"
+    },
+    {
+      "id": "decimal-version",
+      "input": "{\"lockfileVersion\":1.0,\"packages\":[]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "lock-version"
+    },
+    {
+      "id": "exponent-version",
+      "input": "{\"lockfileVersion\":1e0,\"packages\":[]}",
+      "expected": {
+        "accept": false
+      },
+      "rule": "lock-version"
     }
   ]
 }

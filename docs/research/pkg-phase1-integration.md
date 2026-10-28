@@ -168,6 +168,21 @@ narrow native run passes **157 area checks and 197 shared cases**, exit 0;
 12 numeric artifact-budget cases remain explicitly unsupported. Its stderr is
 empty. Evidence is `/tmp/pkg-phase1-bootstrap-integrated/results.json`.
 
+The same JavaScript area suite now passes **108 checks**, exit 0, with empty
+stderr. The added checks inspect ancestors before and after a manifest read,
+and before source collection. This aligns the input rule with native and pack
+readers. It adds metadata calls proportional to path depth. It does not add
+source copies, and it does not claim full race protection. Use physical paths
+without linked ancestors; linked temporary-directory aliases on other hosts
+still need platform checks. Evidence is `/tmp/pkg-phase1-ancestor-green.*`.
+
+## Lock version literal agreement
+
+Native and Dew lock readers already require the literal JSON number `1`.
+The JavaScript lock parser initially admitted `1.0` and `1e0` after numeric
+conversion. Two new shared and focused cases require rejection of those forms.
+This is a representation check for the existing codec number, not a new version.
+
 ## Ordered integration and original lock fix
 
 Bootstrap merged, then the standard codecs. Only the generated package source
