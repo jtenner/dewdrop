@@ -126,3 +126,33 @@ reader differences; `evidence/harness-red.*` and `evidence/harness-green.*`
 record the test-only bridge change. `evidence/functional.json` records generator,
 CLI bridge, unsupported-case, raw-export, and baseline replay checks. No native
 compiler or remote service is part of these checks.
+
+
+## Phase 1 JavaScript adapter
+
+`adapters/javascript.mjs` calls the real `parsePackageManifest`,
+`readPackageManifest`, `collectSourceFiles`, and `encodeCapsule` exports. After
+the JS worker commit is merged, it uses `tools/dew-package-contract.mjs` in this
+repo by default. Before merge, set `DEW_CONTRACT_JS_MODULE` to the absolute path
+of the frozen module in a peer worktree. It only reads that module.
+
+`DEW_CONTRACT_JS_ENTRY=parse` is the default. Set it to `read` to test the bounded
+file reader with the same raw manifests. All source files remain small. Logical
+artifact path vectors call the actual encoder with one-byte file contents, so
+long logical paths do not need long host filenames. Expected rejections also
+check the real diagnostic against a rule-specific pattern. OS/setup failures
+stay errors. Exported MAX_* constants must match `limits.json`; this is an API
+agreement check, not proof that a large codec input enforces each cap.
+
+```sh
+node tests/package-contract-v1/run.mjs tests/package-contract-v1/adapters/javascript.mjs
+DEW_CONTRACT_JS_ENTRY=read node tests/package-contract-v1/run.mjs tests/package-contract-v1/adapters/javascript.mjs
+```
+
+These commands need the JS worker's module to be present. At
+`588cf363c2f9970ca698d44639c57d7a23bce731`, both modes pass 149 shared cases and
+list 30 unsupported range-match/budget cases. Exact pre-merge paths, commands,
+streams, head, and module/adapter hashes are in `evidence/javascript.json`.
+This proves those JS entry points agree with the tested vectors. The derived
+compiler source list still does not execute the compiler. Source races, binary
+restore, native/platform checks, and large cap enforcement remain separate.

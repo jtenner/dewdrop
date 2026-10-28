@@ -150,6 +150,7 @@ The old JS collector returns directory-first order for `src/a/z.dew` versus
 reproduced old-reader difference and can affect source integrity. Coordinate all
 hash/capsule callers together; do not let only one path switch order.
 
+The owner confirmed the drive-prefix rule during coordination.
 `C:/main.dew` is an absolute Windows path and is rejected by the shared vector.
 The old Dew relative-path predicate checks a leading slash but not drive roots.
 Execution on Windows and drive-relative or host-specific filename policy are
@@ -171,6 +172,10 @@ filter of publisher source paths, not a compiler run.
 No compiler, native test lane, platform build, benchmark, memory measurement,
 server, auth, network install, or publication is run by this area. The laptop
 hold remains active. Adapter support and unsupported IDs must stay visible.
-Production red-to-green checks and the quiet-host measurement gate remain with
-the owning workers and coordinator. See `pkg-phase1-contract.md` for the exact
+The coordinated JS adapter passes 149 vectors through both manifest entry
+points at `588cf363c2f9970ca698d44639c57d7a23bce731`. It checks actual parse, file
+read, source collect, and encode behavior, with specific rejection diagnostics.
+Thirty range-match/budget vectors remain unsupported there. Other production
+reader red-to-green checks and the quiet-host measurement gate remain with the
+owning workers and coordinator. See `pkg-phase1-contract.md` for the exact
 baseline evidence and handoff workload.

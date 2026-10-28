@@ -140,8 +140,8 @@ argv, environment overrides, stdout, stderr, and expected/actual exit status:
 6. The SAME full baseline command still returns 1, with stdout and stderr
    byte-identical to checkpoint 1: 49 match, 72 differ, 58 unsupported.
 
-There is no production green claim. Other workers own the fixes and real reader
-adapters. The generic runner enforces acceptance, expected output fields, and a
+At checkpoint 3 there is no production green claim. Other workers own the
+fixes and real reader adapters. The later JS coordination result is below. The generic runner enforces acceptance, expected output fields, and a
 nonempty rejection diagnostic. It does not itself prove that a rejection came
 from the intended parser error. Each production adapter must check its reader's
 specific error when that distinction is available. Static byte/budget fixtures
@@ -166,12 +166,57 @@ paths without inventing a broader filename policy. These points are explained
 in `package-contract-v1.md`. This area cannot close the native, platform, source
 race, lock graph, restore, binary cap, or performance gates.
 
+## Checkpoint 4: coordinated JS reader agreement
+
+Prior harness head: `0714abd2c81b9c230579458d8074c6e1e0f3eec5`.
+The coordinator supplied the completed JS module at
+`/home/dev/.t3/worktrees/dewdrop/t3-e477a636/tools/dew-package-contract.mjs`,
+head `588cf363c2f9970ca698d44639c57d7a23bce731`.
+That worktree was clean. It was read only. No peer file changed here.
+The coordinator also confirmed that drive-prefixed `C:/x.dew` paths are unsafe;
+the existing shared vector already has this rule.
+
+`adapters/javascript.mjs` calls that module's real parse/read/collect/encode API.
+The fixture and baseline regression checkpoints existed before this adapter.
+This runs the SAME contract cases that were red on the old publisher. The
+adapter sets valid surrounding fields for individual name/version/request cases;
+manifest JSON is passed raw. It writes bounded fixture files for the file-reader
+mode and source inventory. Path cases call the real encoder with one-byte source
+buffers. It checks the intended rejection diagnostic for every negative case,
+with OS/setup faults left visible. Ten exported MAX_* constants also agree with
+the shared limits file; this does not prove large-input cap enforcement.
+
+Both `DEW_CONTRACT_JS_ENTRY=parse` and `DEW_CONTRACT_JS_ENTRY=read` return exit 0:
+149 pass, 0 fail, 30 unsupported. The 121 cases run on the old reader now all
+pass; another 28 artifact path cases pass through the real encoder, including
+duplicate/prefix conflicts in both orders and the Windows drive-root case.
+The old baseline was 49 match and 72 differences for its 121 cases. There is no
+claim of a baseline artifact-path check, because that baseline adapter did not
+support artifact-path records.
+
+`evidence/javascript.json` records the exact commands, environment overrides,
+production head, production module hash, adapter hash, and full stream paths.
+Each subprocess had a 30-second timeout. No compiler or network was invoked.
+The production module hash was unchanged before and after the run. These are
+narrow functional results, not performance measurements. All changes in this
+worktree are still within the assigned test/docs area.
+
+The remaining 30 cases are 18 requirement matches and 12 numeric budget inputs.
+The JS module has no version-match API and these checks did not allocate large
+sources or capsules. Native/bootstrap/Dew and affected-platform checks, real
+large source/file-count/encoded-cap checks, source-race checks, lock traversal,
+restoration, and the quiet-host performance gate remain with the coordinator.
+No rule or API adjustment is needed for the JS functions tested here. The
+previous static Dew parser and shared hash-order points still need owning-worker
+checks. Use the earlier workload proposal after the timing hold is lifted.
+
 ## Complete changed file list
 
 - `docs/research/package-contract-v1.md`
 - `docs/research/pkg-phase1-contract.md`
 - `tests/package-contract-v1/README.md`
 - `tests/package-contract-v1/adapters/baseline-registry.mjs`
+- `tests/package-contract-v1/adapters/javascript.mjs`
 - `tests/package-contract-v1/adapters/jsonl-reader.mjs`
 - `tests/package-contract-v1/artifact-budgets.json`
 - `tests/package-contract-v1/artifact-paths.json`
@@ -186,6 +231,11 @@ race, lock graph, restore, binary cap, or performance gates.
 - `tests/package-contract-v1/evidence/harness-red.json`
 - `tests/package-contract-v1/evidence/harness-red.stderr`
 - `tests/package-contract-v1/evidence/harness-red.stdout`
+- `tests/package-contract-v1/evidence/javascript-parse.stderr`
+- `tests/package-contract-v1/evidence/javascript-parse.stdout`
+- `tests/package-contract-v1/evidence/javascript-read.stderr`
+- `tests/package-contract-v1/evidence/javascript-read.stdout`
+- `tests/package-contract-v1/evidence/javascript.json`
 - `tests/package-contract-v1/generate.py`
 - `tests/package-contract-v1/harness.test.mjs`
 - `tests/package-contract-v1/jsonl.mjs`
