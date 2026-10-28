@@ -111,3 +111,25 @@ bound without requiring host files at that length.
 Run the same failure command with `--evidence
 /tmp/pkg-phase1-bootstrap-evidence/red-paths`. Base source is unchanged. The
 previous test checkpoint is `0fc3e2cc4`. Full evidence remains in that folder.
+
+## Strict text checkpoint
+
+The first direct-path run could not pass NUL in a process argument. The driver
+now receives path text as JSON, so it can check NUL without changing the input
+rule. That incomplete setup run is not a baseline pass. The complete replacement
+run used `--revision 20f902acb6caa56a49712df832aeb0c46ec520b8 --evidence
+/tmp/pkg-phase1-bootstrap-evidence/red-utf8`: exit 1, 149 named checks, 100
+failed expectations including pre-write checks. Narrow build: exit 0,
+1.007082 seconds. The test checkpoint before this repair is `77692bbcf`.
+
+The installed `moonbitlang/x@0.5.5` source was read from its local registry ZIP.
+It exposes `is_file` and `is_dir`, but no lstat/size API. Native reads use
+fopen/fseek/ftell and full-file allocation. String reads then use
+`@unicode.to_utf8_string`, which can replace invalid bytes. This justifies the
+small lstat helper and a strict `@utf8.decode` in bootstrap JSON reads.
+
+`manifest invalid UTF-8` returns exit 0 on base with
+`ok @fixture/root@1.0.0 dependencies=1`. The invalid lock byte fixture already
+returns exit 2, but with a JSON character error rather than a UTF-8 error. The
+lock check specifically pins that diagnostic; it does not claim the base accepts
+that lock. No remote dependency or software install was needed.

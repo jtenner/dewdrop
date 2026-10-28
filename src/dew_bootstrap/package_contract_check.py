@@ -352,7 +352,15 @@ def main():
             check('restore field byte bound ' + name, 'restore', folder / 'dew.lock', 'bound')
 
         for path, valid in [('a:x.dew', True), ('1:/x.dew', True), ('C:/x.dew', False), ('z:/x.dew', False), ('/x.dew', False), ('../x.dew', False), ('a//x.dew', False), ('a/./x.dew', False), ('a/../x.dew', False), ('a\\x.dew', False), ('a\0x.dew', False), ('dew.json/x.dew', False), ('a'*4092 + '.dew', True), ('a'*4093 + '.dew', False)]:
-            check('logical path ' + repr(path[:35]), 'path', path, 'valid' if valid else 'unsafe', True)
+            check('logical path ' + repr(path[:35]), 'path', json.dumps(path), 'valid' if valid else 'unsafe', True)
+
+        folder = package()
+        (folder / 'dew.json').write_bytes(b'{"name":"@fixture/root","version":"1.0.0","dependencies":{"@fixture/dep":"git+\xff#ref"}}')
+        check('manifest invalid UTF-8', 'manifest', folder / 'dew.json', 'UTF-8')
+        folder = package()
+        lock(folder)
+        (folder / 'dew.lock').write_bytes((folder / 'dew.lock').read_bytes().replace(b'file:dep', b'file:\xff'))
+        check('lock invalid UTF-8', 'lock', folder / 'dew.lock', 'UTF-8')
 
         # Local artifacts above the 64 MiB public cap still fit the 256 MiB codec.
         # Inspect the constant only here; near-limit I/O is a held workload.
