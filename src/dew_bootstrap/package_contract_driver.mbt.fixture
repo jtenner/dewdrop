@@ -1,6 +1,7 @@
 fn main {
   let args = @sys.get_cli_args()
   match args[1] {
+    "path" => println(if bootstrap_package_artifact_source_path_valid(args[2]) { "valid" } else { "unsafe" })
     "manifest" => {
       let package_ = bootstrap_load_package(args[2])
       println("ok \{package_.name}@\{package_.version} dependencies=\{package_.dependencies.length()}")

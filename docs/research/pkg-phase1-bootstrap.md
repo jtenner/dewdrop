@@ -96,3 +96,18 @@ sources or dependencies. This can change old source-integrity hashes for
 packages with different-length source paths or dependency names. No v2 is added;
 this aligns unreleased v1 with the contract. Recreate affected local locks and
 artifacts using the aligned contract.
+
+## Path agreement checkpoint
+
+Read the JS contract at
+`/home/dev/.t3/worktrees/dewdrop/t3-e477a636/tools/dew-package-contract.mjs`,
+reported head `588cf363c2f9970ca698d44639c57d7a23bce731`, without edits.
+Source/dependency byte order, lowercase hashes, and all size constants agree.
+Windows drive-absolute paths match `^[A-Za-z]:/`; a colon in a relative filename
+is allowed. Direct native helper checks cover that distinction, NUL, dot and
+empty segments, backslashes, manifest prefixes, and the exact 4,096-byte path
+bound without requiring host files at that length.
+
+Run the same failure command with `--evidence
+/tmp/pkg-phase1-bootstrap-evidence/red-paths`. Base source is unchanged. The
+previous test checkpoint is `0fc3e2cc4`. Full evidence remains in that folder.

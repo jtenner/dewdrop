@@ -351,6 +351,9 @@ def main():
             artifact.write_bytes(capsule(entry, [], files))
             check('restore field byte bound ' + name, 'restore', folder / 'dew.lock', 'bound')
 
+        for path, valid in [('a:x.dew', True), ('1:/x.dew', True), ('C:/x.dew', False), ('z:/x.dew', False), ('/x.dew', False), ('../x.dew', False), ('a//x.dew', False), ('a/./x.dew', False), ('a/../x.dew', False), ('a\\x.dew', False), ('a\0x.dew', False), ('dew.json/x.dew', False), ('a'*4092 + '.dew', True), ('a'*4093 + '.dew', False)]:
+            check('logical path ' + repr(path[:35]), 'path', path, 'valid' if valid else 'unsafe', True)
+
         # Local artifacts above the 64 MiB public cap still fit the 256 MiB codec.
         # Inspect the constant only here; near-limit I/O is a held workload.
         constant_source = (source / 'package_artifact.mbt').read_text()
