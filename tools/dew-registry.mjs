@@ -1,16 +1,16 @@
 #!/usr/bin/env bun
-import { createHash } from "node:crypto";
-import { homedir, tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
-import { chmod, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 
 const repositoryRoot = resolve(import.meta.dir, "..");
 const command = process.argv[2] ?? "";
 const arguments_ = process.argv.slice(3);
 
 function fail(message, status = 2) {
-  console.error(`dew ${command}: ${message}`);
-  process.exit(status);
+  const error = new Error(message);
+  error.status = status;
+  throw error;
 }
 
 function option(name, fallback = "") {
@@ -123,99 +123,75 @@ async function logout() {
 }
 
 async function run(commandLine, options = {}) {
-  const child = Bun.spawn(commandLine, { cwd: options.cwd ?? process.cwd(), stdin: "inherit", stdout: options.capture ? "pipe" : "inherit", stderr: "inherit", env: process.env });
+  const child = Bun.spawn(commandLine, { cwd: options.cwd ?? process.cwd(), stdin: "inherit", stdout: options.capture ? "pipe" : "inherit", stderr: "inherit", env: options.env ?? process.env });
   const output = options.capture ? await new Response(child.stdout).text() : "";
   const status = await child.exited;
-  if (status !== 0) fail(options.message ?? `${commandLine[0]} failed`, 1);
+  if (status !== 0) fail(`${options.message ?? `${commandLine[0]} failed`} (exit ${status})`, 1);
   return output.trim();
 }
 
-async function sourceFiles(packageRoot) {
-  const sourceRoot = join(packageRoot, "src");
-  const files = [];
-  async function collect(directory) {
-    const entries = await readdir(directory, { withFileTypes: true });
-    entries.sort((left, right) => Buffer.compare(Buffer.from(left.name), Buffer.from(right.name)));
-    for (const entry of entries) {
-      const path = join(directory, entry.name);
-      if (entry.isDirectory()) await collect(path);
-      else if (entry.isFile() && entry.name.endsWith(".dew")) files.push(path);
-    }
+function packageOptions() {
+  const values = new Map();
+  const valued = new Set(["--manifest", "--registry", "--output"]);
+  const flags = new Set(command === "publish" ? ["--help", "--dry-run"] : ["--help"]);
+  for (let index = 0; index < arguments_.length; index++) {
+    const name = arguments_[index];
+    if (!valued.has(name) && !flags.has(name)) fail(`${name.startsWith("-") ? "unknown option" : "unexpected argument"}: ${name}`);
+    if (values.has(name)) fail(`duplicate option: ${name}`);
+    if (valued.has(name)) {
+      const value = arguments_[++index];
+      if (!value || value.startsWith("-")) fail(`${name} requires a value`);
+      values.set(name, value);
+    } else values.set(name, true);
   }
-  try {
-    if ((await stat(sourceRoot)).isDirectory()) await collect(sourceRoot);
-  } catch {
-    const entries = await readdir(packageRoot, { withFileTypes: true });
-    entries.sort((left, right) => Buffer.compare(Buffer.from(left.name), Buffer.from(right.name)));
-    for (const entry of entries) if (entry.isFile() && entry.name.endsWith(".dew")) files.push(join(packageRoot, entry.name));
-  }
-  if (files.length === 0) fail("package has no conventional .dew sources", 1);
-  return files;
+  if (command === "publish" && values.has("--output") && !values.has("--dry-run")) fail("--output requires publish --dry-run");
+  return values;
 }
 
-function u32(value) {
-  const bytes = Buffer.alloc(4);
-  bytes.writeUInt32LE(value);
-  return bytes;
+function packageHelp() {
+  console.log(`usage: dew ${command} [--manifest PATH] [--registry ORIGIN] [--help]${command === "publish" ? " [--dry-run [--output DIR]]" : " [--output DIR]"}`);
+  console.log("--manifest PATH: package manifest (default: ./dew.json).");
+  console.log("--registry ORIGIN: capsule source origin (no lookup for local preparation).");
+  if (command === "publish") console.log("--dry-run: save local checked inputs without login or upload.");
+  console.log("--output DIR: new output directory. It must not exist; its parent must exist.");
+  console.log("Local output: package.dpa and INPUTS.json. This is not a public release descriptor.");
 }
 
-function field(value) {
-  const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
-  return Buffer.concat([u32(bytes.length), bytes]);
-}
-
-async function capsule(manifestPath, source, interfaceFingerprint, integrity) {
-  let manifest;
-  try { manifest = JSON.parse(await readFile(manifestPath, "utf8")); } catch { fail("dew.json is invalid JSON", 1); }
-  if (typeof manifest?.name !== "string" || typeof manifest?.version !== "string" || !manifest.dependencies || typeof manifest.dependencies !== "object" || Array.isArray(manifest.dependencies)) fail("dew.json does not contain a package manifest", 1);
-  if (!/^[0-9a-f]{64}$/.test(interfaceFingerprint) || !/^sha256-[0-9a-f]{64}$/.test(integrity)) fail("compiler returned invalid package provenance", 1);
-  const packageRoot = dirname(manifestPath);
-  const dependencies = Object.entries(manifest.dependencies).sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
-  const files = await sourceFiles(packageRoot);
-  const parts = [Buffer.from("DEWPKG1\0", "binary"), field(manifest.name), field(manifest.version), field(source), field(integrity), field(interfaceFingerprint), u32(dependencies.length)];
-  for (const [name, requirement] of dependencies) {
-    if (typeof requirement !== "string") fail(`dependency ${name} requirement is not a string`, 1);
-    parts.push(field(name), field(requirement));
-  }
-  parts.push(u32(files.length));
-  for (const path of files) parts.push(field(relative(packageRoot, path).replaceAll("\\", "/")), field(await readFile(path)));
-  const payload = Buffer.concat(parts);
-  const encoded = Buffer.concat([payload, createHash("sha256").update(payload).digest()]);
-  if (encoded.length > 64 * 1_048_576) fail("package capsule exceeds the 64 MiB upload limit", 1);
-  return { encoded, manifest };
-}
-
-async function publish() {
+async function packageCommand() {
+  const options = packageOptions();
+  if (options.has("--help")) { packageHelp(); return; }
   const registry = registryOrigin();
-  const { value } = await credentialFor(registry);
-  const manifestPath = resolve(option("--manifest", join(process.cwd(), "dew.json")));
-  const temporary = await mkdtemp(join(tmpdir(), "dew-publish-"));
-  try {
-    const wasm = join(temporary, "package.wasm");
-    console.log("Building and validating the package…");
-    await run([join(repositoryRoot, "tools/dew"), "build", "--manifest", manifestPath, "-o", wasm]);
-    const abiText = await run(["node", join(repositoryRoot, "tools/dew-abi.mjs"), wasm, "interface"], { capture: true, message: "could not read the compiled package interface" });
-    let abi;
-    try { abi = JSON.parse(abiText); } catch { fail("compiler emitted invalid interface metadata", 1); }
-    const integrity = await run([join(repositoryRoot, "tools/dew"), "package-integrity", manifestPath], { capture: true, message: "could not calculate package integrity" });
-    const source = `registry:${registry}`;
-    const artifact = await capsule(manifestPath, source, abi.interfaceFingerprint, integrity);
-    console.log(`Publishing ${artifact.manifest.name}@${artifact.manifest.version} (${(artifact.encoded.length / 1024).toFixed(1)} KiB)…`);
-    const response = await fetch(`${registry}/api/cli/packages`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${value.token}`, "Content-Type": "application/vnd.dewdrop.package-v1", "Content-Length": String(artifact.encoded.length), "User-Agent": "Dewdrop-CLI/0.1" },
-      body: artifact.encoded,
-    });
-    const result = await responseJson(response);
-    if (!response.ok) fail(result.error ?? `registry returned ${response.status}`, 1);
-    console.log(`Published ${result.name}@${result.version}\n${registry}${result.url}`);
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
+  const local = command === "pack" || options.has("--dry-run");
+  // Preserve the existing publish credential lookup and upload contract.
+  const credential = local ? null : await credentialFor(registry);
+  const manifestPath = resolve(options.get("--manifest") ?? join(process.cwd(), "dew.json"));
+  const { preparePackage, retainPackage } = await import("./dew-package-snapshot.mjs");
+  console.log("Building and checking captured package inputs...");
+  const artifact = await preparePackage({ manifestPath, source: `registry:${registry}`, repositoryRoot, run });
+  if (local) {
+    const defaultOutput = `${artifact.manifest.name.slice(1).replaceAll("/", "-")}-${artifact.manifest.version}.pack`;
+    const inputs = await retainPackage(artifact, resolve(options.get("--output") ?? defaultOutput));
+    console.log(JSON.stringify(inputs, null, 2));
+    return;
   }
+  console.log(`Publishing ${artifact.manifest.name}@${artifact.manifest.version} (${(artifact.encoded.length / 1024).toFixed(1)} KiB)...`);
+  const response = await fetch(`${registry}/api/cli/packages`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${credential.value.token}`, "Content-Type": "application/vnd.dewdrop.package-v1", "Content-Length": String(artifact.encoded.length), "User-Agent": "Dewdrop-CLI/0.1" },
+    body: artifact.encoded,
+  });
+  const result = await responseJson(response);
+  if (!response.ok) fail(result.error ?? `registry returned ${response.status}`, 1);
+  console.log(`Published ${result.name}@${result.version}\n${registry}${result.url}`);
 }
 
-if (command === "login") await login();
-else if (command === "logout") await logout();
-else if (command === "whoami") await whoami();
-else if (command === "publish") await publish();
-else fail("unsupported registry command");
+try {
+  if (command === "login") await login();
+  else if (command === "logout") await logout();
+  else if (command === "whoami") await whoami();
+  else if (command === "pack" || command === "publish") await packageCommand();
+  else fail("unsupported registry command");
+} catch (error) {
+  console.error(`dew ${command}: ${error.message ?? error}`);
+  process.exitCode = error.status ?? 1;
+}

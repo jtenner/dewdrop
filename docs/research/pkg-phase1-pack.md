@@ -109,6 +109,115 @@ evidence only, with absent future release fields. No remote tag check or full
 release descriptor is added. Existing publish auth and HTTP remain as before.
 Gaps 5 (server persistence/listing) and 7 (token expiry/revocation) stay deferred.
 
+## Implementation and final narrow evidence
+
+Owner approved inheriting the two JavaScript commits after the red runs:
+
+| Original worker commit | Local inherited commit |
+| --- | --- |
+| `158dd834088f598e9a629cb8f89dcb2d28c9f90a` | `deac06c7e11599acf2425454a1fcd419570618ef` |
+| `588cf363c2f9970ca698d44639c57d7a23bce731` | `24d1946bbd55f20779318a3bcec752ee9b9cd2f8` |
+
+Root integration must skip these duplicate changes when it picks the snapshot
+checkpoints. This work does not edit the inherited contract implementation.
+Second own test checkpoint: `29a391a7744eed1b2995facc1288c94e986ae794`.
+The code checkpoint follows local head `24d1946bbd55f20779318a3bcec752ee9b9cd2f8`.
+Its tested source hashes are below; final handoff gives its exact commit ID.
+
+`preparePackage` captures validated manifests, selected root/dependency sources,
+the reachable graph, and selected standard `.dew` files. It checks regular files,
+all parent directories, no-follow open, fstat identity, bounded reads, growth and
+replacement, and strict manifest UTF-8. Selected file inventory is not treated as
+captured bytes. The rewritten lock uses confined `.dew-snapshot/N/dew.json` paths.
+The capture hashes each package with the existing v1 source-integrity field order
+and checks dependency integrity and identity before build. Compiler graph checks
+still apply; this helper does not implement a new version resolver.
+
+Captured files have mode 0400; captured directories have mode 0500 while building.
+Build uses the captured manifest, captured standard root, and an isolated private
+cache. No live package or materialized dependency file is read after freeze.
+Compiler scripts and installed toolchain files remain trusted installed tools.
+Integrity from the compiler must equal the captured source integrity. Capsule
+encoding takes only the captured root bytes. The compiler still owns compile
+selection and excludes `_test.dew`; capture/integrity/capsules include tests.
+No real compiler selection check is claimed in this mock-only run.
+
+The primary compiler error and a cleanup error both remain visible. Package
+errors throw; only the outer CLI sets `process.exitCode`. Outputs are retained
+after snapshot cleanup, in a new directory created exclusively. A build failure
+cannot leave a local output set or cause upload. Existing output directories,
+capsules, descriptors and package inputs are not replaced.
+
+Local commands:
+
+```sh
+tools/dew pack --manifest ./dew.json --output ./new-pack-directory
+tools/dew publish --dry-run --manifest ./dew.json --output ./new-dry-run-directory
+tools/dew pack --help
+tools/dew publish --help
+```
+
+The output directory's parent must exist. The default directory is
+`SCOPE-NAME-VERSION.pack` in the working directory. The capsule remains v1 with
+the existing `registry:ORIGIN` source field. `INPUTS.json` records original and
+canonical manifest hashes, files and hashes, original/rewritten lock hashes,
+the exact captured graph, source integrity, ABI/interface, build-file digest,
+captured standard identity, and capsule digest/size/paths. It records compiler
+build identity as null because current ABI metadata does not expose it. Future
+release data is null. This is local build evidence, not a public release.
+
+Bounds: source 16 MiB, manifest 1 MiB, publish capsule 64 MiB including overhead,
+local dependency artifact capture 256 MiB, 65,536 files/package, 4,096 graph nodes.
+Lock input uses the approved plan's 1 MiB metadata bound. Coordinator note:
+large 4,096-node graphs can reach this lock-byte bound before the node bound;
+confirm this local lock policy when integrating. No contract API change is needed.
+No version or codec number changes. Standard source capture also limits individual
+files to 16 MiB and count to 65,536. This is not a whole-workspace/cache copy.
+
+Additional baseline preflight run:
+`DEW_TEST_REGISTRY_MODULE=/tmp/dew-pack-evidence/baseline-registry.mjs node --test --test-name-pattern='64 MiB publish|snapshot rejects .* graph' tools/test_dew_pack.mjs`.
+Exit 1, 6 failed. Exact files: `preflight-baseline.stdout`,
+`preflight-baseline.stderr` (empty), `preflight-baseline.status`. Old code reaches
+the build before rejecting the capsule cap. The graph cases test snapshot-local
+preflight with a mock compiler, not missing real-compiler rejection.
+
+Final normal-import command, after the real contract commits were inherited:
+`node --test tools/test_dew_pack.mjs`.
+Result: exit 0, 34 passed, 0 failed, 0 skipped. Exact stdout, empty stderr, and
+exit status are in `/tmp/dew-pack-evidence/integrated-green.stdout`,
+`integrated-green.stderr`, `integrated-green.status`.
+All 14 original named checks are covered, with option/symlink cases split and
+the wider checks above. The same mutation checks are green. No fixture skipped
+an unavailable module. A previous wider run using an exact external contract
+copy also passed 34 checks: `wider-green.*`. That contract copy's SHA-256 equals
+the inherited file: `c914ceac8f601d1f41f05ba47319a8dd225dd6e0f04551a4c5451d5946440fae`.
+
+Impact smoke command: `python3 -m unittest tools/test_dew_registry_cli.py`.
+Exit 0, one passed; stdout empty; stderr says `Ran 1 test` and `OK`.
+Exact files: `auth-smoke.stdout`, `auth-smoke.stderr`, `auth-smoke.status`.
+This checks the existing IPv6 no-login error without an HTTP call. It is not
+auth expiry, revocation, server, or live-publish coverage.
+
+Static commands: `git diff --check`, `node --check tools/dew-registry.mjs`,
+`node --check tools/dew-package-snapshot.mjs`, `bash -n tools/dew`: all exit 0,
+no stdout/stderr. No production source changed after the final normal-import run.
+Tested implementation SHA-256 values:
+
+| File | SHA-256 |
+| --- | --- |
+| `tools/dew` | `abfe52397e36b39ee012a467de1a3e1d5e16df897c68c7bdbb51f9e03431b133` |
+| `tools/dew-registry.mjs` | `ec16833f266c7f20a7bd13879aeae4b821c293fedeba74cd727711abb900f57f` |
+| `tools/dew-package-snapshot.mjs` | `bc2b404acf64dc6393a8dc6a8e40112fde298254edb1e1931db42cf9cc8034cb` |
+| `tools/test_dew_pack.mjs` | `84d13a0554a5cfe639cf5dbabb86903817855552ec04b063dfd91b78d382d27d` |
+
+Own changed files: those four files and this note. Inherited files:
+`tools/dew-package-contract.mjs`, `tools/test_dew_package_contract.mjs`,
+`docs/research/pkg-phase1-javascript.md`. Native integration after the bootstrap
+and standard changes is still required. No full native lane, stress lane,
+Starshine lane, broad build, timing or benchmark ran. No real compiler subprocess
+ran, so no compiler wall-time sample is reported. Test-runner durations are
+incidental functional-check output, not performance evidence.
+
 ## Performance handoff
 
 Changed shared callers: pack, publish, and publish dry-run. Sensitive work:
@@ -116,6 +225,15 @@ source traversal, graph traversal, bounded file reads/copies, standard-source
 capture, SHA-256, JSON, and capsule buffers. Snapshotting adds disk I/O and hash
 work proportional to selected bytes. It must not copy unrelated workspace data.
 No performance result is claimed during HOLD.
+
+Capture reads/writes one bounded source at a time and stores file metadata.
+Encoding later retains root file buffers plus one encoded capsule buffer, so its
+live source/capsule data can approach twice the publish size before runtime/GC
+overhead. SHA-256 rechecks and no-follow/parent checks add per-file work. The
+compiled build file is hashed in chunks. The private cache deliberately cannot
+reuse or restore live package-cache inputs. No lower memory or runtime cost is
+claimed without measurement. An unavailable compiler build identity is not
+invented from a Git commit or package version.
 
 After an exclusive lease: compare frozen master and head for tiny/root/src
 packages, a 16 MiB source, near-64 MiB capsules, 65,536 tiny files, graph chains

@@ -4,7 +4,7 @@ export DEW_WORKING_DIRECTORY="$PWD"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 export DEW_REPOSITORY_ROOT="$root"
 case "${1:-}" in
-  login|logout|whoami|publish)
+  login|logout|whoami|pack|publish)
     exec bun "$root/tools/dew-registry.mjs" "$@"
     ;;
 esac
