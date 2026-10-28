@@ -75,3 +75,26 @@ directory. This is a partial green result for the parser fix, not a claim that
 the complete contract suite passes. The generated package sources are current.
 The wider JavaScript vector suite now passes 163 cases, with the same 30
 unsupported range-match/budget cases. No full native lane or timing run ran.
+
+## Original lock input regression checkpoint
+
+The completed snapshot branch is `2012c41ee577fbd104cf49e423b7db2077235896`.
+Static inspection found that `captureGraph` used `JSON.parse` and then wrote a
+canonical lock. This hid original duplicate/unknown fields from the compiler's
+strict lock reader. The new `snapshot-inputs.test.mjs` calls the real snapshot
+module with a mock compiler and tiny standard sources. It checks duplicate
+decoded keys, unknown fields, invalid unused locked records, and invalid UTF-8.
+Every rejection must happen before a build call. The valid-lock control checks
+the original lock digest and the checked source integrity.
+
+Command before the fix:
+
+```sh
+DEW_TEST_SNAPSHOT_MODULE=/home/dev/.t3/worktrees/dewdrop/t3-5d0c8bc9/tools/dew-package-snapshot.mjs node --test tests/package-contract-v1/snapshot-inputs.test.mjs
+```
+
+Result: 10 failures, 1 pass, exit 1. Each failure reports a missing expected
+rejection. Raw output is `/tmp/pkg-phase1-snapshot-lock-red.stdout`; stderr is
+`/tmp/pkg-phase1-snapshot-lock-red.stderr`. This error is in newly added snapshot
+code, not a claim that master had the `pack` command. The fix must validate the
+original lock, including unused records, before snapshot path rewriting.
