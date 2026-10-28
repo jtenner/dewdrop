@@ -1,0 +1,41 @@
+fn main {
+  let args = @sys.get_cli_args()
+  match args[1] {
+    "manifest" => {
+      let package_ = bootstrap_load_package(args[2])
+      println("ok \{package_.name}@\{package_.version} dependencies=\{package_.dependencies.length()}")
+    }
+    "lock" => {
+      let locked = bootstrap_load_lockfile(args[2], bootstrap_dirname(args[2]))
+      println("ok packages=\{locked.length()}")
+    }
+    "sources" | "integrity" => {
+      let package_ = bootstrap_load_package(args[2])
+      if args[1] == "integrity" {
+        println(bootstrap_package_integrity(package_))
+      } else {
+        for file in bootstrap_package_sources(package_, args[3] == "true") {
+          println(file)
+        }
+      }
+    }
+    "graph" => {
+      let manifest = bootstrap_load_package_manifest(args[2], false)
+      println("ok modules=\{manifest.modules.length()}")
+    }
+    "artifact-path" | "restore" | "store" => {
+      let locks = bootstrap_load_lockfile(args[2], bootstrap_dirname(args[2]))
+      let lock = locks.get("@fixture/dep").unwrap()
+      if args[1] == "artifact-path" {
+        println(bootstrap_package_artifact_path(lock))
+      } else if args[1] == "restore" {
+        let package_ = bootstrap_restore_package_artifact(lock)
+        println("ok \{package_.name}@\{package_.version}")
+      } else {
+        bootstrap_store_package_artifact(bootstrap_load_package(lock.manifest), lock)
+        println("ok stored")
+      }
+    }
+    _ => abort("unknown contract check")
+  }
+}
