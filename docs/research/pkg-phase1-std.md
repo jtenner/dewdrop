@@ -282,3 +282,50 @@ parser for public version and requirement values. This adds bounded parser work
 and allocations to encode/validate callers. A type-privacy change could remove
 that need, but it changes an API outside this assignment. No such API change is
 proposed in this patch. Measurements remain held and must include this new work.
+
+## Public SemVer green checkpoint
+
+Test checkpoint: `94e159f5f116da8eff9b1f0fa365d1b25f9bac9a`.
+The same 23 checks pass with unchanged test source. The version and requirement
+validators reuse `semver_parse` on the wire text. No new SemVer grammar, version
+codec, or Git grammar is introduced. This checks encoded text, not a claim that
+all public SemVer internal fields are consistent with that text for unrelated
+SemVer arithmetic APIs.
+
+Command: `python3 /tmp/pkg-phase1-std-evidence/run.py green-semver`.
+Compile exit: 0; wall seconds: 0.9932756000198424.
+Compile stdout:
+```text
+wrote self-describing Dew test module
+```
+Compile stderr: empty.
+Execution exit: 0; wall seconds: 0.21480105601949617.
+Execution stdout:
+```text
+package contract v1 passed: 23
+```
+Execution stderr: empty.
+Commands match the first red commands with output/input `green-semver.wasm`.
+Input SHA-256 values:
+```json
+{
+  "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626",
+  "std/package.dew": "68a596acd1d9ed4a04a2c87c8bcfb8732f82b31bf50b5fcceaa32c912bb0a1a1",
+  "std/package/artifact.dew": "35966ea77aba5f2eecc52dbcc413ba15f0c6db677804a223fe356655ed3656a1",
+  "std/tests/package_contract_v1_test.dew": "d6ef4ddcb5f5ec3d10448e65d091fe2039b334535247904de9569a4add17e5f1"
+}
+```
+
+The embedded source mirror was regenerated and its `--check` passed, exit 0.
+`git diff --check` also passed, exit 0, with no output.
+
+Performance addendum: this final fix supersedes the first checkpoint's statement
+that only Git requirements parse during validation. Public exact/caret/tilde
+requirements and package version text now also parse, because public SemVer fields
+can bypass both checked factories. Successful decode currently repeats that
+bounded parse during final validation. This allocates the parser's result state;
+it does not render/copy exact version text or file contents. Reuse of the current
+strict parser keeps all codecs on the same grammar. A quiet-host lease is needed
+to measure this cost and the added path views. Include no-dependency manifests,
+256 SemVer dependencies, prerelease/build strings at 255 bytes, and early/late
+rejections in that comparison. No runtime or memory improvement is claimed.

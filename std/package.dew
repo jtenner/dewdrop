@@ -177,12 +177,19 @@ pub fn package_requirement_to_string(value: PackageRequirement) -> String {
   }
 }
 
+pub fn package_semver_is_valid(value: SemVer) -> Bool {
+  // SemVer fields are public, so a constructed value may bypass semver_parse.
+  semver_parse(value.to_string()) is Result::Ok(_)
+}
+
 pub fn package_requirement_is_valid(value: PackageRequirement) -> Bool {
   match value {
-    // SemVer values are checked by their parser. Git strings can also come from
-    // the public enum constructor, so check both their grammar and their variant.
+    PackageRequirement::Any => true
+    PackageRequirement::Exact(version) => package_semver_is_valid(version)
+    PackageRequirement::Caret(version) => package_semver_is_valid(version)
+    PackageRequirement::Tilde(version) => package_semver_is_valid(version)
+    // Check both grammar and variant for the public Git string constructor.
     PackageRequirement::Git(source) => package_requirement_parse(source) is Result::Ok(PackageRequirement::Git(_))
-    _ => true
   }
 }
 
@@ -665,6 +672,8 @@ impl Validate<FormatValidationErr> for PackageManifest {
   fn validate(self) -> Result<Unit, FormatValidationErr> {
     if !package_name_is_valid(self.name) {
       Result::Err(FormatValidationErr::InvalidField("package name"))
+    } else if !package_semver_is_valid(self.version) {
+      Result::Err(FormatValidationErr::InvalidField("package version"))
     } else if self.dependencies.length() > package_max_dependencies() {
       Result::Err(FormatValidationErr::LimitExceeded("dependencies", self.dependencies.length(), package_max_dependencies()))
     } else {

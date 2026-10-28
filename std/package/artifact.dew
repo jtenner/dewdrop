@@ -553,6 +553,8 @@ impl Validate<FormatValidationErr> for PackageArtifact {
       !package_artifact_is_hex(self.integrity.slice(7u32, 71u32), 64u32) ||
       !package_artifact_is_hex(self.interface_fingerprint, 64u32) {
       Result::Err(FormatValidationErr::InvalidField("package artifact provenance"))
+    } else if !package_semver_is_valid(self.version) {
+      Result::Err(FormatValidationErr::InvalidField("package artifact version"))
     } else if encoded_size > 268435456u64 {
       Result::Err(FormatValidationErr::ByteLimitExceeded("package artifact bytes", encoded_size, 268435456u64))
     } else if self.dependencies.length() > package_max_dependencies() {
