@@ -157,3 +157,38 @@ streams, head, and module/adapter hashes are in `evidence/javascript.json`.
 This proves those JS entry points agree with the tested vectors. The derived
 compiler source list still does not execute the compiler. Source races, binary
 restore, native/platform checks, and large cap enforcement remain separate.
+
+## Integrated lock and standard codec checks
+
+The integrated JavaScript adapter also runs `lock` cases through
+`tools/dew-package-lock.mjs`. This is the original local lock schema, not a new
+resolver. It applies strict duplicate/unknown-field checks and the existing
+8 MiB local lock bound before snapshot rewriting. Parse/read mode selects only
+the manifest entry point; both modes use the same lock parser.
+
+Run the standard codec vectors with an explicit, already-built Dew test compiler:
+
+```sh
+python3 tests/package-contract-v1/run-std.py --compiler /absolute/path/dew_test_gen.exe --evidence /tmp/dew-shared-codec-check
+```
+
+This generates Dew tests directly from the same vectors, keeps each case ID in
+the test name, and tests name/SemVer/request/match, manifest and lock decode,
+normalized dependencies, and artifact decode/validate/encode. SemVer cases also
+enter manifest, lock, and artifact decoders. No compiler build is performed.
+The 30-second check bound is not a timing benchmark. The evidence records the
+executable hash, standard source hashes, generated test hash, commands, streams,
+and exit status. A compiler whose source commit is unknown does not prove a fresh
+integrated compiler build. Source-selection and numeric budget recipes are not
+implemented by this codec runner.
+
+The native bootstrap contract driver consumes the same shared data:
+
+```sh
+python3 src/dew_bootstrap/package_contract_check.py --evidence /tmp/dew-bootstrap-contract-check
+```
+
+It builds a small driver from the real input functions, not the full compiler.
+It covers filesystem selection, lock traversal, integrity, cache store/restore,
+request matching, and lock input schema. It lists unsupported large budget cases.
+These narrow checks are separate from the full native lanes and measurements.

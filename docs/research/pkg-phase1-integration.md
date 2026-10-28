@@ -183,6 +183,12 @@ The JavaScript lock parser initially admitted `1.0` and `1e0` after numeric
 conversion. Two new shared and focused cases require rejection of those forms.
 This is a representation check for the existing codec number, not a new version.
 
+Before the fix, the focused lock suite reports 22 pass and 2 fail, exit 1.
+Both failures are missing expected rejections. The parser now checks the original
+root version number before conversion. This adds no scan or metadata copy.
+The same focused suite now passes 24 checks, exit 0. Raw streams are
+`/tmp/pkg-phase1-lock-literal-red.*` and `/tmp/pkg-phase1-lock-literal-green.*`.
+
 ## Ordered integration and original lock fix
 
 Bootstrap merged, then the standard codecs. Only the generated package source

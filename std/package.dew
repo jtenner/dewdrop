@@ -775,28 +775,28 @@ pub fn package_lock_validate_entries(
   }
   while index {
     current if current < packages.length() => {
-    let item = packages.get_unchecked(current)
-    let item_name = item.name()
-    let item_source = item.source()
-    let item_path = item.path()
-    let item_integrity = item.integrity()
-    let item_interface = item.interface_fingerprint()
-    let drive_root = item_path.byte_length() >= 3u32 &&
-      ((item_path.byte_at(0u32) >= 65u8 && item_path.byte_at(0u32) <= 90u8) ||
-      (item_path.byte_at(0u32) >= 97u8 && item_path.byte_at(0u32) <= 122u8)) &&
-      item_path.byte_at(1u32) == 58u8 && item_path.byte_at(2u32) == 47u8
-    if !package_name_is_valid(item_name) || !package_relative_path_is_valid(item_path) || drive_root ||
-      !item_integrity.starts_with("sha256-") || item_integrity.byte_length() != 71u32 ||
-      !package_is_hex(item_integrity.slice(7u32, 71u32), 64u32) || !package_is_hex(item_interface, 64u32) ||
-      item_source.byte_length() == 0u32 || item_source.byte_length() > package_requirement_max_bytes() {
-      break Result::Err(FormatValidationErr::InvalidField("locked package"))
-    } else if !(semver_parse(item.version().to_string()) is Result::Ok(_)) {
-      break Result::Err(FormatValidationErr::InvalidField("locked package version"))
-    } else if !seen.insert(item_name) {
-      break Result::Err(FormatValidationErr::Duplicate(item_name))
-    } else {
-      continue current + 1u32
-    }
+      let item = packages.get_unchecked(current)
+      let item_name = item.name()
+      let item_source = item.source()
+      let item_path = item.path()
+      let item_integrity = item.integrity()
+      let item_interface = item.interface_fingerprint()
+      let drive_root = item_path.byte_length() >= 3u32 &&
+        ((item_path.byte_at(0u32) >= 65u8 && item_path.byte_at(0u32) <= 90u8) ||
+        (item_path.byte_at(0u32) >= 97u8 && item_path.byte_at(0u32) <= 122u8)) &&
+        item_path.byte_at(1u32) == 58u8 && item_path.byte_at(2u32) == 47u8
+      if !package_name_is_valid(item_name) || !package_relative_path_is_valid(item_path) || drive_root ||
+        !item_integrity.starts_with("sha256-") || item_integrity.byte_length() != 71u32 ||
+        !package_is_hex(item_integrity.slice(7u32, 71u32), 64u32) || !package_is_hex(item_interface, 64u32) ||
+        item_source.byte_length() == 0u32 || item_source.byte_length() > package_requirement_max_bytes() {
+        break Result::Err(FormatValidationErr::InvalidField("locked package"))
+      } else if !(semver_parse(item.version().to_string()) is Result::Ok(_)) {
+        break Result::Err(FormatValidationErr::InvalidField("locked package version"))
+      } else if !seen.insert(item_name) {
+        break Result::Err(FormatValidationErr::Duplicate(item_name))
+      } else {
+        continue current + 1u32
+      }
     }
     _ => break Result::Ok(package_unit())
   }

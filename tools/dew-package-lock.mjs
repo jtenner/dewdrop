@@ -31,7 +31,7 @@ function parseStrictJson(text) {
     }
     fail('unterminated string');
   }
-  function value(depth) {
+  function value(depth, lockVersion = false) {
     if (depth > 16 || ++values > 65536) fail('depth or value limit exceeded');
     whitespace();
     if (text[offset] === '"') return string();
@@ -44,7 +44,7 @@ function parseStrictJson(text) {
         const key = string();
         if (Object.hasOwn(result, key)) fail(`duplicate decoded field ${key}`);
         token(':');
-        result[key] = value(depth + 1);
+        result[key] = value(depth + 1, depth === 0 && key === 'lockfileVersion');
         whitespace();
         if (text[offset] === '}') { offset++; return result; }
         token(',');
@@ -65,7 +65,9 @@ function parseStrictJson(text) {
     const start = offset;
     while (offset < text.length && !' \t\r\n,]}'.includes(text[offset])) offset++;
     if (start === offset) fail('expected value');
-    try { return JSON.parse(text.slice(start, offset)); }
+    const representation = text.slice(start, offset);
+    if (lockVersion && representation !== '1') fail('lockfileVersion must use literal JSON 1');
+    try { return JSON.parse(representation); }
     catch { fail('invalid scalar'); }
   }
   const result = value(0);

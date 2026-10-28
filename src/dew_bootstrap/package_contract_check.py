@@ -382,7 +382,7 @@ def main():
             evidence['vector_export']['sha256'] = hashlib.sha256(emitted.stdout.encode()).hexdigest()
             evidence['shared_checks'] = []
             evidence['unsupported_shared'] = []
-            supported = {'name', 'semver', 'requirement', 'manifest', 'artifact-paths', 'source-selection', 'requirement-match'}
+            supported = {'name', 'semver', 'requirement', 'manifest', 'lock', 'artifact-paths', 'source-selection', 'requirement-match'}
             for case in cases:
                 kind, value = case['kind'], case['input']
                 if kind not in supported:
@@ -406,6 +406,11 @@ def main():
                         actual['dependencies'] = json.loads(result.stdout.splitlines()[-1])
                     else:
                         actual['diagnostic'] = result.stdout.strip()
+                elif kind == 'lock':
+                    folder = package()
+                    (folder / 'dew.lock').write_text(value)
+                    result = shared_run('lock', folder / 'dew.lock')
+                    actual = {'accept': result.returncode == 0, 'diagnostic': (result.stdout + result.stderr).strip()}
                 elif kind == 'artifact-paths':
                     result = shared_run('paths', json.dumps(value))
                     actual = {'accept': result.returncode == 0, 'diagnostic': result.stdout.strip()}

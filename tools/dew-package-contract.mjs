@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, open, readdir, realpath } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 
 export const MAX_MANIFEST_BYTES = 1_048_576;
@@ -167,10 +167,21 @@ function sameFile(left, right) {
   return left.dev === right.dev && left.ino === right.ino;
 }
 
+async function noLinkedAncestors(path) {
+  let current = dirname(resolve(path));
+  for (;;) {
+    noSymlink(await lstat(current), current);
+    const parent = dirname(current);
+    if (parent === current) return;
+    current = parent;
+  }
+}
+
 /** Bounded regular-file read. Keep filesystem errors visible to the caller. */
 export async function readPackageManifest(manifestPath) {
   const before = await lstat(manifestPath);
   noSymlink(before, manifestPath);
+  await noLinkedAncestors(manifestPath);
   if (!before.isFile()) throw new Error(`package manifest is not a regular file: ${manifestPath}`);
   if (before.size > MAX_MANIFEST_BYTES) throw new Error("package manifest exceeds the 1 MiB limit");
   const handle = await open(manifestPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
@@ -190,6 +201,7 @@ export async function readPackageManifest(manifestPath) {
     const after = await handle.stat();
     const current = await lstat(manifestPath);
     noSymlink(current, manifestPath);
+    await noLinkedAncestors(manifestPath);
     if (length !== opened.size || after.size !== opened.size || after.mtimeMs !== opened.mtimeMs ||
         after.ctimeMs !== opened.ctimeMs || !sameFile(opened, current)) {
       throw new Error(`package manifest changed during read: ${manifestPath}`);
@@ -226,6 +238,7 @@ export async function collectSourceFiles(packageRoot) {
   const requestedRoot = resolve(packageRoot);
   const rootInfo = await lstat(requestedRoot);
   noSymlink(rootInfo, requestedRoot);
+  await noLinkedAncestors(requestedRoot);
   if (!rootInfo.isDirectory()) throw new Error(`package root is not a directory: ${requestedRoot}`);
   const root = await realpath(requestedRoot);
   const output = [];
