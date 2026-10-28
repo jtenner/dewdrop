@@ -1,0 +1,58 @@
+{
+  "head": "d14e30d2764f1969437c63e9e55cc7c2af7322fe",
+  "sdk": "/tmp/pkg-phase1-post-release/sdk-nightly",
+  "purpose": "functional checks, not performance evidence",
+  "checks": [
+    {
+      "name": "nightly-transforms-seeded",
+      "command": [
+        "bash",
+        "tools/test-native.sh"
+      ],
+      "env": {
+        "DEW_NATIVE_TEST_PACKAGES": "transforms"
+      },
+      "exit": 1,
+      "wall_seconds": 0.6157280250336044,
+      "ledger_generation": 20
+    },
+    {
+      "name": "nightly-real-pack-frozen",
+      "command": [
+        "bun",
+        "--preload",
+        "/tmp/pkg-phase1-post-release/deny-network.mjs",
+        "tools/dew-registry.mjs",
+        "pack",
+        "--manifest",
+        "/tmp/pkg-phase1-post-release/real-pack-fixture/dew.json",
+        "--output",
+        "/tmp/pkg-phase1-post-release/nightly-pack-frozen-output"
+      ],
+      "env": {
+        "DEW_CONFIG_HOME": "/tmp/pkg-phase1-post-release/invalid-config",
+        "TMPDIR": "/tmp/pkg-phase1-post-release/pack-temp"
+      },
+      "exit": 1,
+      "wall_seconds": 7.985978329030331,
+      "ledger_generation": 20,
+      "snapshot_entries_after_exit": [],
+      "output_exists": false
+    },
+    {
+      "name": "nightly-llvm-seeded",
+      "command": [
+        "moon",
+        "build",
+        "--frozen",
+        "--target",
+        "llvm",
+        "src/dew_bootstrap"
+      ],
+      "env": {},
+      "exit": 0,
+      "wall_seconds": 1.1666756920167245,
+      "ledger_generation": 20
+    }
+  ]
+}

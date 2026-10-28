@@ -1,0 +1,7 @@
+{
+  "sdk": "/tmp/pkg-phase1-post-release/sdk-nightly",
+  "binary_archive_sha256": "a1c7a6c0dec4b7f1030ff275ac863bc501f4e807e547cb2084eff07c6fb600eb",
+  "core_archive_sha256": "3efa3227229a2f414b892ff126a10b23fd50a055e2c209e671916379ce6d7928",
+  "verified_binary_checksum": true,
+  "ledger_generation": 20
+}

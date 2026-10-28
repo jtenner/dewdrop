@@ -1,0 +1,35 @@
+{
+  "head": "fcb50e441468c1804293029a66411173ceae12c4",
+  "sdk": "/tmp/pkg-phase1-post-release/sdk-nightly",
+  "purpose": "native and LLVM functional contract execution; no performance comparison",
+  "checks": [
+    {
+      "target": "native",
+      "command": [
+        "python3",
+        "src/dew_bootstrap/package_contract_check.py",
+        "--target",
+        "native",
+        "--evidence",
+        "/tmp/pkg-phase1-post-release/contract-native"
+      ],
+      "exit": 0,
+      "wall_seconds": 1.918606897990685,
+      "ledger_generation": 20
+    },
+    {
+      "target": "llvm",
+      "command": [
+        "python3",
+        "src/dew_bootstrap/package_contract_check.py",
+        "--target",
+        "llvm",
+        "--evidence",
+        "/tmp/pkg-phase1-post-release/contract-llvm"
+      ],
+      "exit": 0,
+      "wall_seconds": 3.022193723008968,
+      "ledger_generation": 20
+    }
+  ]
+}

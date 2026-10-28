@@ -186,6 +186,7 @@ The native bootstrap contract driver consumes the same shared data:
 
 ```sh
 python3 src/dew_bootstrap/package_contract_check.py --evidence /tmp/dew-bootstrap-contract-check
+python3 src/dew_bootstrap/package_contract_check.py --target llvm --evidence /tmp/dew-bootstrap-llvm-check
 ```
 
 It builds a small driver from the real input functions, not the full compiler.
@@ -196,6 +197,11 @@ These narrow checks are separate from the full native lanes and measurements.
 The integrated report is `docs/research/pkg-phase1-report.md`. Saved final raw
 streams and result records are in `evidence/final/`. They retain the initial
 harness count failure, its repair, master results, source hashes, and the limits
-of the saved Dew test compiler. The owner hold stops all new laptop builds,
-tests, guest runs, and timings until `RELEASE`. Reading the saved records does
-not authorize a new run.
+of the saved Dew test compiler. Post-release records are in `evidence/post-release/`.
+They include native and LLVM execution with a matching isolated nightly SDK,
+final script checks, full-lane failures, and exact-master controls. LLVM needs
+its matching compiler/runtime/core bundle. Set `MOON_HOME` and prefix `PATH` with
+that SDK's `bin` directory when using an isolated SDK.
+
+The V20 hold is released. Follow the current build mutex and measurement lease
+rules before new work. The recorded checks grant no timing lease.

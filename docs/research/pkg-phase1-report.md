@@ -1,27 +1,32 @@
 # Phase 1 package contract report
 
-Status: **IMPLEMENTED; post-release validation in progress**.
+Status: **READY FOR MUSE; component workloads READY TO MEASURE**.
 
-The V20 hold is released. Broader correctness checks have now run and exposed
-SDK compile errors in unchanged source. See
+The V20 hold is released. Native and LLVM contract execution pass. Broader
+checks reproduce compile errors and one stale test expectation on master. See
 [`pkg-phase1-post-release.md`](pkg-phase1-post-release.md) for current results.
-No new timing lease is granted. The original held handoff is recorded below.
+No new timing lease is granted. Real full-compiler pack is not qualified because
+master's numeric conversion calls do not compile with either checked SDK. The
+original held handoff is recorded below, followed by the post-release result.
 
 Branch: `coordinate/dewdrop-pkg-phase1`.
 Base master: `20f902acb6caa56a49712df832aeb0c46ec520b8`.
 Plan: `c812b052:docs/package-manager-migration-plan.md`.
-Frozen production source: `3ac2506d9b13a033979470e0a344a8977a0f0190`.
-Final test repair and validation head:
-`788cf198b9397e29833ae317df220be2e78f6a95`.
-The final branch head, including this report, is in the handback. Only the
-harness and reports changed after the production source freeze.
+Initial production checkpoint: `3ac2506d9b13a033979470e0a344a8977a0f0190`.
+Initial test repair: `788cf198b9397e29833ae317df220be2e78f6a95`.
+Final production checkpoint, including frozen compiler dependencies:
+`d14e30d2764f1969437c63e9e55cc7c2af7322fe`.
+Final test checkpoint, including the LLVM contract runner:
+`fcb50e441468c1804293029a66411173ceae12c4`.
+The final integrated head, including this report, is in the handback. Only docs
+and saved evidence change after the final test checkpoint. Source and binary
+hashes are in `evidence/post-release/provenance.json` under the shared test area.
 
-The owner then reserved the laptop for V20. All owned build, test, guest-run,
-and timing processes exited. No new build, test, guest run, or timing started
-after receipt of that hold message. This report and its evidence archive use saved results and
-static file operations. Wait for `RELEASE`, then obtain the designated
+The owner reserved the laptop for V20. All owned processes stopped during that
+hold. After RELEASE, correctness checks used the existing build mutex with no
+performance lease. All owned processes have now exited. Obtain the designated
 coordinator's current exclusive lease before any timing. READY TO MEASURE is a
-work handoff, not a lease or a claim that the full validation gates have passed.
+work handoff, not a lease or a claim that all validation gates have passed.
 
 No server, box, WorkOS, dewdrop-pm, registry data, or production host changed.
 No package was published. No branch was pushed, PR made, or master merge done.
@@ -39,7 +44,9 @@ locks, requests, identity, Git source, containment, integrity, store, and restor
 without credential reads or network calls. Build, interface, source integrity,
 and capsule bytes use one captured package, dependency, and standard-source
 snapshot. Original manifest and lock bytes are checked before canonicalization.
-Normal publish uses the same preparation path.
+Normal publish uses the same preparation path. Package preparation forwards
+Moon's `--frozen` policy through bootstrap, JS, and WasmGC compiler launchers.
+Compiler dependencies must already be installed.
 
 The source-file cap is 16 MiB. The complete publish capsule cap is 64 MiB,
 including framing and checksum. Local artifacts retain their separate 256 MiB
@@ -87,6 +94,11 @@ Additional integration checks were added before their fixes:
   Native, snapshot, and standalone JS readers now reject linked ancestors.
 - Lock version text: two JavaScript missing rejections became passing checks.
   All three readers require literal JSON `1`, not `1.0` or `1e0`.
+- Offline compiler launches: four policy checks failed, while three ordinary
+  launch controls passed, before the fix. The same seven checks now pass.
+  Checkpoint `3b59ae8e2` adds the failing checks; `d14e30d27` fixes the private
+  preparation environment and both shell launchers. These checks prove argument
+  forwarding, not an observed network leak.
 
 ## Workers and merge order
 
@@ -108,7 +120,7 @@ commits were then picked as `150f6d7c2`, `aca17e7ea`, and `e01b99892`. Its inher
 copies of JS commits were not picked again. Root integration test/fix checkpoints
 are on the branch first-parent log and are described in the integration record.
 
-## Final narrow checks
+## Initial narrow checks
 
 | Check | Result |
 | --- | --- |
@@ -129,26 +141,46 @@ are on the branch first-parent log and are described in the integration record.
 Saved records are in `tests/package-contract-v1/evidence/final/`. They include
 raw streams, commands, exit status, source hashes, compiler/driver hashes, and
 functional compile durations. The first harness failure is retained. Its later
-repair changed no production source. Static hash checks show all current `src/`,
-`std/`, and `tools/` inputs match the frozen production check inputs.
+repair changed no production source. Those hashes identify the initial inputs.
+The later offline launch fix and LLVM runner have separate post-release records;
+the final production/test hashes match `fcb50e441`.
 
 The native driver was built from frozen source. Its build warnings are retained,
 not hidden. Dew test Wasm was made fresh with standard-source overrides and caches
 off. The saved test compiler hash is
 `73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626`;
-its source commit is unknown. A fresh full compiler and real `pack` run are still
-required. Mock subprocess checks do not replace that gate.
+its source commit is unknown. A fresh full compiler and real `pack` run were attempted after RELEASE.
+Both stop on unchanged master numeric conversion methods. Mock subprocess checks
+do not replace that gate.
+
+## Post-release checks
+
+Native and LLVM execute the same 157 area checks and 199 shared cases, all
+passing. The 12 large numeric budget recipes remain unsupported. The final
+JavaScript area/shared checks pass 108/181 supported cases. Offline launch checks
+pass 7; pack passes 34; strict lock, snapshot lock, and harness pass 24/11/11.
+Generated sources and the existing registry smoke pass.
+
+The full routine native lane exits 1. Of 304 target invocations, 115 emit compile
+errors. The reports from tests that did run total 1,364 pass and zero fail. Exact
+master reproduces the missing numeric methods. The focused integration test also
+reproduces master's stale `80 != 79` module count. Full compiler pack, stress,
+and full pinned Starshine qualification cannot pass through this build. See
+`pkg-phase1-post-release.md` and `evidence/post-release/` for commands, stdout,
+stderr, exit status, SDK setup, baseline controls, and hashes. No full-lane,
+full-compiler pack, or performance success is claimed.
 
 ## READY TO MEASURE: queued work
 
 These changes affect runtime and memory. No claim of no performance effect, a
-speed gain, or a memory gain is made. Full native, integration, stress, Starshine,
-LLVM/platform, large-cap and performance runs remain held. After `RELEASE`, use
-the required lanes, including `tools/test-native.sh`,
-`tools/test-integration-native.sh`, `tools/test-stress-native.sh`, and
-`tools/test-starshine-native.sh`, as appropriate. Add fresh real compiler/pack,
-cache restore, and affected native/LLVM checks. Compile-only evidence is not
-native execution evidence.
+speed gain, or a memory gain is made. The V20 hold is released, but no new timing
+lease exists. Native and LLVM contract execution passed. Full native/integration
+checks expose proven master failures. Repair those compiler prerequisites in
+separate work before full compiler/pack, stress, and pinned Starshine checks.
+Exact large-cap, large-inventory, and other-platform checks remain open. Use the
+required `tools/test-native.sh`, `tools/test-integration-native.sh`,
+`tools/test-stress-native.sh`, and `tools/test-starshine-native.sh` lanes when
+their prerequisites are ready. Compile-only evidence is not execution evidence.
 
 Before timing, the designated coordinator must grant an exclusive quiet-host
 lease and pause competing work. Compare frozen master with the integrated head,
@@ -186,7 +218,8 @@ No network release, persistence, auth, or install end-to-end pass is claimed.
 
 ## Files by area
 
-The exact inventory below includes source, tests, docs, and retained evidence.
+The exact inventory has 104 files. It includes source, tests, docs,
+and retained evidence. SDK archives, binaries, and temporary fixtures are excluded.
 
 ### JavaScript contract and lock input
 
@@ -229,16 +262,19 @@ docs/research/pkg-phase1-pack.md
 tools/dew
 tools/dew-package-snapshot.mjs
 tools/dew-registry.mjs
+tools/run-dew-cli-host.sh
 tools/test_dew_pack.mjs
+tools/test_dew_pack_offline.mjs
 ```
 
-### Shared checks, report, and evidence
+### Shared checks, reports, and evidence
 
 ```text
 docs/research/package-contract-v1.md
 docs/research/package-manifest.md
 docs/research/pkg-phase1-contract.md
 docs/research/pkg-phase1-integration.md
+docs/research/pkg-phase1-post-release.md
 docs/research/pkg-phase1-report.md
 tests/package-contract-v1/README.md
 tests/package-contract-v1/adapters/baseline-registry.mjs
@@ -269,6 +305,29 @@ tests/package-contract-v1/evidence/javascript-parse.stdout
 tests/package-contract-v1/evidence/javascript-read.stderr
 tests/package-contract-v1/evidence/javascript-read.stdout
 tests/package-contract-v1/evidence/javascript.json
+tests/package-contract-v1/evidence/post-release/contract-backends.json
+tests/package-contract-v1/evidence/post-release/contract-llvm.json
+tests/package-contract-v1/evidence/post-release/contract-native.json
+tests/package-contract-v1/evidence/post-release/dew_bootstrap.stderr.gz
+tests/package-contract-v1/evidence/post-release/dew_bootstrap.stdout.gz
+tests/package-contract-v1/evidence/post-release/final-checks.json
+tests/package-contract-v1/evidence/post-release/followup-streams.json
+tests/package-contract-v1/evidence/post-release/integration.json
+tests/package-contract-v1/evidence/post-release/llvm-core.json
+tests/package-contract-v1/evidence/post-release/missing-submodule.json
+tests/package-contract-v1/evidence/post-release/native-results.json
+tests/package-contract-v1/evidence/post-release/native-target-summary.json
+tests/package-contract-v1/evidence/post-release/native.stderr.gz
+tests/package-contract-v1/evidence/post-release/native.stdout.gz
+tests/package-contract-v1/evidence/post-release/nightly-core-results.json
+tests/package-contract-v1/evidence/post-release/nightly-qualification.json
+tests/package-contract-v1/evidence/post-release/nightly-seeded-results.json
+tests/package-contract-v1/evidence/post-release/provenance.json
+tests/package-contract-v1/evidence/post-release/qualification.json
+tests/package-contract-v1/evidence/post-release/results.json
+tests/package-contract-v1/evidence/post-release/sdk-install.json
+tests/package-contract-v1/evidence/post-release/standard_sources.stderr.gz
+tests/package-contract-v1/evidence/post-release/standard_sources.stdout.gz
 tests/package-contract-v1/evidence/std-shared-red.json
 tests/package-contract-v1/evidence/std-shared-red.stderr
 tests/package-contract-v1/evidence/std-shared-red.stdout

@@ -38,8 +38,8 @@ The distinct compile errors are:
   `reinterpret_as_float` method.
 
 The transform source and Starshine pin are unchanged from master `20f902acb6`.
-Tool resolution and SDK/core compatibility need repair or a compatible local
-install before these errors can be classified further. No compiler-lowering or
+These errors were then checked with a matching official SDK and exact master,
+as recorded below. No compiler-lowering or
 dependency-source workaround has been folded into the package-contract branch.
 
 Raw stdout/stderr and exit records are retained under
@@ -48,10 +48,13 @@ stored as deterministic gzip files. All processes from these runs have exited.
 
 ## Remaining work
 
-Resolve local SDK compatibility. Then finish routine/integration and affected
-platform checks, run real offline pack with the branch compiler, and update the
-consolidated report. Performance comparisons still need a separate lease.
-The earlier narrow checks remain valid within their recorded limits.
+The scoped package checks and affected native/LLVM execution are complete.
+The full compiler cannot qualify until the unchanged master numeric-method calls
+are repaired in separate compiler work. Its wildcard integration count is also
+stale on master. Real full-compiler pack, stress, and full pinned Starshine
+qualification remain unavailable through that build. Performance comparisons
+still need a separate lease. The earlier narrow checks remain valid within their
+recorded limits; no full-suite or full-compiler success is claimed.
 
 ## Further qualification and offline preparation regression
 
@@ -69,8 +72,8 @@ to the shared SDK or its credentials. The downloaded binary checksum was
 verified. It reports `moon 0.1.20261028` and
 `moonc v0.10.17+5802d87ac-nightly`. Its native, JS, WasmGC and LLVM core bundles
 all build. The first project checks with that SDK stopped because its private
-registry index was empty, before project compilation. Cached dependency metadata
-must be copied locally; this is a setup issue, not a package-contract result.
+registry index was empty, before project compilation. Cached public dependency metadata was then copied locally, as recorded below.
+The empty registry was a setup issue, not a package-contract result.
 
 New `tools/test_dew_pack_offline.mjs` checks a remaining pack requirement:
 compiler dependency synchronization must be disabled during package preparation.
@@ -78,7 +81,8 @@ It uses the real shell launchers with a fake Moon executable and captures the
 actual argument vector. It covers bootstrap, JS and WasmGC launches, ordinary
 build controls, and the prepared compiler environment. Before the fix, three
 ordinary-build controls pass and four offline-policy checks fail, exit 1.
-Raw evidence is `/tmp/pkg-phase1-post-release/offline-red.*`.
+Raw evidence is retained under the `offline-red` keys in
+`evidence/post-release/followup-streams.json` in the shared test area.
 These tests prove forwarding and environment policy, not an observed HTTP leak.
 
 The fix sets a private package-preparation environment flag and forwards
@@ -90,7 +94,7 @@ source or graph copy. It must be included in the queued preparation measurement.
 
 The identical seven offline checks now pass, exit 0. All 34 existing pack checks
 also pass. Their raw streams are `offline-green.*` and `pack-after-offline.*`
-in `/tmp/pkg-phase1-post-release/`. This is a script/environment policy fix; no
+in the same retained streams record. This is a script/environment policy fix; no
 compiler-lowering or dependency source changed.
 
 With matching nightly compiler/runtime/core and the cached dependency index,
@@ -99,3 +103,44 @@ native|llvm`; its default is unchanged. This permits execution of the same
 source/lock/cache checks through the affected LLVM binding, rather than treating
 compilation alone as runtime evidence. The new SDK still rejects the baseline
 numeric conversion calls, so real full-compiler pack remains unqualified.
+
+## Final execution and handoff
+
+The final code/test checkpoint is `fcb50e441` (following the offline fix
+`d14e30d27` and its failing-test checkpoint `3b59ae8e2`). The final report commit
+does not change production code. All checks below ran before that report commit.
+
+| Check | Result |
+| --- | --- |
+| Native contract driver, nightly SDK | 157 area and 199 shared cases pass; 12 numeric budget recipes explicitly unsupported |
+| LLVM contract driver, same SDK/source | The same 157 area and 199 shared cases pass; actual native-host execution, not just cross-compilation |
+| Final JavaScript area/shared checks | 108 area and 181 supported shared cases pass |
+| Offline compiler forwarding | All 7 pass, after the same 4 offline checks failed before the fix |
+| Existing pack checks | All 34 pass |
+| Strict lock/snapshot lock/harness | 24 / 11 / 11 pass |
+| Generated source and registry smoke | Pass |
+| Full routine native lane | Exit 1: 304 target invocations; 115 emit compile errors; reported tests total 1,364 pass, zero fail. Not a passing lane. |
+| Master transform control | Exact master reproduces the four `to_float` errors |
+| Focused integration | Exit 1: module-system test has 25 pass/1 fail, and linking cannot compile. Master reproduces `80 != 79`. |
+| Real pack with installed and nightly SDKs | Exit 1 at the unchanged conversion-method calls. Snapshot cleanup completes; no output is created. No pack-success claim. |
+
+An initial partial LLVM setup failed inside SDK async support. Installing the
+complete matching nightly compiler/runtime/core and seeding only the cached
+public `moonbitlang/x@0.5.5` index/ZIP repaired setup. No shared SDK, credentials,
+compiler-lowering source, or dependency source changed. The binary archive was
+verified against the official checksum. SDK archive hashes and setup commands
+are retained in `sdk-install.json` and the core-bundle records.
+
+Sources: [official installer](https://cli.moonbitlang.com/install/unix.sh) and
+[SDK download instructions](https://www.moonbitlang.com/download/). The registry
+seed came from the already-installed local public package cache. No package or
+auth request was made to a Dew registry. The real pack check blocked Bun fetch,
+used invalid credential-file bytes as a read guard, and used frozen compiler
+dependencies. Its failure is a compiler prerequisite failure, not a successful
+end-to-end release or a proof about server state.
+
+All owned build/test/guest/timing processes have exited. No performance lease
+was acquired and no comparative performance result exists. Component workloads
+are READY TO MEASURE under a future lease. Real full-compiler workloads first
+need the proven baseline build errors repaired. Nothing has landed or been
+pushed; Muse still reviews the integrated branch first.

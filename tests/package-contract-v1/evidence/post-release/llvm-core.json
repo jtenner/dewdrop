@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/tmp/pkg-phase1-post-release/sdk/bin/moon",
+    "-C",
+    "/tmp/pkg-phase1-post-release/sdk/lib/core",
+    "bundle",
+    "--target",
+    "llvm",
+    "--warn-list",
+    "-a"
+  ],
+  "env": {
+    "MOON_HOME": "/tmp/pkg-phase1-post-release/sdk",
+    "PATH_prefix": "/tmp/pkg-phase1-post-release/sdk/bin"
+  },
+  "exit": 255,
+  "wall_seconds": 0.9162154910154641,
+  "ledger_generation": 20
+}

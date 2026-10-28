@@ -146,7 +146,9 @@ tools/dew publish --dry-run --manifest path/to/dew.json --output new-pack-direct
 Both commands build and check one private source snapshot. They also capture
 the materialized dependency graph and standard-library sources used by the
 build. They do not read credentials or make a network request. The compiler and
-its installed dependencies must already be available. Use `--help` for options.
+its installed dependencies must already be available. Preparation uses frozen
+compiler dependencies, so it cannot install missing compiler packages. Use
+`--help` for options.
 
 The output directory must be new; its parent must exist. It contains:
 

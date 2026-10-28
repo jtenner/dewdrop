@@ -1,0 +1,1682 @@
+{
+  "attempted_targets": [
+    {
+      "target": "src/tokenizer",
+      "diagnostic_seconds": 0.637
+    },
+    {
+      "target": "src/parser",
+      "diagnostic_seconds": 2.128
+    },
+    {
+      "target": "src/standard_sources",
+      "diagnostic_seconds": 0.028
+    },
+    {
+      "target": "src/transforms",
+      "diagnostic_seconds": 0.277
+    },
+    {
+      "target": "src/semantic/arena_views_wbtest.mbt",
+      "diagnostic_seconds": 12.7
+    },
+    {
+      "target": "src/semantic/array_literal_binding_wbtest.mbt",
+      "diagnostic_seconds": 1.706
+    },
+    {
+      "target": "src/semantic/array_wbtest.mbt",
+      "diagnostic_seconds": 0.874
+    },
+    {
+      "target": "src/semantic/basic_body_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.048
+    },
+    {
+      "target": "src/semantic/binary_heap_wbtest.mbt",
+      "diagnostic_seconds": 0.522
+    },
+    {
+      "target": "src/semantic/block_expression_types_wbtest.mbt",
+      "diagnostic_seconds": 0.732
+    },
+    {
+      "target": "src/semantic/body_arena_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/body_flow_stress_wbtest.mbt",
+      "diagnostic_seconds": 0.036
+    },
+    {
+      "target": "src/semantic/body_flow_wbtest.mbt",
+      "diagnostic_seconds": 0.749
+    },
+    {
+      "target": "src/semantic/body_hir_wbtest.mbt",
+      "diagnostic_seconds": 0.043
+    },
+    {
+      "target": "src/semantic/body_inference_cache_wbtest.mbt",
+      "diagnostic_seconds": 0.422
+    },
+    {
+      "target": "src/semantic/body_name_resolution_wbtest.mbt",
+      "diagnostic_seconds": 0.045
+    },
+    {
+      "target": "src/semantic/body_signature_pool_wbtest.mbt",
+      "diagnostic_seconds": 1.174
+    },
+    {
+      "target": "src/semantic/call_evidence_recipe_wbtest.mbt",
+      "diagnostic_seconds": 2.723
+    },
+    {
+      "target": "src/semantic/call_inference_stress_wbtest.mbt",
+      "diagnostic_seconds": 0.036
+    },
+    {
+      "target": "src/semantic/call_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/callback_reachability_wbtest.mbt",
+      "diagnostic_seconds": 0.378
+    },
+    {
+      "target": "src/semantic/callback_signature_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.036
+    },
+    {
+      "target": "src/semantic/capture_cell_type_invariants_wbtest.mbt",
+      "diagnostic_seconds": 4.041
+    },
+    {
+      "target": "src/semantic/circular_buffer_wbtest.mbt",
+      "diagnostic_seconds": 0.525
+    },
+    {
+      "target": "src/semantic/closure_fragment_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.045
+    },
+    {
+      "target": "src/semantic/closure_type_invariants_wbtest.mbt",
+      "diagnostic_seconds": 2.796
+    },
+    {
+      "target": "src/semantic/collect_wbtest.mbt",
+      "diagnostic_seconds": 0.049
+    },
+    {
+      "target": "src/semantic/compile_scaling_wbtest.mbt",
+      "diagnostic_seconds": 0.904
+    },
+    {
+      "target": "src/semantic/compile_time_associated_traits_wbtest.mbt",
+      "diagnostic_seconds": 2.014
+    },
+    {
+      "target": "src/semantic/compile_time_bound_specialization_wbtest.mbt",
+      "diagnostic_seconds": 2.909
+    },
+    {
+      "target": "src/semantic/compile_time_deferred_checks_wbtest.mbt",
+      "diagnostic_seconds": 9.353
+    },
+    {
+      "target": "src/semantic/compile_time_flow_wbtest.mbt",
+      "diagnostic_seconds": 0.977
+    },
+    {
+      "target": "src/semantic/compile_time_guard_refinements_wbtest.mbt",
+      "diagnostic_seconds": 5.411
+    },
+    {
+      "target": "src/semantic/compile_time_guarded_traits_wbtest.mbt",
+      "diagnostic_seconds": 4.392
+    },
+    {
+      "target": "src/semantic/compile_time_implements_wbtest.mbt",
+      "diagnostic_seconds": 3.809
+    },
+    {
+      "target": "src/semantic/compile_time_lambdas_wbtest.mbt",
+      "diagnostic_seconds": 1.413
+    },
+    {
+      "target": "src/semantic/compile_time_local_sources_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/compile_time_locals_wbtest.mbt",
+      "diagnostic_seconds": 1.4
+    },
+    {
+      "target": "src/semantic/compile_time_lowering_wbtest.mbt",
+      "diagnostic_seconds": 1.159
+    },
+    {
+      "target": "src/semantic/compile_time_method_bounds_wbtest.mbt",
+      "diagnostic_seconds": 2.828
+    },
+    {
+      "target": "src/semantic/compile_time_nominal_demand_wbtest.mbt",
+      "diagnostic_seconds": 3.003
+    },
+    {
+      "target": "src/semantic/compile_time_overloads_wbtest.mbt",
+      "diagnostic_seconds": 2.122
+    },
+    {
+      "target": "src/semantic/compile_time_qualified_guards_wbtest.mbt",
+      "diagnostic_seconds": 2.697
+    },
+    {
+      "target": "src/semantic/compile_time_query_edges_wbtest.mbt",
+      "diagnostic_seconds": 5.633
+    },
+    {
+      "target": "src/semantic/compile_time_raw_layout_wbtest.mbt",
+      "diagnostic_seconds": 0.862
+    },
+    {
+      "target": "src/semantic/compile_time_reachability_wbtest.mbt",
+      "diagnostic_seconds": 0.855
+    },
+    {
+      "target": "src/semantic/compile_time_reflection_wbtest.mbt",
+      "diagnostic_seconds": 0.642
+    },
+    {
+      "target": "src/semantic/compile_time_selected_bindings_wbtest.mbt",
+      "diagnostic_seconds": 2.526
+    },
+    {
+      "target": "src/semantic/compile_time_selected_source_wbtest.mbt",
+      "diagnostic_seconds": 6.097
+    },
+    {
+      "target": "src/semantic/compile_time_specialization_wbtest.mbt",
+      "diagnostic_seconds": 3.183
+    },
+    {
+      "target": "src/semantic/compile_time_types_wbtest.mbt",
+      "diagnostic_seconds": 0.039
+    },
+    {
+      "target": "src/semantic/compiler_test_builders_wbtest.mbt",
+      "diagnostic_seconds": 0.46
+    },
+    {
+      "target": "src/semantic/computed_types_wbtest.mbt",
+      "diagnostic_seconds": 5.788
+    },
+    {
+      "target": "src/semantic/content_hash_wbtest.mbt",
+      "diagnostic_seconds": 2.062
+    },
+    {
+      "target": "src/semantic/declared_storage_types_wbtest.mbt",
+      "diagnostic_seconds": 3.492
+    },
+    {
+      "target": "src/semantic/defer_wbtest.mbt",
+      "diagnostic_seconds": 0.411
+    },
+    {
+      "target": "src/semantic/deferred_computed_types_wbtest.mbt",
+      "diagnostic_seconds": 0.98
+    },
+    {
+      "target": "src/semantic/deque_wbtest.mbt",
+      "diagnostic_seconds": 0.513
+    },
+    {
+      "target": "src/semantic/derive_wbtest.mbt",
+      "diagnostic_seconds": 1.596
+    },
+    {
+      "target": "src/semantic/disposable_wbtest.mbt",
+      "diagnostic_seconds": 0.429
+    },
+    {
+      "target": "src/semantic/fixed_array_wbtest.mbt",
+      "diagnostic_seconds": 0.864
+    },
+    {
+      "target": "src/semantic/foreign_library_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/fragment_payload_indices_wbtest.mbt",
+      "diagnostic_seconds": 0.762
+    },
+    {
+      "target": "src/semantic/frozen_interface_cache_wbtest.mbt",
+      "diagnostic_seconds": 0.034
+    },
+    {
+      "target": "src/semantic/frozen_module_value_types_wbtest.mbt",
+      "diagnostic_seconds": 0.099
+    },
+    {
+      "target": "src/semantic/frozen_standard_interfaces_wbtest.mbt",
+      "diagnostic_seconds": 0.867
+    },
+    {
+      "target": "src/semantic/function_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.05
+    },
+    {
+      "target": "src/semantic/function_reference_call_recipe_wbtest.mbt",
+      "diagnostic_seconds": 0.371
+    },
+    {
+      "target": "src/semantic/generic_bounds_wbtest.mbt",
+      "diagnostic_seconds": 1.044
+    },
+    {
+      "target": "src/semantic/generic_lambda_instances_wbtest.mbt",
+      "diagnostic_seconds": 0.38
+    },
+    {
+      "target": "src/semantic/impl_index_wbtest.mbt",
+      "diagnostic_seconds": 0.386
+    },
+    {
+      "target": "src/semantic/impl_method_stress_wbtest.mbt",
+      "diagnostic_seconds": 0.034
+    },
+    {
+      "target": "src/semantic/impl_type_walk_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/import_alias_namespaces_wbtest.mbt",
+      "diagnostic_seconds": 1.311
+    },
+    {
+      "target": "src/semantic/import_intern_bench_wbtest.mbt",
+      "diagnostic_seconds": 0.043
+    },
+    {
+      "target": "src/semantic/import_intern_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/imported_products_wbtest.mbt",
+      "diagnostic_seconds": 0.512
+    },
+    {
+      "target": "src/semantic/imported_semantics_wbtest.mbt",
+      "diagnostic_seconds": 0.747
+    },
+    {
+      "target": "src/semantic/index_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.553
+    },
+    {
+      "target": "src/semantic/inference_reachability_wbtest.mbt",
+      "diagnostic_seconds": 0.43
+    },
+    {
+      "target": "src/semantic/interface_type_walk_wbtest.mbt",
+      "diagnostic_seconds": 0.047
+    },
+    {
+      "target": "src/semantic/json_provenance_wbtest.mbt",
+      "diagnostic_seconds": 2.794
+    },
+    {
+      "target": "src/semantic/lambda_capture_wbtest.mbt",
+      "diagnostic_seconds": 0.047
+    },
+    {
+      "target": "src/semantic/lambda_closure_type_invariants_wbtest.mbt",
+      "diagnostic_seconds": 4.894
+    },
+    {
+      "target": "src/semantic/lambda_flow_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/lambda_function_lookup_invariants_wbtest.mbt",
+      "diagnostic_seconds": 3.378
+    },
+    {
+      "target": "src/semantic/lambda_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/lambda_lowering_wbtest.mbt",
+      "diagnostic_seconds": 0.039
+    },
+    {
+      "target": "src/semantic/lambda_physical_shapes_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/lane_types_wbtest.mbt",
+      "diagnostic_seconds": 0.473
+    },
+    {
+      "target": "src/semantic/local_type_bindings_wbtest.mbt",
+      "diagnostic_seconds": 0.466
+    },
+    {
+      "target": "src/semantic/local_unification_wbtest.mbt",
+      "diagnostic_seconds": 0.042
+    },
+    {
+      "target": "src/semantic/lowering_plan_stress_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/lowering_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/map_wbtest.mbt",
+      "diagnostic_seconds": 2.582
+    },
+    {
+      "target": "src/semantic/member_type_inference_wbtest.mbt",
+      "diagnostic_seconds": 2.84
+    },
+    {
+      "target": "src/semantic/method_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.047
+    },
+    {
+      "target": "src/semantic/module_function_lookup_invariants_wbtest.mbt",
+      "diagnostic_seconds": 3.826
+    },
+    {
+      "target": "src/semantic/module_graph_invariants_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/module_initialization_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/module_initialization_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.142
+    },
+    {
+      "target": "src/semantic/module_private_fields_wbtest.mbt",
+      "diagnostic_seconds": 3.485
+    },
+    {
+      "target": "src/semantic/module_system_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/module_value_dependencies_wbtest.mbt",
+      "diagnostic_seconds": 0.047
+    },
+    {
+      "target": "src/semantic/module_value_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.042
+    },
+    {
+      "target": "src/semantic/module_visibility_invariants_wbtest.mbt",
+      "diagnostic_seconds": 0.119
+    },
+    {
+      "target": "src/semantic/multi_file_collection_wbtest.mbt",
+      "diagnostic_seconds": 0.414
+    },
+    {
+      "target": "src/semantic/nullable_foreign_ref_wbtest.mbt",
+      "diagnostic_seconds": 3.256
+    },
+    {
+      "target": "src/semantic/numeric_literal_range_wbtest.mbt",
+      "diagnostic_seconds": 0.039
+    },
+    {
+      "target": "src/semantic/object_field_inference_stress_wbtest.mbt",
+      "diagnostic_seconds": 0.035
+    },
+    {
+      "target": "src/semantic/object_field_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/operator_folding_selected_call_wbtest.mbt",
+      "diagnostic_seconds": 3.584
+    },
+    {
+      "target": "src/semantic/operator_trait_homogeneity_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/operator_trait_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.553
+    },
+    {
+      "target": "src/semantic/ordered_map_wbtest.mbt",
+      "diagnostic_seconds": 0.559
+    },
+    {
+      "target": "src/semantic/ordered_set_wbtest.mbt",
+      "diagnostic_seconds": 0.559
+    },
+    {
+      "target": "src/semantic/pattern_match_loop_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/pattern_match_loop_stress_wbtest.mbt",
+      "diagnostic_seconds": 0.035
+    },
+    {
+      "target": "src/semantic/physical_call_targets_wbtest.mbt",
+      "diagnostic_seconds": 0.888
+    },
+    {
+      "target": "src/semantic/planned_body_arena_wbtest.mbt",
+      "diagnostic_seconds": 3.229
+    },
+    {
+      "target": "src/semantic/planned_body_children_wbtest.mbt",
+      "diagnostic_seconds": 3.084
+    },
+    {
+      "target": "src/semantic/planned_body_cycles_wbtest.mbt",
+      "diagnostic_seconds": 2.398
+    },
+    {
+      "target": "src/semantic/planned_body_lists_wbtest.mbt",
+      "diagnostic_seconds": 2.754
+    },
+    {
+      "target": "src/semantic/planned_callable_lookup_wbtest.mbt",
+      "diagnostic_seconds": 0.039
+    },
+    {
+      "target": "src/semantic/planned_capture_metadata_wbtest.mbt",
+      "diagnostic_seconds": 4.069
+    },
+    {
+      "target": "src/semantic/planned_capture_ownership_wbtest.mbt",
+      "diagnostic_seconds": 2.442
+    },
+    {
+      "target": "src/semantic/planned_capture_sources_wbtest.mbt",
+      "diagnostic_seconds": 2.088
+    },
+    {
+      "target": "src/semantic/planning_binary_codec_wbtest.mbt",
+      "diagnostic_seconds": 2.53
+    },
+    {
+      "target": "src/semantic/priority_queue_wbtest.mbt",
+      "diagnostic_seconds": 0.475
+    },
+    {
+      "target": "src/semantic/product_array_wbtest.mbt",
+      "diagnostic_seconds": 1.322
+    },
+    {
+      "target": "src/semantic/product_patterns_wbtest.mbt",
+      "diagnostic_seconds": 0.232
+    },
+    {
+      "target": "src/semantic/program_function_index_invariants_wbtest.mbt",
+      "diagnostic_seconds": 1.556
+    },
+    {
+      "target": "src/semantic/program_function_lookup_invariants_wbtest.mbt",
+      "diagnostic_seconds": 3.124
+    },
+    {
+      "target": "src/semantic/program_function_signature_invariants_wbtest.mbt",
+      "diagnostic_seconds": 2.327
+    },
+    {
+      "target": "src/semantic/program_function_type_preflight_wbtest.mbt",
+      "diagnostic_seconds": 8.601
+    },
+    {
+      "target": "src/semantic/program_index_wbtest.mbt",
+      "diagnostic_seconds": 0.768
+    },
+    {
+      "target": "src/semantic/program_initializer_dependency_contracts_wbtest.mbt",
+      "diagnostic_seconds": 6.606
+    },
+    {
+      "target": "src/semantic/program_initializer_direct_queries_wbtest.mbt",
+      "diagnostic_seconds": 0.754
+    },
+    {
+      "target": "src/semantic/program_initializer_selected_instances_wbtest.mbt",
+      "diagnostic_seconds": 5.049
+    },
+    {
+      "target": "src/semantic/program_initializer_source_invariants_wbtest.mbt",
+      "diagnostic_seconds": 4.311
+    },
+    {
+      "target": "src/semantic/program_link_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.037
+    },
+    {
+      "target": "src/semantic/program_module_index_wbtest.mbt",
+      "diagnostic_seconds": 3.873
+    },
+    {
+      "target": "src/semantic/program_optimization_arenas_wbtest.mbt",
+      "diagnostic_seconds": 1.65
+    },
+    {
+      "target": "src/semantic/program_optimization_wbtest.mbt",
+      "diagnostic_seconds": 0.037
+    },
+    {
+      "target": "src/semantic/program_physical_alias_invariants_wbtest.mbt",
+      "diagnostic_seconds": 3.27
+    },
+    {
+      "target": "src/semantic/program_physical_reference_invariants_wbtest.mbt",
+      "diagnostic_seconds": 2.611
+    },
+    {
+      "target": "src/semantic/program_physical_type_invariants_wbtest.mbt",
+      "diagnostic_seconds": 9.293
+    },
+    {
+      "target": "src/semantic/qualified_function_references_wbtest.mbt",
+      "diagnostic_seconds": 1.82
+    },
+    {
+      "target": "src/semantic/queue_wbtest.mbt",
+      "diagnostic_seconds": 0.037
+    },
+    {
+      "target": "src/semantic/raw_array_contracts_wbtest.mbt",
+      "diagnostic_seconds": 1.443
+    },
+    {
+      "target": "src/semantic/raw_forwarding_result_wbtest.mbt",
+      "diagnostic_seconds": 0.386
+    },
+    {
+      "target": "src/semantic/raw_gc_storage_wbtest.mbt",
+      "diagnostic_seconds": 0.037
+    },
+    {
+      "target": "src/semantic/raw_wasm_memory_wbtest.mbt",
+      "diagnostic_seconds": 0.037
+    },
+    {
+      "target": "src/semantic/red_black_tree_wbtest.mbt",
+      "diagnostic_seconds": 0.035
+    },
+    {
+      "target": "src/semantic/return_constructor_inference_wbtest.mbt",
+      "diagnostic_seconds": 0.446
+    },
+    {
+      "target": "src/semantic/runtime_trait_export_admission_wbtest.mbt",
+      "diagnostic_seconds": 1.416
+    },
+    {
+      "target": "src/semantic/set_wbtest.mbt",
+      "diagnostic_seconds": 0.034
+    },
+    {
+      "target": "src/semantic/short_inference_wbtest.mbt",
+      "diagnostic_seconds": 4.516
+    },
+    {
+      "target": "src/semantic/show_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/solver_lifecycle_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.042
+    },
+    {
+      "target": "src/semantic/solver_root_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.043
+    },
+    {
+      "target": "src/semantic/solver_snapshot_identity_wbtest.mbt",
+      "diagnostic_seconds": 0.04
+    },
+    {
+      "target": "src/semantic/solver_type_graph_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/solver_undo_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.039
+    },
+    {
+      "target": "src/semantic/solver_value_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/source_diagnostics_wbtest.mbt",
+      "diagnostic_seconds": 1.143
+    },
+    {
+      "target": "src/semantic/specialization_shapes_wbtest.mbt",
+      "diagnostic_seconds": 0.409
+    },
+    {
+      "target": "src/semantic/specialized_call_identity_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/specialized_call_witness_lookup_wbtest.mbt",
+      "diagnostic_seconds": 2.565
+    },
+    {
+      "target": "src/semantic/specialized_function_lookup_wbtest.mbt",
+      "diagnostic_seconds": 3.069
+    },
+    {
+      "target": "src/semantic/stack_wbtest.mbt",
+      "diagnostic_seconds": 0.038
+    },
+    {
+      "target": "src/semantic/standard_builtin_registry_wbtest.mbt",
+      "diagnostic_seconds": 0.122
+    },
+    {
+      "target": "src/semantic/standard_dependency_closure_wbtest.mbt",
+      "diagnostic_seconds": 0.451
+    },
+    {
+      "target": "src/semantic/standard_module_identity_wbtest.mbt",
+      "diagnostic_seconds": 0.477
+    },
+    {
+      "target": "src/semantic/standard_preamble_wbtest.mbt",
+      "diagnostic_seconds": 0.041
+    },
+    {
+      "target": "src/semantic/string_pattern_effects_wbtest.mbt",
+      "diagnostic_seconds": 0.766
+    },
+    {
+      "target": "src/semantic/test_file_convention_wbtest.mbt",
+      "diagnostic_seconds": 0.129
+    },
+    {
+      "target": "src/semantic/test_planning_wbtest.mbt",
+      "diagnostic_seconds": 1.554
+    },
+    {
+      "target": "src/semantic/text_hash_wbtest.mbt",
+      "diagnostic_seconds": 0.037
+    },
+    {
+      "target": "src/semantic/text_iteration_wbtest.mbt",
+      "diagnostic_seconds": 0.044
+    },
+    {
+      "target": "src/semantic/text_ordering_wbtest.mbt",
+      "diagnostic_seconds": 0.035
+    },
+    {
+      "target": "src/semantic/trait_evidence_concreteness_wbtest.mbt",
+      "diagnostic_seconds": 0.043
+    },
+    {
+      "target": "src/semantic/trait_evidence_keys_wbtest.mbt",
+      "diagnostic_seconds": 0.056
+    },
+    {
+      "target": "src/semantic/trait_search_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.042
+    },
+    {
+      "target": "src/semantic/transform_trait_cache_wbtest.mbt",
+      "diagnostic_seconds": 0.043
+    },
+    {
+      "target": "src/semantic/type_layout_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.043
+    },
+    {
+      "target": "src/semantic/type_resolution_wbtest.mbt",
+      "diagnostic_seconds": 0.054
+    },
+    {
+      "target": "src/semantic/using_wbtest.mbt",
+      "diagnostic_seconds": 0.422
+    },
+    {
+      "target": "src/semantic/wasmgc_fragment_plan_wbtest.mbt",
+      "diagnostic_seconds": 0.066
+    },
+    {
+      "target": "src/backend/bound_trait_callbacks_wbtest.mbt",
+      "diagnostic_seconds": 2.663
+    },
+    {
+      "target": "src/backend/btree_plans_providers_wbtest.mbt",
+      "diagnostic_seconds": 0.246
+    },
+    {
+      "target": "src/backend/btree_storage_primitives_wbtest.mbt",
+      "diagnostic_seconds": 0.278
+    },
+    {
+      "target": "src/backend/bytes_staging_boundary_wbtest.mbt",
+      "diagnostic_seconds": 0.249
+    },
+    {
+      "target": "src/backend/callback_adapter_wbtest.mbt",
+      "diagnostic_seconds": 0.247
+    },
+    {
+      "target": "src/backend/compile_scaling_wbtest.mbt",
+      "diagnostic_seconds": 0.256
+    },
+    {
+      "target": "src/backend/compile_time_associated_traits_wbtest.mbt",
+      "diagnostic_seconds": 0.249
+    },
+    {
+      "target": "src/backend/compiler_test_builders_wbtest.mbt",
+      "diagnostic_seconds": 0.251
+    },
+    {
+      "target": "src/backend/diverging_index_wbtest.mbt",
+      "diagnostic_seconds": 0.242
+    },
+    {
+      "target": "src/backend/inferred_enum_layout_wbtest.mbt",
+      "diagnostic_seconds": 0.264
+    },
+    {
+      "target": "src/backend/member_call_fixed_point_wbtest.mbt",
+      "diagnostic_seconds": 0.291
+    },
+    {
+      "target": "src/backend/module_initializer_nominals_wbtest.mbt",
+      "diagnostic_seconds": 0.274
+    },
+    {
+      "target": "src/backend/product_match_box_demand_wbtest.mbt",
+      "diagnostic_seconds": 0.301
+    },
+    {
+      "target": "src/backend/raw_array_default_results_wbtest.mbt",
+      "diagnostic_seconds": 0.329
+    },
+    {
+      "target": "src/backend/raw_gc_storage_wbtest.mbt",
+      "diagnostic_seconds": 0.287
+    },
+    {
+      "target": "src/backend/starshine_array_runtime_wbtest.mbt",
+      "diagnostic_seconds": 0.282
+    },
+    {
+      "target": "src/backend/starshine_bool_match_wbtest.mbt",
+      "diagnostic_seconds": 0.253
+    },
+    {
+      "target": "src/backend/starshine_builtin_references_wbtest.mbt",
+      "diagnostic_seconds": 0.253
+    },
+    {
+      "target": "src/backend/starshine_call_evidence_recipe_wbtest.mbt",
+      "diagnostic_seconds": 0.261
+    },
+    {
+      "target": "src/backend/starshine_capture_cell_agreement_wbtest.mbt",
+      "diagnostic_seconds": 0.267
+    },
+    {
+      "target": "src/backend/starshine_capture_cell_lookup_wbtest.mbt",
+      "diagnostic_seconds": 0.254
+    },
+    {
+      "target": "src/backend/starshine_capture_cell_shapes_wbtest.mbt",
+      "diagnostic_seconds": 0.259
+    },
+    {
+      "target": "src/backend/starshine_capture_product_scratch_wbtest.mbt",
+      "diagnostic_seconds": 0.263
+    },
+    {
+      "target": "src/backend/starshine_closure_calls_wbtest.mbt",
+      "diagnostic_seconds": 0.26
+    },
+    {
+      "target": "src/backend/starshine_closure_type_contract_wbtest.mbt",
+      "diagnostic_seconds": 0.251
+    },
+    {
+      "target": "src/backend/starshine_compiler_facts_wbtest.mbt",
+      "diagnostic_seconds": 0.272
+    },
+    {
+      "target": "src/backend/starshine_debug_emission_wbtest.mbt",
+      "diagnostic_seconds": 0.281
+    },
+    {
+      "target": "src/backend/starshine_erased_adapter_kind_wbtest.mbt",
+      "diagnostic_seconds": 0.254
+    },
+    {
+      "target": "src/backend/starshine_erased_pattern_bindings_wbtest.mbt",
+      "diagnostic_seconds": 0.269
+    },
+    {
+      "target": "src/backend/starshine_exact_call_target_wbtest.mbt",
+      "diagnostic_seconds": 0.249
+    },
+    {
+      "target": "src/backend/starshine_fib_wbtest.mbt",
+      "diagnostic_seconds": 0.25
+    },
+    {
+      "target": "src/backend/starshine_fixed_array_wbtest.mbt",
+      "diagnostic_seconds": 0.256
+    },
+    {
+      "target": "src/backend/starshine_fragments_wbtest.mbt",
+      "diagnostic_seconds": 0.262
+    },
+    {
+      "target": "src/backend/starshine_function_signature_invariants_wbtest.mbt",
+      "diagnostic_seconds": 0.266
+    },
+    {
+      "target": "src/backend/starshine_generic_enums_wbtest.mbt",
+      "diagnostic_seconds": 0.261
+    },
+    {
+      "target": "src/backend/starshine_generic_impl_wbtest.mbt",
+      "diagnostic_seconds": 0.267
+    },
+    {
+      "target": "src/backend/starshine_generic_payload_wbtest.mbt",
+      "diagnostic_seconds": 0.273
+    },
+    {
+      "target": "src/backend/starshine_generic_raw_builtins_wbtest.mbt",
+      "diagnostic_seconds": 0.279
+    },
+    {
+      "target": "src/backend/starshine_index_wbtest.mbt",
+      "diagnostic_seconds": 0.261
+    },
+    {
+      "target": "src/backend/starshine_lambda_closure_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.253
+    },
+    {
+      "target": "src/backend/starshine_lambda_function_lookup_wbtest.mbt",
+      "diagnostic_seconds": 0.282
+    },
+    {
+      "target": "src/backend/starshine_lane_types_wbtest.mbt",
+      "diagnostic_seconds": 0.268
+    },
+    {
+      "target": "src/backend/starshine_local_reuse_wbtest.mbt",
+      "diagnostic_seconds": 0.26
+    },
+    {
+      "target": "src/backend/starshine_map_wbtest.mbt",
+      "diagnostic_seconds": 0.293
+    },
+    {
+      "target": "src/backend/starshine_module_values_wbtest.mbt",
+      "diagnostic_seconds": 0.265
+    },
+    {
+      "target": "src/backend/starshine_multi_file_wbtest.mbt",
+      "diagnostic_seconds": 0.273
+    },
+    {
+      "target": "src/backend/starshine_nested_call_shapes_wbtest.mbt",
+      "diagnostic_seconds": 0.266
+    },
+    {
+      "target": "src/backend/starshine_never_local_wbtest.mbt",
+      "diagnostic_seconds": 0.262
+    },
+    {
+      "target": "src/backend/starshine_numeric_builtins_wbtest.mbt",
+      "diagnostic_seconds": 0.262
+    },
+    {
+      "target": "src/backend/starshine_numeric_constants_wbtest.mbt",
+      "diagnostic_seconds": 0.256
+    },
+    {
+      "target": "src/backend/starshine_packed_primitives_wbtest.mbt",
+      "diagnostic_seconds": 0.286
+    },
+    {
+      "target": "src/backend/starshine_physical_type_invariants_wbtest.mbt",
+      "diagnostic_seconds": 0.282
+    },
+    {
+      "target": "src/backend/starshine_product_array_wbtest.mbt",
+      "diagnostic_seconds": 0.267
+    },
+    {
+      "target": "src/backend/starshine_production_assertion_wbtest.mbt",
+      "diagnostic_seconds": 0.262
+    },
+    {
+      "target": "src/backend/starshine_program_link_wbtest.mbt",
+      "diagnostic_seconds": 0.263
+    },
+    {
+      "target": "src/backend/starshine_query_reference_singletons_wbtest.mbt",
+      "diagnostic_seconds": 0.266
+    },
+    {
+      "target": "src/backend/starshine_raw_arithmetic_wbtest.mbt",
+      "diagnostic_seconds": 0.263
+    },
+    {
+      "target": "src/backend/starshine_raw_array_references_wbtest.mbt",
+      "diagnostic_seconds": 0.26
+    },
+    {
+      "target": "src/backend/starshine_raw_conversions_wbtest.mbt",
+      "diagnostic_seconds": 0.258
+    },
+    {
+      "target": "src/backend/starshine_raw_intrinsics_wbtest.mbt",
+      "diagnostic_seconds": 0.269
+    },
+    {
+      "target": "src/backend/starshine_raw_math_wbtest.mbt",
+      "diagnostic_seconds": 0.261
+    },
+    {
+      "target": "src/backend/starshine_raw_memory_wbtest.mbt",
+      "diagnostic_seconds": 0.279
+    },
+    {
+      "target": "src/backend/starshine_raw_simd_cases_wbtest.mbt",
+      "diagnostic_seconds": 0.268
+    },
+    {
+      "target": "src/backend/starshine_raw_simd_wbtest.mbt",
+      "diagnostic_seconds": 0.275
+    },
+    {
+      "target": "src/backend/starshine_ref_eq_wbtest.mbt",
+      "diagnostic_seconds": 0.256
+    },
+    {
+      "target": "src/backend/starshine_reference_fields_wbtest.mbt",
+      "diagnostic_seconds": 0.291
+    },
+    {
+      "target": "src/backend/starshine_retired_runtime_names_wbtest.mbt",
+      "diagnostic_seconds": 0.259
+    },
+    {
+      "target": "src/backend/starshine_scalar_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.267
+    },
+    {
+      "target": "src/backend/starshine_set_wbtest.mbt",
+      "diagnostic_seconds": 0.266
+    },
+    {
+      "target": "src/backend/starshine_specialization_products_wbtest.mbt",
+      "diagnostic_seconds": 0.263
+    },
+    {
+      "target": "src/backend/starshine_test_assertion_wbtest.mbt",
+      "diagnostic_seconds": 0.259
+    },
+    {
+      "target": "src/backend/starshine_unit_branch_discard_wbtest.mbt",
+      "diagnostic_seconds": 0.261
+    },
+    {
+      "target": "src/backend/starshine_unit_fields_wbtest.mbt",
+      "diagnostic_seconds": 0.263
+    },
+    {
+      "target": "src/backend/starshine_unknown_builtin_wbtest.mbt",
+      "diagnostic_seconds": 0.268
+    },
+    {
+      "target": "src/backend/starshine_wasi_write_removal_wbtest.mbt",
+      "diagnostic_seconds": 0.261
+    },
+    {
+      "target": "src/backend/starshine_while_wbtest.mbt",
+      "diagnostic_seconds": 0.259
+    },
+    {
+      "target": "src/backend/wasi_marshalling_schema_wbtest.mbt",
+      "diagnostic_seconds": 0.258
+    },
+    {
+      "target": "src/backend/wasm_custom_sections_wbtest.mbt",
+      "diagnostic_seconds": 0.277
+    },
+    {
+      "target": "src/standard_loader",
+      "diagnostic_seconds": 11.463
+    },
+    {
+      "target": "src/compiler_driver/compiler_driver_wbtest.mbt",
+      "diagnostic_seconds": 0.293
+    },
+    {
+      "target": "src/compiler_driver/expanded_sources_wbtest.mbt",
+      "diagnostic_seconds": 0.28
+    },
+    {
+      "target": "src/compiler_driver/source_loading_wbtest.mbt",
+      "diagnostic_seconds": 0.296
+    },
+    {
+      "target": "src/compiler_driver/source_pool_wbtest.mbt",
+      "diagnostic_seconds": 0.305
+    },
+    {
+      "target": "src/compiler_driver/transforms_body_guards_wbtest.mbt",
+      "diagnostic_seconds": 0.291
+    },
+    {
+      "target": "src/compiler_driver/transforms_cache_wbtest.mbt",
+      "diagnostic_seconds": 0.282
+    },
+    {
+      "target": "src/compiler_driver/transforms_constants_wbtest.mbt",
+      "diagnostic_seconds": 0.29
+    },
+    {
+      "target": "src/compiler_driver/transforms_declarations_wbtest.mbt",
+      "diagnostic_seconds": 0.289
+    },
+    {
+      "target": "src/compiler_driver/transforms_default_references_wbtest.mbt",
+      "diagnostic_seconds": 0.284
+    },
+    {
+      "target": "src/compiler_driver/transforms_dynamic_traits_wbtest.mbt",
+      "diagnostic_seconds": 0.315
+    },
+    {
+      "target": "src/compiler_driver/transforms_environment_wbtest.mbt",
+      "diagnostic_seconds": 0.291
+    },
+    {
+      "target": "src/compiler_driver/transforms_execution_wbtest.mbt",
+      "diagnostic_seconds": 0.281
+    },
+    {
+      "target": "src/compiler_driver/transforms_frame_roots_wbtest.mbt",
+      "diagnostic_seconds": 0.285
+    },
+    {
+      "target": "src/compiler_driver/transforms_function_identity_wbtest.mbt",
+      "diagnostic_seconds": 0.286
+    },
+    {
+      "target": "src/compiler_driver/transforms_generic_frames_wbtest.mbt",
+      "diagnostic_seconds": 0.284
+    },
+    {
+      "target": "src/compiler_driver/transforms_generic_identity_wbtest.mbt",
+      "diagnostic_seconds": 0.287
+    },
+    {
+      "target": "src/compiler_driver/transforms_generic_impl_wbtest.mbt",
+      "diagnostic_seconds": 0.296
+    },
+    {
+      "target": "src/compiler_driver/transforms_loading_wbtest.mbt",
+      "diagnostic_seconds": 0.286
+    },
+    {
+      "target": "src/compiler_driver/transforms_loop_guards_wbtest.mbt",
+      "diagnostic_seconds": 0.289
+    },
+    {
+      "target": "src/compiler_driver/transforms_memory_wbtest.mbt",
+      "diagnostic_seconds": 0.298
+    },
+    {
+      "target": "src/compiler_driver/transforms_methods_wbtest.mbt",
+      "diagnostic_seconds": 0.29
+    },
+    {
+      "target": "src/compiler_driver/transforms_overloads_wbtest.mbt",
+      "diagnostic_seconds": 0.301
+    },
+    {
+      "target": "src/compiler_driver/transforms_patterns_wbtest.mbt",
+      "diagnostic_seconds": 0.287
+    },
+    {
+      "target": "src/compiler_driver/transforms_product_carriers_wbtest.mbt",
+      "diagnostic_seconds": 0.29
+    },
+    {
+      "target": "src/compiler_driver/transforms_raw_bool_wbtest.mbt",
+      "diagnostic_seconds": 0.292
+    },
+    {
+      "target": "src/compiler_driver/transforms_reference_carriers_wbtest.mbt",
+      "diagnostic_seconds": 0.285
+    },
+    {
+      "target": "src/compiler_driver/transforms_reflection_wbtest.mbt",
+      "diagnostic_seconds": 0.285
+    },
+    {
+      "target": "src/compiler_driver/transforms_resource_reports_wbtest.mbt",
+      "diagnostic_seconds": 0.319
+    },
+    {
+      "target": "src/compiler_driver/transforms_signature_changes_wbtest.mbt",
+      "diagnostic_seconds": 0.307
+    },
+    {
+      "target": "src/compiler_driver/transforms_signatures_wbtest.mbt",
+      "diagnostic_seconds": 0.307
+    },
+    {
+      "target": "src/compiler_driver/transforms_string_vm_wbtest.mbt",
+      "diagnostic_seconds": 0.288
+    },
+    {
+      "target": "src/compiler_driver/transforms_text_execution_wbtest.mbt",
+      "diagnostic_seconds": 0.284
+    },
+    {
+      "target": "src/compiler_driver/transforms_text_operations_wbtest.mbt",
+      "diagnostic_seconds": 0.296
+    },
+    {
+      "target": "src/compiler_driver/transforms_typed_reflection_wbtest.mbt",
+      "diagnostic_seconds": 0.291
+    },
+    {
+      "target": "src/compiler_driver/transforms_vector_contracts_wbtest.mbt",
+      "diagnostic_seconds": 0.29
+    },
+    {
+      "target": "src/compiler_driver/transforms_wbtest.mbt",
+      "diagnostic_seconds": 0.295
+    }
+  ],
+  "targets_with_compile_errors": [
+    {
+      "target": "src/transforms",
+      "error_headers": 4
+    },
+    {
+      "target": "src/backend/bound_trait_callbacks_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/btree_plans_providers_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/btree_storage_primitives_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/bytes_staging_boundary_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/callback_adapter_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/compile_scaling_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/compile_time_associated_traits_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/compiler_test_builders_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/diverging_index_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/inferred_enum_layout_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/member_call_fixed_point_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/module_initializer_nominals_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/product_match_box_demand_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/raw_array_default_results_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/raw_gc_storage_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_array_runtime_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_bool_match_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_builtin_references_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_call_evidence_recipe_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_capture_cell_agreement_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_capture_cell_lookup_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_capture_cell_shapes_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_capture_product_scratch_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_closure_calls_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_closure_type_contract_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_compiler_facts_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_debug_emission_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_erased_adapter_kind_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_erased_pattern_bindings_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_exact_call_target_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_fib_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_fixed_array_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_fragments_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_function_signature_invariants_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_generic_enums_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_generic_impl_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_generic_payload_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_generic_raw_builtins_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_index_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_lambda_closure_contracts_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_lambda_function_lookup_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_lane_types_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_local_reuse_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_map_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_module_values_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_multi_file_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_nested_call_shapes_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_never_local_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_numeric_builtins_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_numeric_constants_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_packed_primitives_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_physical_type_invariants_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_product_array_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_production_assertion_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_program_link_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_query_reference_singletons_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_arithmetic_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_array_references_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_conversions_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_intrinsics_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_math_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_memory_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_simd_cases_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_raw_simd_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_ref_eq_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_reference_fields_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_retired_runtime_names_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_scalar_contracts_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_set_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_specialization_products_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_test_assertion_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_unit_branch_discard_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_unit_fields_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_unknown_builtin_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_wasi_write_removal_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/starshine_while_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/wasi_marshalling_schema_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/backend/wasm_custom_sections_wbtest.mbt",
+      "error_headers": 1
+    },
+    {
+      "target": "src/compiler_driver/compiler_driver_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/expanded_sources_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/source_loading_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/source_pool_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_body_guards_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_cache_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_constants_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_declarations_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_default_references_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_dynamic_traits_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_environment_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_execution_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_frame_roots_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_function_identity_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_generic_frames_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_generic_identity_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_generic_impl_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_loading_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_loop_guards_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_memory_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_methods_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_overloads_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_patterns_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_product_carriers_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_raw_bool_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_reference_carriers_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_reflection_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_resource_reports_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_signature_changes_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_signatures_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_string_vm_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_text_execution_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_text_operations_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_typed_reflection_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_vector_contracts_wbtest.mbt",
+      "error_headers": 5
+    },
+    {
+      "target": "src/compiler_driver/transforms_wbtest.mbt",
+      "error_headers": 5
+    }
+  ]
+}

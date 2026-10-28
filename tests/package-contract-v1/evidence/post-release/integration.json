@@ -1,0 +1,14 @@
+{
+  "head": "ce1055b7d5a8cd9198e04f5fe3c6619551c0fe1b",
+  "command": [
+    "bash",
+    "tools/test-integration-native.sh"
+  ],
+  "env": {
+    "DEW_INTEGRATION_TEST_FILES": "src/semantic/module_system_wbtest.mbt src/backend/starshine_program_link_wbtest.mbt"
+  },
+  "exit": 1,
+  "wall_seconds": 6.531509812979493,
+  "ledger_generation": 20,
+  "purpose": "focused correctness integration, not benchmark evidence"
+}

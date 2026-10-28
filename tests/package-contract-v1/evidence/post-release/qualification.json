@@ -1,0 +1,60 @@
+{
+  "head": "ce1055b7d5a8cd9198e04f5fe3c6619551c0fe1b",
+  "baseline": "20f902acb6caa56a49712df832aeb0c46ec520b8",
+  "purpose": "functional qualification only; no benchmark or timing lease",
+  "checks": [
+    {
+      "name": "master-transforms",
+      "command": [
+        "bash",
+        "tools/test-native.sh"
+      ],
+      "cwd": "/tmp/pkg-phase1-post-release/master-20f902ac",
+      "env": {
+        "DEW_NATIVE_TEST_PACKAGES": "transforms"
+      },
+      "exit": 1,
+      "wall_seconds": 0.6153221940039657,
+      "ledger_generation": 20
+    },
+    {
+      "name": "real-pack",
+      "command": [
+        "bun",
+        "--preload",
+        "/tmp/pkg-phase1-post-release/deny-network.mjs",
+        "tools/dew-registry.mjs",
+        "pack",
+        "--manifest",
+        "/tmp/pkg-phase1-post-release/real-pack-fixture/dew.json",
+        "--output",
+        "/tmp/pkg-phase1-post-release/real-pack-output"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {
+        "DEW_CONFIG_HOME": "/tmp/pkg-phase1-post-release/invalid-config",
+        "TMPDIR": "/tmp/pkg-phase1-post-release/pack-temp"
+      },
+      "exit": 1,
+      "wall_seconds": 9.734119194035884,
+      "ledger_generation": 20,
+      "snapshot_entries_after_exit": [],
+      "output_exists": false
+    },
+    {
+      "name": "llvm-bootstrap",
+      "command": [
+        "moon",
+        "build",
+        "--target",
+        "llvm",
+        "src/dew_bootstrap"
+      ],
+      "cwd": "/home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1",
+      "env": {},
+      "exit": 255,
+      "wall_seconds": 0.03207164601190016,
+      "ledger_generation": 20
+    }
+  ]
+}
