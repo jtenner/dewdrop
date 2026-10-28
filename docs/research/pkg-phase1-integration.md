@@ -56,3 +56,22 @@ After the first two merges, Node checks pass: 106 area checks, 149 shared cases
 in each of parse/read modes, and 11 harness tests. The shared runner lists 30
 unsupported range-match/budget cases. All three JavaScript check stderr files
 are empty. These are functional checks, not performance results.
+
+## Empty SemVer suffix fix
+
+Regression checkpoint: `d61a75c37`. The parser now checks that a dash has a
+following prerelease identifier before the build separator, and that a plus
+has a following build identifier. It returns `EmptyIdentifier` at the missing
+identifier. The source change is in `std/semver.dew`, the narrow shared owner of
+this bug. Fixing each package caller separately would leave the other readers
+with different SemVer rules. No scan, allocation, or source copy was added.
+The existing scans get two constant-time checks.
+
+The identical 169-case test suite now reports **148 pass and 21 fail**, exit 1.
+All sixteen empty-suffix failures are gone. The 21 remaining failures are the
+separate standard codec changes that have not been merged yet. The result is
+`/tmp/pkg-phase1-shared-std-semver-fixed/result.json`; stdout/stderr are in that
+directory. This is a partial green result for the parser fix, not a claim that
+the complete contract suite passes. The generated package sources are current.
+The wider JavaScript vector suite now passes 163 cases, with the same 30
+unsupported range-match/budget cases. No full native lane or timing run ran.
