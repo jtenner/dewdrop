@@ -152,3 +152,21 @@ This parser adds one bounded metadata parse and a package-name set to local
 pack/publish preparation. It does not parse each lock twice or copy source
 contents. Measure lock parse/capture with large materialized graphs after the
 hold. File I/O, UTF-8 rejection, and snapshot cleanup still need the caller checks.
+
+## Ordered integration and original lock fix
+
+Bootstrap merged, then the standard codecs. Only the generated package source
+mirror conflicted. It was regenerated from the merged source files. Pack's three
+own checkpoints were then cherry-picked in order, without its inherited copies
+of the already-merged JavaScript changes. All worker checkpoints remain reachable
+from their retained branches; no worktree was removed.
+
+Pack now reads original lock bytes with strict UTF-8, then calls
+`parsePackageLock` before canonicalization or source capture. It uses the existing
+8 MiB local lock cap. The exact 11-case original-lock test now passes, exit 0.
+The original 34-case pack suite had one diagnostic-only mismatch: an escaping
+path now fails earlier with `unsafe locked package path: ../outside`. The test
+now requires that specific cause, and each other graph check requires its own
+identity, integrity, cycle, or missing-lock cause. No valid behavior was changed
+to satisfy the test. Streams are `/tmp/pkg-phase1-snapshot-lock-green.*` and
+`/tmp/pkg-phase1-pack-integrated.*`.

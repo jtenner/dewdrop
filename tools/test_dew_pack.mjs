@@ -323,7 +323,14 @@ if (process.argv[2] === "--driver") {
       lock.packages[0].integrity = integrity(manifest, await sources(dirname(f.dependencySource)));
     }
     await writeFile(f.lock, JSON.stringify(lock));
-    rejected(await f.run(), /escapes package workspace|identity mismatch|integrity mismatch|dependency cycle|missing from dew.lock/);
+    const reasons = {
+      escape: /unsafe locked package path: \.\.\/outside/,
+      identity: /identity mismatch/,
+      integrity: /integrity mismatch/,
+      cycle: /dependency cycle/,
+      missing: /missing from dew.lock/,
+    };
+    rejected(await f.run(), reasons[kind]);
     assert.ok(!existsSync(f.trace)); assert.deepEqual(await readdir(f.scratch), []);
   });
   test("snapshot captures a shared diamond once", async t => {

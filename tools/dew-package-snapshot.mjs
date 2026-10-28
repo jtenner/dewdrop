@@ -4,6 +4,7 @@ import { chmod, lstat, mkdir, mkdtemp, open, readdir, realpath, rm, writeFile } 
 import { tmpdir } from "node:os";
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { collectSourceFiles, encodeCapsule, parsePackageManifest } from "./dew-package-contract.mjs";
+import { MAX_LOCK_BYTES, parsePackageLock } from "./dew-package-lock.mjs";
 
 const SOURCE_MAX = 16 * 1_048_576;
 const MANIFEST_MAX = 1_048_576;
@@ -135,11 +136,13 @@ async function capturePackage(manifestPath, target, source, maximum) {
 async function captureGraph(manifestPath, target, source) {
   const root = await capturePackage(manifestPath, target, source, PUBLISH_MAX);
   const originalRoot = dirname(manifestPath);
-  const lockBytes = await optionalBytes(join(originalRoot, "dew.lock"), MANIFEST_MAX, "lockfile");
+  const lockBytes = await optionalBytes(join(originalRoot, "dew.lock"), MAX_LOCK_BYTES, "lockfile");
   let lock = { lockfileVersion: 1, packages: [] };
   if (lockBytes) {
-    lock = JSON.parse(lockBytes.toString("utf8"));
-    if (lock?.lockfileVersion !== 1 || !Array.isArray(lock.packages) || lock.packages.length > GRAPH_MAX) throw new Error("invalid v1 lockfile or graph exceeds 4096 packages");
+    let lockText;
+    try { lockText = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(lockBytes); }
+    catch { throw new Error("lockfile is not valid UTF-8"); }
+    lock = parsePackageLock(lockText);
   }
   const locked = new Map();
   for (const entry of lock.packages) {
