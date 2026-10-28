@@ -206,3 +206,79 @@ The artifact encoder's existing payload/trailer copy remains unchanged.
 Module and lock path rules did not change. The local 256 MiB cap, 16 MiB source
 cap, 256 dependencies, and 65,536 source-file cap did not change. No public
 publish helper was added: 64 MiB is a transport policy owned by the publisher.
+
+## Public SemVer red checkpoint
+
+Code checkpoint for the first green set:
+`bbda0fa703f95c8a92951aa582784da020fbaf14`.
+Static follow-up found that SemVer fields are public, not parser-only.
+`docs/spec.md` states that fields without `private` are public. A caller can
+construct `SemVer::{ ... text: "01.0.0" }`, and each requirement variant can hold
+this unchecked value. The first fix therefore left a real encode/validate gap.
+The next five checks cover public manifest/artifact versions and exact, caret,
+and tilde variants, including leading zeros, malformed identifiers, and U32
+core/prerelease overflow. All five fail on the first fix, while its original 18
+checks pass (compile exit 0, 1.268208222 seconds; run exit 1, 0.275136998 seconds).
+
+The first baseline fixture setup failed because its parent `std` directory was
+missing. It ran no baseline check. The fixture was repaired, then both package
+files were compared byte-for-byte with `git show 20f902ac:<path>` before use.
+Other standard files are symlinks to unchanged worktree source. No production
+source was reverted or overwritten. No broad compiler build ran.
+
+Baseline command:
+`CONTRACT_STD_ROOT=/tmp/pkg-phase1-std-evidence/baseline python3 /tmp/pkg-phase1-std-evidence/run.py red-semver-baseline`.
+The harness sets `DEW_STD_ROOT` to that fixture; other overrides stay as above.
+The compiler and test runner commands are as above with
+`red-semver-baseline.wasm`. All 23 checks run against the original baseline
+package implementation. The five new failures are thus reproduced on untouched
+baseline source as well as the current code checkpoint.
+
+Compile exit: 0; wall seconds: 1.0124049119767733.
+Compile stdout:
+```text
+wrote self-describing Dew test module
+```
+Compile stderr: empty.
+Run exit: 1; wall seconds: 0.3951608630013652.
+Run stdout: empty.
+Run stderr:
+```text
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 manifest decode rejects invalid package name: unexpected trap unreachable: assertion failed: manifest decoder accepted invalid package name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 manifest decode rejects invalid dependency name: unexpected trap unreachable: assertion failed: manifest decoder accepted invalid dependency name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public manifest rejects invalid Git enum strings: unexpected trap unreachable: assertion failed: invalid Git requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public artifact rejects invalid Git enum strings: unexpected trap unreachable: assertion failed: artifact invalid Git requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects invalid package name: unexpected trap unreachable: assertion failed: artifact decoder accepted invalid package name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects invalid dependency name: unexpected trap unreachable: assertion failed: artifact decoder accepted invalid dependency name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects duplicate dependencies: unexpected trap unreachable: assertion failed: artifact decoder accepted duplicate dependencies
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects duplicate sources: unexpected trap unreachable: assertion failed: artifact decoder accepted duplicate sources
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact requires Dew sources: unexpected trap unreachable: assertion failed: non-Dew source accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects reserved manifest directory: unexpected trap unreachable: assertion failed: manifest directory source accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects forward path prefix conflicts: unexpected trap unreachable: assertion failed: forward path prefix conflict accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects reverse path prefix conflicts: unexpected trap unreachable: assertion failed: reverse path prefix conflict accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode checks unsafe paths: unexpected trap unreachable: assertion failed: unsafe source path decoded
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects empty source set: unexpected trap unreachable: assertion failed: empty source set decoded
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 Git enum must retain its variant: unexpected trap unreachable: assertion failed: Git enum accepted exact version text
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decoder checks provenance: unexpected trap unreachable: assertion failed: artifact decoder accepted empty source
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public manifest checks SemVer text: unexpected trap unreachable: assertion failed: invalid public manifest version validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public artifact checks SemVer text: unexpected trap unreachable: assertion failed: invalid public artifact version validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public exact checks SemVer text: unexpected trap unreachable: assertion failed: invalid public SemVer requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public caret checks SemVer text: unexpected trap unreachable: assertion failed: invalid public SemVer requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public tilde checks SemVer text: unexpected trap unreachable: assertion failed: invalid public SemVer requirement validated
+package contract v1: 2 passed, 21 failed
+```
+Input SHA-256 values:
+```json
+{
+  "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626",
+  "/tmp/pkg-phase1-std-evidence/baseline/std/package.dew": "0a44c7c928a5acf1e9c484d0022d5d3d5204d2b868e72248e30b687ad222db8b",
+  "/tmp/pkg-phase1-std-evidence/baseline/std/package/artifact.dew": "68e50bd71324cb00f9417ab56679a8cb3083c1b58024c530c973df31ae4ce324",
+  "std/tests/package_contract_v1_test.dew": "d6ef4ddcb5f5ec3d10448e65d091fe2039b334535247904de9569a4add17e5f1"
+}
+```
+
+The required fix is to validate rendered SemVer text through the existing strict
+parser for public version and requirement values. This adds bounded parser work
+and allocations to encode/validate callers. A type-privacy change could remove
+that need, but it changes an API outside this assignment. No such API change is
+proposed in this patch. Measurements remain held and must include this new work.

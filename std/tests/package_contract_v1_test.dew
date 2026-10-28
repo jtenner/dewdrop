@@ -204,3 +204,49 @@ test "contract v1 artifact decoder checks provenance" {
   let value = package_artifact("@s/app", contract_version(), "", "sha256-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Array::new(), contract_files("main.dew"))
   assert(package_artifact_try_decode(contract_raw_artifact(value)) is Result::Err(FormatDecodeError::InvalidSyntax("package artifact provenance")), "artifact decoder accepted empty source")
 }
+
+fn contract_unchecked_version(text: String) -> SemVer {
+  SemVer::{
+    major: 1u32
+    minor: 0u32
+    patch: 0u32
+    prerelease: Array::new()
+    build: Array::new()
+    text: text
+  }
+}
+
+fn contract_expect_requirement_invalid(requirement: PackageRequirement) -> Unit {
+  let dependencies = Array::new()
+  dependencies.push(package_dependency("@s/a", requirement))
+  let manifest = package_manifest("@s/app", contract_version(), dependencies)
+  assert(manifest.validate() is Result::Err(FormatValidationErr::InvalidField("dependency requirement")), "invalid public SemVer requirement validated")
+  assert(manifest.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public SemVer requirement encoded")
+  let artifact = contract_artifact("@s/app", dependencies, contract_files("main.dew"))
+  assert(artifact.validate() is Result::Err(FormatValidationErr::InvalidField("artifact dependency requirement")), "invalid public artifact SemVer requirement validated")
+  assert(artifact.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public artifact SemVer requirement encoded")
+}
+
+test "contract v1 public manifest checks SemVer text" {
+  let value = package_manifest("@s/app", contract_unchecked_version("01.0.0"), Array::new())
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("package version")), "invalid public manifest version validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public manifest version encoded")
+}
+
+test "contract v1 public artifact checks SemVer text" {
+  let value = package_artifact("@s/app", contract_unchecked_version("1.0.0-4294967296"), "file:app", "sha256-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", Array::new(), contract_files("main.dew"))
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("package artifact version")), "invalid public artifact version validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public artifact version encoded")
+}
+
+test "contract v1 public exact checks SemVer text" {
+  contract_expect_requirement_invalid(PackageRequirement::Exact(contract_unchecked_version("1.0")))
+}
+
+test "contract v1 public caret checks SemVer text" {
+  contract_expect_requirement_invalid(PackageRequirement::Caret(contract_unchecked_version("4294967296.0.0")))
+}
+
+test "contract v1 public tilde checks SemVer text" {
+  contract_expect_requirement_invalid(PackageRequirement::Tilde(contract_unchecked_version("1.0.0-alpha..one")))
+}
