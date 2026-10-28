@@ -149,6 +149,15 @@ check("manifest: missing file keeps read error", async () => {
   await rejected(() => contract.readPackageManifest(join(temporary, "missing.json")), /ENOENT|no such file/i);
 });
 
+for (const reader of ["manifest", "sources"]) check(`${reader}: reject a linked path ancestor`, async () => {
+  const directory = await fixture({ "child/dew.json": JSON.stringify(manifest), "child/main.dew": "source" });
+  const alias = join(temporary, `linked-parent-${serial++}`);
+  await fs.symlink(directory, alias);
+  await rejected(() => reader === "manifest"
+    ? contract.readPackageManifest(join(alias, "child/dew.json"))
+    : contract.collectSourceFiles(join(alias, "child")), /symlink|symbolic/i);
+});
+
 check("sources: recursive src, tests included, global byte order", async () => {
   const directory = await fixture({ "src/a/z.dew": "z", "src/a.dew": "aa", "src/é.dew": "e", "src/😀.dew": "u", "src/\uE000.dew": "p", "src/unit_test.dew": "t", "root.dew": "ignored", "src/note.txt": "ignored" });
   const files = await contract.collectSourceFiles(directory);

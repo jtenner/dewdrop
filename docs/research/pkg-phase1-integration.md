@@ -153,6 +153,21 @@ pack/publish preparation. It does not parse each lock twice or copy source
 contents. Measure lock parse/capture with large materialized graphs after the
 hold. File I/O, UTF-8 rejection, and snapshot cleanup still need the caller checks.
 
+## Linked ancestor agreement checkpoint
+
+The JavaScript reader initially followed a link in a package path ancestor,
+while the bootstrap and snapshot readers rejected it. Two new real-filesystem
+checks cover manifest reads and source collection through a linked parent.
+Before the fix, the area suite reports **106 pass, 2 fail**, exit 1. Both failures
+are missing expected symlink rejections. Streams are
+`/tmp/pkg-phase1-ancestor-red.stdout` and `.stderr`. These checks do not claim
+complete hardening against concurrent directory replacement.
+
+The native shared adapter now also runs the 16 raw lock cases. The integrated
+narrow native run passes **157 area checks and 197 shared cases**, exit 0;
+12 numeric artifact-budget cases remain explicitly unsupported. Its stderr is
+empty. Evidence is `/tmp/pkg-phase1-bootstrap-integrated/results.json`.
+
 ## Ordered integration and original lock fix
 
 Bootstrap merged, then the standard codecs. Only the generated package source
