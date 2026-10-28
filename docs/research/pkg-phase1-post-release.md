@@ -52,3 +52,31 @@ Resolve local SDK compatibility. Then finish routine/integration and affected
 platform checks, run real offline pack with the branch compiler, and update the
 consolidated report. Performance comparisons still need a separate lease.
 The earlier narrow checks remain valid within their recorded limits.
+
+## Further qualification and offline preparation regression
+
+An isolated source fixture from exact master `20f902acb6`, with its pinned
+Starshine and standard sources, reproduces the four transform conversion-method
+errors. The real pack check also stops on those errors, then removes its private
+snapshot and creates no output set. A separate integration check reports
+`program.modules.length(): 80 != 79`; the same test fails on exact master, so
+that count failure is not introduced by Phase 1. The baseline fixture initially
+lacked its integration script; that setup error was repaired before the check.
+
+LLVM first stopped for missing `prelude.mi`. A complete official nightly SDK
+was then installed in `/tmp/pkg-phase1-post-release/sdk-nightly`, without changes
+to the shared SDK or its credentials. The downloaded binary checksum was
+verified. It reports `moon 0.1.20261028` and
+`moonc v0.10.17+5802d87ac-nightly`. Its native, JS, WasmGC and LLVM core bundles
+all build. The first project checks with that SDK stopped because its private
+registry index was empty, before project compilation. Cached dependency metadata
+must be copied locally; this is a setup issue, not a package-contract result.
+
+New `tools/test_dew_pack_offline.mjs` checks a remaining pack requirement:
+compiler dependency synchronization must be disabled during package preparation.
+It uses the real shell launchers with a fake Moon executable and captures the
+actual argument vector. It covers bootstrap, JS and WasmGC launches, ordinary
+build controls, and the prepared compiler environment. Before the fix, three
+ordinary-build controls pass and four offline-policy checks fail, exit 1.
+Raw evidence is `/tmp/pkg-phase1-post-release/offline-red.*`.
+These tests prove forwarding and environment policy, not an observed HTTP leak.
