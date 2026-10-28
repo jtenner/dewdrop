@@ -133,3 +133,40 @@ small lstat helper and a strict `@utf8.decode` in bootstrap JSON reads.
 returns exit 2, but with a JSON character error rather than a UTF-8 error. The
 lock check specifically pins that diagnostic; it does not claim the base accepts
 that lock. No remote dependency or software install was needed.
+
+## Shared vector adapter checkpoint
+
+The driver and Python harness now consume `emit.mjs` output from the shared
+vector folder, without editing it. `--vectors PATH` selects a peer folder; the
+merged repo defaults to `tests/package-contract-v1` when present. It calls real
+bootstrap load, source selection, path validation and graph traversal functions.
+No expected answers are sent to the Moon reader. Range-match vectors build a
+small valid local lock graph and distinguish a request mismatch from any other
+failure. Manifest vectors use raw JSON text and inspect the normalized dependency
+map returned by the actual loader. Artifact path vectors call the real shared
+validator without making long host paths.
+
+Command:
+
+```
+python3 src/dew_bootstrap/package_contract_check.py --vectors /home/dev/.t3/worktrees/dewdrop/coordinate-dewdrop-pkg-phase1/tests/package-contract-v1 --evidence /tmp/pkg-phase1-bootstrap-evidence/green-shared2 > /tmp/pkg-phase1-bootstrap-evidence/green-shared2.stdout 2> /tmp/pkg-phase1-bootstrap-evidence/green-shared2.stderr
+```
+
+Exit 0: 157 bootstrap checks and 181 shared checks pass. Exactly 12 artifact
+budget cases are listed as unsupported. All 18 request-match cases run through
+the local graph loader. Narrow build: exit 0, 0.887067 seconds. The emitted
+vector bytes have a SHA-256 in the evidence. Source-selection cases execute the
+native collector for both include-tests modes. They do not execute the Dew
+compiler. Bounds checked only by inspecting constants are not codec tests.
+
+The final own-suite baseline command used `--revision
+20f902acb6caa56a49712df832aeb0c46ec520b8 --evidence
+/tmp/pkg-phase1-bootstrap-evidence/red-freeze`. It includes exact/caret/tilde
+trailing `-` and `+` requests and lock versions. Earlier trailing-marker manifest
+checks also fail on base and pass with the fix. A test-driver JSON expression
+was corrected before the successful shared run; that build failure is retained
+in `green-shared/results.json` and is not a production-code defect.
+
+Only the five owned Moon input files were formatted, using `moonfmt -` with
+explicit input and output. Total wall duration: 0.050981 seconds. Per-file
+commands, stderr, exit status and wall duration: `/tmp/pkg-phase1-bootstrap-evidence/format.json`.

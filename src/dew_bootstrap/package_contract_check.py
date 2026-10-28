@@ -19,6 +19,7 @@ ROOT = HERE.parent.parent
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence', type=Path, required=True)
+    parser.add_argument('--vectors', type=Path, help='Shared vector folder (read only)')
     parser.add_argument('--revision', help='Read production inputs from an exact Git revision')
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
@@ -361,6 +362,100 @@ def main():
         lock(folder)
         (folder / 'dew.lock').write_bytes((folder / 'dew.lock').read_bytes().replace(b'file:dep', b'file:\xff'))
         check('lock invalid UTF-8', 'lock', folder / 'dew.lock', 'UTF-8')
+
+        for version in ['1.0.0-', '1.0.0+']:
+            for prefix in ['', '^', '~']:
+                folder = package({'name': '@fixture/root', 'version': '1.0.0', 'dependencies': {'@fixture/dep': prefix + version}})
+                check('trailing marker requirement ' + prefix + version, 'manifest', folder / 'dew.json', 'requirement')
+            folder = package()
+            lock(folder, version=version)
+            check('trailing marker lock ' + version, 'lock', folder / 'dew.lock', 'version')
+
+        vectors = args.vectors or ROOT / 'tests/package-contract-v1'
+        if vectors.exists():
+            command = ['node', str(vectors / 'emit.mjs')]
+            emitted = subprocess.run(command, text=True, capture_output=True, timeout=10)
+            evidence['vector_export'] = {'command': command, 'exit': emitted.returncode, 'stderr': emitted.stderr}
+            if emitted.returncode:
+                raise RuntimeError('shared vector export failed: ' + emitted.stderr)
+            cases = [json.loads(line) for line in emitted.stdout.splitlines()]
+            evidence['vector_export']['sha256'] = hashlib.sha256(emitted.stdout.encode()).hexdigest()
+            evidence['shared_checks'] = []
+            evidence['unsupported_shared'] = []
+            supported = {'name', 'semver', 'requirement', 'manifest', 'artifact-paths', 'source-selection', 'requirement-match'}
+            for case in cases:
+                kind, value = case['kind'], case['input']
+                if kind not in supported:
+                    evidence['unsupported_shared'].append(case['id'])
+                    continue
+                records = []
+                def shared_run(action, path, *extra):
+                    command, result = run(action, path, *extra)
+                    records.append({'command': command, 'stdout': result.stdout, 'stderr': result.stderr, 'exit': result.returncode})
+                    if result.returncode not in (0, 2):
+                        raise RuntimeError('shared reader setup/exit fault: ' + repr(records[-1]))
+                    return result
+                if kind in {'name', 'semver', 'requirement', 'manifest'}:
+                    fields = {'name': value if kind == 'name' else '@fixture/root', 'version': value if kind == 'semver' else '1.0.0'}
+                    if kind == 'requirement':
+                        fields['dependencies'] = {'@fixture/dep': value}
+                    folder = package(fields, raw=value if kind == 'manifest' else None)
+                    result = shared_run('manifest', folder / 'dew.json')
+                    actual = {'accept': result.returncode == 0}
+                    if result.returncode == 0:
+                        actual['dependencies'] = json.loads(result.stdout.splitlines()[-1])
+                    else:
+                        actual['diagnostic'] = result.stdout.strip()
+                elif kind == 'artifact-paths':
+                    result = shared_run('paths', json.dumps(value))
+                    actual = {'accept': result.returncode == 0, 'diagnostic': result.stdout.strip()}
+                elif kind == 'requirement-match':
+                    request, version = value['requirement'], value['version']
+                    folder = package({'name': '@fixture/root', 'version': '1.0.0', 'dependencies': {'@fixture/dep': request}})
+                    dep = folder / 'dep'
+                    dep.mkdir()
+                    (dep / 'dew.json').write_text(json.dumps({'name': '@fixture/dep', 'version': version}))
+                    (dep / 'main.dew').write_text('dependency')
+                    result = shared_run('integrity', dep / 'dew.json')
+                    if result.returncode:
+                        raise RuntimeError('invalid range fixture version: ' + result.stdout)
+                    lock(folder, version=version, source=request if request.startswith('git+') else 'file:dep', integrity=result.stdout.strip())
+                    result = shared_run('graph', folder / 'dew.json')
+                    if result.returncode and 'requirement' not in result.stdout:
+                        raise RuntimeError('range fixture failed for another cause: ' + result.stdout)
+                    actual = {'accept': True, 'matches': result.returncode == 0}
+                else:
+                    folder = package()
+                    (folder / 'main.dew').unlink()
+                    for entry in value['entries']:
+                        path = folder / entry['path']
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        if entry['type'] == 'file':
+                            path.write_text(entry.get('text', ''))
+                        elif entry['type'] == 'directory':
+                            path.mkdir(exist_ok=True)
+                        elif entry['type'] == 'symlink':
+                            path.symlink_to(entry['target'])
+                        else:
+                            raise RuntimeError('unsupported fixture type: ' + entry['type'])
+                    result = shared_run('sources', folder / 'dew.json', 'true')
+                    actual = {'accept': result.returncode == 0}
+                    if result.returncode == 0:
+                        actual['artifact'] = [str(Path('/' + line.lstrip('/')).relative_to(folder)) for line in result.stdout.splitlines()]
+                        result = shared_run('sources', folder / 'dew.json', 'false')
+                        if result.returncode:
+                            raise RuntimeError('compiler source selection failed: ' + result.stdout)
+                        actual['compiler'] = [str(Path('/' + line.lstrip('/')).relative_to(folder)) for line in result.stdout.splitlines()]
+                    else:
+                        actual['diagnostic'] = result.stdout.strip()
+                passed = all(actual.get(key) == expected for key, expected in case['expected'].items())
+                if not actual['accept'] and not actual.get('diagnostic'):
+                    raise RuntimeError('reader rejection has no diagnostic: ' + case['id'])
+                evidence['shared_checks'].append({'id': case['id'], 'rule': case['rule'], 'expected': case['expected'], 'actual': actual, 'calls': records, 'pass': passed})
+                print(('PASS shared ' if passed else 'FAIL shared ') + case['id'])
+                if not passed:
+                    failures.append('shared ' + case['id'])
+            print(f'{len(evidence["shared_checks"])} shared checks; {len(evidence["unsupported_shared"])} unsupported')
 
         # Local artifacts above the 64 MiB public cap still fit the 256 MiB codec.
         # Inspect the constant only here; near-limit I/O is a held workload.
