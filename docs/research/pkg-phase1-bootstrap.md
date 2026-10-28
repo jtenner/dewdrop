@@ -170,3 +170,61 @@ in `green-shared/results.json` and is not a production-code defect.
 Only the five owned Moon input files were formatted, using `moonfmt -` with
 explicit input and output. Total wall duration: 0.050981 seconds. Per-file
 commands, stderr, exit status and wall duration: `/tmp/pkg-phase1-bootstrap-evidence/format.json`.
+
+## Implementation checkpoint
+
+Final base run: exit 1, 157 named checks, 108 failed expectations including
+pre-write state assertions, narrow build exit 0 in 1.079560 seconds. The test
+checkpoint before the implementation is `411fed668`.
+
+The implementation now:
+
+- Rejects duplicate JSON keys before map collapse, including escaped keys.
+  Uses strict UTF-8, known fields, byte limits and bounded nesting. Missing
+  dependencies still means an empty map.
+- Checks ASCII package names, bounded U32 SemVer, all five request forms,
+  direct-dependency counts, strict v1 lock schema and counts, provenance strings,
+  lowercase hashes and safe relative lock paths.
+- Checks each request before loading or restoring its dependency, including exact
+  Git source equality. Checks loaded/stored name and version against the lock.
+  The native lstat helper rejects links, special files and oversized selected
+  files. It checks every existing parent before a missing lock path is restored.
+- Selects globally UTF-8-byte-sorted conventional regular `.dew` sources, with
+  tests excluded for compile input and included for integrity/cache artifacts.
+  It ignores root directories with a `.dew` suffix. Source reads have the
+  16 MiB bound. Full-file reads are not used just to obtain size.
+- Checks local artifact dependencies, identities, provenance, path conflicts,
+  field lengths, file lengths, count bounds, checksum and complete source
+  integrity before restore writes. Restore directories are parent-first. Cache
+  storage validates identity even on a cache hit. A new artifact hashes source
+  bytes during encoding instead of reading once for integrity and again to
+  store. Local encoded size is bounded before appending each source.
+
+The local codec remains 256 MiB. The JS public publish policy remains 64 MiB.
+There is no new codec version, network installer or Git fetch operation.
+
+Costs and limits:
+
+- Metadata checks are bounded scans. SemVer parse allocates bounded component
+  arrays; dependency and file checks use hash sets. Paths are not compared
+  pairwise. The UTF-8-order comparator scans UTF-16 units without allocating
+  encoded strings on each sort comparison. Sorting remains O(n log n).
+- The lstat helper adds metadata calls, including one per existing parent for
+  checked reads and restoration. These calls need quiet-host measurements on
+  deep paths and shared dependency graphs. No speed or RSS gain is claimed.
+- Artifact store and restore still use the existing whole-payload buffers and
+  checksum copies, up to the 256 MiB local bound. This patch does not claim
+  streaming or low peak memory for near-limit artifacts.
+- Checks inspect filesystem state at each step. They do not freeze source or
+  lock files against concurrent mutation. End-to-end release snapshots belong
+  to the separate snapshot area. Full openat-based race hardening is not proven.
+- The parent-link check also rejects links in package path ancestors. Check this
+  policy on platforms with linked temporary-directory ancestors before claiming
+  native portability. Only the Linux native narrow driver has run. LLVM shares
+  the edited binding but its compile and execution remain held. Bootstrap had
+  no JS/Wasm platform implementation at base, and none is added here.
+- Existing lock hashes from length-first Moon sorting can need regeneration.
+  The full native/integration/cache lanes and large-cap workloads remain held.
+
+Files are confined to `manifest.mbt`, `package_artifact.mbt`, new bootstrap
+contract/helper/test inputs, `platform.c`, `platform_native.mbt`, and this note.

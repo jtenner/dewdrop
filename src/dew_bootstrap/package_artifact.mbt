@@ -19,35 +19,9 @@ const BOOTSTRAP_PACKAGE_ARTIFACT_MAX_PATH_BYTES : Int32 = 4096
 
 ///|
 fn bootstrap_package_artifact_source_path_valid(path : String) -> Bool {
-  let bytes = @utf8.encode(path)
-  if bytes.length() == 0 ||
-    bytes.length() > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_PATH_BYTES ||
-    bytes[0] == b'/' ||
-    !path.has_suffix(".dew") ||
-    path.has_prefix("dew.json/") {
-    return false
-  }
-  let mut segment_start = 0
-  for index in 0..<=bytes.length() {
-    if index < bytes.length() &&
-      (bytes[index] == b'\\' || bytes[index] == b'\x00') {
-      return false
-    }
-    if index == bytes.length() || bytes[index] == b'/' {
-      let length = index - segment_start
-      if length == 0 ||
-        (length == 1 && bytes[segment_start] == b'.') ||
-        (
-          length == 2 &&
-          bytes[segment_start] == b'.' &&
-          bytes[segment_start + 1] == b'.'
-        ) {
-        return false
-      }
-      segment_start = index + 1
-    }
-  }
-  true
+  bootstrap_package_relative_path_valid(path) &&
+  path.has_suffix(".dew") &&
+  !path.has_prefix("dew.json/")
 }
 
 ///|
@@ -61,6 +35,9 @@ fn bootstrap_validate_package_artifact_files(
   let file_paths : Set[String] = Set([], capacity=files.length())
   let directories : Set[String] = Set([], capacity=files.length())
   for file in files {
+    if file.1.length() > BOOTSTRAP_PACKAGE_SOURCE_MAX_BYTES {
+      return Err("installed package artifact source exceeds byte bound")
+    }
     let path = file.0
     if !bootstrap_package_artifact_source_path_valid(path) {
       return Err("installed package artifact source path is unsafe: \{path}")
@@ -91,11 +68,16 @@ fn bootstrap_validate_package_artifact_files(
       )
     }
   }
-  Ok(directories.to_array())
+  let ordered = directories.to_array()
+  ordered.sort_by(bootstrap_contract_path_compare)
+  Ok(ordered)
 }
 
 ///|
 fn BootstrapArtifactReader::read_u32(self : BootstrapArtifactReader) -> Int32 {
+  if self.error is Some(_) {
+    return 0
+  }
   if self.offset + 4 > self.bytes.length() {
     self.error = Some("truncated package artifact")
     return 0
@@ -109,12 +91,13 @@ fn BootstrapArtifactReader::read_u32(self : BootstrapArtifactReader) -> Int32 {
 }
 
 ///|
-fn BootstrapArtifactReader::read_bytes(self : BootstrapArtifactReader) -> Bytes {
+fn BootstrapArtifactReader::read_bytes(
+  self : BootstrapArtifactReader,
+  limit~ : Int32 = BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES,
+) -> Bytes {
   let length = self.read_u32()
-  if length < 0 ||
-    length > 0x10000000 ||
-    self.offset + length > self.bytes.length() {
-    self.error = Some("invalid package artifact byte length")
+  if length < 0 || length > limit || self.offset + length > self.bytes.length() {
+    self.error = Some("invalid package artifact byte length bound")
     return b""
   }
   let value = self.bytes[self.offset:self.offset + length].to_owned()
@@ -125,8 +108,9 @@ fn BootstrapArtifactReader::read_bytes(self : BootstrapArtifactReader) -> Bytes 
 ///|
 fn BootstrapArtifactReader::read_string(
   self : BootstrapArtifactReader,
+  limit~ : Int32 = 4096,
 ) -> String {
-  @utf8.decode(self.read_bytes()) catch {
+  @utf8.decode(self.read_bytes(limit~)) catch {
     _ => {
       self.error = Some("invalid package artifact UTF-8")
       ""
@@ -185,10 +169,17 @@ fn bootstrap_store_package_artifact(
   package_ : BootstrapPackage,
   lock : BootstrapLockedPackage,
 ) -> Unit {
+  bootstrap_contract_lock(lock)
+  bootstrap_contract_identity(package_, lock)
+  bootstrap_contract_dependencies(package_.dependencies)
   let path = bootstrap_package_artifact_path(lock)
   if @fs.path_exists(path) {
+    if bootstrap_package_integrity(package_) != lock.integrity {
+      bootstrap_fail("dependency integrity mismatch for \{lock.name}")
+    }
     return
   }
+  let hash = bootstrap_package_integrity_header(package_)
   let body = Buffer()
   body.write_bytes(b"DEWPKG1\x00")
   for
@@ -209,22 +200,43 @@ fn bootstrap_store_package_artifact(
   let root = bootstrap_dirname(package_.manifest)
   let files = bootstrap_package_sources(package_, true)
   bootstrap_hash_u32_buffer(body, files.length())
+  let mut encoded_size = 8 + 32 + 8
+  for
+    value in [
+      lock.name,
+      lock.version,
+      lock.source,
+      lock.integrity,
+      lock.interface_fingerprint,
+    ] {
+    encoded_size += 4 + @utf8.encode(value).length()
+  }
+  for dependency in package_.dependencies {
+    encoded_size += 8 +
+      @utf8.encode(dependency.name).length() +
+      @utf8.encode(dependency.requirement).length()
+  }
   for file in files {
     let logical = if file.has_prefix(root + "/") {
       file[root.length() + 1:].to_owned()
     } else {
       file
     }
-    bootstrap_artifact_write_string(body, logical)
-    let bytes = @fs.read_file_to_bytes(file) catch {
-      error => {
-        bootstrap_fail(
-          "cannot read package source \{file}: \{bootstrap_fs_error_message(error)}",
-        )
-        b""
-      }
+    let bytes = bootstrap_read_package_source(file)
+    let extra = 8 + @utf8.encode(logical).length() + bytes.length()
+    if extra > BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES - encoded_size {
+      bootstrap_fail("local package artifact exceeds byte bound")
     }
+    encoded_size += extra
+    bootstrap_write_hash_string(hash, logical)
+    bootstrap_hash_u32(hash, bytes.length())
+    hash.update(bytes)
+    bootstrap_artifact_write_string(body, logical)
     bootstrap_artifact_write_bytes(body, bytes)
+  }
+  bootstrap_package_integrity_dependencies(hash, package_.dependencies)
+  if "sha256-" + @crypto.bytes_to_hex_string(hash.finalize()) != lock.integrity {
+    bootstrap_fail("dependency integrity mismatch for \{lock.name}")
   }
   let payload = body.to_bytes()
   let output = Buffer(size_hint=payload.length() + 32)
@@ -248,11 +260,21 @@ fn bootstrap_hash_u32_buffer(output : Buffer, value : Int32) -> Unit {
 fn bootstrap_restore_package_artifact(
   lock : BootstrapLockedPackage,
 ) -> BootstrapPackage {
+  bootstrap_contract_lock(lock)
+  ignore(bootstrap_contract_path_info(lock.manifest, 1048576, true))
   let path = bootstrap_package_artifact_path(lock)
   if !@fs.path_exists(path) {
     bootstrap_fail(
       "locked package source is unavailable and no installed artifact exists for \{lock.name}@\{lock.version}: \{path}",
     )
+  }
+  if bootstrap_contract_path_info(
+      path,
+      BOOTSTRAP_PACKAGE_ARTIFACT_MAX_BYTES,
+      true,
+    ) !=
+    1 {
+    bootstrap_fail("installed package artifact must be a regular file")
   }
   let encoded = @fs.read_file_to_bytes(path) catch {
     error => {
@@ -281,11 +303,14 @@ fn bootstrap_restore_package_artifact(
     offset: 8,
     error: None,
   }
-  let name = reader.read_string()
-  let version = reader.read_string()
-  let source = reader.read_string()
-  let integrity = reader.read_string()
-  let interface_ = reader.read_string()
+  let name = reader.read_string(limit=255)
+  let version = reader.read_string(limit=255)
+  let source = reader.read_string(limit=2048)
+  let integrity = reader.read_string(limit=71)
+  let interface_ = reader.read_string(limit=64)
+  if reader.error is Some(error) {
+    bootstrap_fail(error)
+  }
   if name != lock.name ||
     version != lock.version ||
     source != lock.source ||
@@ -306,10 +331,17 @@ fn bootstrap_restore_package_artifact(
   }
   for _ in 0..<bounded_dependency_count {
     dependencies.push({
-      name: reader.read_string(),
-      requirement: reader.read_string(),
+      name: reader.read_string(limit=255),
+      requirement: reader.read_string(limit=2048),
     })
   }
+  if reader.error is Some(error) {
+    bootstrap_fail(error)
+  }
+  bootstrap_contract_dependencies(dependencies)
+  dependencies.sort_by(fn(left, right) {
+    bootstrap_contract_path_compare(left.name, right.name)
+  })
   let file_count = reader.read_u32()
   let files : Array[(String, Bytes)] = []
   let bounded_file_count = if file_count <= 0 ||
@@ -320,10 +352,18 @@ fn bootstrap_restore_package_artifact(
     file_count
   }
   for _ in 0..<bounded_file_count {
-    files.push((reader.read_string(), reader.read_bytes()))
+    files.push(
+      (
+        reader.read_string(),
+        reader.read_bytes(limit=BOOTSTRAP_PACKAGE_SOURCE_MAX_BYTES),
+      ),
+    )
   }
-  if reader.error is Some(_) || reader.offset != payload.length() {
-    bootstrap_fail("invalid installed package artifact")
+  if reader.error is Some(error) {
+    bootstrap_fail(error)
+  }
+  if reader.offset != payload.length() {
+    bootstrap_fail("invalid installed package artifact trailing bytes")
   }
   let directories = match bootstrap_validate_package_artifact_files(files) {
     Ok(value) => value
@@ -331,6 +371,33 @@ fn bootstrap_restore_package_artifact(
       bootstrap_fail(error)
       []
     }
+  }
+  let package_ : BootstrapPackage = {
+    manifest: lock.manifest,
+    name,
+    version,
+    dependencies,
+  }
+  files.sort_by(fn(left, right) {
+    bootstrap_contract_path_compare(left.0, right.0)
+  })
+  // Enforce the same conventional inventory used by load, integrity and store.
+  let has_src = files.any(fn(file) { file.0.has_prefix("src/") })
+  let hash = bootstrap_package_integrity_header(package_)
+  for file in files {
+    if (has_src && !file.0.has_prefix("src/")) ||
+      (!has_src && file.0.contains("/")) {
+      bootstrap_fail(
+        "installed package artifact has nonconventional source path",
+      )
+    }
+    bootstrap_write_hash_string(hash, file.0)
+    bootstrap_hash_u32(hash, file.1.length())
+    hash.update(file.1)
+  }
+  bootstrap_package_integrity_dependencies(hash, dependencies)
+  if "sha256-" + @crypto.bytes_to_hex_string(hash.finalize()) != lock.integrity {
+    bootstrap_fail("installed package artifact source integrity mismatch")
   }
   let package_root = bootstrap_dirname(lock.manifest)
   if @fs.path_exists(package_root) {
@@ -391,12 +458,6 @@ fn bootstrap_restore_package_artifact(
   match bootstrap_rename(staging, package_root) {
     Ok(_) => ()
     Err(error) => bootstrap_fail(error)
-  }
-  let package_ = bootstrap_load_package(lock.manifest)
-  if bootstrap_package_integrity(package_) != lock.integrity {
-    bootstrap_fail(
-      "restored installed package artifact failed integrity for \{lock.name}",
-    )
   }
   package_
 }
