@@ -81,6 +81,48 @@ node tests/package-contract-v1/run.mjs tests/package-contract-v1/adapters/baseli
 ```
 
 A Dew or MoonBit worker can import the JSON directly, or use the JSONL bridge
-added in the next checkpoint. Use the same IDs in generated tests. Check decode
+described below. Use the same IDs in generated tests. Check decode
 AND validate at public codec entry points where these are separate operations.
 Do not claim a passing decode alone proves schema validation.
+
+
+## Batch reader bridge and test generator input
+
+`adapters/jsonl-reader.mjs` accepts `DEW_CONTRACT_COMMAND` as a JSON argv array,
+with no shell parsing. `DEW_CONTRACT_KINDS` is a comma-separated list of supported
+kinds. The main runner selects cases, then calls optional `prepare(cases)` once.
+The adapter starts the reader once for the selected supported cases. Use an
+already-built narrow reader. Do not make the adapter build the compiler, or run
+large allocation checks during the timing hold.
+
+Each stdin line is one JSON object with `schemaVersion:1`, `id`, `kind`, and
+expanded `input`. It contains NO expected answer or rule. Each stdout line must
+be one response with the same `id`, `accept`, and the fields in the expected
+result. Rejections require a reader `diagnostic`. Replies can arrive in any
+order. Missing, duplicate, unknown, malformed, or ill-shaped replies are errors.
+Stderr stays visible. Nonzero exits and setup faults are errors. The batch has a
+30-second deadline and an 8 MiB output bound. This is a functional safety bound,
+not a compiler performance result.
+
+This command checks the protocol with a deliberately small fixture reader. It
+is NOT a real package-reader check:
+
+```sh
+DEW_CONTRACT_KINDS=name DEW_CONTRACT_COMMAND='["node","tests/package-contract-v1/support/jsonl-reader.mjs","valid"]' node tests/package-contract-v1/run.mjs tests/package-contract-v1/adapters/jsonl-reader.mjs name/empty
+```
+
+For a generated language test suite, `emit.mjs [kind/id ...]` writes full expanded
+case records as JSONL, INCLUDING expected values and rules. Keep this generator
+input separate from the request protocol. Example:
+
+```sh
+node tests/package-contract-v1/emit.mjs manifest/duplicate-name-escaped
+node --test tests/package-contract-v1/harness.test.mjs
+```
+
+The harness tests check data and process handling. Their green result does not
+mean the production readers agree. `evidence/baseline.*` records production
+reader differences; `evidence/harness-red.*` and `evidence/harness-green.*`
+record the test-only bridge change. `evidence/functional.json` records generator,
+CLI bridge, unsupported-case, raw-export, and baseline replay checks. No native
+compiler or remote service is part of these checks.

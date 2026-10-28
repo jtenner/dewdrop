@@ -28,8 +28,10 @@ async function main() {
   const unsupported = selected.filter(test => !adapter.kinds.includes(test.kind));
   // An explicit unsupported request must fail. Unselected kinds stay visible.
   if (filters.length && unsupported.length) throw new Error(`adapter cannot run requested case: ${unsupported[0].id}`);
+  const runnable = selected.filter(test => adapter.kinds.includes(test.kind));
+  if (adapter.prepare && runnable.length) await adapter.prepare(runnable);
   let passed = 0, failed = 0;
-  for (const test of selected.filter(test => adapter.kinds.includes(test.kind))) {
+  for (const test of runnable) {
     try {
       const actual = await adapter.evaluate(test.kind, test.input, test);
       const error = compare(test, actual);

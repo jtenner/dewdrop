@@ -36,7 +36,8 @@ JSON escape coverage. The saved baseline evidence is from the corrected data.
 The baseline run is intentionally red. It is not a completed production fix.
 The probe covers 121 checks against the old capsule/source functions. It leaves
 58 artifact-path, budget, and range-match checks unsupported and lists every ID.
-The final pass/failure counts are in the saved stdout summary.
+The corrected run has 49 matching results and 72 differences. These counts
+are in the saved stdout summary and are not a full-reader coverage claim.
 
 Specific red checks include `manifest/dependencies-absent`,
 `manifest/unknown-field`, `manifest/duplicate-name-escaped`,
@@ -106,3 +107,95 @@ shows missing bridge support, not a production reader defect. The SAME test file
 will run after the bridge is added. The record under `evidence/harness-red.*`
 contains the exact command, source head, stdout, stderr, and exit status.
 No compiler or timing workload runs.
+
+
+## Checkpoint 3: batch bridge and passing harness
+
+Red test checkpoint: `1f1084e0cd3837c787a390cc6c30376b68ad77ad`.
+The red command is `node --test tests/package-contract-v1/harness.test.mjs`.
+It returned exit 1: 8 bridge tests failed with `ERR_MODULE_NOT_FOUND` for the
+not-yet-added bridge, and 3 existing helper tests passed. This is evidence for a
+new harness feature, not evidence of a production parser bug.
+
+The SAME command and test file now return exit 0: all 11 checks pass. The bridge
+starts one process with an argv array, passes only requests, checks result IDs
+and diagnostics, and exposes child stderr/status. Output is bounded to 8 MiB,
+and the child has a 30-second deadline. The main runner calls optional adapter
+`prepare(cases)` once before per-case comparison. A separate `emit.mjs` exports
+expanded cases, WITH answers, for language-specific test generation. It never
+feeds answers to a reader under test.
+
+`evidence/harness-green.json` records the exact command, prior head, exit status,
+full stream paths, and SHA-256 of every tested code/data file. No test source
+changed after this run. This source map verifies the interpreted test code; no
+compiled Dew executable was involved. The matching stdout reports 11 pass and
+0 fail. `evidence/functional.json` records six further narrow checks with exact
+argv, environment overrides, stdout, stderr, and expected/actual exit status:
+
+1. Generator output is byte-identical on a repeat run.
+2. An explicit unsupported artifact-path request exits 2.
+3. The JSONL CLI adapter accepts a negative protocol-fixture result, exit 0.
+4. It exposes a wrong protocol-fixture result, exit 1, with the exact case ID.
+5. Expanded generator output keeps the escaped duplicate-key input unchanged.
+6. The SAME full baseline command still returns 1, with stdout and stderr
+   byte-identical to checkpoint 1: 49 match, 72 differ, 58 unsupported.
+
+There is no production green claim. Other workers own the fixes and real reader
+adapters. The generic runner enforces acceptance, expected output fields, and a
+nonempty rejection diagnostic. It does not itself prove that a rejection came
+from the intended parser error. Each production adapter must check its reader's
+specific error when that distinction is available. Static byte/budget fixtures
+are not a replacement for real binary codec and restoration checks.
+
+The first commit attempt returned exit 128 with `Author identity unknown` and
+`fatal: unable to auto-detect email address`. The local environment had no Git
+author. Commits use command-scoped `-c user.name=Codex` and
+`-c user.email=codex@openai.com`; no stored Git configuration changed.
+
+## Handoff points
+
+Use fixture checkpoint `7bcb9edd0377e3c0f0b914fd72f22ff2d9caf785` first if other
+workers need the data before the bridge commits. Preserve stable case IDs and
+schema version 1. The whole branch also adds the checked batch bridge.
+No production file or other worker's note/test is changed.
+
+Rule points for the coordinator: preserve the Dew Git grammar and narrow
+prerelease predicate; confirm all hash/capsule paths use full logical path sort;
+prove trailing `-`/`+` behavior in the real Dew parser; check Windows absolute
+paths without inventing a broader filename policy. These points are explained
+in `package-contract-v1.md`. This area cannot close the native, platform, source
+race, lock graph, restore, binary cap, or performance gates.
+
+## Complete changed file list
+
+- `docs/research/package-contract-v1.md`
+- `docs/research/pkg-phase1-contract.md`
+- `tests/package-contract-v1/README.md`
+- `tests/package-contract-v1/adapters/baseline-registry.mjs`
+- `tests/package-contract-v1/adapters/jsonl-reader.mjs`
+- `tests/package-contract-v1/artifact-budgets.json`
+- `tests/package-contract-v1/artifact-paths.json`
+- `tests/package-contract-v1/emit.mjs`
+- `tests/package-contract-v1/evidence/baseline.json`
+- `tests/package-contract-v1/evidence/baseline.stderr`
+- `tests/package-contract-v1/evidence/baseline.stdout`
+- `tests/package-contract-v1/evidence/functional.json`
+- `tests/package-contract-v1/evidence/harness-green.json`
+- `tests/package-contract-v1/evidence/harness-green.stderr`
+- `tests/package-contract-v1/evidence/harness-green.stdout`
+- `tests/package-contract-v1/evidence/harness-red.json`
+- `tests/package-contract-v1/evidence/harness-red.stderr`
+- `tests/package-contract-v1/evidence/harness-red.stdout`
+- `tests/package-contract-v1/generate.py`
+- `tests/package-contract-v1/harness.test.mjs`
+- `tests/package-contract-v1/jsonl.mjs`
+- `tests/package-contract-v1/limits.json`
+- `tests/package-contract-v1/manifests.json`
+- `tests/package-contract-v1/names.json`
+- `tests/package-contract-v1/requirement-matches.json`
+- `tests/package-contract-v1/requirements.json`
+- `tests/package-contract-v1/run.mjs`
+- `tests/package-contract-v1/semver.json`
+- `tests/package-contract-v1/source-selection.json`
+- `tests/package-contract-v1/support/jsonl-reader.mjs`
+- `tests/package-contract-v1/vectors.mjs`
