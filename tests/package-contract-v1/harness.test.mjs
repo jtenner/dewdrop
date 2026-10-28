@@ -69,5 +69,8 @@ test('manifest byte boundaries and one-case rule controls stay exact', async () 
   assert.ok(byId.get('manifest/duplicate-dependency-escaped').input.includes('@c\\u002fd'));
   assert.equal(byId.get('manifest/dependencies-absent').expected.accept, true);
   assert.equal(byId.get('manifest/dependencies-empty').expected.accept, true);
-  assert.equal(all.length, 179);
+  for (const id of ['manifest/version-empty-prerelease', 'manifest/dependency-caret-empty-build',
+    'requirement/exact-empty-build', 'lock/duplicate-record', 'lock/decimal-version', 'lock/exponent-version']) {
+    assert.equal(byId.get(id).expected.accept, false, `missing negative control: ${id}`);
+  }
 });

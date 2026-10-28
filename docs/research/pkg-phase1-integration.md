@@ -206,3 +206,21 @@ now requires that specific cause, and each other graph check requires its own
 identity, integrity, cycle, or missing-lock cause. No valid behavior was changed
 to satisfy the test. Streams are `/tmp/pkg-phase1-snapshot-lock-green.*` and
 `/tmp/pkg-phase1-pack-integrated.*`.
+
+## Fixed-source final checks
+
+Production code was frozen at `3ac2506d9b13a033979470e0a344a8977a0f0190`.
+The final narrow run is `/tmp/pkg-phase1-final/results.json`. It records each
+command, stdout/stderr path, exit status, functional wall time, and changed-file
+hash. The small native driver was rebuilt from that source. Dew tests compiled
+fresh Wasm from the on-disk standard sources with caches disabled; the saved
+test compiler's source commit remains unknown.
+
+The first final run passed native, Dew shared, JavaScript Node/Bun, shared JS
+parse/read, pack, strict lock, and original-lock snapshot checks. The harness
+failed only because its old fixed count expected 179 vectors instead of 211.
+The count assertion was replaced with named controls for the new actual
+regressions. No production code changed after the freeze for that test repair.
+The failed harness stdout remains in `/tmp/pkg-phase1-final/harness.stdout`.
+Full native lanes, LLVM/platform compilation, real compiler pack validation,
+large cap workloads, and performance measurements remain held.
