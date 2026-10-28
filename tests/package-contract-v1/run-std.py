@@ -16,7 +16,7 @@ import time
 
 
 ROOT = Path(__file__).resolve().parents[2]
-KINDS = ["name", "semver", "requirement", "requirement-match", "manifest", "artifact-paths"]
+KINDS = ["name", "semver", "requirement", "requirement-match", "manifest", "lock", "artifact-paths"]
 
 
 def literal(text):
@@ -129,8 +129,9 @@ fn vector_raw_artifact(files: Array<PackageArtifactFile>, version: String) -> By
             lines.append('    Result::Ok(request) => {')
             lines.append(assertion(f'package_requirement_matches(request, vector_version({literal(value["version"])}))', expected['matches'], message))
             lines.extend(['    }', f'    Result::Err(_) => assert(false, {literal(message + ": valid request rejected")})', '  }'])
-        elif kind == 'manifest':
-            lines.append(f'  let result = package_manifest_try_decode({text_expression(value)}.as_bytes())')
+        elif kind in ('manifest', 'lock'):
+            decoder = 'package_manifest_try_decode' if kind == 'manifest' else 'package_lock_try_decode'
+            lines.append(f'  let result = {decoder}({text_expression(value)}.as_bytes())')
             lines.append(assertion('result is Result::Ok(_)', expected['accept'], message))
             if expected['accept'] and 'dependencies' in expected:
                 lines.extend(['  match result {', '    Result::Ok(manifest) => {'])

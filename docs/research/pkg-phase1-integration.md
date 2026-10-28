@@ -98,3 +98,19 @@ rejection. Raw output is `/tmp/pkg-phase1-snapshot-lock-red.stdout`; stderr is
 `/tmp/pkg-phase1-snapshot-lock-red.stderr`. This error is in newly added snapshot
 code, not a claim that master had the `pack` command. The fix must validate the
 original lock, including unused records, before snapshot path rewriting.
+
+## Dew lock codec regression checkpoint
+
+Shared vectors now include 16 raw lock cases. With the empty-suffix parser fix
+but before lock or worker codec fixes, the 185-case suite reports **154 pass,
+31 fail**, exit 1. Ten new failures have `lock/` IDs: invalid name, empty source,
+absolute/drive/parent/empty/dot paths, invalid integrity/interface, and duplicate
+records. Six valid or already-rejected lock controls pass. The raw result and
+streams are in `/tmp/pkg-phase1-shared-std-lock-red/`.
+
+The standard lock decoder returned records before applying its validator.
+The fix must make decode obey the same rules as public encode, check public
+SemVer text and drive-root paths, and use a name set instead of a pairwise scan.
+The added public-constructor tests are
+`std/tests/package_lock_contract_v1_test.dew`. No change to module-manifest path
+semantics is needed. Network resolution and install remain outside Phase 1.

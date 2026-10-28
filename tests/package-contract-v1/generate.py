@@ -153,6 +153,23 @@ for n in [1048576, 1048577]:
     manifest.append(case(f"bytes-{n}", concat(raw({**base, "dependencies": {}}), repeat(" ", n - len(raw({**base, "dependencies": {}})))), n == 1048576, "manifest-byte-limit", **({"dependencies": {}} if n == 1048576 else {})))
 write("manifests", "manifest", manifest)
 
+locked = {"name": "@a/b", "version": "1.0.0", "source": "file:fixture", "path": "fixture", "integrity": "sha256-" + "a" * 64, "interface": "b" * 64}
+locks = [case("empty", raw({"lockfileVersion": 1, "packages": []}), True, "lock-v1"),
+         case("valid-record", raw({"lockfileVersion": 1, "packages": [locked]}), True, "lock-v1")]
+for id, field, value in [
+    ("bad-name", "name", "@A/b"), ("bad-version", "version", "1.0.0-"),
+    ("empty-source", "source", ""), ("absolute-path", "path", "/fixture"),
+    ("drive-path", "path", "C:/fixture"), ("parent-path", "path", "../fixture"),
+    ("empty-path-part", "path", "a//fixture"), ("dot-path-part", "path", "a/./fixture"),
+    ("bad-integrity", "integrity", "sha256-wrong"), ("bad-interface", "interface", "wrong"),
+    ("unknown-record-field", "extra", "value"),
+]:
+    locks.append(case(id, raw({"lockfileVersion": 1, "packages": [{**locked, field: value}]}), False, "locked-record"))
+locks.append(case("duplicate-record", raw({"lockfileVersion": 1, "packages": [locked, locked]}), False, "duplicate-locked-name"))
+locks.append(case("unknown-field", raw({"lockfileVersion": 1, "packages": [], "extra": 0}), False, "unknown-field"))
+locks.append(case("duplicate-field", '{"lockfileVersion":1,"lockfileVersi\\u006fn":1,"packages":[]}', False, "duplicate-decoded-key"))
+write("locks", "lock", locks)
+
 paths = []
 for id, value in [("root", ["main.dew"]), ("nested", ["src/a.dew", "src/z/b_test.dew"]),
                   ("utf8", ["src/caf\u00e9.dew"]), ("case-sensitive", ["a.dew", "A.dew"]),

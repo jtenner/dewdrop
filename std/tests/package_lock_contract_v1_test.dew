@@ -1,0 +1,38 @@
+open dew.std.array
+open dew.std.decode
+open dew.std.encode
+open dew.std.format
+open dew.std.package
+open dew.std.semver
+
+fn lock_contract_value(version: String, path: String) -> PackageLock {
+  let unchecked = SemVer::{
+    major: 1u32
+    minor: 0u32
+    patch: 0u32
+    prerelease: Array::new()
+    build: Array::new()
+    text: version
+  }
+  let packages = Array::new()
+  packages.push(locked_package("@a/b", unchecked, "file:fixture", path, "sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"))
+  package_lock(packages)
+}
+
+test "v1 lock public version text must be strict SemVer" {
+  let value = lock_contract_value("1.0.0+", "fixture")
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("locked package version")), "invalid public lock version validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "invalid public lock version encoded")
+}
+
+test "v1 lock public paths reject drive roots" {
+  let value = lock_contract_value("1.0.0", "C:/fixture")
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("locked package")), "drive-root lock path validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(_)), "drive-root lock path encoded")
+}
+
+test "v1 lock public relative path remains valid" {
+  let value = lock_contract_value("1.0.0", ".dew/packages/fixture")
+  assert(value.validate() is Result::Ok(_), "valid local lock rejected")
+  assert(value.encode() is Result::Ok(_), "valid local lock did not encode")
+}
