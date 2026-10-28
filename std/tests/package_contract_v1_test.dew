@@ -302,8 +302,18 @@ test "contract v1 names versions and requirement byte limits" {
 }
 
 test "contract v1 source limit is enforced before reading declared contents" {
+  let mut contents = b"x"
+  while 0u32 {
+    index if index < 24u32 => {
+      contents = contents.concat(contents)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  contents = contents.concat(b"x")
+  assert(contents.byte_length() == package_artifact_max_source_bytes() + 1u32, "source bound fixture has wrong size")
   let output = BytesBuilder::new()
-  package_artifact_write_u32(output, package_artifact_max_source_bytes() + 1u32)
+  package_artifact_write_bytes(output, contents)
   let reader = PackageArtifactReader::{
     bytes: output.finish()
     offset: 0u32
@@ -312,6 +322,11 @@ test "contract v1 source limit is enforced before reading declared contents" {
   let _ = package_artifact_read_bytes(reader, package_artifact_max_source_bytes())
   assert(reader.failed, "oversize declared source accepted")
   assert(reader.offset == 4u32, "oversize source payload was read")
+  let files = Array::new()
+  files.push(package_artifact_file("main.dew", contents))
+  let value = contract_artifact("@s/app", Array::new(), files)
+  assert(value.validate() is Result::Err(FormatValidationErr::InvalidField("artifact file")), "oversize public source validated")
+  assert(value.encode() is Result::Err(FormatEncodeError::Validation(FormatValidationErr::InvalidField("artifact file"))), "oversize public source encoded")
 }
 
 test "contract v1 local codec keeps a separate encoded byte cap" {

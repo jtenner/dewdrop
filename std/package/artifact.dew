@@ -203,7 +203,16 @@ pub fn package_artifact_is_hex(value: String, length: U32) -> Bool {
 }
 
 pub fn package_artifact_path_is_valid(value: String) -> Bool {
-  package_relative_path_is_valid(value) && value.ends_with(".dew") && !value.starts_with("dew.json/")
+  if !package_relative_path_is_valid(value) || !value.ends_with(".dew") || value.starts_with("dew.json/") {
+    false
+  } else {
+    // Capsules can move between hosts. A drive-root path is absolute even when
+    // the codec runs on a host that uses slash-root paths.
+    !(value.byte_length() >= 3u32 &&
+      ((value.byte_at(0u32) >= 65u8 && value.byte_at(0u32) <= 90u8) ||
+      (value.byte_at(0u32) >= 97u8 && value.byte_at(0u32) <= 122u8)) &&
+      value.byte_at(1u32) == 58u8 && value.byte_at(2u32) == 47u8)
+  }
 }
 
 pub fn package_artifact_read_dependencies(

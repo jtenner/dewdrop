@@ -422,3 +422,135 @@ Input SHA-256 values:
   "std/tests/package_contract_v1_test.dew": "2e5f404c0cc15a94112609d438c82d8ef135a188f9ecacae19c25330c7a71a35"
 }
 ```
+
+## Portable path fix and final frozen check
+
+Test checkpoint: `ed5d01382f78e2e97823d4c56f5d727d19d52fa0`.
+The artifact path helper now rejects `[A-Za-z]:/` drive roots with three bounded
+byte checks. The shared module/lock path helper is unchanged. This adds no heap
+allocation and does not add a scan. All source-only rules remain in the artifact
+helper, and its final decode validation reuses the same helper as encode.
+
+The source-limit preservation check was strengthened before the final runs.
+Its original missing payload could have triggered truncation even if the bound
+was removed. It now contains all 16 MiB + 1 bytes and checks the specific reader
+state and unchanged offset. Public Validate and Encode must also return the
+specific artifact-file size error. These checks pass on the untouched baseline;
+no source-byte-limit behavior changed in this patch.
+
+Final runs use the identical final test file. The baseline still has the exact
+original package source bytes. All environment settings and compiler commands
+match the prior runs, with labels/output files `red-final` and `green-final`.
+The compile input hashes below identify the exact source and saved compiler.
+They were rechecked against the final source after embedded-source generation.
+
+Command: `CONTRACT_STD_ROOT=/tmp/pkg-phase1-std-evidence/baseline python3 /tmp/pkg-phase1-std-evidence/run.py red-final`.
+Compile exit: 0; wall seconds: 1.2495977400103584.
+Compile stdout:
+```text
+wrote self-describing Dew test module
+```
+Compile stderr: empty.
+Run exit: 1; wall seconds: 0.5405561589868739.
+Run stdout:
+```text
+```
+Run stderr:
+```text
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 manifest decode rejects invalid package name: unexpected trap unreachable: assertion failed: manifest decoder accepted invalid package name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 manifest decode rejects invalid dependency name: unexpected trap unreachable: assertion failed: manifest decoder accepted invalid dependency name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public manifest rejects invalid Git enum strings: unexpected trap unreachable: assertion failed: invalid Git requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public artifact rejects invalid Git enum strings: unexpected trap unreachable: assertion failed: artifact invalid Git requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects invalid package name: unexpected trap unreachable: assertion failed: artifact decoder accepted invalid package name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects invalid dependency name: unexpected trap unreachable: assertion failed: artifact decoder accepted invalid dependency name
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects duplicate dependencies: unexpected trap unreachable: assertion failed: artifact decoder accepted duplicate dependencies
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects duplicate sources: unexpected trap unreachable: assertion failed: artifact decoder accepted duplicate sources
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact requires Dew sources: unexpected trap unreachable: assertion failed: non-Dew source accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects reserved manifest directory: unexpected trap unreachable: assertion failed: manifest directory source accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects forward path prefix conflicts: unexpected trap unreachable: assertion failed: forward path prefix conflict accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects reverse path prefix conflicts: unexpected trap unreachable: assertion failed: reverse path prefix conflict accepted
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode checks unsafe paths: unexpected trap unreachable: assertion failed: unsafe source path decoded
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decode rejects empty source set: unexpected trap unreachable: assertion failed: empty source set decoded
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 Git enum must retain its variant: unexpected trap unreachable: assertion failed: Git enum accepted exact version text
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact decoder checks provenance: unexpected trap unreachable: assertion failed: artifact decoder accepted empty source
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public manifest checks SemVer text: unexpected trap unreachable: assertion failed: invalid public manifest version validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public artifact checks SemVer text: unexpected trap unreachable: assertion failed: invalid public artifact version validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public exact checks SemVer text: unexpected trap unreachable: assertion failed: invalid public SemVer requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public caret checks SemVer text: unexpected trap unreachable: assertion failed: invalid public SemVer requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 public tilde checks SemVer text: unexpected trap unreachable: assertion failed: invalid public SemVer requirement validated
+FAIL main::std/tests/package_contract_v1_test.dew::contract v1 artifact rejects drive-root absolute sources: unexpected trap unreachable: assertion failed: drive-root absolute source accepted
+package contract v1: 5 passed, 22 failed
+```
+Input SHA-256 values:
+```json
+{
+  "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626",
+  "/tmp/pkg-phase1-std-evidence/baseline/std/package.dew": "0a44c7c928a5acf1e9c484d0022d5d3d5204d2b868e72248e30b687ad222db8b",
+  "/tmp/pkg-phase1-std-evidence/baseline/std/package/artifact.dew": "68e50bd71324cb00f9417ab56679a8cb3083c1b58024c530c973df31ae4ce324",
+  "std/tests/package_contract_v1_test.dew": "5682c6cb1b3c1d0a8db5d1c92c4f63b2a5667d552363472683235f006315c32a"
+}
+```
+
+Command: `python3 /tmp/pkg-phase1-std-evidence/run.py green-final`.
+Compile exit: 0; wall seconds: 1.0483855960192159.
+Compile stdout:
+```text
+wrote self-describing Dew test module
+```
+Compile stderr: empty.
+Run exit: 0; wall seconds: 0.36711034196196124.
+Run stdout:
+```text
+package contract v1 passed: 27
+```
+Run stderr:
+```text
+```
+Input SHA-256 values:
+```json
+{
+  "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626",
+  "std/package.dew": "68a596acd1d9ed4a04a2c87c8bcfb8732f82b31bf50b5fcceaa32c912bb0a1a1",
+  "std/package/artifact.dew": "c4945c18438409499825011835cb4ebb1094ce3c35139194412d04e96699e5aa",
+  "std/tests/package_contract_v1_test.dew": "5682c6cb1b3c1d0a8db5d1c92c4f63b2a5667d552363472683235f006315c32a"
+}
+```
+
+`python3 tools/generate_package_std.py` and its `--check` both exit 0.
+`git diff --check` exits 0. All narrow compiler checks stayed below 30 seconds.
+No full native lane, integration lane, stress lane, Starshine lane, broad
+compiler rebuild, performance run, or timing experiment ran. The check wall
+times above only enforce the owner's narrow functional-check limit.
+
+The coordinator supplied the JS contract at
+`/home/dev/.t3/worktrees/dewdrop/t3-e477a636/tools/dew-package-contract.mjs`,
+head `588cf363c2f9970ca698d44639c57d7a23bce731`. It was read without edits.
+Its manifest/name/version/requirement/dependency/path/source/file/local caps match
+the Dew helpers. Its source paths also reject drive roots. Its 64 MiB capsule
+encoder is public transport policy; the Dew local codec deliberately stays
+256 MiB. Git parsing preserves the same first-`#`, bounded, nonempty-source/ref
+form. No additional Git URL policy was added.
+
+## Final handoff
+
+Files in this area:
+
+- `std/package.dew`
+- `std/package/artifact.dew`
+- `std/tests/package_contract_v1_test.dew` (new distinct contract file)
+- `src/standard_sources/standard_package_sources.mbt` (generated)
+- `docs/research/pkg-phase1-std.md`
+
+The saved compiler's exact source build identity is unavailable. The checks load
+and compile exact on-disk source and execute fresh Wasm, but this is not evidence
+from a fresh compiler built at the branch head. A clean native build and affected
+platform checks remain required after the hold. Shared vectors are not yet in
+this branch, and no cross-language capsule-byte comparison was run. The area
+implements no filesystem source inventory or symlink handling. Those are owned
+by the JS/bootstrap/snapshot areas. Lock/module codec behavior is unchanged.
+
+Coordinator actions after integration: run shared vectors across readers, then
+obtain a quiet-host lease before the measurement plan above. Include new SemVer
+validation allocations and path-view/set work. Full standard package tests must
+include the existing 65,536-file validation case. The final branch contains only
+local commits; no PR, push, publication, or merge was done.
