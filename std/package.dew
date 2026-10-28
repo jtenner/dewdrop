@@ -177,6 +177,15 @@ pub fn package_requirement_to_string(value: PackageRequirement) -> String {
   }
 }
 
+pub fn package_requirement_is_valid(value: PackageRequirement) -> Bool {
+  match value {
+    // SemVer values are checked by their parser. Git strings can also come from
+    // the public enum constructor, so check both their grammar and their variant.
+    PackageRequirement::Git(source) => package_requirement_parse(source) is Result::Ok(PackageRequirement::Git(_))
+    _ => true
+  }
+}
+
 pub fn package_requirement_matches(requirement: PackageRequirement, version: SemVer) -> Bool {
   match requirement {
     PackageRequirement::Any => !version.is_prerelease()
@@ -497,16 +506,29 @@ pub fn package_manifest_finish(
   version: SemVer,
 ) -> Result<PackageManifest, FormatDecodeError> {
   match json_object_get(members, "dependencies") {
-    Option::None => Result::Ok(package_manifest(name, version, Array::new()))
+    Option::None => package_manifest_checked(name, version, Array::new())
     Option::Some(JsonValue::Object(values)) => if values.length() > package_max_dependencies() {
       Result::Err(FormatDecodeError::InvalidLength(values.length(), package_max_dependencies()))
     } else {
       match package_manifest_dependencies(values, 0u32, Array::new()) {
         Result::Err(error) => Result::Err(error)
-        Result::Ok(dependencies) => Result::Ok(package_manifest(name, version, dependencies))
+        Result::Ok(dependencies) => package_manifest_checked(name, version, dependencies)
       }
     }
     _ => Result::Err(FormatDecodeError::InvalidSyntax("package dependencies"))
+  }
+}
+
+pub fn package_manifest_checked(
+  name: String,
+  version: SemVer,
+  dependencies: Array<PackageDependency>,
+) -> Result<PackageManifest, FormatDecodeError> {
+  let value = package_manifest(name, version, dependencies)
+  match value.validate() {
+    Result::Ok(_) => Result::Ok(value)
+    Result::Err(FormatValidationErr::InvalidField(field)) => Result::Err(FormatDecodeError::InvalidSyntax(field))
+    Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package manifest"))
   }
 }
 
@@ -565,6 +587,8 @@ pub fn package_manifest_validate_dependencies(
     let name = dependency.name()
     if !package_name_is_valid(name) {
       Result::Err(FormatValidationErr::InvalidField("dependency name"))
+    } else if !package_requirement_is_valid(dependency.requirement()) {
+      Result::Err(FormatValidationErr::InvalidField("dependency requirement"))
     } else if package_manifest_dependency_seen(dependencies, index, name) {
       Result::Err(FormatValidationErr::Duplicate(name))
     } else {

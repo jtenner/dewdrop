@@ -111,7 +111,8 @@ Input SHA-256 values:
 
 ## Fix and widened coverage
 
-Pending after this test-only checkpoint. The intended narrow fixes are:
+Test checkpoint: `fe82ffe500236bc93a1e217aa0950758414e06be`.
+The code fix applies these narrow changes:
 
 - Apply manifest validation before decode returns a value.
 - Validate the public Git requirement variant before encoding. Preserve the
@@ -148,3 +149,60 @@ prefix conflicts in both orders, 16 MiB source bounds, and 64/256 MiB encoded
 boundaries. Record raw runtime, peak RSS, allocations, bytes copied, and native
 host details. Check added validation scans and avoid full-source copies and
 O(file-count squared) prefix scans. Keep compiler work below 30 seconds.
+
+## Green checkpoint
+
+The exact same 18 checks now pass. Test source SHA-256 stayed unchanged from the
+red run. Implementation input hashes and commands are recorded below. The tested
+source is the code delta from `fe82ffe500236bc93a1e217aa0950758414e06be` in the code
+checkpoint that contains this section. The compiler executable hash is unchanged.
+The test Wasm was built fresh from these on-disk sources, with caches disabled.
+
+Command: `python3 /tmp/pkg-phase1-std-evidence/run.py green`.
+Compile exit: 0; wall seconds: 0.9816947809886187.
+Compile command is the red command with output `green.wasm`.
+Compile stdout:
+```text
+wrote self-describing Dew test module
+```
+Compile stderr: empty.
+Execution exit: 0; wall seconds: 0.22823493502801284.
+Execution command is the red command with input `green.wasm`.
+Execution stdout:
+```text
+package contract v1 passed: 18
+```
+Execution stderr: empty.
+
+Input SHA-256 values:
+```json
+{
+  "/home/dev/Projects/dewdrop/_build/native/release/build/jtenner/dewdrop/dew_test_gen/dew_test_gen.exe": "73a57efc6454d0ef7b4755f3c9979561c146a1cad182778d044c32890658b626",
+  "std/package.dew": "df0383bb0ce2727b31e7769c4af441caa79b380a27085bda9efe5e2d3e60957b",
+  "std/package/artifact.dew": "9b87705c23c2f579bc3b39b02b73832bc3de9235cf0677ae993ddf5cdec83245",
+  "std/tests/package_contract_v1_test.dew": "7d2b346e29c9eb58f25a16cb0ca245702b9a98b8970c85a2ec0238b9244d5272"
+}
+```
+
+`python3 tools/generate_package_std.py` exits 0 and prints
+`generated src/standard_sources/standard_package_sources.mbt`.
+`python3 tools/generate_package_std.py --check` exits 0 and prints
+`checked src/standard_sources/standard_package_sources.mbt`.
+`git diff --check` exits 0 with no output.
+
+Artifact decoding now performs the same validation pass used by public encode.
+This adds dependency-name/duplicate and source-path/duplicate/prefix set work to
+successful decode. Manifest decode adds its bounded dependency validation pass.
+Git validation parses only the public Git string variant; exact/caret/tilde/any
+values do not incur string rendering or another SemVer parse. The existing Git
+syntax is unchanged. The file-prefix check uses one set of full-path StringViews
+and probes a view at each slash. It adds no copied path strings and no persistent
+directory set. Each path view can still require a runtime value; allocation cost
+must be measured after the hold. Work grows with file count, path byte count,
+and the sum of prefix lengths hashed at separators, not with all file pairs.
+The path length remains bounded at 4,096 bytes. No file-content copy was added.
+The artifact encoder's existing payload/trailer copy remains unchanged.
+
+Module and lock path rules did not change. The local 256 MiB cap, 16 MiB source
+cap, 256 dependencies, and 65,536 source-file cap did not change. No public
+publish helper was added: 64 MiB is a transport policy owned by the publisher.

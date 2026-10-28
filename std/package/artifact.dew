@@ -203,7 +203,7 @@ pub fn package_artifact_is_hex(value: String, length: U32) -> Bool {
 }
 
 pub fn package_artifact_path_is_valid(value: String) -> Bool {
-  package_relative_path_is_valid(value)
+  package_relative_path_is_valid(value) && value.ends_with(".dew") && !value.starts_with("dew.json/")
 }
 
 pub fn package_artifact_read_dependencies(
@@ -280,7 +280,13 @@ pub fn package_artifact_finish_decode(
             } else if reader.offset != payload.byte_length() {
               Result::Err(FormatDecodeError::TrailingData(reader.offset))
             } else {
-              Result::Ok(package_artifact(name, version, source, integrity, interface_, dependencies, files))
+              let value = package_artifact(name, version, source, integrity, interface_, dependencies, files)
+              match value.validate() {
+                Result::Ok(_) => Result::Ok(value)
+                Result::Err(FormatValidationErr::InvalidField(field)) => Result::Err(FormatDecodeError::InvalidSyntax(field))
+                Result::Err(FormatValidationErr::Duplicate(_)) => Result::Err(FormatDecodeError::InvalidSyntax("duplicate artifact entry"))
+                Result::Err(_) => Result::Err(FormatDecodeError::InvalidSyntax("package artifact"))
+              }
             }
           }
         }
@@ -396,9 +402,12 @@ pub fn package_artifact_validate_dependencies(
   }
   while index {
     current if current < values.length() => {
-      let name = values.get_unchecked(current).name()
+      let dependency = values.get_unchecked(current)
+      let name = dependency.name()
       if !package_name_is_valid(name) {
         break Result::Err(FormatValidationErr::InvalidField("artifact dependency"))
+      } else if !package_requirement_is_valid(dependency.requirement()) {
+        break Result::Err(FormatValidationErr::InvalidField("artifact dependency requirement"))
       } else if !seen.insert(name) {
         break Result::Err(FormatValidationErr::Duplicate(name))
       } else {
@@ -431,7 +440,8 @@ pub fn package_artifact_validate_files(
   let seen = Set::empty()
   while 0u32 {
     current if current < index && current < values.length() => {
-      seen.insert(values.get_unchecked(current).path())
+      let path = values.get_unchecked(current).path()
+      seen.insert(path.subarray(0u32, path.byte_length()))
       continue current + 1u32
     }
     _ => break package_artifact_unit()
@@ -442,8 +452,35 @@ pub fn package_artifact_validate_files(
       let path = file.path()
       if !package_artifact_path_is_valid(path) || file.contents().byte_length() > package_artifact_max_source_bytes() {
         break Result::Err(FormatValidationErr::InvalidField("artifact file"))
-      } else if !seen.insert(path) {
+      } else if !seen.insert(path.subarray(0u32, path.byte_length())) {
         break Result::Err(FormatValidationErr::Duplicate(path))
+      } else {
+        continue current + 1u32
+      }
+    }
+    _ => break package_artifact_validate_file_parents(values, seen)
+  }
+}
+
+pub fn package_artifact_validate_file_parents(
+  values: Array<PackageArtifactFile>,
+  seen: Set<StringView>,
+) -> Result<Unit, FormatValidationErr> {
+  // All complete paths are in the set, so either input order finds the same
+  // conflict. Views avoid copying parent prefixes or storing directory entries.
+  while 0u32 {
+    current if current < values.length() => {
+      let path = values.get_unchecked(current).path()
+      let conflict = while 0u32 {
+        offset if offset < path.byte_length() => if path.byte_at(offset) == 47u8 && seen.contains(path.subarray(0u32, offset)) {
+          break true
+        } else {
+          continue offset + 1u32
+        }
+        _ => break false
+      }
+      if conflict {
+        break Result::Err(FormatValidationErr::InvalidField("artifact file prefix"))
       } else {
         continue current + 1u32
       }
