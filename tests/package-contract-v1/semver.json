@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "kind": "semver",
+  "cases": [
+    {
+      "id": "zero",
+      "input": "0.0.0",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "release",
+      "input": "1.2.3",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "u32-core",
+      "input": "4294967295.4294967295.4294967295",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "u32-prerelease",
+      "input": "1.0.0-4294967295",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "build-not-u32",
+      "input": "1.0.0+9999999999999999999999999",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "build-leading-zero",
+      "input": "1.0.0+001",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "mixed-identifiers",
+      "input": "1.2.3-alpha.0.Z-9+build.001",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "text-leading-zero",
+      "input": "1.0.0-01a",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "hyphen-identifier",
+      "input": "1.0.0--",
+      "expected": {
+        "accept": true
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "empty",
+      "input": "",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "prefix-v",
+      "input": "v1.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "short-core",
+      "input": "1.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "extra-core",
+      "input": "1.0.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "leading-zero",
+      "input": "01.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "minor-leading-zero",
+      "input": "1.01.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "patch-leading-zero",
+      "input": "1.0.01",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "core-overflow",
+      "input": "4294967296.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "minor-overflow",
+      "input": "1.4294967296.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "patch-overflow",
+      "input": "1.0.4294967296",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "prerelease-overflow",
+      "input": "1.0.0-4294967296",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "prerelease-leading-zero",
+      "input": "1.0.0-01",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "empty-prerelease",
+      "input": "1.0.0-",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "empty-build",
+      "input": "1.0.0+",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "empty-pre-id",
+      "input": "1.0.0-a..b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "empty-build-id",
+      "input": "1.0.0+a..b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "two-builds",
+      "input": "1.0.0+a+b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "underscore",
+      "input": "1.0.0-a_b",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "unicode",
+      "input": "1.0.0-\u00e9",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "space",
+      "input": " 1.0.0",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "newline",
+      "input": "1.0.0\n",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "nul",
+      "input": "1.0.0\u0000",
+      "expected": {
+        "accept": false
+      },
+      "rule": "strict-semver"
+    },
+    {
+      "id": "bytes-255",
+      "input": {
+        "concat": [
+          "1.0.0+",
+          {
+            "repeat": "a",
+            "count": 249
+          }
+        ]
+      },
+      "expected": {
+        "accept": true
+      },
+      "rule": "semver-byte-limit"
+    },
+    {
+      "id": "bytes-256",
+      "input": {
+        "concat": [
+          "1.0.0+",
+          {
+            "repeat": "a",
+            "count": 250
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "semver-byte-limit"
+    }
+  ]
+}

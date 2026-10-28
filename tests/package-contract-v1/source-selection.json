@@ -1,0 +1,309 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-selection",
+  "cases": [
+    {
+      "id": "root-fallback",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "z.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "a.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "a_test.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "nested/no.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "compiler": [
+          "a.dew",
+          "z.dew"
+        ],
+        "artifact": [
+          "a.dew",
+          "a_test.dew",
+          "z.dew"
+        ]
+      },
+      "rule": "conventional-sources"
+    },
+    {
+      "id": "src-recursive",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "root.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "src/z.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "src/a/n.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "src/a_test.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "compiler": [
+          "src/a/n.dew",
+          "src/z.dew"
+        ],
+        "artifact": [
+          "src/a/n.dew",
+          "src/a_test.dew",
+          "src/z.dew"
+        ]
+      },
+      "rule": "conventional-sources"
+    },
+    {
+      "id": "src-regular-file",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "src",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "main.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "compiler": [
+          "main.dew"
+        ],
+        "artifact": [
+          "main.dew"
+        ]
+      },
+      "rule": "conventional-sources"
+    },
+    {
+      "id": "directory-with-dew-suffix",
+      "input": {
+        "entries": [
+          {
+            "type": "directory",
+            "path": "x.dew"
+          },
+          {
+            "type": "file",
+            "path": "main.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "compiler": [
+          "main.dew"
+        ],
+        "artifact": [
+          "main.dew"
+        ]
+      },
+      "rule": "conventional-sources"
+    },
+    {
+      "id": "global-logical-sort",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "src/a/z.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "file",
+            "path": "src/a.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "compiler": [
+          "src/a.dew",
+          "src/a/z.dew"
+        ],
+        "artifact": [
+          "src/a.dew",
+          "src/a/z.dew"
+        ]
+      },
+      "rule": "conventional-sources"
+    },
+    {
+      "id": "no-sources",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "README.md",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "source-required"
+    },
+    {
+      "id": "empty-src-no-fallback",
+      "input": {
+        "entries": [
+          {
+            "type": "directory",
+            "path": "src"
+          },
+          {
+            "type": "file",
+            "path": "main.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "source-required"
+    },
+    {
+      "id": "symlink-source",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "src/a.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "symlink",
+            "path": "src/b.dew",
+            "target": "a.dew"
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "reject-symlink"
+    },
+    {
+      "id": "symlink-directory",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "src/a.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "symlink",
+            "path": "src/sub",
+            "target": "."
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "reject-symlink"
+    },
+    {
+      "id": "symlink-src-root",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "other/a.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "symlink",
+            "path": "src",
+            "target": "other"
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "reject-symlink"
+    },
+    {
+      "id": "symlink-root-source",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "main.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "symlink",
+            "path": "other.dew",
+            "target": "main.dew"
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "reject-symlink"
+    },
+    {
+      "id": "symlink-escape",
+      "input": {
+        "entries": [
+          {
+            "type": "file",
+            "path": "main.dew",
+            "text": "pub fn value() -> I32 { 1 }\n"
+          },
+          {
+            "type": "symlink",
+            "path": "src",
+            "target": "../outside"
+          }
+        ]
+      },
+      "expected": {
+        "accept": false
+      },
+      "rule": "reject-symlink"
+    }
+  ]
+}

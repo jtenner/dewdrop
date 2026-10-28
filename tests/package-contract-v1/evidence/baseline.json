@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "20f902acb6caa56a49712df832aeb0c46ec520b8",
+  "productionReader": "20f902acb6caa56a49712df832aeb0c46ec520b8:tools/dew-registry.mjs",
+  "command": [
+    "node",
+    "tests/package-contract-v1/run.mjs",
+    "tests/package-contract-v1/adapters/baseline-registry.mjs"
+  ],
+  "exitStatus": 1,
+  "stdout": "baseline.stdout",
+  "stderr": "baseline.stderr",
+  "compilerInvoked": false,
+  "networkInvoked": false,
+  "node": "v24.22.1"
+}
