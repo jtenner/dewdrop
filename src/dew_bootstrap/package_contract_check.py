@@ -21,9 +21,10 @@ def main():
     parser.add_argument('--evidence', type=Path, required=True)
     parser.add_argument('--vectors', type=Path, help='Shared vector folder (read only)')
     parser.add_argument('--revision', help='Read production inputs from an exact Git revision')
+    parser.add_argument('--target', choices=['native', 'llvm'], default='native', help='Backend used by the narrow contract driver')
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
-    evidence = {'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(), 'checks': []}
+    evidence = {'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(), 'target': args.target, 'checks': []}
     failures = []
     with tempfile.TemporaryDirectory(prefix='dew-bootstrap-contract-') as temp:
         project = Path(temp)
@@ -45,7 +46,7 @@ def main():
         main_path.write_text(main_path.read_text().split('fn main {')[0] + (HERE / 'package_contract_driver.mbt.fixture').read_text())
         (project / 'moon.mod').write_text('name = "fixture/bootstrap-contract"\nversion = "0.1.0"\nsource = "src"\nimport { "moonbitlang/x@0.5.5", }\n')
         (project / 'moon.work').write_text('members = ["."]\n')
-        command = ['moon', 'build', '--target', 'native', 'src']
+        command = ['moon', 'build', '--target', args.target, 'src']
         start = time.monotonic()
         process = subprocess.Popen(command, cwd=project, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
         try:
@@ -60,7 +61,7 @@ def main():
             (args.evidence / 'results.json').write_text(json.dumps(evidence, indent=2))
             print(build.stdout + build.stderr)
             raise SystemExit(build.returncode)
-        exe = next(project.glob('_build/native/**/*.exe'))
+        exe = next(project.glob(f'_build/{args.target}/**/*.exe'))
         evidence['binary_sha256'] = hashlib.sha256(exe.read_bytes()).hexdigest()
         evidence['source_sha256'] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in source.iterdir() if p.is_file()}
         workspace = project / 'workspace'

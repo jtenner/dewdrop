@@ -92,3 +92,10 @@ The identical seven offline checks now pass, exit 0. All 34 existing pack checks
 also pass. Their raw streams are `offline-green.*` and `pack-after-offline.*`
 in `/tmp/pkg-phase1-post-release/`. This is a script/environment policy fix; no
 compiler-lowering or dependency source changed.
+
+With matching nightly compiler/runtime/core and the cached dependency index,
+the LLVM bootstrap build passes. The contract harness now accepts `--target
+native|llvm`; its default is unchanged. This permits execution of the same
+source/lock/cache checks through the affected LLVM binding, rather than treating
+compilation alone as runtime evidence. The new SDK still rejects the baseline
+numeric conversion calls, so real full-compiler pack remains unqualified.
