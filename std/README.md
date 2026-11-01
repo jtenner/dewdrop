@@ -502,3 +502,15 @@ fixed width values to a `BytesBuilder`. They use its normal capacity and
 finished-builder rules. No host access is needed. Slice views keep the input
 backing storage alive; use `Bytes.compact()` when a small slice must outlive
 large input. Existing version 1 formats are unchanged.
+
+Buffered byte records use `dew.std.io`:
+
+```dew
+let input = BufferedReader::new(BytesInput::new(b"hello\n"), 64u32, 1024u32)
+let line = input.read_line(256u32)
+```
+
+`read_until(byte, max_bytes)` keeps its delimiter. `read_line(max_bytes)`
+removes LF only. Both return `Result<Option<Bytes>, IoError>`: None is EOF,
+Some(empty) is an empty line. Bounds count the delimiter. Decode text with
+`dew.std.utf8`. See `docs/research/stdlib-wave1-10.md` for error and buffer rules.

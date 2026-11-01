@@ -1,0 +1,24 @@
+open dew.std.io
+open dew.std.bytes
+open dew.std.fixed_array
+
+fn expect_record(value: Result<Option<Bytes>, IoError>, expected: Bytes) -> Unit {
+  match value {
+    Result::Ok(Option::Some(bytes)) => assert(bytes.equals(expected), "record bytes")
+    _ => assert(false, "expected record")
+  }
+}
+
+test "buffered lines keep suffix and separate empty line from EOF" {
+  let input = BufferedReader::new(BytesInput::new(b"a\n\nlast"), 8u32, 16u32)
+  expect_record(input.read_line(8u32), b"a")
+  expect_record(input.read_line(8u32), b"")
+  expect_record(input.read_line(8u32), b"last")
+  assert(input.read_line(8u32) is Result::Ok(Option::None), "EOF")
+}
+
+test "buffered byte delimiter retains delimiter and raw bytes" {
+  let input = BufferedReader::new(BytesInput::new(b"\xff|x\r\n"), 1u32, 16u32)
+  expect_record(input.read_until(124u8, 8u32), b"\xff|")
+  expect_record(input.read_line(8u32), b"x\r")
+}
