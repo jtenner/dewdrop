@@ -13,8 +13,16 @@ fn split_expect(parts: StringViewSplit, expected: String) -> Unit {
 }
 
 fn split_end(parts: StringViewSplit) -> Unit {
-  assert(parts.next().is_none(), "split did not terminate")
-  assert(parts.next().is_none(), "split restarted")
+  while 0u32 {
+    index if index < 2u32 => {
+      match parts.next() {
+        Option::None => ()
+        Option::Some(_) => assert(false, "split did not terminate")
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
 }
 
 test "split keeps repeated trailing and leading empty fields" {
@@ -78,8 +86,12 @@ test "split nonoverlap and delimiter longer than source" {
 
 test "split scans repetitive source once and bounds comparisons" {
   let builder = StringBuilder::new()
-  for _ in 0u32..<8192u32 {
-    builder.append("a")
+  while 0u32 {
+    index if index < 8192u32 => {
+      builder.append("a")
+      continue index + 1u32
+    }
+    _ => break ()
   }
   let source = builder.finish()
   let parts = source.view(0u32, source.byte_length()).split("aaaaab".view(0u32, 6u32))
@@ -88,4 +100,31 @@ test "split scans repetitive source once and bounds comparisons" {
   split_end(parts)
   assert(parts.source_scans() == 8192u32, "source was scanned again")
   assert(parts.comparisons() <= 16384u32, "quadratic delimiter search")
+}
+
+test "split prefix fallback matches late and keeps partial suffix" {
+  let parts = "aaaaaaaabaaaaa".view(0u32, 14u32).split("aaaab".view(0u32, 5u32))
+  split_expect(parts, "aaaa")
+  split_expect(parts, "aaaaa")
+  split_end(parts)
+  let unicode = "λ🌍aλ🌍λ".view(0u32, 15u32).split("λ🌍".view(0u32, 6u32))
+  split_expect(unicode, "")
+  split_expect(unicode, "a")
+  split_expect(unicode, "λ")
+  split_end(unicode)
+  let lines = "\r\r\n".view(0u32, 3u32).lines()
+  split_expect(lines, "\r")
+  split_expect(lines, "")
+  split_end(lines)
+}
+
+test "split iterator aliases share progress without eager scans" {
+  let parts = "x:y".view(0u32, 3u32).split(":".view(0u32, 1u32))
+  let alias = parts.iter()
+  assert(alias.source_scans() == 0u32, "iter scanned the source")
+  split_expect(parts, "x")
+  assert(parts.source_scans() == 2u32, "next scanned beyond its delimiter")
+  split_expect(alias, "y")
+  split_end(parts)
+  assert(alias.source_scans() == 3u32, "alias rescanned source")
 }

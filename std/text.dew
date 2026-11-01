@@ -374,3 +374,122 @@ impl Iter<U32> for StringViewCodePoints {
     }
   }
 }
+
+// State slots: next field start, exhausted flag, source scans, comparisons.
+// The delimiter prefix table is built once. Returned fields share source bytes.
+pub struct StringViewSplit {
+  value: StringView
+  delimiter: StringView
+  prefix: FixedArray<U32>
+  state: FixedArray<U32>
+  line_mode: Bool
+}
+
+fn text_split_prefix(delimiter: StringView) -> FixedArray<U32> {
+  let length = delimiter.byte_length()
+  let prefix = FixedArray::make(length, 0u32)
+  let mut matched = 0u32
+  while 1u32 {
+    index if index < length => {
+      let byte = delimiter.byte_at(index)
+      matched = while matched {
+        count if count > 0u32 && byte != delimiter.byte_at(count) => {
+          continue prefix.get_unchecked(count - 1u32)
+        }
+        count => break count
+      }
+      if byte == delimiter.byte_at(matched) {
+        matched = matched + 1u32
+      }
+      prefix.set_unchecked(index, matched)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  prefix
+}
+
+fn text_split(value: StringView, delimiter: StringView, line_mode: Bool) -> StringViewSplit {
+  StringViewSplit::{
+    value: value
+    delimiter: delimiter
+    prefix: text_split_prefix(delimiter)
+    state: FixedArray::make(4u32, 0u32)
+    line_mode: line_mode
+  }
+}
+
+impl StringView {
+  fn split(self, delimiter: StringView) -> StringViewSplit {
+    text_split(self, delimiter, false)
+  }
+  fn lines(self) -> StringViewSplit {
+    text_split(self, "\n".view(0u32, 1u32), true)
+  }
+}
+
+impl StringViewSplit {
+  fn iter(self) -> StringViewSplit {
+    self
+  }
+  fn source_scans(self) -> U32 {
+    self.state.get_unchecked(2u32)
+  }
+  fn comparisons(self) -> U32 {
+    self.state.get_unchecked(3u32)
+  }
+}
+
+impl Iter<StringView> for StringViewSplit {
+  fn next(self) -> Option<StringView> {
+    if self.state.get_unchecked(1u32) != 0u32 {
+      Option::None
+    } else {
+      let start = self.state.get_unchecked(0u32)
+      let length = self.value.byte_length()
+      let width = self.delimiter.byte_length()
+      let mut matched = 0u32
+      let mut scans = self.source_scans()
+      let mut comparisons = self.comparisons()
+      let end = while start {
+        index if index < length && width > 0u32 => {
+          let byte = self.value.byte_at(index)
+          scans = scans + 1u32
+          let equal = while matched {
+            count => {
+              comparisons = comparisons + 1u32
+              if byte == self.delimiter.byte_at(count) {
+                break true
+              } else if count == 0u32 {
+                break false
+              } else {
+                matched = self.prefix.get_unchecked(count - 1u32)
+                continue matched
+              }
+            }
+          }
+          if equal {
+            matched = matched + 1u32
+          }
+          if matched == width {
+            self.state.set_unchecked(0u32, index + 1u32)
+            break index + 1u32 - width
+          }
+          continue index + 1u32
+        }
+        _ => {
+          self.state.set_unchecked(1u32, 1u32)
+          break length
+        }
+      }
+      self.state.set_unchecked(2u32, scans)
+      self.state.set_unchecked(3u32, comparisons)
+      let field_end = if self.line_mode && self.state.get_unchecked(1u32) == 0u32 && end > start && self.value.byte_at(end - 1u32) == 13u8 {
+        end - 1u32
+      } else {
+        end
+      }
+      Option::Some(self.value.view(start, field_end - start))
+    }
+  }
+}

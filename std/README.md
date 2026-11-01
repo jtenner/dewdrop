@@ -470,3 +470,16 @@ values.binary_search(4u32) // Option::Some(1u32)
 ```
 
 Search takes O(log n) comparisons and O(1) extra space. It does not sort.
+
+`dew.std.text` adds `StringView.split(delimiter: StringView)` and `lines()`.
+Both return `StringViewSplit`, which implements `Iter<StringView>` directly.
+Fields share the source bytes; call `field.compact()` to copy a field.
+For example, `"a,,".view(0u32, 3u32).split(",".view(0u32, 1u32))`
+yields `"a"`, `""`, `""`. Matches do not overlap. Empty input yields one
+empty field. An empty delimiter yields the whole view once. `lines()` splits
+on LF, removes CR only in CRLF, keeps lone CR, and keeps a final empty line.
+Repeated `next()` calls after the last field return `None`. Aliases share progress.
+Construction reads only the delimiter. KMP search takes O(source + delimiter)
+time and O(delimiter) state. `source_scans()` and `comparisons()` count source
+bytes advanced by the forward search and search comparisons. They exclude
+prefix table setup and the CR check in `lines()`.
