@@ -1,0 +1,22 @@
+{
+  "snapshots-path.log": {
+    "sha256": "5abaf3abefd439a8e7670f951824a1dd3410962ff0d994f9e76b17c0c6436f09",
+    "bytes": 2389851,
+    "path": "/data/workspace/stdlib-wave1-g0/evidence/snapshots-path.log"
+  },
+  "snapshots.log": {
+    "sha256": "5368340af63aa74588a2dfd762184724ed4ba44377a380ff12c04e07ce936cd0",
+    "bytes": 1742,
+    "path": "/data/workspace/stdlib-wave1-g0/evidence/snapshots.log"
+  },
+  "std-run.log": {
+    "sha256": "ee8e178bde09be585eb21b0214d4ede2f70d750f819ef488745d994b6ad68bc7",
+    "bytes": 2393476,
+    "path": "/data/workspace/stdlib-wave1-g0/evidence/std-run.log"
+  },
+  "dependency-restore.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0,
+    "path": "/data/workspace/stdlib-wave1-g0/evidence/dependency-restore.log"
+  }
+}

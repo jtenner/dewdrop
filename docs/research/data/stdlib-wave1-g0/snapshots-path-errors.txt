@@ -1,0 +1,40 @@
+Error: [4015]
+     ╭─[ /data/workspace/dewdrop/src/transforms/floats.mbt:169:18 ]
+     │
+ 169 │             bits.to_float()
+     │                  ────┬───  
+     │                      ╰───── Type UInt64 has no method to_float.
+─────╯
+
+Error: [4015]
+     ╭─[ /data/workspace/dewdrop/src/transforms/floats.mbt:171:41 ]
+     │
+ 171 │             bits.reinterpret_as_int64().to_float()
+     │                                         ────┬───  
+     │                                             ╰───── Type Int64 has no method to_float.
+─────╯
+
+Error: [4015]
+     ╭─[ /data/workspace/dewdrop/src/transforms/floats.mbt:174:26 ]
+     │
+ 174 │           bits.to_uint().to_float()
+     │                          ────┬───  
+     │                              ╰───── Type UInt has no method to_float.
+─────╯
+
+Error: [4015]
+     ╭─[ /data/workspace/dewdrop/src/transforms/floats.mbt:176:25 ]
+     │
+ 176 │           bits.to_int().to_float()
+     │                         ────┬───  
+     │                             ╰───── Type Int has no method to_float.
+─────╯
+
+Error: [4015]
+     ╭─[ /data/workspace/dewdrop/starshine-mb/src/wast/lower_to_lib.mbt:814:56 ]
+     │
+ 814 │     Ok(Some(bits)) => return Ok(@lib.F32(bits.to_int().reinterpret_as_float()))
+     │                                                        ──────────┬─────────  
+     │                                                                  ╰─────────── Type Int has no method reinterpret_as_float.
+─────╯
+

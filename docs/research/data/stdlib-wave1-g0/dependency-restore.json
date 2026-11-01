@@ -1,0 +1,10 @@
+{
+  "cwd": "/data/workspace/dewdrop",
+  "command": [
+    "bash",
+    "-c",
+    "git -C /data/workspace/starshine-mb archive 1b237952167f582abd492aec27adf10c5a6c9e60 | tar -xf - -C starshine-mb"
+  ],
+  "exit": 0,
+  "elapsed_seconds": 0.8483958200085908
+}

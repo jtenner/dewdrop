@@ -1,0 +1,14 @@
+{
+  "installed_core": {
+    "algorithm": "SHA256 of sorted relative-path + NUL + file SHA256 + newline; excludes _build and .git",
+    "files": 1213,
+    "sha256": "1fa970e641b3d8e2fa738a144c6f6a4aafe91970cc32f10521d04a53193905af"
+  },
+  "dependency": {
+    "algorithm": "SHA256 of sorted relative-path + NUL + file SHA256 + newline; excludes _build and .git",
+    "files": 4208,
+    "sha256": "d32cc09d9b5cf3a32d2f1a8b0db39b02c79939f3e1ccf7ba3ea02c77f3c06e3f"
+  },
+  "dependency_blob_mismatches": [],
+  "dependency_tracked_blobs_checked": 4208
+}
