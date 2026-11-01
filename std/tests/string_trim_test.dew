@@ -172,3 +172,17 @@ test "ASCII trim exact byte set" {
   assert("\x20x\x20".trim_ascii_start().to_string().equals("x\x20"), "start byte 32")
   assert("\x20x\x20".trim_ascii_end().to_string().equals("\x20x"), "end byte 32")
 }
+
+test "ASCII trim view empty and scalar boundaries" {
+  let empty = "λ🌍".view(2u32, 0u32)
+  assert(empty.trim_ascii().byte_length() == 0u32, "empty nonzero view")
+  assert(empty.trim_ascii_start().byte_length() == 0u32, "empty view start")
+  assert(empty.trim_ascii_end().byte_length() == 0u32, "empty view end")
+  let all = "x \t\ny".view(1u32, 3u32)
+  assert(all.trim_ascii().byte_length() == 0u32, "all view both")
+  assert(all.trim_ascii_start().byte_length() == 0u32, "all view start")
+  assert(all.trim_ascii_end().byte_length() == 0u32, "all view end")
+  assert(" ¢€𐍈 ".trim_ascii().to_string().equals("¢€𐍈"), "2 3 4 byte scalar bounds")
+  assert("¢€𐍈".trim_ascii_start().to_string().equals("¢€𐍈"), "unchanged start scalars")
+  assert("¢€𐍈".trim_ascii_end().to_string().equals("¢€𐍈"), "unchanged end scalars")
+}
