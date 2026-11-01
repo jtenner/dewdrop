@@ -294,3 +294,134 @@ pub fn sha256(input: Bytes) -> FixedArray<U8> {
     _ => break digest
   }
 }
+
+// The 16-word block doubles as the circular message schedule. No input is retained.
+pub struct Sha256State {
+  hash: FixedArray<U32>
+  block: FixedArray<U32>
+  mut length: U64
+  mut used: U32
+  mut finalized: Bool
+}
+
+pub fn sha256_new() -> Sha256State {
+  Sha256State::{
+    hash: sha256_initial_state()
+    block: FixedArray::make(16u32, 0u32)
+    length: 0u64
+    used: 0u32
+    finalized: false
+  }
+}
+
+pub fn sha256_stream_byte(state: Sha256State, byte: U8) -> Unit {
+  let slot = state.used / 4u32
+  let shift = (3u32 - state.used % 4u32) * 8u32
+  let value = if state.used % 4u32 == 0u32 {
+    0u32
+  } else {
+    state.block.get_unchecked(slot)
+  }
+  state.block.set_unchecked(slot, value | (sha256_u8_to_u32(byte) << shift))
+  state.used = state.used + 1u32
+  if state.used == 64u32 {
+    sha256_stream_compress(state.hash, state.block)
+    state.used = 0u32
+  }
+}
+
+pub fn sha256_update(state: Sha256State, input: Bytes) -> Bool {
+  let count = sha256_u32_to_u64(input.byte_length())
+  if state.finalized || count > 2305843009213693951u64 - state.length {
+    false
+  } else {
+    state.length = state.length + count
+    while 0u32 {
+      i if i < input.byte_length() => {
+        sha256_stream_byte(state, input.byte_at(i))
+        continue i + 1u32
+      }
+      _ => break true
+    }
+  }
+}
+
+pub fn sha256_finalize(state: Sha256State) -> FixedArray<U8> {
+  if !state.finalized {
+    let bits = state.length * 8u64
+    sha256_stream_byte(state, 128u8)
+    while state.used {
+      used if used != 56u32 => {
+        sha256_stream_byte(state, 0u8)
+        continue state.used
+      }
+      _ => break sha256_unit()
+    }
+    while 0u64 {
+      i if i < 8u64 => {
+        sha256_stream_byte(state, sha256_u64_to_u8((bits >> ((7u64 - i) * 8u64)) & 255u64))
+        continue i + 1u64
+      }
+      _ => break sha256_unit()
+    }
+    state.finalized = true
+  }
+  let digest = FixedArray::make(32u32, 0u8)
+  while 0u32 {
+    i if i < 32u32 => {
+      digest.set_unchecked(i, sha256_u32_to_u8((state.hash.get_unchecked(i / 4u32) >> ((3u32 - i % 4u32) * 8u32)) & 255u32))
+      continue i + 1u32
+    }
+    _ => break digest
+  }
+}
+
+pub fn sha256_stream_compress(state: FixedArray<U32>, schedule: FixedArray<U32>) -> Unit {
+  let mut a = state.get_unchecked(0u32)
+  let mut b = state.get_unchecked(1u32)
+  let mut c = state.get_unchecked(2u32)
+  let mut d = state.get_unchecked(3u32)
+  let mut e = state.get_unchecked(4u32)
+  let mut f = state.get_unchecked(5u32)
+  let mut g = state.get_unchecked(6u32)
+  let mut h = state.get_unchecked(7u32)
+  while 0u32 {
+    round if round < 64u32 => {
+      let slot = round % 16u32
+      if round >= 16u32 {
+        let x = schedule.get_unchecked((round - 15u32) % 16u32)
+        let y = schedule.get_unchecked((round - 2u32) % 16u32)
+        let s0 = sha256_rotate_right(x, 7u32) ^ sha256_rotate_right(x, 18u32) ^ (x >> 3u32)
+        let s1 = sha256_rotate_right(y, 17u32) ^ sha256_rotate_right(y, 19u32) ^ (y >> 10u32)
+        schedule.set_unchecked(slot, schedule.get_unchecked(slot) + s0 + schedule.get_unchecked((round - 7u32) % 16u32) + s1)
+      }
+      let sum_1 = sha256_rotate_right(e, 6u32) ^
+        sha256_rotate_right(e, 11u32) ^ sha256_rotate_right(e, 25u32)
+      let choose = (e & f) ^ ((e ^ 4294967295u32) & g)
+      let temporary_1 = h + sum_1 + choose + sha256_round_constant(round) +
+        schedule.get_unchecked(slot)
+      let sum_0 = sha256_rotate_right(a, 2u32) ^
+        sha256_rotate_right(a, 13u32) ^ sha256_rotate_right(a, 22u32)
+      let majority = (a & b) ^ (a & c) ^ (b & c)
+      let temporary_2 = sum_0 + majority
+      h = g
+      g = f
+      f = e
+      e = d + temporary_1
+      d = c
+      c = b
+      b = a
+      a = temporary_1 + temporary_2
+      continue round + 1u32
+    }
+    _ => break sha256_unit()
+  }
+  state.set_unchecked(0u32, state.get_unchecked(0u32) + a)
+  state.set_unchecked(1u32, state.get_unchecked(1u32) + b)
+  state.set_unchecked(2u32, state.get_unchecked(2u32) + c)
+  state.set_unchecked(3u32, state.get_unchecked(3u32) + d)
+  state.set_unchecked(4u32, state.get_unchecked(4u32) + e)
+  state.set_unchecked(5u32, state.get_unchecked(5u32) + f)
+  state.set_unchecked(6u32, state.get_unchecked(6u32) + g)
+  state.set_unchecked(7u32, state.get_unchecked(7u32) + h)
+}

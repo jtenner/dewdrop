@@ -430,3 +430,23 @@ import dew.std.encoding.hex as @hex
 // @hex.encode(b"\xAB\x01") == b"ab01"
 // @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
 ```
+
+Incremental SHA-256 (`dew.std.integrity.sha256`):
+
+```dew
+let state = sha256_new()
+assert(sha256_update(state, first_chunk), "SHA-256 update failed")
+assert(sha256_update(state, next_chunk), "SHA-256 update failed")
+let digest = sha256_finalize(state) // FixedArray<U8>, 32 bytes
+```
+
+Aliases share one state. Finalize closes it. Repeated finalize calls return
+fresh digest arrays with the same bytes. Update returns `false` after finalize,
+even for empty input. It also returns `false` if total input would exceed
+`2305843009213693951` bytes (the SHA-256 bit-length limit). A rejected update
+makes no change. Empty updates succeed while open, including at the limit.
+Do not change state fields directly. Returned digests do not share state.
+The state retains a 64-byte block, eight hash words, a checked byte count,
+a block offset, and a closed flag. It retains no input and allocates nothing
+in update. The block also serves as the circular message schedule.
+The existing `sha256(Bytes)` and its digest type are unchanged.

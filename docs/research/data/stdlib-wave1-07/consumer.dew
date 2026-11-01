@@ -1,0 +1,32 @@
+open dew.std.bytes_builder
+open dew.std.integrity.sha256
+open dew.std.bytes
+open dew.std.string
+open dew.std.fixed_array
+pub fn run(repeats: U32) -> U32 {
+  let state = sha256_new()
+  let chunk = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".as_bytes()
+  while 0u32 {
+    i if i < repeats => {
+      assert(sha256_update(state, chunk), "update")
+      continue i + 1u32
+    }
+    _ => break sha256_unit()
+  }
+  let digest = sha256_finalize(state)
+  sha256_u8_to_u32(digest.get_unchecked(0u32))
+}
+
+pub fn run_oneshot(repeats: U32) -> U32 {
+  let builder = BytesBuilder::with_capacity(repeats * 64u32)
+  let chunk = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".as_bytes()
+  while 0u32 {
+    i if i < repeats => {
+      builder.append(chunk)
+      continue i + 1u32
+    }
+    _ => break sha256_unit()
+  }
+  let digest = sha256(builder.finish())
+  sha256_u8_to_u32(digest.get_unchecked(0u32))
+}

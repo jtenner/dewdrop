@@ -58,8 +58,35 @@ fn sha256_vector_message(bit_length: U32) -> String {
 
 fn assert_stream_vector(bit_length: U32, message_hex: String, digest_hex: String) -> Unit {
   let input = sha256_decode_message(bit_length, message_hex)
-  let expected = sha256(sha256_decode_message(256u32, digest_hex))
-  let oracle = sha256(input)
+  let oracle = sha256_decode_message(256u32, digest_hex)
+  while 1u32 {
+    size if size <= 65u32 => {
+      let state = sha256_new()
+      while 0u32 {
+        offset if offset < input.byte_length() => {
+          let remaining = input.byte_length() - offset
+          let count = if remaining < size {
+            remaining
+          } else {
+            size
+          }
+          assert(sha256_update(state, input.view(offset, count)), "chunk update")
+          continue offset + count
+        }
+        _ => break sha256_test_unit()
+      }
+      let digest = sha256_finalize(state)
+      while 0u32 {
+        i if i < 32u32 => {
+          assert(digest.get_unchecked(i) == oracle.byte_at(i), "chunk CAVS digest")
+          continue i + 1u32
+        }
+        _ => break sha256_test_unit()
+      }
+      continue size + 1u32
+    }
+    _ => break sha256_test_unit()
+  }
   while 0u32 {
     split if split <= input.byte_length() => {
       let state = sha256_new()
@@ -73,14 +100,14 @@ fn assert_stream_vector(bit_length: U32, message_hex: String, digest_hex: String
       assert(!sha256_update(alias, input), "closed update")
       while 0u32 {
         i if i < 32u32 => {
-          assert(digest.get_unchecked(i) == oracle.get_unchecked(i), "partition digest")
+          assert(digest.get_unchecked(i) == oracle.byte_at(i), "partition digest")
           assert(again.get_unchecked(i) == digest.get_unchecked(i), "repeat finalize")
           continue i + 1u32
         }
         _ => break sha256_test_unit()
       }
       digest.set_unchecked(0u32, 0u8)
-      assert(sha256_finalize(state).get_unchecked(0u32) == oracle.get_unchecked(0u32), "digest does not alias state")
+      assert(sha256_finalize(state).get_unchecked(0u32) == oracle.byte_at(0u32), "digest does not alias state")
       continue split + 1u32
     }
     _ => break sha256_test_unit()
@@ -153,4 +180,61 @@ test "SHA-256 stream CAVS all split boundaries and aliases" {
   assert_stream_vector(496u32, "6511a2242ddb273178e19a82c57c85cb05a6887ff2014cf1a31cb9ba5df1695aadb25c22b3c5ed51c10d047d256b8e3442842ae4e6c525f8d7a5a944af2a", "d6859c0b5a0b66376a24f56b2ab104286ed0078634ba19112ace0d6d60a9c1ae")
   assert_stream_vector(504u32, "e2f76e97606a872e317439f1a03fcd92e632e5bd4e7cbc4e97f1afc19a16fde92d77cbe546416b51640cddb92af996534dfd81edb17c4424cf1ac4d75aceeb", "18041bd4665083001fba8c5411d2d748e8abbfdcdfd9218cb02b68a78e7d4c23")
   assert_stream_vector(512u32, "5a86b737eaea8ee976a0a24da63e7ed7eefad18a101c1211e2b3650c5187c2a8a650547208251f6d4237e661c7bf4c77f335390394c37fa1a9f9be836ac28509", "42e61e174fbb3897d6dd6cef3dd2802fe67b331953b06114a65c772859dfc1aa")
+}
+
+test "SHA-256 65-byte padding boundary" {
+  assert_stream_vector(520u32, "6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161", "635361c48bb9eab14198e76ea8ab7f1a41685d6ad62aa9146d301d4f17eb0ae0")
+}
+
+fn assert_sha256_long_stream(repeats: U32, expected_hex: String) -> Unit {
+  let state = sha256_new()
+  let chunk = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".as_bytes()
+  while 0u32 {
+    i if i < repeats => {
+      assert(sha256_update(state, chunk), "long update")
+      continue i + 1u32
+    }
+    _ => break sha256_test_unit()
+  }
+  let expected = sha256_decode_message(256u32, expected_hex)
+  let digest = sha256_finalize(state)
+  while 0u32 {
+    i if i < 32u32 => {
+      assert(digest.get_unchecked(i) == expected.byte_at(i), "Node long digest")
+      continue i + 1u32
+    }
+    _ => break sha256_test_unit()
+  }
+}
+
+test "SHA-256 long streams match Node crypto" {
+  assert_sha256_long_stream(16384u32, "9bc1b2a288b26af7257a36277ae3816a7d4f16e89c1e7e77d0a5c48bad62b360")
+  assert_sha256_long_stream(65536u32, "299285fc41a44cdb038b9fdaf494c76ca9d0c866672b2b266c1a0c17dda60a05")
+}
+
+test "SHA-256 checked byte limit rejects without state change" {
+  let wide = sha256_new()
+  wide.length = 4294967295u64
+  assert(sha256_update(wide, "aa".as_bytes()), "cross U32 length")
+  assert(wide.length == 4294967297u64, "U64 byte count")
+  let state = sha256_new()
+  state.length = 2305843009213693950u64
+  assert(!sha256_update(state, "aa".as_bytes()), "length overflow")
+  assert(state.length == 2305843009213693950u64, "length unchanged")
+  assert(state.used == 0u32, "buffer unchanged")
+  let initial = sha256_initial_state()
+  while 0u32 {
+    i if i < 16u32 => {
+      assert(state.block.get_unchecked(i) == 0u32, "overflow leaves block unchanged")
+      if i < 8u32 {
+        assert(state.hash.get_unchecked(i) == initial.get_unchecked(i), "overflow leaves hash unchanged")
+      }
+      continue i + 1u32
+    }
+    _ => break sha256_test_unit()
+  }
+  assert(sha256_update(state, "a".as_bytes()), "last legal byte")
+  assert(sha256_update(state, "".as_bytes()), "empty at limit")
+  assert(!sha256_update(state, "a".as_bytes()), "past limit")
+  assert(state.length == 2305843009213693951u64, "limit retained")
 }
