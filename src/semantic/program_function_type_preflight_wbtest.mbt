@@ -410,6 +410,8 @@ test "generic callback records retain external result storage" {
   let link = plan_program_wasmgc_link(stages.analyzed, stages.lowering, 0)
   assert_eq(link.diagnostics, [])
   assert_eq(verify_program_physical_type_fragments(link), Ok(()))
+  let result = stages.program.modules[2].lookup_type("Maybe").unwrap()
+  assert_true(link.type_lookup.contains(result))
 }
 
 ///|
@@ -427,4 +429,7 @@ test "unused generic callback producer registers external results" {
   ])
   assert_eq(stages.diagnostics(), [])
   assert_eq(verify_program_physical_type_fragments(stages.link), Ok(()))
+  assert_eq(stages.link.modules[1].function_types.length(), 0)
+  let result = stages.program.modules[2].lookup_type("Maybe").unwrap()
+  assert_false(stages.link.type_lookup.contains(result))
 }

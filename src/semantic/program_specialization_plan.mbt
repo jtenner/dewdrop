@@ -3043,11 +3043,9 @@ fn plan_program_wasmgc_fragments_for_root(
         lowering,
         module_,
         selected_demand,
-        declaration_roots=if declaration_roots is Some(_) {
-          Some(program_roots)
-        } else {
-          None
-        },
+        // A dead source reference must not allocate a callback signature whose
+        // nominal dependencies were deliberately excluded by demand planning.
+        declaration_roots=Some(program_roots),
       ) {
       match expression.kind {
         PlannedFunctionReference(declaration, _) =>

@@ -1,0 +1,33 @@
+{
+  "runtime": {
+    "node": [
+      "wildcard"
+    ],
+    "wago": [
+      "wildcard"
+    ]
+  },
+  "compilations": [
+    {
+      "compiled": true,
+      "errors": [],
+      "warnings": [
+        "std/encoding/utf8.dew:7:10: warning: RedundantPatternArm(1, 127)\n  |\n7 | } derive(Eq)\n  |          ^",
+        "std/encoding/hex.dew:46:7: warning: UnreachableBlockItem(14, 1, 871)\n  |\n46 |       0u32\n  |       ^",
+        "std/encoding/binary.dew:6:10: warning: RedundantPatternArm(1, 107)\n  |\n6 | } derive(Eq)\n  |          ^"
+      ]
+    },
+    {
+      "compiled": true,
+      "errors": [],
+      "warnings": [
+        "std/encoding/utf8.dew:7:10: warning: RedundantPatternArm(1, 127)\n  |\n7 | } derive(Eq)\n  |          ^",
+        "std/encoding/hex.dew:46:7: warning: UnreachableBlockItem(14, 1, 871)\n  |\n46 |       0u32\n  |       ^",
+        "std/encoding/binary.dew:6:10: warning: RedundantPatternArm(1, 107)\n  |\n6 | } derive(Eq)\n  |          ^"
+      ]
+    }
+  ],
+  "old_wat_sha256": "c41eed6ecdd333d5a209b175347767a14c17717b0234ee0217bd4959f8dfabd5",
+  "new_wat_sha256": "c41eed6ecdd333d5a209b175347767a14c17717b0234ee0217bd4959f8dfabd5",
+  "old_json_sha256": "61f7a06392e4cbfde18ebfe43329edc173ac593b071d14172c02b2cd93d35f83"
+}

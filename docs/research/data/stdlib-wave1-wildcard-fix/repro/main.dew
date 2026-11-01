@@ -1,0 +1,4 @@
+open app.callbacks
+pub fn main() -> I32 {
+  42
+}
