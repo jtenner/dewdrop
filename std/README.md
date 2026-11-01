@@ -364,3 +364,11 @@ Regenerate the lane modules, embedded preamble, fixed-lane, memory, shuffle, cro
 ```text
 python3 tools/generate_lane_std.py
 ```
+
+`String` and `StringView` provide `trim_ascii_start()`, `trim_ascii_end()`,
+and `trim_ascii()`. Each returns a shared `StringView`, without copying text.
+They remove only ASCII HT, LF, VT, FF, CR, and SPACE (bytes 09–0D and 20).
+They do not do Unicode trimming. NUL and all non-ASCII spaces stay unchanged.
+For example, `" \tλ \n".trim_ascii().to_string()` is `"λ"`.
+Bounds are relative to the input view. Only single-byte ASCII scalars are
+removed, so a valid input view keeps valid UTF-8 scalar boundaries.
