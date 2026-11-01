@@ -208,3 +208,28 @@ for(const name of ['bad_reversed','bad_end','bad_search']) {let trapped=false;tr
 for(const n of [16,256,4096,16384])for(const linear of [false,true]){for(let i=0;i<5;i++)x.search(n,linear); const times=[];global.gc(); const before=process.memoryUsage().heapUsed;for(let i=0;i<15;i++){const t=performance.now();if(x.search(n,linear)!==n*1000)throw Error('oracle');times.push(performance.now()-t);}global.gc();const after=process.memoryUsage().heapUsed;times.sort((a,b)=>a-b);console.log(JSON.stringify({n,linear,median_ms_1000:times[7],retained_heap_delta:after-before}));}
 })();
 ```
+
+## Combined landing gate
+
+Full `bash tools/dew-test/run.sh` exited 0 in 169.87 s:
+395 public tests (391 prior + 4 permanent new tests), 41 private
+tests, builtin traps, repeat-byte check, and all 42 operation check scripts
+passed. `DEW_NATIVE_TEST_PACKAGES=standard_loader bash tools/test-native.sh`
+passed 31/31 tests in 13.92 s. Process-local Clang uses trailing
+-g0 -O0 and bracket-depth 4096; the pinned SDK is unchanged. Compiler calls
+over 30 s remain visible in the full logs. Build output was removed.
+Logs: `data/stdlib-wave1/landing-09-{std,native}.log.gz`.
+
+## Final full-native count correction
+
+The full routine lane found `158 != 146` in
+`src/semantic/array_wbtest.mbt:72`. Item 09 appends exactly six search
+functions and six natural-order methods, so the callable count is now 158.
+The count expectation is updated. All existing identity assertions remain
+unchanged. This is a test metadata fact, with no library/compiler change.
+The complete native lane is rerun after the correction; its first log stays
+in the final evidence.
+
+Final full native verification after the callable-count correction passed all
+1,931 tests, including the unchanged stable-identity assertions. Full final
+standard verification passed 445 public and 41 private tests.

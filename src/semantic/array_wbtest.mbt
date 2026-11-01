@@ -69,7 +69,8 @@ test "array standard source has stable compiler-owned identities" {
   assert_eq(semantic_id_local(collected.lookup_type("Array").unwrap()), 0)
   assert_eq(semantic_id_local(collected.lookup_type("ArrayIter").unwrap()), 1)
   assert_eq(semantic_id_local(collected.lookup_value("array_new").unwrap()), 2)
-  assert_eq(collected.callables.length(), 146)
+  // Six search functions and six natural-order methods were appended.
+  assert_eq(collected.callables.length(), 158)
   assert_eq(semantic_id_local(collected.callables[0].declaration), 2)
   assert_eq(semantic_id_local(collected.callables[13].declaration), 15)
   assert_eq(semantic_id_local(collected.callables[14].declaration), 17)
