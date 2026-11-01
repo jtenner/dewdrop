@@ -1,0 +1,41 @@
+open dew.std.fs.directory
+open dew.std.bytes
+open dew.std.array
+
+fn directory_expect_error(value: Bytes, cookie: U64, count: U32, bytes: U32, expected: DirectoryError) -> Unit {
+  match directory_decode_page(value, cookie, count, bytes) {
+    Err(error) => assert(error == expected, "directory error differs")
+    Ok(_) => assert(false, "expected directory error")
+  }
+}
+
+test "directory empty and bounds" {
+  match directory_decode_page(b"", 0u64, 2u32, 64u32) {
+    Ok(page) => {
+      assert(page.entries.length() == 0u32, "empty entries")
+      assert(page.end, "empty end")
+    }
+    Err(_) => assert(false, "empty page failed")
+  }
+  directory_expect_error(b"", 0u64, 0u32, 64u32, DirectoryError::InvalidLimit)
+  directory_expect_error(b"", 0u64, 2049u32, 64u32, DirectoryError::InvalidLimit)
+  directory_expect_error(b"", 0u64, 1u32, 23u32, DirectoryError::InvalidLimit)
+  directory_expect_error(b"", 0u64, 1u32, 49153u32, DirectoryError::InvalidLimit)
+}
+
+test "directory partial header and name" {
+  directory_expect_error(b"x", 0u64, 2u32, 64u32, DirectoryError::PartialRecord)
+  directory_expect_error(b"\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x04\x00\x00\x00x", 0u64, 2u32, 64u32, DirectoryError::PartialRecord)
+}
+
+test "directory one relative entry" {
+  match directory_decode_page(b"\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x07\x00\x00\x00x", 0u64, 2u32, 64u32) {
+    Ok(page) => {
+      assert(page.entries.length() == 1u32, "one entry")
+      assert(page.entries.get_unchecked(0u32).name.as_bytes() == b"x", "relative name")
+      assert(page.entries.get_unchecked(0u32).kind is DirectoryEntryKind::Symlink, "link is data")
+      assert(page.cookie == 1u64 && page.end, "end cookie")
+    }
+    Err(_) => assert(false, "entry failed")
+  }
+}
