@@ -71,7 +71,7 @@ Source: `tests/module-snapshots/generics/bounded-function-reference-runtime-evid
 
 **CORRECT NEW OUTPUT. The singleton now refers to the exact enum adapter selected for this source site. Its argument/result conversion preserves the source enum values.**
 
-Full review: **3 hunks**, 773 → 773 lines. Only `compiler.facts`, the declared element, and startup `ref.func` change; the target is 5 → 7. All function bodies remain unchanged. Function 7 converts compact scalar payloads through the erased fallback and back; function 5 is the direct specialized implementation. Facts must mark the new address-taken target and startup call target.
+Full review: **3 hunks**, 773 → 773 lines. Only `compiler.facts`, the declared element, and startup `ref.func` change; the target is 5 → 7. All function bodies remain unchanged. Function 7 converts compact scalar payloads through the erased fallback and back; function 5 is the direct specialized implementation. Facts must mark the new address-taken target and startup reference target.
 
 Source: `tests/module-snapshots/generics/generic-enum-adapter-runtime.dew:18` defines `echo_maybe`, line 39 returns it as a function value, and line 43 checks tuple, named, boxed, and nested enum payloads (42–45). `src/semantic/program_physical_link.mbt:1572` checks signature compatibility before selecting an adapter; emission uses that selected singleton. Both versions pass every assertion on both runtimes.
 
@@ -114,3 +114,84 @@ Source: `src/parser/derive.mbt:729` makes derived field calls to `show_append`; 
 Full review: **33 hunks**, 1,976 → 1,971 lines. Old function 68 is removed; old Wrapper body 81 (new 80) calls retained function 46. Both forwarding bodies load argument 0 and call function 32. Type 87 is removed, later types and functions move down one, and all **79 retained bodies** match exactly after this map.
 
 Source: `src/parser/derive.mbt:572` makes ordinary `debug` field calls; line 586 builds struct output. `tests/module-snapshots/types/derive-debug-runtime.dew:34` covers derived structs/enums, nested values, integer limits, float bit patterns including negative zero, Unit, escaped text/bytes, SWAR, and V128. Its unchanged JSON sets `write_limit: 3`. Both old and new produce the exact expected text on Node and Wago.
+
+## Commands and gate results
+
+The exact selected PATH for both full runs and the WAT runtime checks was
+`/data/workspace/tools:/data/home/.moon/bin:/usr/local/bin:/usr/bin:/bin`.
+All commands ran from `/data/workspace/wave1-fixtures`.
+
+```sh
+git -c protocol.file.allow=always submodule update --init --reference /data/workspace/dewdrop/starshine-mb starshine-mb
+
+env PATH=/data/workspace/tools:/data/home/.moon/bin:/usr/local/bin:/usr/bin:/bin /usr/bin/time -p bash tools/module-snapshots/run.sh --jobs 1 --target-dir .tmp/fixture-build > docs/research/data/stdlib-fixture-fixes/before.log 2>&1
+
+env PATH=/data/workspace/tools:/data/home/.moon/bin:/usr/local/bin:/usr/bin:/bin /usr/bin/time -p bash tools/module-snapshots/run.sh --jobs 2 --target-dir .tmp/fixture-build > docs/research/data/stdlib-fixture-fixes/after.log 2>&1
+
+python3 docs/research/data/stdlib-fixture-fixes/review.py > docs/research/data/stdlib-fixture-fixes/review-after.jsonl
+
+env PATH=/data/workspace/tools:/data/home/.moon/bin:/usr/local/bin:/usr/bin:/bin /usr/bin/time -p python3 docs/research/data/stdlib-fixture-fixes/check-wat.py > docs/research/data/stdlib-fixture-fixes/wat-runtime-replay.log 2>&1
+
+git diff --check b9fcc8ea..HEAD
+```
+
+Both full runs used the pinned SDK, the default two runtimes, repeat-byte
+checks, diagnostics checks, and all fixtures. There were no filters, update
+flags, or reproduction bypasses. The first run used one slot, including its
+cold generator build. The second used at most two warm fixture slots.
+
+| Full run | Passed | Failed | Compiler calls | Wall seconds | Generator build seconds | Longest fixture compile seconds |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| before | 453 | 8 | 922 | 423.22 | 26.708 | 1.868 |
+| after | 461 | 0 | 922 | 198.09 | 0.063 | 1.880 |
+
+Before exit: **1**, with exactly the eight named WAT mismatches. Their fresh
+full diffs equal the historical baseline bytes. After exit: **0**, with
+**461/461 green and no escalations**. No compiler activity in these runs
+exceeded 30 seconds. These results do not change the owner's accepted cold
+build result from G0.
+
+The first old/candidate WAT parse/validate/runtime check took **1.05 seconds**;
+the saved script replay took **1.17 seconds**. Each log records every
+parse/validate pair, runtime call, and Wago runner build time. All 16 WAT
+modules validate and all 32 runtime checks pass in each run.
+
+### Times for the eight affected fixtures
+
+Each pair below is the first and repeat Dew compile, in seconds.
+
+| Fixture | Before | After |
+| --- | --- | --- |
+| `collections/binary-heap-runtime` | 0.526 / 0.428 | 0.545 / 0.428 |
+| `generics/bounded-function-reference-runtime-evidence` | 0.391 / 0.319 | 0.408 / 0.317 |
+| `generics/generic-enum-adapter-runtime` | 0.397 / 0.317 | 0.414 / 0.312 |
+| `generics/generic-erased-scalar-adapter-runtime` | 0.402 / 0.319 | 0.379 / 0.310 |
+| `modules/imported-bounded-function-reference-runtime-evidence` | 0.411 / 0.320 | 0.394 / 0.327 |
+| `text/show-collections-runtime` | 0.519 / 0.441 | 0.514 / 0.423 |
+| `text/show-derived-runtime` | 0.492 / 0.430 | 0.518 / 0.420 |
+| `types/derive-debug-runtime` | 0.538 / 0.444 | 0.516 / 0.423 |
+
+No compiler source changed, so no native unit or compiler integration lane
+was needed. Full logs are gzip files in `research/data/stdlib-fixture-fixes/`;
+`results.json` gives the gate counts and timing summary. No failure was hidden.
+
+## Atomic fixture commits
+
+| Fixture | Commit |
+| --- | --- |
+| `collections/binary-heap-runtime` | `3a5b5105` |
+| `generics/bounded-function-reference-runtime-evidence` | `4f0766da` |
+| `generics/generic-enum-adapter-runtime` | `abeb8b2b` |
+| `generics/generic-erased-scalar-adapter-runtime` | `6c792266` |
+| `modules/imported-bounded-function-reference-runtime-evidence` | `89f221e9` |
+| `text/show-collections-runtime` | `d4e938aa` |
+| `text/show-derived-runtime` | `c5cfa1af` |
+| `types/derive-debug-runtime` | `109882b4` |
+
+## Handoff cleanup
+
+Removed this worker's `.tmp/fixture-build`, `.tmp/fixture-review`,
+`.mooncakes`, and generated `tools/module-snapshots/__pycache__`. Source and
+compact evidence remain. The patched Starshine gitlink is still
+`29dde5c78291a976abd5f739da920915f04fdc36`; its working tree is clean.
+The global SDK is unchanged. No push occurred. Build slots are released.

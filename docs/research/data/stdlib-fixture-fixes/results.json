@@ -1,0 +1,45 @@
+{
+  "before": {
+    "fixtures": 461,
+    "passed": 453,
+    "failed": 8,
+    "compiler_calls": 922,
+    "wall_seconds": 423.22,
+    "generator_build_seconds": 26.708,
+    "max_fixture_compile_seconds": 1.868,
+    "compiler_calls_over_30_seconds": 0,
+    "jobs": 1
+  },
+  "after": {
+    "fixtures": 461,
+    "passed": 461,
+    "failed": 0,
+    "compiler_calls": 922,
+    "wall_seconds": 198.09,
+    "generator_build_seconds": 0.063,
+    "max_fixture_compile_seconds": 1.88,
+    "compiler_calls_over_30_seconds": 0,
+    "jobs": 2
+  },
+  "base": "b9fcc8ea",
+  "fixture_head": "109882b4",
+  "verdicts": {
+    "correct_new_output": 8,
+    "real_defect": 0,
+    "escalations": []
+  },
+  "starshine_gitlink": "29dde5c78291a976abd5f739da920915f04fdc36",
+  "sdk": {
+    "decision": "Owner for-now baseline, 2026-10-31",
+    "moon": "moon 0.1.20261023 (3778465 2026-10-23)",
+    "moonc": "v0.10.17+d971670cd (2026-10-23)",
+    "core": "0.10.17+d971670cd"
+  },
+  "runtimes": [
+    "node",
+    "wago"
+  ],
+  "full_diffs_equal_historical_baseline": true,
+  "wat_runtime_first_wall_seconds": 1.05,
+  "wat_runtime_replay_wall_seconds": 1.17
+}
