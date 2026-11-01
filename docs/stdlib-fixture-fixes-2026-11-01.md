@@ -90,3 +90,11 @@ Source: `tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.d
 Full review: **4 hunks**, 144 → 138 lines. Specialized reader 7 loads global 0 instead of making subtype 34 with wrapper 10. Startup already sets global 0 to target 3; removed wrapper 10 only forwarded argument 1 to function 3. Its subtype and declared element are removed. Generic reader 6 and capturing wrapper 9 remain unchanged.
 
 Source: `tests/module-snapshots/modules/imported-bounded-function-reference-runtime-evidence.dew:1` imports `fixture.callback_provider`; line 3 returns imported `read`, and line 11 checks callback result 42. The provider is in the adjacent `.modules/fixture.callback_provider/` directory. Exact-site target selection uses the module and specialization key, not a spelling rule. Both versions pass on both runtimes.
+
+### `text/show-collections-runtime.wat`
+
+**CORRECT NEW OUTPUT. The nested collection Show path reuses the existing equivalent append function. It keeps the depth check, formatter depth increment, and selected value formatter.**
+
+Full review: **24 hunks**, 2,325 → 2,302 lines. Old function 92 is removed and its caller uses function 79. Its body equals retained function 79 after index mapping; all **98 retained bodies** match exactly. Old functions 93–98 move down one, type 137 is removed, and the later types/exports move with them.
+
+Source: `std/show.dew:50` checks depth and increments it before `append_show`. `tests/module-snapshots/text/show-collections-runtime.dew:26` checks Array, FixedArray, Option Some/None, Result Ok/Err, and nested Option<Array<I32>> strings. Every exact-string assertion passes for both versions on both runtimes.
