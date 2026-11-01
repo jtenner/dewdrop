@@ -1,6 +1,7 @@
 open dew.std.io
 open dew.std.bytes
 open dew.std.fixed_array
+open dew.std.bytes_builder
 
 fn expect_record(value: Result<Option<Bytes>, IoError>, expected: Bytes) -> Unit {
   match value {
@@ -10,7 +11,7 @@ fn expect_record(value: Result<Option<Bytes>, IoError>, expected: Bytes) -> Unit
 }
 
 test "buffered lines keep suffix and separate empty line from EOF" {
-  let input = BufferedReader::new(BytesInput::new(b"a\n\nlast"), 8u32, 16u32)
+  let input = buffered_reader_new(BytesInput::new(b"a\n\nlast"), 8u32, 16u32)
   expect_record(input.read_line(8u32), b"a")
   expect_record(input.read_line(8u32), b"")
   expect_record(input.read_line(8u32), b"last")
@@ -18,7 +19,206 @@ test "buffered lines keep suffix and separate empty line from EOF" {
 }
 
 test "buffered byte delimiter retains delimiter and raw bytes" {
-  let input = BufferedReader::new(BytesInput::new(b"\xff|x\r\n"), 1u32, 16u32)
-  expect_record(input.read_until(124u8, 8u32), b"\xff|")
+  let input = buffered_reader_new(BytesInput::new(b"\xff|x\r\n"), 1u32, 16u32)
+  expect_record(input.read_until(b"|", 8u32), b"\xff|")
   expect_record(input.read_line(8u32), b"x\r")
+}
+
+struct ScriptReader {
+  input: BytesInput
+  calls: FixedArray<U32>
+  mode: U32
+}
+impl Reader for ScriptReader {
+  fn read(self, limit: U32) -> Result<Bytes, IoError> {
+    self.calls.set_unchecked(0u32, self.calls.get_unchecked(0u32) + 1u32)
+    if self.mode == 1u32 {
+      Result::Ok(b"too long")
+    } else if self.mode == 2u32 {
+      Result::Err(IoError::Backend(17u32))
+    } else {
+      self.input.read(if limit > 1u32 {
+      1u32
+    } else {
+      limit
+    })
+    }
+  }
+}
+fn scripted(value: Bytes, mode: U32) -> ScriptReader {
+  ScriptReader::{
+    input: BytesInput::new(value)
+    calls: FixedArray::make(1u32, 0u32)
+    mode: mode
+  }
+}
+
+test "buffered short reads and linear counters" {
+  let source = scripted(b"abc\ndef\n", 0u32)
+  let input = buffered_reader_new(source, 8u32, 16u32)
+  expect_record(input.read_line(4u32), b"abc")
+  expect_record(input.read_line(4u32), b"def")
+  assert(input.read_line(4u32) is Result::Ok(Option::None), "short EOF")
+  assert(input.read_count() == 9u32, "one read per byte plus EOF")
+  assert(input.copied_bytes() == 8u32, "one copy per byte")
+  assert(source.calls.get_unchecked(0u32) == 9u32, "backend calls")
+  assert(input.read_line(4u32) is Result::Ok(Option::None), "cached EOF")
+  assert(input.read_count() == 9u32, "no repeated EOF read")
+}
+
+test "buffered limits and suffix after limit" {
+  let input = buffered_reader_new(BytesInput::new(b"abcd\nx\n"), 8u32, 16u32)
+  assert(input.read_line(3u32) is Result::Err(IoError::LimitExceeded), "line bound")
+  expect_record(input.read_line(3u32), b"d")
+  expect_record(input.read_line(3u32), b"x")
+  let small = buffered_reader_new(BytesInput::new(b"abcdef"), 9u32, 2u32)
+  assert(small.read_line(8u32) is Result::Err(IoError::LimitExceeded), "total buffer bound")
+  assert(small.copied_bytes() == 2u32, "bounded bytes")
+  let exact = buffered_reader_new(BytesInput::new(b"abc"), 2u32, 8u32)
+  expect_record(exact.read_line(3u32), b"abc")
+}
+
+test "buffered invalid progress and backend errors" {
+  let invalid = buffered_reader_new(scripted(b"", 1u32), 1u32, 8u32)
+  assert(invalid.read_line(4u32) is Result::Err(IoError::InvalidProgress), "overread")
+  let backend = buffered_reader_new(scripted(b"", 2u32), 1u32, 8u32)
+  assert(backend.read_line(4u32) is Result::Err(IoError::Backend(17u32)), "backend error")
+  let zero = buffered_reader_new(BytesInput::new(b"x"), 0u32, 8u32)
+  assert(zero.read_line(4u32) is Result::Err(IoError::ZeroProgress), "zero chunk")
+  let empty = buffered_reader_new(BytesInput::new(b""), 1u32, 8u32)
+  assert(empty.read_line(0u32) is Result::Err(IoError::LimitExceeded), "zero max")
+}
+
+test "buffered Reader drains suffix before backend" {
+  let input = buffered_reader_new(BytesInput::new(b"a\nxyz"), 8u32, 16u32)
+  expect_record(input.read_line(4u32), b"a")
+  assert(input.buffered_bytes() == 3u32, "retained suffix")
+  match io_read(input, 2u32) {
+    Result::Ok(value) => assert(value.equals(b"xy"), "Reader suffix")
+    _ => assert(false, "Reader error")
+  }
+  assert(input.read_count() == 1u32, "no extra backend read")
+  expect_record(input.read_line(4u32), b"z")
+}
+
+test "buffered empty input and total bound at EOF" {
+  let input = buffered_reader_new(BytesInput::new(b""), 1u32, 1u32)
+  assert(input.read_line(1u32) is Result::Ok(Option::None), "empty input")
+  let full = buffered_reader_new(BytesInput::new(b"a\n"), 99u32, 2u32)
+  expect_record(full.read_line(2u32), b"a")
+  assert(full.read_line(2u32) is Result::Ok(Option::None), "full buffer EOF")
+}
+
+fn check_buffered_scale(length: U32, chunk: U32) -> Unit {
+  let builder = BytesBuilder::with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(120u8)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let input = buffered_reader_new(BytesInput::new(builder.finish()), chunk, length + chunk)
+  match input.read_until(b"xxxxxxxy", length) {
+    Result::Ok(Option::Some(value)) => {
+      assert(value.byte_length() == length, "scale output length")
+      assert(value.byte_at(length - 1u32) == 120u8, "scale output end")
+    }
+    _ => assert(false, "scale output failed")
+  }
+  assert(input.copied_bytes() == length, "linear copy count")
+  assert(input.read_count() == length / chunk + 1u32, "linear read count")
+  assert(input.buffered_bytes() == 0u32, "no unread bytes at EOF")
+}
+
+test "buffered scaling 4096 bytes" {
+  check_buffered_scale(4096u32, 64u32)
+}
+
+test "buffered scaling 32768 bytes" {
+  check_buffered_scale(32768u32, 64u32)
+}
+
+struct RetryReader {
+  input: BytesInput
+  calls: FixedArray<U32>
+}
+impl Reader for RetryReader {
+  fn read(self, limit: U32) -> Result<Bytes, IoError> {
+    let call = self.calls.get_unchecked(0u32)
+    self.calls.set_unchecked(0u32, call + 1u32)
+    if call == 1u32 {
+      Result::Err(IoError::Backend(9u32))
+    } else {
+      self.input.read(1u32)
+    }
+  }
+}
+
+test "buffered retry after backend error consumes partial record" {
+  let reader = RetryReader::{
+    input: BytesInput::new(b"ab\n")
+    calls: FixedArray::make(1u32, 0u32)
+  }
+  let input = buffered_reader_new(reader, 1u32, 8u32)
+  assert(input.read_line(4u32) is Result::Err(IoError::Backend(9u32)), "partial error")
+  expect_record(input.read_line(4u32), b"b")
+}
+
+
+test "buffered split delimiter with overlapping prefix" {
+  let input = buffered_reader_new(BytesInput::new(b"aaaababTAILabab"), 1u32, 32u32)
+  expect_record(input.read_until(b"abab", 16u32), b"aaaabab")
+  expect_record(input.read_until(b"abab", 16u32), b"TAILabab")
+  assert(input.read_until(b"abab", 16u32) is Result::Ok(Option::None), "split EOF")
+  assert(input.read_until(b"", 16u32) is Result::Err(IoError::ZeroProgress), "empty delimiter")
+}
+
+test "buffered delimiter at every chunk boundary" {
+  while 1u32 {
+    size if size <= 12u32 => {
+      let input = buffered_reader_new(BytesInput::new(b"xxabababyyababEND"), size, 32u32)
+      expect_record(input.read_until(b"abab", 24u32), b"xxabab")
+      expect_record(input.read_until(b"abab", 24u32), b"abyyabab")
+      expect_record(input.read_until(b"abab", 24u32), b"END")
+      assert(input.read_until(b"abab", 24u32) is Result::Ok(Option::None), "partition EOF")
+      assert(input.copied_bytes() == 17u32, "partition copied bytes")
+      continue size + 1u32
+    }
+    _ => break ()
+  }
+}
+
+test "buffered raw Reader bounds and errors" {
+  let input = buffered_reader_new(BytesInput::new(b"abc"), 8u32, 2u32)
+  match io_read(input, 1u32) {
+    Result::Ok(value) => assert(value.equals(b"a"), "raw first byte")
+    _ => assert(false, "raw read failed")
+  }
+  assert(input.buffered_bytes() == 1u32, "raw retained suffix")
+  assert(input.read_count() == 1u32, "raw backend count")
+  match io_read(input, 0u32) {
+    Result::Ok(value) => assert(value.byte_length() == 0u32, "raw zero limit")
+    _ => assert(false, "zero limit failed")
+  }
+  assert(input.buffered_bytes() == 1u32, "zero keeps suffix")
+  let invalid = buffered_reader_new(scripted(b"", 1u32), 1u32, 2u32)
+  assert(io_read(invalid, 1u32) is Result::Err(IoError::InvalidProgress), "raw invalid progress")
+  let backend = buffered_reader_new(scripted(b"", 2u32), 1u32, 2u32)
+  assert(io_read(backend, 1u32) is Result::Err(IoError::Backend(17u32)), "raw backend")
+  let zero = buffered_reader_new(BytesInput::new(b""), 0u32, 1u32)
+  assert(io_read(zero, 1u32) is Result::Err(IoError::ZeroProgress), "raw zero chunk")
+  let bounded = buffered_reader_new(BytesInput::new(b""), 1u32, 0u32)
+  assert(io_read(bounded, 1u32) is Result::Err(IoError::LimitExceeded), "raw zero buffer")
+}
+
+
+test "buffered partial delimiter at EOF and rejected delimiter bounds" {
+  let input = buffered_reader_new(BytesInput::new(b"ababa"), 2u32, 16u32)
+  expect_record(input.read_until(b"abab", 8u32), b"abab")
+  expect_record(input.read_until(b"abab", 8u32), b"a")
+  let bounded = buffered_reader_new(BytesInput::new(b"ok\n"), 8u32, 16u32)
+  assert(bounded.read_until(b"abcd", 3u32) is Result::Err(IoError::LimitExceeded), "delimiter record bound")
+  assert(bounded.read_count() == 0u32, "rejected delimiter did not read")
+  expect_record(bounded.read_line(3u32), b"ok")
 }

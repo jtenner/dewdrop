@@ -506,11 +506,12 @@ large input. Existing version 1 formats are unchanged.
 Buffered byte records use `dew.std.io`:
 
 ```dew
-let input = BufferedReader::new(BytesInput::new(b"hello\n"), 64u32, 1024u32)
+let input = buffered_reader_new(BytesInput::new(b"hello\n"), 64u32, 1024u32)
 let line = input.read_line(256u32)
 ```
 
-`read_until(byte, max_bytes)` keeps its delimiter. `read_line(max_bytes)`
+`read_until(delimiter: Bytes, max_bytes)` keeps its delimiter. `read_line(max_bytes)`
 removes LF only. Both return `Result<Option<Bytes>, IoError>`: None is EOF,
-Some(empty) is an empty line. Bounds count the delimiter. Decode text with
-`dew.std.utf8`. See `docs/research/stdlib-wave1-10.md` for error and buffer rules.
+Some(empty) is an empty line. Bounds count the delimiter. `max_buffer` limits
+partial-record bytes plus unread bytes. Errors discard the consumed partial
+record and keep the unread suffix. Decode text with `dew.std.utf8`. See `docs/research/stdlib-wave1-10.md` for error and buffer rules.

@@ -250,3 +250,213 @@ impl Writer for BytesOutput {
     }
   }
 }
+
+// State slots: chunk offset, EOF, backend reads, record bytes copied.
+pub struct BufferedReader<r> {
+  reader: r
+  chunk_limit: U32
+  max_buffer: U32
+  chunk: FixedArray<Bytes>
+  state: FixedArray<U32>
+}
+
+pub fn buffered_reader_new<r: Reader>(
+  reader: r,
+  chunk_limit: U32,
+  max_buffer: U32,
+) -> BufferedReader<r> {
+  BufferedReader::{
+    reader: reader
+    chunk_limit: chunk_limit
+    max_buffer: max_buffer
+    chunk: FixedArray::make(1u32, b"")
+    state: FixedArray::make(4u32, 0u32)
+  }
+}
+
+impl<r: Reader> BufferedReader<r> {
+  fn read_count(self) -> U32 {
+    self.state.get_unchecked(2u32)
+  }
+  fn copied_bytes(self) -> U32 {
+    self.state.get_unchecked(3u32)
+  }
+  fn buffered_bytes(self) -> U32 {
+    self.chunk.get_unchecked(0u32).byte_length() - self.state.get_unchecked(0u32)
+  }
+  fn consume(self, offset: U32) -> Unit {
+    if offset == self.chunk.get_unchecked(0u32).byte_length() {
+      self.chunk.set_unchecked(0u32, b"")
+      self.state.set_unchecked(0u32, 0u32)
+    } else {
+      self.state.set_unchecked(0u32, offset)
+    }
+  }
+  fn read_until(self, delimiter: Bytes, max_bytes: U32) -> Result<Option<Bytes>, IoError> {
+    let delimiter_length = delimiter.byte_length()
+    if self.chunk_limit == 0u32 || delimiter_length == 0u32 {
+      Result::Err(IoError::ZeroProgress)
+    } else if max_bytes == 0u32 || self.max_buffer == 0u32 || delimiter_length > max_bytes || delimiter_length > self.max_buffer {
+      Result::Err(IoError::LimitExceeded)
+    } else {
+      let prefix = io_delimiter_prefix(delimiter)
+      let builder = BytesBuilder::new()
+      while 0u32 {
+        matched => {
+          let total = builder.byte_length()
+          let chunk = self.chunk.get_unchecked(0u32)
+          let offset = self.state.get_unchecked(0u32)
+          if offset < chunk.byte_length() {
+            if total >= max_bytes {
+              break Result::Err(IoError::LimitExceeded)
+            } else {
+              let byte = chunk.byte_at(offset)
+              let next = while matched {
+                candidate => {
+                  if candidate > 0u32 && delimiter.byte_at(candidate) != byte {
+                    continue prefix.get_unchecked(candidate - 1u32)
+                  } else if delimiter.byte_at(candidate) == byte {
+                    break candidate + 1u32
+                  } else {
+                    break 0u32
+                  }
+                }
+              }
+              builder.append_byte(byte)
+              self.state.set_unchecked(3u32, self.copied_bytes() + 1u32)
+              self.consume(offset + 1u32)
+              if next == delimiter_length {
+                break Result::Ok(Option::Some(builder.finish()))
+              } else {
+                continue next
+              }
+            }
+          } else if self.state.get_unchecked(1u32) != 0u32 {
+            if total == 0u32 {
+              break Result::Ok(Option::None)
+            } else {
+              break Result::Ok(Option::Some(builder.finish()))
+            }
+          } else if total >= self.max_buffer {
+            break Result::Err(IoError::LimitExceeded)
+          } else {
+            let budget = self.max_buffer - total
+            let limit = if self.chunk_limit < budget {
+              self.chunk_limit
+            } else {
+              budget
+            }
+            self.state.set_unchecked(2u32, self.read_count() + 1u32)
+            match self.reader.read(limit) {
+              Result::Err(error) => break Result::Err(error)
+              Result::Ok(next) => {
+                if next.byte_length() > limit {
+                  break Result::Err(IoError::InvalidProgress)
+                } else {
+                  self.chunk.set_unchecked(0u32, next)
+                  self.state.set_unchecked(0u32, 0u32)
+                  if next.byte_length() == 0u32 {
+                    self.state.set_unchecked(1u32, 1u32)
+                  }
+                  continue matched
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  fn read_line(self, max_bytes: U32) -> Result<Option<Bytes>, IoError> {
+    match self.read_until(b"\n", max_bytes) {
+      Result::Ok(Option::Some(value)) => {
+        let length = value.byte_length()
+        if length > 0u32 && value.byte_at(length - 1u32) == 10u8 {
+          Result::Ok(Option::Some(value.view(0u32, length - 1u32)))
+        } else {
+          Result::Ok(Option::Some(value))
+        }
+      }
+      Result::Ok(Option::None) => Result::Ok(Option::None)
+      Result::Err(error) => Result::Err(error)
+    }
+  }
+}
+
+impl<r: Reader> Reader for BufferedReader<r> {
+  fn read(self, limit: U32) -> Result<Bytes, IoError> {
+    if limit == 0u32 {
+      Result::Ok(b"")
+    } else if self.buffered_bytes() > 0u32 {
+      let chunk = self.chunk.get_unchecked(0u32)
+      let offset = self.state.get_unchecked(0u32)
+      let remaining = chunk.byte_length() - offset
+      let count = if limit < remaining {
+        limit
+      } else {
+        remaining
+      }
+      self.consume(offset + count)
+      Result::Ok(chunk.view(offset, count))
+    } else if self.state.get_unchecked(1u32) != 0u32 {
+      Result::Ok(b"")
+    } else if self.chunk_limit == 0u32 {
+      Result::Err(IoError::ZeroProgress)
+    } else if self.max_buffer == 0u32 {
+      Result::Err(IoError::LimitExceeded)
+    } else {
+      let requested = if self.chunk_limit < self.max_buffer {
+        self.chunk_limit
+      } else {
+        self.max_buffer
+      }
+      self.state.set_unchecked(2u32, self.read_count() + 1u32)
+      match self.reader.read(requested) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(chunk) => {
+          let length = chunk.byte_length()
+          if length > requested {
+            Result::Err(IoError::InvalidProgress)
+          } else {
+            let count = if limit < length {
+              limit
+            } else {
+              length
+            }
+            self.chunk.set_unchecked(0u32, chunk)
+            self.consume(count)
+            if length == 0u32 {
+              self.state.set_unchecked(1u32, 1u32)
+            }
+            Result::Ok(chunk.view(0u32, count))
+          }
+        }
+      }
+    }
+  }
+}
+
+
+fn io_delimiter_prefix(delimiter: Bytes) -> FixedArray<U32> {
+  let prefix = FixedArray::make(delimiter.byte_length(), 0u32)
+  while 1u32 {
+    index if index < delimiter.byte_length() => {
+      let byte = delimiter.byte_at(index)
+      let matched = while prefix.get_unchecked(index - 1u32) {
+        candidate => {
+          if candidate > 0u32 && delimiter.byte_at(candidate) != byte {
+            continue prefix.get_unchecked(candidate - 1u32)
+          } else if delimiter.byte_at(candidate) == byte {
+            break candidate + 1u32
+          } else {
+            break 0u32
+          }
+        }
+      }
+      prefix.set_unchecked(index, matched)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  prefix
+}
