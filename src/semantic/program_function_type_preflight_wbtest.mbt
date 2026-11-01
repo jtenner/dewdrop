@@ -392,3 +392,22 @@ test "direct lambda callback parameters retain the closure ABI" {
   )
   assert_true(module_.closure_type_index >= 0)
 }
+
+///|
+test "generic callback records retain external result storage" {
+  let stages = compiler_test_stages(24023UL, [
+    CompilerTestModule::new("app.main", [
+      CompilerTestSource::new("main.dew", b"open app.callbacks\npub fn main() -> I32 { 42 }\n"),
+    ]),
+    CompilerTestModule::new("app.callbacks", [
+      CompilerTestSource::new("callbacks.dew", b"open app.values\npub struct Reader<t, i> {\n  inner: i\n  pull: fn(i) -> Maybe<t>\n}\npub fn read<t, i>(reader: Reader<t, i>) -> Maybe<t> {\n  let pull = reader.pull\n  pull(reader.inner)\n}\n"),
+    ]),
+    CompilerTestModule::new("app.values", [
+      CompilerTestSource::new("values.dew", b"pub enum Maybe<t> {\n  Some(t)\n  None\n}\n"),
+    ]),
+  ])
+  assert_eq(stages.diagnostics(), [])
+  let link = plan_program_wasmgc_link(stages.analyzed, stages.lowering, 0)
+  assert_eq(link.diagnostics, [])
+  assert_eq(verify_program_physical_type_fragments(link), Ok(()))
+}
