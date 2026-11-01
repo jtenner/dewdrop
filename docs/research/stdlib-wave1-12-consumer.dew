@@ -1,0 +1,14 @@
+import dew.std.fs.directory as @directory
+open dew.std.bytes
+open dew.std.array
+
+pub fn main() -> U32 {
+  match @directory.directory_decode_page(b"", 0u64, 10u32, 4096u32) {
+    Ok(page) => if page.end {
+      page.entries.length() + 42u32
+    } else {
+      0u32
+    }
+    Err(_) => 0u32
+  }
+}

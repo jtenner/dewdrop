@@ -1,7 +1,9 @@
 open dew.std.fs.directory
 open dew.std.bytes
 open dew.std.array
-
+open dew.std.bytes_builder
+open dew.std.path
+open dew.std.string
 fn directory_expect_error(value: Bytes, cookie: U64, count: U32, bytes: U32, expected: DirectoryError) -> Unit {
   match directory_decode_page(value, cookie, count, bytes) {
     Err(error) => assert(error == expected, "directory error differs")
@@ -38,4 +40,206 @@ test "directory one relative entry" {
     }
     Err(_) => assert(false, "entry failed")
   }
+}
+
+
+fn directory_record(builder: BytesBuilder, cookie: U64, name: Bytes, kind: U8) -> Unit {
+  while 0u32 {
+    i if i < 8u32 => {
+      builder.append_byte((cookie >> directory_shift(i * 8u32)).into())
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    i if i < 8u32 => {
+      builder.append_byte(0u8)
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    i if i < 4u32 => {
+      builder.append_byte((name.byte_length() >> (i * 8u32)).into())
+      continue i + 1u32
+    }
+    _ => break ()
+  }
+  builder.append_byte(kind)
+  builder.append_byte(0u8)
+  builder.append_byte(0u8)
+  builder.append_byte(0u8)
+  builder.append(name)
+}
+
+fn directory_record_bytes(cookie: U64, name: Bytes, kind: U8) -> Bytes {
+  let builder = BytesBuilder::new()
+  directory_record(builder, cookie, name, kind)
+  builder.finish()
+}
+
+test "directory rejects unsafe names and UTF8" {
+  directory_expect_error(directory_record_bytes(1u64, b"", 4u8), 0u64, 2u32, 64u32, DirectoryError::InvalidName)
+  directory_expect_error(directory_record_bytes(1u64, b"a/b", 4u8), 0u64, 2u32, 64u32, DirectoryError::InvalidName)
+  directory_expect_error(directory_record_bytes(1u64, b"a\\b", 4u8), 0u64, 2u32, 64u32, DirectoryError::InvalidName)
+  directory_expect_error(directory_record_bytes(1u64, b"\x00", 4u8), 0u64, 2u32, 64u32, DirectoryError::InvalidName)
+  directory_expect_error(directory_record_bytes(1u64, b"\xFF", 4u8), 0u64, 2u32, 64u32, DirectoryError::InvalidUtf8)
+  directory_expect_error(directory_record_bytes(1u64, b"\xC0\xAF", 4u8), 0u64, 2u32, 64u32, DirectoryError::InvalidUtf8)
+  directory_expect_error(directory_record_bytes(1u64, b"x", 8u8), 0u64, 2u32, 64u32, DirectoryError::MalformedRecord)
+}
+
+test "directory repeated and opaque cookies" {
+  directory_expect_error(directory_record_bytes(9u64, b"x", 4u8), 9u64, 2u32, 64u32, DirectoryError::RepeatedCookie)
+  let builder = BytesBuilder::new()
+  directory_record(builder, 9u64, b"x", 4u8)
+  directory_record(builder, 9u64, b"y", 4u8)
+  directory_expect_error(builder.finish(), 0u64, 2u32, 64u32, DirectoryError::RepeatedCookie)
+  let descending = directory_record_bytes(2u64, b"x", 4u8)
+  match directory_decode_page(descending, 9u64, 2u32, 64u32) {
+    Ok(page) => assert(page.cookie == 2u64, "cookies are opaque")
+    Err(_) => assert(false, "descending opaque cookie rejected")
+  }
+}
+
+test "directory pagination count byte and partial tail" {
+  let builder = BytesBuilder::new()
+  directory_record(builder, 1u64, b"a", 4u8)
+  directory_record(builder, 2u64, b"b", 3u8)
+  let bytes = builder.finish()
+  match directory_decode_page(bytes, 0u64, 1u32, 64u32) {
+    Ok(page) => assert(page.cookie == 1u64 && !page.end && page.entries.length() == 1u32, "count stop")
+    Err(_) => assert(false, "count page failed")
+  }
+  match directory_decode_page(bytes.view(0u32, 25u32), 0u64, 2u32, 25u32) {
+    Ok(page) => assert(page.cookie == 1u64 && !page.end, "full buffer is not end")
+    Err(_) => assert(false, "full page failed")
+  }
+  match directory_decode_page(bytes.view(25u32, 25u32), 1u64, 2u32, 64u32) {
+    Ok(page) => assert(page.cookie == 2u64 && page.end, "second page")
+    Err(_) => assert(false, "second page failed")
+  }
+  while 1u32 {
+    tail if tail < 25u32 => {
+      match directory_decode_page(bytes.view(0u32, 25u32 + tail), 0u64, 2u32, 64u32) {
+        Ok(page) => assert(page.cookie == 1u64 && !page.end, "partial tail retains progress")
+        Err(_) => assert(false, "partial tail failed")
+      }
+      directory_expect_error(bytes.view(25u32, tail), 1u64, 2u32, 64u32, DirectoryError::PartialRecord)
+      continue tail + 1u32
+    }
+    _ => break ()
+  }
+  directory_expect_error(bytes, 0u64, 2u32, 24u32, DirectoryError::MalformedRecord)
+}
+
+test "directory dot entries consume bounded progress" {
+  let builder = BytesBuilder::new()
+  directory_record(builder, 1u64, b".", 3u8)
+  directory_record(builder, 2u64, b"..", 3u8)
+  match directory_decode_page(builder.finish(), 0u64, 1u32, 64u32) {
+    Ok(page) => assert(page.entries.length() == 0u32 && page.cookie == 1u64 && !page.end, "dot progress")
+    Err(_) => assert(false, "dot page failed")
+  }
+  match directory_decode_page(directory_record_bytes(1u64, b"\xC3\xA9", 4u8), 0u64, 1u32, 64u32) {
+    Ok(page) => assert(page.entries.get_unchecked(0u32).name.as_bytes() == b"\xC3\xA9", "UTF8 name")
+    Err(_) => assert(false, "UTF8 name failed")
+  }
+}
+
+struct MockDirectoryHost {
+  bytes: Bytes
+  open_error: Bool
+  read_error: Bool
+  close_error: Bool
+  mut opens: U32
+  mut reads: U32
+  mut closes: U32
+}
+
+impl DirectoryHost for MockDirectoryHost {
+  fn open_directory(self, path: RelativePath) -> Result<U32, DirectoryError> {
+    self.opens = self.opens + 1u32
+    if self.open_error {
+      Err(DirectoryError::PermissionDenied)
+    } else {
+      Ok(17u32)
+    }
+  }
+  fn read_directory_bytes(self, handle: U32, cookie: U64, max_bytes: U32) -> Result<Bytes, DirectoryError> {
+    assert(handle == 17u32, "mock read handle")
+    self.reads = self.reads + 1u32
+    if self.read_error {
+      Err(DirectoryError::PermissionDenied)
+    } else {
+      Ok(self.bytes)
+    }
+  }
+  fn close_directory(self, handle: U32) -> Result<Unit, DirectoryError> {
+    assert(handle == 17u32, "mock close handle")
+    self.closes = self.closes + 1u32
+    if self.close_error {
+      Err(DirectoryError::Close(29u32))
+    } else {
+      Ok(())
+    }
+  }
+}
+
+fn directory_mock(bytes: Bytes, open_error: Bool, read_error: Bool, close_error: Bool) -> MockDirectoryHost {
+  MockDirectoryHost::{
+    bytes: bytes
+    open_error: open_error
+    read_error: read_error
+    close_error: close_error
+    opens: 0u32
+    reads: 0u32
+    closes: 0u32
+  }
+}
+
+fn directory_test_path() -> RelativePath {
+  match relative_path("tree") {
+    Ok(path) => path
+    Err(_) => unreachable()
+  }
+}
+
+test "directory mock closes on read decode and close errors" {
+  let denied = directory_mock(b"", true, false, false)
+  assert(directory_read(denied, directory_test_path(), 0u64, 1u32, 64u32) is Err(DirectoryError::PermissionDenied), "open denied")
+  assert(denied.closes == 0u32, "no close without handle")
+  let read_denied = directory_mock(b"", false, true, true)
+  assert(directory_read(read_denied, directory_test_path(), 0u64, 1u32, 64u32) is Err(DirectoryError::PermissionDenied), "primary error")
+  assert(read_denied.closes == 1u32, "close on read error")
+  let corrupt = directory_mock(b"x", false, false, false)
+  assert(directory_read(corrupt, directory_test_path(), 0u64, 1u32, 64u32) is Err(DirectoryError::PartialRecord), "decode error")
+  assert(corrupt.closes == 1u32, "close on decode error")
+  let close = directory_mock(b"", false, false, true)
+  assert(directory_read(close, directory_test_path(), 0u64, 1u32, 64u32) is Err(DirectoryError::Close(29u32)), "close error")
+  let invalid = directory_mock(b"", false, false, false)
+  assert(directory_read(invalid, directory_test_path(), 0u64, 0u32, 64u32) is Err(DirectoryError::InvalidLimit), "invalid limit")
+  assert(invalid.opens == 0u32 && invalid.reads == 0u32 && invalid.closes == 0u32, "limit before host")
+}
+
+test "directory full width cookie and exact bounds" {
+  let bytes = directory_record_bytes(18446744073709551615u64, b"x", 4u8)
+  match directory_decode_page(bytes, 0u64, 2048u32, 49152u32) {
+    Ok(page) => assert(page.cookie == 18446744073709551615u64 && page.end, "full width cookie")
+    Err(_) => assert(false, "full width cookie failed")
+  }
+  directory_expect_error(bytes.view(0u32, 24u32), 0u64, 1u32, 24u32, DirectoryError::PartialRecord)
+  let builder = BytesBuilder::new()
+  directory_record(builder, 1u64, b"x", 4u8)
+  directory_record(builder, 2u64, b"y", 4u8)
+  directory_record(builder, 1u64, b"z", 4u8)
+  directory_expect_error(builder.finish(), 0u64, 3u32, 100u32, DirectoryError::RepeatedCookie)
+}
+
+test "directory checks forged path before host" {
+  let host = directory_mock(b"", false, false, false)
+  let path = RelativePath::{
+    value: "../outside"
+  }
+  assert(directory_read(host, path, 0u64, 1u32, 64u32) is Err(DirectoryError::InvalidName), "forged path rejected")
+  assert(host.opens == 0u32, "forged path never reaches host")
 }

@@ -1,0 +1,44 @@
+## production.log
+std/fs/directory.dew:75:71: error: NoMatchingMethod(114, 135, 1765)
+  |
+75 |       result = result | (directory_u64(value.byte_at(offset + index)) << (index * 8u32))
+  |                                                                       ^
+TIME 20.40 RSS_KB 925756
+## registry.log
+Total tests: 2, passed: 2, failed: 0.
+self-host timing: native src/standard_sources tests: 0.824 seconds
+TIME 0.82 RSS_KB 80688
+## integration.log
+Total tests: 27, passed: 27, failed: 0.
+self-host timing: native integration src/semantic/module_system_wbtest.mbt: 22.964 seconds
+Total tests: 24, passed: 24, failed: 0.
+self-host timing: native integration src/semantic/standard_preamble_wbtest.mbt: 2.589 seconds
+TIME 25.55 RSS_KB 1129016
+## identities.log
+TIME 0.02 RSS_KB 12044
+## focused.log
+std/tests/directory_test.dew:49:35: error: NoMatchingMethod(107, 168, 2063)
+  |
+49 |       builder.append_byte((cookie >> (i * 8u32)).into())
+  |                                   ^
+std/fs/directory.dew:75:71: error: NoMatchingMethod(114, 135, 1765)
+  |
+75 |       result = result | (directory_u64(value.byte_at(offset + index)) << (index * 8u32))
+  |                                                                       ^
+TIME 28.82 RSS_KB 1080932
+## generated.log
+tools/check-generated.sh: line 101: bun: command not found
+TIME 3.17 RSS_KB 26988
+## generator.log
+TIME 0.02 RSS_KB 12132
+## equivalence.log
+Total tests: 1, passed: 1, failed: 0.
+TIME 9.25 RSS_KB 680716
+## probe.log
+std/fs/directory.dew:75:71: error: NoMatchingMethod(114, 135, 1765)
+  |
+75 |       result = result | (directory_u64(value.byte_at(offset + index)) << (index * 8u32))
+  |                                                                       ^
+TIME 1.02 RSS_KB 70996
+## interfaces.log
+TIME 0.18 RSS_KB 35104

@@ -1,0 +1,127 @@
+import dew.std.wasm.wasi as @wasi
+open dew.std.fs.directory
+open dew.std.path
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.string
+open dew.std.wasm.intrinsics
+
+pub struct WasiDirectoryReader {
+  root: U32
+}
+
+pub fn wasi_directory_reader(root: U32) -> WasiDirectoryReader {
+  WasiDirectoryReader::{
+    root: root
+  }
+}
+
+pub fn directory_host_error(code: U32) -> DirectoryError {
+  if code == 2u32 || code == 63u32 {
+    DirectoryError::PermissionDenied
+  } else if code == 32u32 {
+    DirectoryError::Symlink
+  } else {
+    DirectoryError::Host(code)
+  }
+}
+
+impl DirectoryHost for WasiDirectoryReader {
+  fn open_directory(self, path: RelativePath) -> Result<U32, DirectoryError> {
+    if !directory_path_valid(path) {
+      Result::Err(DirectoryError::InvalidName)
+    } else {
+      let value = path.as_bytes()
+      let mut parent = self.root
+      let mut owned = false
+      let mut start = 0u32
+      while 0u32 {
+        index if index <= value.byte_length() => {
+          if index == value.byte_length() || value.byte_at(index) == 47u8 {
+            let length = index - start
+            while 0u32 {
+              part if part < length => {
+                wasm_u8_store(128u32 + part, value.byte_at(start + part))
+                continue part + 1u32
+              }
+              _ => break ()
+            }
+            // Inspect without following links, then open DIRECTORY with no
+            // lookup flags. Do not rely on the open flag alone on Node WASI.
+            let stat_error = @wasi.path_filestat_get(parent, 0u32, 128u32, length, 0u32)
+            let kind = wasm_u8_load(16u32)
+            let error = if stat_error != 0u32 {
+              stat_error
+            } else if kind == 7u8 {
+              32u32
+            } else if kind != 3u8 {
+              54u32
+            } else {
+              @wasi.path_open(parent, 0u32, 128u32, length, 2u32, 286720u64, 286720u64, 0u32, 0u32)
+            }
+            let child = wasm_u32_load(0u32)
+            let close_error = if owned {
+              @wasi.fd_close(parent)
+            } else {
+              0u32
+            }
+            if error != 0u32 {
+              break Result::Err(directory_host_error(error))
+            } else if close_error != 0u32 {
+              @wasi.fd_close(child)
+              break Result::Err(DirectoryError::Close(close_error))
+            } else if index == value.byte_length() {
+              break Result::Ok(child)
+            } else {
+              parent = child
+              owned = true
+              start = index + 1u32
+              continue index + 1u32
+            }
+          } else {
+            continue index + 1u32
+          }
+        }
+        _ => break Result::Err(DirectoryError::InvalidName)
+      }
+    }
+  }
+
+  fn read_directory_bytes(self, handle: U32, cookie: U64, max_bytes: U32) -> Result<Bytes, DirectoryError> {
+    if max_bytes > 49152u32 {
+      Result::Err(DirectoryError::InvalidLimit)
+    } else {
+      let error = @wasi.fd_readdir(handle, 8192u32, max_bytes, cookie, 0u32)
+      let used = wasm_u32_load(0u32)
+      if error != 0u32 {
+        Result::Err(directory_host_error(error))
+      } else if used > max_bytes {
+        Result::Err(DirectoryError::MalformedRecord)
+      } else {
+        let builder = BytesBuilder::with_capacity(used)
+        while 0u32 {
+          index if index < used => {
+            builder.append_byte(wasm_u8_load(8192u32 + index))
+            continue index + 1u32
+          }
+          _ => break Result::Ok(builder.finish())
+        }
+      }
+    }
+  }
+
+  fn close_directory(self, handle: U32) -> Result<Unit, DirectoryError> {
+    let error = @wasi.fd_close(handle)
+    if error == 0u32 {
+      Result::Ok(())
+    } else {
+      Result::Err(DirectoryError::Close(error))
+    }
+  }
+}
+
+impl DirectoryReader for WasiDirectoryReader {
+  fn read_directory(self, path: RelativePath, cookie: U64, max_entries: U32, max_bytes: U32) -> Result<DirectoryPage, DirectoryError> {
+    directory_read(self, path, cookie, max_entries, max_bytes)
+  }
+}

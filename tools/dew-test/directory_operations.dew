@@ -1,0 +1,77 @@
+open dew.std.fs.directory
+open dew.std.fs.wasi_directory
+open dew.std.path
+open dew.std.array
+open dew.std.string
+
+fn probe_widen(value: U32) -> U64 {
+  value.into()
+}
+
+fn probe_path(mode: U32) -> RelativePath {
+  let text = match mode & 3u32 {
+    0u32 => "tree"
+    1u32 => "tree/nested"
+    2u32 => "tree/link"
+    _ => "linktree/nested"
+  }
+  match relative_path(text) {
+    Ok(path) => path
+    Err(_) => unreachable()
+  }
+}
+
+pub fn main(mode: U32, cookie: U64, count: U32, bytes: U32) -> U64 {
+  match read_directory(wasi_directory_reader(3u32), probe_path(mode), cookie, count, bytes) {
+    Err(error) => {
+      let code = match error {
+        DirectoryError::InvalidLimit => 1u32
+        DirectoryError::PartialRecord => 2u32
+        DirectoryError::MalformedRecord => 3u32
+        DirectoryError::InvalidName => 4u32
+        DirectoryError::InvalidUtf8 => 5u32
+        DirectoryError::RepeatedCookie => 6u32
+        DirectoryError::PermissionDenied => 7u32
+        DirectoryError::Symlink => 8u32
+        DirectoryError::Host(code) => 100u32 + code
+        DirectoryError::Close(code) => 200u32 + code
+      }
+      18446744069414584320u64 + probe_widen(code)
+    }
+    Ok(page) => {
+      if (mode & 8u32) != 0u32 {
+        let mut hash = 0u32
+        while 0u32 {
+          i if i < page.entries.length() => {
+            let entry = page.entries.get_unchecked(i)
+            let mut name_hash = 0u32
+            while 0u32 {
+              j if j < entry.name.byte_length() => {
+                name_hash = name_hash * 31u32 + directory_u32(directory_u64(entry.name.byte_at(j)))
+                continue j + 1u32
+              }
+              _ => break ()
+            }
+            let kind = match entry.kind {
+              DirectoryEntryKind::Directory => 3u32
+              DirectoryEntryKind::File => 4u32
+              DirectoryEntryKind::Symlink => 7u32
+              _ => 0u32
+            }
+            hash = hash + name_hash * 8u32 + kind
+            continue i + 1u32
+          }
+          _ => break probe_widen(hash)
+        }
+      } else if (mode & 16u32) != 0u32 {
+        probe_widen(page.entries.length()) + if page.end {
+          2147483648u64
+        } else {
+          0u64
+        }
+      } else {
+        page.cookie
+      }
+    }
+  }
+}

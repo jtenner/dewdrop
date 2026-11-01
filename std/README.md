@@ -413,18 +413,39 @@ import dew.std.encoding.hex as @hex
 // @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
 ```
 
-`dew.std.io.process` adapts an existing `Process` to `Writer`:
+### Bounded directory pages
+
+`dew.std.fs.directory` adds `DirectoryReader`, separate from `FileSystem`.
+Call `read_directory(reader, path, cookie, max_entries, max_bytes)`.
+Start with cookie `0u64`. Use each page's cookie for the next call; stop when
+`page.end` is true. An empty page can still advance past `.` and `..`.
+Limits are 1–2048 encoded records (including dot entries) and 24–49152 encoded
+bytes per call. A full buffer needs another call to confirm end. A short final
+record returns prior progress, or `PartialRecord` if no complete record fits.
+Increase the byte limit on `PartialRecord`. No partial name is returned.
+
+Each entry has a UTF-8 single-part `name` and a `kind`. Names stay relative to
+`path`; do not treat them as global paths. Invalid UTF-8, empty/unsafe names,
+unknown type codes, oversized host replies and repeated cookies within a page
+are typed errors. Cookies are opaque, not ordered. Directory mutation can change
+pages; this API does not provide a snapshot. Callers that need protection from
+cycles across distinct pages must bound total calls or track prior cookies.
+
+`dew.std.fs.wasi_directory` provides `wasi_directory_reader(root_fd)`.
+It checks each path part with no-follow metadata and opens it with DIRECTORY
+and no link-follow flag. It returns entry symlinks as metadata and reports a
+`Symlink` error for a link in the directory path. It attempts to close each
+owned handle exactly once on success or error. The root handle
+belongs to the caller. A read/decode error takes precedence over a close error;
+a close error is returned when the read and decode succeed. This API does not
+walk subdirectories.
 
 ```dew
-let output = process_stdout(process)
-let result = io_write_all(output, b"hello\n")
-let errors = process_stderr(process)
-```
+open dew.std.fs.directory
+open dew.std.fs.wasi_directory
+open dew.std.path
 
-Both return `ProcessWriter<p>`. `channel()` returns `StandardOutput` or
-`StandardError` from `ProcessOutputChannel`. Direct writes forward once;
-`io_write_all` handles partial writes and rejects zero or excessive progress.
-Process `LimitExceeded` maps to IO `LimitExceeded`; every other kind maps to
-`Backend(code)`. This keeps the numeric code but discards the Process operation
-and kind. Channel identity stays in adapter state. Already written bytes are
-not rolled back on error. The module creates no global Process or host import.
+pub fn first_page(path: RelativePath) -> Result<DirectoryPage, DirectoryError> {
+  read_directory(wasi_directory_reader(3u32), path, 0u64, 64u32, 4096u32)
+}
+```

@@ -24,6 +24,8 @@ pub fn standard_decode_source() -> Bytes
 
 pub fn standard_deque_source() -> Bytes
 
+pub fn standard_directory_source() -> Bytes
+
 pub fn standard_disposable_source() -> Bytes
 
 pub fn standard_encode_source() -> Bytes
@@ -143,6 +145,8 @@ pub fn standard_types_source() -> Bytes
 pub fn standard_utf8_source() -> Bytes
 
 pub fn standard_v128_preamble_source() -> Bytes
+
+pub fn standard_wasi_directory_source() -> Bytes
 
 pub fn standard_wasi_source() -> Bytes
 

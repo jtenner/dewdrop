@@ -31,6 +31,7 @@ node tools/check-intrinsic-names.mjs tools/dew-test/intrinsic_names.wasm
 node tools/check-builtin-references.mjs tools/dew-test/intrinsic_function_reference.wasm
 node tools/check-production-assertions.mjs tools/dew-test/production_assertions.wasm
 node tools/check-wasi-bytes.mjs tools/dew-test/wasi_bytes.wasm
+node --expose-gc tools/check-directory-operations.mjs tools/dew-test/directory_operations.wasm
 node tools/wasi-parity/check-staging.mjs tools/dew-test/wasi_staging.wasm
 node tools/check-product-patterns.mjs tools/dew-test/product_patterns.wasm
 node tools/check-constructor-evaluations.mjs tools/dew-test/constructor_evaluations.wasm

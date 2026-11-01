@@ -39,6 +39,7 @@ PROBE_MODULES = [
     ("intrinsic_function_reference", "app.builtin_references"),
     ("production_assertions", "app.production_assertions"),
     ("wasi_bytes", "app.wasi_bytes"),
+    ("directory_operations", "app.directory_operations"),
     ("product_patterns", "app.product_patterns"),
     ("constructor_evaluations", "app.constructor_probes"),
     ("operator_call_recipes", "app.operator_call_recipes"),

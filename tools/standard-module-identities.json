@@ -81,6 +81,7 @@
     "dew.std.types": 79,
     "dew.std.collections.btree": 80,
     "dew.std.encoding.hex": 81,
-    "dew.std.io.process": 83
+    "dew.std.fs.directory": 84,
+    "dew.std.fs.wasi_directory": 85
   }
 }

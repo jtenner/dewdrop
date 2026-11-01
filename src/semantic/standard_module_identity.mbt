@@ -82,7 +82,8 @@ fn canonical_standard_module_id(path : String) -> ModuleId? {
     "dew.std.types" => Some(4294901839UL)
     "dew.std.collections.btree" => Some(4294901840UL)
     "dew.std.encoding.hex" => Some(4294901841UL)
-    "dew.std.io.process" => Some(4294901843UL)
+    "dew.std.fs.directory" => Some(4294901844UL)
+    "dew.std.fs.wasi_directory" => Some(4294901845UL)
     _ => None
   }
 }
