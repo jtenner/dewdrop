@@ -1,4 +1,5 @@
 open dew.std.path
+open dew.std.string
 open dew.std.string_builder
 open dew.std.testing
 
@@ -55,8 +56,11 @@ test "path parts exact 4096 byte limit" {
   let builder = StringBuilder::with_capacity(4096u32)
   builder.append("a/")
   while 0u32 {
-    index if index < 4092u32 => { builder.append_ascii(120u8); continue index + 1u32 }
-    _ => break
+    index if index < 4092u32 => {
+      builder.append_ascii(120u8)
+      continue index + 1u32
+    }
+    _ => break ()
   }
   builder.append(".z")
   let value = builder.finish()
@@ -73,5 +77,24 @@ test "path parts keep escape rejection" {
   assert(relative_path("a/../b") is Result::Err(PathError::ParentEscape), "parent segment accepted")
   assert(relative_path("a/./b") is Result::Err(PathError::EmptySegment), "dot segment accepted")
   assert(relative_path("a/") is Result::Err(PathError::EmptySegment), "trailing slash accepted")
-  assert(relative_path("a\0b") is Result::Err(PathError::Nul), "NUL accepted")
+  assert(relative_path("a\x00b") is Result::Err(PathError::Nul), "NUL accepted")
+}
+
+test "path parts limit counts UTF8 bytes" {
+  let builder = StringBuilder::with_capacity(4096u32)
+  while 0u32 {
+    index if index < 2048u32 => {
+      builder.append("é")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let value = builder.finish()
+  let path = parts_path(value)
+  assert(path.byte_length() == 4096u32, "UTF8 byte bound differs")
+  assert(path.filename().equals(value), "UTF8 limit filename differs")
+  assert(path.stem().equals(value), "UTF8 limit stem differs")
+  assert(path.extension() is Option::None, "UTF8 limit extension present")
+  assert(path.parent() is Option::None, "UTF8 limit parent present")
+  assert(relative_path(value.concat("é")) is Result::Err(PathError::TooLong), "UTF8 byte overflow accepted")
 }

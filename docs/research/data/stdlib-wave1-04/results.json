@@ -1,0 +1,134 @@
+{
+  "bench-4096-compile": {
+    "elapsed": "0:00.91",
+    "peak_rss_kib": 70024,
+    "exit": 0
+  },
+  "bench-512-compile": {
+    "elapsed": "0:00.94",
+    "peak_rss_kib": 70084,
+    "exit": 0
+  },
+  "bench-64-compile": {
+    "elapsed": "0:00.93",
+    "peak_rss_kib": 70100,
+    "exit": 0
+  },
+  "benchmark": {
+    "elapsed": "0:04.53",
+    "peak_rss_kib": 58008,
+    "exit": 0
+  },
+  "consumer-compile": {
+    "elapsed": "0:15.90",
+    "peak_rss_kib": 1312376,
+    "exit": 0
+  },
+  "consumer-run": {
+    "elapsed": "0:00.02",
+    "peak_rss_kib": 45060,
+    "exit": 0
+  },
+  "focused-compile": {
+    "elapsed": "0:27.92",
+    "peak_rss_kib": 1076604,
+    "exit": 0
+  },
+  "focused-run": {
+    "elapsed": "0:00.03",
+    "peak_rss_kib": 49784,
+    "exit": 0
+  },
+  "generator": {
+    "elapsed": "0:00.03",
+    "peak_rss_kib": 13040,
+    "exit": 0
+  },
+  "native": {
+    "elapsed": "0:15.25",
+    "peak_rss_kib": 682248,
+    "exit": 0
+  },
+  "tests": {
+    "focused_passed": 16,
+    "focused_failed": 0,
+    "new": 8,
+    "existing_host": 8,
+    "native_loader_passed": 31,
+    "native_loader_failed": 0,
+    "native_standard_sources_tests": 0,
+    "production_consumers_passed": 1,
+    "production_consumers_failed": 0,
+    "measured_probe_calls": 210000,
+    "warmup_probe_calls": 6000,
+    "probe_failures": 0
+  },
+  "benchmarks": [
+    {
+      "bytes": 64,
+      "calls": 70000,
+      "median_us": 1.0142989999999998,
+      "min_us": 0.8418138999999996,
+      "heap_delta": -2968,
+      "rss_delta": 524288,
+      "before": {
+        "rss": 54251520,
+        "heapTotal": 7184384,
+        "heapUsed": 4172488,
+        "external": 1776831,
+        "arrayBuffers": 10475
+      },
+      "after": {
+        "rss": 54775808,
+        "heapTotal": 7184384,
+        "heapUsed": 4169520,
+        "external": 1776835,
+        "arrayBuffers": 10475
+      }
+    },
+    {
+      "bytes": 512,
+      "calls": 70000,
+      "median_us": 5.7831107000000035,
+      "min_us": 4.360945700000002,
+      "heap_delta": 8456,
+      "rss_delta": 266240,
+      "before": {
+        "rss": 57315328,
+        "heapTotal": 7184384,
+        "heapUsed": 4190520,
+        "external": 1777920,
+        "arrayBuffers": 10475
+      },
+      "after": {
+        "rss": 57581568,
+        "heapTotal": 7184384,
+        "heapUsed": 4198976,
+        "external": 1777920,
+        "arrayBuffers": 10475
+      }
+    },
+    {
+      "bytes": 4096,
+      "calls": 70000,
+      "median_us": 58.549144500000004,
+      "min_us": 52.113258900000005,
+      "heap_delta": -336,
+      "rss_delta": 0,
+      "before": {
+        "rss": 58376192,
+        "heapTotal": 7184384,
+        "heapUsed": 4192640,
+        "external": 1777920,
+        "arrayBuffers": 10475
+      },
+      "after": {
+        "rss": 58376192,
+        "heapTotal": 7184384,
+        "heapUsed": 4192304,
+        "external": 1777920,
+        "arrayBuffers": 10475
+      }
+    }
+  ]
+}

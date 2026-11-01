@@ -275,6 +275,22 @@ The read/write loops are ordinary Dew functions that call the raw foreign import
 
 `dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. `dew.std.facet.imports` owns every raw Facet adapter import. The grouped `core`, `fs`, `process`, `clock`, `random`, `poll`, and `net` modules expose decoded results for all 261 canonical Facet 0.1 operations. `dew.std.facet.fs` contains `fd_sync` and `fd_datasync`. Link Facet programs with `--link-wasm facet fixtures/facet/facet-adapter.wasm`.
 
+`RelativePath.filename() -> String` returns the last component.
+`parent() -> Option<RelativePath>` returns the prefix before the last slash;
+a single component returns `None`, so the workspace root is never an empty
+`RelativePath`. `extension() -> Option<String>` uses the last dot in the
+filename, except a dot at byte zero. `stem() -> String` returns the filename
+before that dot, or the whole filename when there is no extension. Thus `.env`
+has no extension, `.env.json` has `Some("json")`, and `file.` has `Some("")`.
+Repeated dots use the same last-dot rule. All cuts are at ASCII separators,
+so UTF-8 names keep valid boundaries. Queries scan bytes without a split array.
+For example, after `relative_path("src/main.dew")` returns `Ok(path)`,
+`path.filename()` is `"main.dew"`, `path.stem()` is `"main"`,
+`path.extension()` is `Some("dew")`, and `path.parent()` is `Some` of `"src"`.
+The existing 4,096-byte bound and escape checks still apply. These queries do
+not normalize absolute paths or add authority.
+
+
 Path joins enforce the full 4,096-byte limit. WASI directory creation is
 idempotent for an existing directory, but reports an error for an existing file
 or other path kind.
@@ -414,18 +430,3 @@ import dew.std.encoding.hex as @hex
 // @hex.encode(b"\xAB\x01") == b"ab01"
 // @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
 ```
-
-`RelativePath.filename() -> String` returns the last component.
-`parent() -> Option<RelativePath>` returns the prefix before the last slash;
-a single component returns `None`, so the workspace root is never an empty
-`RelativePath`. `extension() -> Option<String>` uses the last dot in the
-filename, except a dot at byte zero. `stem() -> String` returns the filename
-before that dot, or the whole filename when there is no extension. Thus `.env`
-has no extension, `.env.json` has `Some("json")`, and `file.` has `Some("")`.
-Repeated dots use the same last-dot rule. All cuts are at ASCII separators,
-so UTF-8 names keep valid boundaries. Queries scan bytes without a split array.
-For example, after `relative_path("src/main.dew")` returns `Ok(path)`,
-`path.filename()` is `"main.dew"`, `path.stem()` is `"main"`,
-`path.extension()` is `Some("dew")`, and `path.parent()` is `Some` of `"src"`.
-The existing 4,096-byte bound and escape checks still apply. These queries do
-not normalize absolute paths or add authority.

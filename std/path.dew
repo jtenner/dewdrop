@@ -77,7 +77,62 @@ pub fn relative_path(value: String) -> Result<RelativePath, PathError> {
   }
 }
 
+// Slash and dot are ASCII bytes, so every returned cut is a UTF-8 boundary.
+fn path_filename_start(value: String) -> U32 {
+  while value.byte_length() {
+    end if end > 0u32 => {
+      if value.byte_at(end - 1u32) == 47u8 {
+        break end
+      } else {
+        continue end - 1u32
+      }
+    }
+    _ => break 0u32
+  }
+}
+
+// The length sentinel means there is no extension separator.
+fn path_extension_dot(value: String, start: U32) -> U32 {
+  while value.byte_length() {
+    end if end > start + 1u32 => {
+      if value.byte_at(end - 1u32) == 46u8 {
+        break end - 1u32
+      } else {
+        continue end - 1u32
+      }
+    }
+    _ => break value.byte_length()
+  }
+}
+
 impl RelativePath {
+  fn filename(self) -> String {
+    self.value.slice(path_filename_start(self.value), self.value.byte_length())
+  }
+  fn parent(self) -> Option<RelativePath> {
+    let start = path_filename_start(self.value)
+    if start == 0u32 {
+      Option::None
+    } else {
+      // A nonempty prefix of a validated path keeps all validation rules.
+      Option::Some(RelativePath::{
+        value: self.value.slice(0u32, start - 1u32)
+      })
+    }
+  }
+  fn extension(self) -> Option<String> {
+    let start = path_filename_start(self.value)
+    let dot = path_extension_dot(self.value, start)
+    if dot == self.value.byte_length() {
+      Option::None
+    } else {
+      Option::Some(self.value.slice(dot + 1u32, self.value.byte_length()))
+    }
+  }
+  fn stem(self) -> String {
+    let start = path_filename_start(self.value)
+    self.value.slice(start, path_extension_dot(self.value, start))
+  }
   fn to_string(self) -> String {
     self.value
   }
