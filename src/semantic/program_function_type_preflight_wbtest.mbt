@@ -397,7 +397,7 @@ test "direct lambda callback parameters retain the closure ABI" {
 test "generic callback records retain external result storage" {
   let stages = compiler_test_stages(24023UL, [
     CompilerTestModule::new("app.main", [
-      CompilerTestSource::new("main.dew", b"open app.callbacks\npub fn main() -> I32 { 42 }\n"),
+      CompilerTestSource::new("main.dew", b"open app.callbacks\npub fn main() -> I32 {\n  42\n}\n"),
     ]),
     CompilerTestModule::new("app.callbacks", [
       CompilerTestSource::new("callbacks.dew", b"open app.values\npub struct Reader<t, i> {\n  inner: i\n  pull: fn(i) -> Maybe<t>\n}\npub fn read<t, i>(reader: Reader<t, i>) -> Maybe<t> {\n  let pull = reader.pull\n  pull(reader.inner)\n}\n"),
@@ -416,13 +416,13 @@ test "generic callback records retain external result storage" {
 test "unused generic callback producer registers external results" {
   let stages = compiler_test_stages(24026UL, [
     CompilerTestModule::new("app.main", [
-      CompilerTestSource::new("main.dew", b"open app.callbacks\npub fn main() -> I32 { 42 }\n"),
+      CompilerTestSource::new("main.dew", b"open app.callbacks\npub fn main() -> I32 {\n  42\n}\n"),
     ]),
     CompilerTestModule::new("app.callbacks", [
-      CompilerTestSource::new("callbacks_test.dew", b"open app.values\npub struct Reader<t, i> {\n  inner: i\n  pull: fn(i) -> Maybe<t>\n}\nfn next<t, i: Read<t>>(inner: i) -> Maybe<t> { inner.read() }\npub fn reader<t, i: Read<t>>(inner: i) -> Reader<t, i> {\n  Reader::{ inner: inner, pull: next }\n}\n"),
+      CompilerTestSource::new("callbacks_test.dew", b"open app.values\npub trait Read<t> {\n  fn read(self) -> Maybe<t>\n}\npub struct Reader<t, i> {\n  inner: i\n  pull: fn(i) -> Maybe<t>\n}\nfn next<t, i: Read<t>>(inner: i) -> Maybe<t> {\n  inner.read()\n}\npub fn reader<t, i: Read<t>>(inner: i) -> Reader<t, i> {\n  Reader::{\n    inner: inner\n    pull: next\n  }\n}\n"),
     ]),
     CompilerTestModule::new("app.values", [
-      CompilerTestSource::new("values.dew", b"pub enum Maybe<t> {\n  Some(t)\n  None\n}\npub trait Read<t> { fn read(self) -> Maybe<t> }\n"),
+      CompilerTestSource::new("values.dew", b"pub enum Maybe<t> {\n  Some(t)\n  None\n}\n"),
     ]),
   ])
   assert_eq(stages.diagnostics(), [])
