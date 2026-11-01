@@ -58,3 +58,11 @@ including Debug's exact text under `write_limit: 3`. The log is
 Full review: **60 hunks**, 2,894 → 2,872 lines. Old function 34 is removed; its instruction body equals function 33 and does not read the receiver. Old functions 35–68 move down by one; all **68 retained bodies**, including `main`, match exactly under that map. Type 66 is removed and later type references move down by one. The compare caller now uses function 33.
 
 Source: `std/ordering.dew:39` compares values and does not read `self`; `std/collections/binary_heap.dew:59`, `:74`, and `:95` implement compare, sift-up, and sift-down. `tests/module-snapshots/collections/binary-heap-runtime.dew:66` starts checks for empty state, min/max order, duplicate keys, alias writes, Floyd heapify, custom comparators, reference values, iteration, and clear. Both old and new pass these checks on both runtimes.
+
+### `generics/bounded-function-reference-runtime-evidence.wat`
+
+**CORRECT NEW OUTPUT. Concrete callbacks use the four existing singletons for their exact selected targets. The generic paths that must capture runtime evidence remain in the module.**
+
+Full review: **5 hunks**, 399 → 375 lines. Specialized readers 11–14 now load globals 0–3 instead of allocating closures with wrappers 24–27. Startup already binds those globals to targets 17–20; the four removed wrappers only forwarded their value argument to those same targets. Four closure subtypes and their declared elements are removed. Capturing readers 9–10 and evidence wrappers 22–23 remain intact.
+
+Source: `tests/module-snapshots/generics/bounded-function-reference-runtime-evidence.dew:41` defines `read`; line 45 returns it from `reader`; line 71 checks results 42, 84, 42, and 1 for single-bound, ordered multi-bound, nominal, and Bool callbacks. The full-key/singleton rules above select the right evidence instance, while `src/backend/starshine_program_adapters.mbt:700` plans escaping evidence references. Both versions pass all four assertions on both runtimes.
