@@ -450,3 +450,23 @@ The state retains a 64-byte block, eight hash words, a checked byte count,
 a block offset, and a closed flag. It retains no input and allocates nothing
 in update. The block also serves as the circular message schedule.
 The existing `sha256(Bytes)` and its digest type are unchanged.
+
+Sorted Array search uses the existing `ArrayComparator<t>` contract.
+`array_lower_bound(values, key, comparator)` returns the first index whose
+value does not precede the key. `array_upper_bound` returns the first index
+whose value follows the key. `array_binary_search` returns `Option<U32>`
+and selects the first equal key. Equality here means comparator equivalence.
+The `_range` forms add `start, end` before the comparator and search only
+`[start, end)`. Results are absolute indices. Invalid ranges trap. Empty
+ranges return `start` for bounds and `None` for search. Input must be sorted
+by the same strict weak order; the comparator must not change it.
+Natural methods require `Lt`:
+
+```dew
+let values = [2u32, 4u32, 4u32, 8u32]
+values.lower_bound(4u32) // 1u32
+values.upper_bound(4u32) // 3u32
+values.binary_search(4u32) // Option::Some(1u32)
+```
+
+Search takes O(log n) comparisons and O(1) extra space. It does not sort.
