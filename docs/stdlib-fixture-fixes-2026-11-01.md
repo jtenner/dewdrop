@@ -82,3 +82,11 @@ Source: `tests/module-snapshots/generics/generic-enum-adapter-runtime.dew:18` de
 Full review: **3 hunks**, 276 → 276 lines. Only facts, declared elements, and startup references change: 9–13 → 14–18. All other code, types, globals, and exports remain unchanged. The five new targets have signatures I32, I64, F32, F64, and V128 respectively, with matching box fields on each side of erased function 7.
 
 Source: `tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.dew:1` defines identity; lines 13–30 return the five typed references. Main at line 33 creates all five and invokes I32, I64, and F64 with assertions. Both versions pass on both runtimes. F32 and V128 are constructed but not invoked by this existing fixture; their exact adapter bodies and matching carrier types were checked in the full WAT (no extra runtime coverage is claimed).
+
+### `modules/imported-bounded-function-reference-runtime-evidence.wat`
+
+**CORRECT NEW OUTPUT. The concrete imported reader uses its existing singleton for target 3. The generic imported reader still has the closure that captures runtime evidence.**
+
+Full review: **4 hunks**, 144 → 138 lines. Specialized reader 7 loads global 0 instead of making subtype 34 with wrapper 10. Startup already sets global 0 to target 3; removed wrapper 10 only forwarded argument 1 to function 3. Its subtype and declared element are removed. Generic reader 6 and capturing wrapper 9 remain unchanged.
+
+Source: `tests/module-snapshots/modules/imported-bounded-function-reference-runtime-evidence.dew:1` imports `fixture.callback_provider`; line 3 returns imported `read`, and line 11 checks callback result 42. The provider is in the adjacent `.modules/fixture.callback_provider/` directory. Exact-site target selection uses the module and specialization key, not a spelling rule. Both versions pass on both runtimes.
