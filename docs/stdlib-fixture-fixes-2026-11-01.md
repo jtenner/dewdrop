@@ -98,3 +98,11 @@ Source: `tests/module-snapshots/modules/imported-bounded-function-reference-runt
 Full review: **24 hunks**, 2,325 → 2,302 lines. Old function 92 is removed and its caller uses function 79. Its body equals retained function 79 after index mapping; all **98 retained bodies** match exactly. Old functions 93–98 move down one, type 137 is removed, and the later types/exports move with them.
 
 Source: `std/show.dew:50` checks depth and increments it before `append_show`. `tests/module-snapshots/text/show-collections-runtime.dew:26` checks Array, FixedArray, Option Some/None, Result Ok/Err, and nested Option<Array<I32>> strings. Every exact-string assertion passes for both versions on both runtimes.
+
+### `text/show-derived-runtime.wat`
+
+**CORRECT NEW OUTPUT. Derived Show calls reuse equivalent I32 and Point append functions. The required depth checks, field values, and text writes remain the same.**
+
+Full review: **22 hunks**, 1,891 → 1,846 lines. Old function 64 redirects to 54 and old 65 to 61; their bodies equal those retained targets under the type/index map. Types 82–83 are removed. All **71 retained bodies**, including the enum arms and nested Wrapper formatter, match exactly after mapping; later functions and types move down two.
+
+Source: `src/parser/derive.mbt:729` makes derived field calls to `show_append`; `std/show.dew:50` supplies the depth check. `tests/module-snapshots/text/show-derived-runtime.dew:33` checks empty structs, Point, unit/tuple/empty-struct/named enum variants, and nested generic Wrapper text. Both versions pass every string assertion on both runtimes.
