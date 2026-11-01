@@ -1441,3 +1441,94 @@ pub fn array_clear_suffix<t>(value: Array<t>, start: U32) -> Unit {
     _ => break array_unit()
   }
 }
+
+// Sorted search requires a stable strict weak order; indices are absolute.
+pub fn array_lower_bound_range<t, c: ArrayComparator<t>>(
+  values: Array<t>, key: t, start: U32, end: U32, comparator: c,
+) -> U32 {
+  array_require_range(array_length(values), start, end)
+  let mut low = start
+  let mut high = end
+  while true {
+    true if low < high => {
+      let middle = low + (high - low) / 2u32
+      if comparator.before(array_get_unchecked(values, middle), key) {
+        low = middle + 1u32
+      } else {
+        high = middle
+      }
+      continue true
+    }
+    _ => break low
+  }
+}
+
+pub fn array_lower_bound<t, c: ArrayComparator<t>>(
+  values: Array<t>, key: t, comparator: c,
+) -> U32 {
+  array_lower_bound_range(values, key, 0u32, array_length(values), comparator)
+}
+
+pub fn array_upper_bound_range<t, c: ArrayComparator<t>>(
+  values: Array<t>, key: t, start: U32, end: U32, comparator: c,
+) -> U32 {
+  array_require_range(array_length(values), start, end)
+  let mut low = start
+  let mut high = end
+  while true {
+    true if low < high => {
+      let middle = low + (high - low) / 2u32
+      if !comparator.before(key, array_get_unchecked(values, middle)) {
+        low = middle + 1u32
+      } else {
+        high = middle
+      }
+      continue true
+    }
+    _ => break low
+  }
+}
+
+pub fn array_upper_bound<t, c: ArrayComparator<t>>(
+  values: Array<t>, key: t, comparator: c,
+) -> U32 {
+  array_upper_bound_range(values, key, 0u32, array_length(values), comparator)
+}
+
+pub fn array_binary_search_range<t, c: ArrayComparator<t>>(
+  values: Array<t>, key: t, start: U32, end: U32, comparator: c,
+) -> Option<U32> {
+  let index = array_lower_bound_range(values, key, start, end, comparator)
+  if index < end && !comparator.before(key, array_get_unchecked(values, index)) {
+    Option::Some(index)
+  } else {
+    Option::None
+  }
+}
+
+pub fn array_binary_search<t, c: ArrayComparator<t>>(
+  values: Array<t>, key: t, comparator: c,
+) -> Option<U32> {
+  array_binary_search_range(values, key, 0u32, array_length(values), comparator)
+}
+
+impl<t: Lt> Array<t> {
+  fn lower_bound(self, key: t) -> U32 {
+    array_lower_bound(self, key, natural_array_comparator())
+  }
+  fn lower_bound_range(self, key: t, start: U32, end: U32) -> U32 {
+    array_lower_bound_range(self, key, start, end, natural_array_comparator())
+  }
+  fn upper_bound(self, key: t) -> U32 {
+    array_upper_bound(self, key, natural_array_comparator())
+  }
+  fn upper_bound_range(self, key: t, start: U32, end: U32) -> U32 {
+    array_upper_bound_range(self, key, start, end, natural_array_comparator())
+  }
+  fn binary_search(self, key: t) -> Option<U32> {
+    array_binary_search(self, key, natural_array_comparator())
+  }
+  fn binary_search_range(self, key: t, start: U32, end: U32) -> Option<U32> {
+    array_binary_search_range(self, key, start, end, natural_array_comparator())
+  }
+}
