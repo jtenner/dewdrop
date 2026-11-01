@@ -136,7 +136,9 @@ impl StringView {
     let length = self.byte_length()
     let start = while 0u32 {
       index if index < length => {
-        if !string_ascii_whitespace(self.byte_at(index)) { break index }
+        if !string_ascii_whitespace(self.byte_at(index)) {
+          break index
+        }
         continue index + 1u32
       }
       index => break index
@@ -146,7 +148,9 @@ impl StringView {
   fn trim_ascii_end(self) -> StringView {
     let end = while self.byte_length() {
       index if index > 0u32 => {
-        if !string_ascii_whitespace(self.byte_at(index - 1u32)) { break index }
+        if !string_ascii_whitespace(self.byte_at(index - 1u32)) {
+          break index
+        }
         continue index - 1u32
       }
       index => break index

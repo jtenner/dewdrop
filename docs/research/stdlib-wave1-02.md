@@ -35,3 +35,74 @@ and is a visible compiler performance failure, beyond the accepted 67.88 s
 cold baseline. Retry uses process-local `MOON_CC=/usr/bin/clang` and `-j 1`;
 there is no SDK change. Full initial log is retained locally in `.tmp/gates.log`.
 Gates are pending at this implementation checkpoint.
+
+## Final gates: PASS
+
+Checkpoints: tests/docs `968caab0`; implementation/mirror `9af13d8f`.
+The final evidence commit fixes the two inline `break` statements to use
+Dew's required newlines. The prior parser failure is retained in
+`stdlib-wave1-02/build-attempts.log`. Its build took 27.93 s and
+1,076,656 KiB peak RSS; no tests ran in that attempt. The earlier direct
+Clang attempt took 21.63 s and 866,528 KiB and failed on its default
+256-bracket limit in generated C (`starshine_v128_builtins.mbt:533`).
+These build setup failures are resolved by the local wrapper in `gates.sh`.
+
+Run from `/data/workspace/wave1-item-02`:
+
+```sh
+flock /data/workspace/wave1-control/build.lock bash docs/research/stdlib-wave1-02/gates.sh > .tmp/final-gates.log 2>&1
+git diff --check
+```
+
+The script records each exact command with `/usr/bin/time -v`. It sets
+`MOON_CC` to a private Clang wrapper with `-fbracket-depth=4096 -g0 -O0`
+and uses `moon run -j 1 --target native`. This changes only the compiler
+process environment. It preserves full logs in `.tmp`; compact result
+lines are saved in `stdlib-wave1-02/results.log`.
+
+| Gate | Wall seconds | Peak RSS KiB | Result |
+| --- | ---: | ---: | --- |
+| `python3 tools/generate_string_std.py --check` | 0.03 | 12,128 | pass |
+| focused `src/dew_test_gen` compile, including cold native build | 27.92 | 1,077,276 | pass |
+| focused Node test run | 0.03 | 46,188 | 6 passed, 0 failed, 6 new |
+| `src/module_snapshot_gen` production consumer compile | 19.57 | 930,852 | pass |
+| Node consumer checks and scan benchmark | 0.77 | 58,728 | 5 exports passed |
+
+The production consumer uses ordinary `app.trim` imports and all three
+String entry points, plus both-sided nonzero-start views at three sizes.
+It needs no host imports. All six focused tests have 164 assertions.
+There are no unresolved source or compiler blockers. The 92.83 s initial
+GCC build remains a recorded performance failure; final compiler commands
+are below 30 s. No baseline snapshot was changed.
+
+Owner G0 remains the accepted baseline: 355 public tests, 41 separate
+private B-tree tests, 42 builtin traps, and 4,121 operation probes.
+This worker ran six focused tests only; it does not count private/provider
+cases again or claim a fresh full-suite result. No compiler source changed,
+so native compiler unit/integration lanes are left to combined landing.
+
+## Runtime and memory
+
+`bench.py` generates the production source. `bench.mjs` loads and warms it
+before timing. Seven batches of 10,000 calls measure scan plus view-header
+creation, with compilation and Wasm initialization outside the timed loop.
+Each result is checked against the expected six UTF-8 bytes (`λ🌍`).
+This is a new API; no before/after speedup is claimed.
+
+| Removed ASCII bytes | Median ns/call | Post-GC heap delta bytes | RSS delta bytes |
+| ---: | ---: | ---: | ---: |
+| 32 | 78.609 | -3,144 | 0 |
+| 512 | 622.824 | 9,560 | 561,152 |
+| 8,192 | 8,293.008 | 16 | 0 |
+
+The scan visits each removed byte once, plus at most one stopping byte per
+side. This gives linear worst-case work and constant scan state. Measurements
+agree with linear growth after fixed call/view cost. Heap/RSS deltas include
+runtime noise, not exact object sizes. Source inspection of
+`std/text_runtime.dew` (`bytes_view` and `string_view_range`) proves shared
+payload and bounded range-record allocation as described above.
+
+The EXIT trap removed `_build`, `.mooncakes`, `.dew/cache`, generated Wasm,
+and the generated consumer source before releasing the lock. No push,
+SDK change, B-tree edit, new module, or shared registry change occurred.
+Status: READY for review; not landed.
