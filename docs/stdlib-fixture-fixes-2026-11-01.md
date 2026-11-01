@@ -106,3 +106,11 @@ Source: `std/show.dew:50` checks depth and increments it before `append_show`. `
 Full review: **22 hunks**, 1,891 → 1,846 lines. Old function 64 redirects to 54 and old 65 to 61; their bodies equal those retained targets under the type/index map. Types 82–83 are removed. All **71 retained bodies**, including the enum arms and nested Wrapper formatter, match exactly after mapping; later functions and types move down two.
 
 Source: `src/parser/derive.mbt:729` makes derived field calls to `show_append`; `std/show.dew:50` supplies the depth check. `tests/module-snapshots/text/show-derived-runtime.dew:33` checks empty structs, Point, unit/tuple/empty-struct/named enum variants, and nested generic Wrapper text. Both versions pass every string assertion on both runtimes.
+
+### `types/derive-debug-runtime.wat`
+
+**CORRECT NEW OUTPUT. Wrapper<I32> Debug reuses the existing equivalent I32 forwarding function. All output bytes and partial-write behavior stay the same.**
+
+Full review: **33 hunks**, 1,976 → 1,971 lines. Old function 68 is removed; old Wrapper body 81 (new 80) calls retained function 46. Both forwarding bodies load argument 0 and call function 32. Type 87 is removed, later types and functions move down one, and all **79 retained bodies** match exactly after this map.
+
+Source: `src/parser/derive.mbt:572` makes ordinary `debug` field calls; line 586 builds struct output. `tests/module-snapshots/types/derive-debug-runtime.dew:34` covers derived structs/enums, nested values, integer limits, float bit patterns including negative zero, Unit, escaped text/bytes, SWAR, and V128. Its unchanged JSON sets `write_limit: 3`. Both old and new produce the exact expected text on Node and Wago.
