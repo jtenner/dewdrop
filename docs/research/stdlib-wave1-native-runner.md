@@ -17,3 +17,7 @@ The runner also checks the file-list pipeline status and rejects an empty list.
 A failing search shim reproduced the old zero exit; the same shim now gives
 exit 1, retains the search diagnostic, and names the source directory.
 Both checks run before any compiler activity.
+
+Final full native retry: **1,931 passed, 0 failed**, all 304 groups, 654.60 s
+with the pinned SDK default C settings. The earlier incomplete and stale-count
+runs are excluded from pass totals and preserved in final compressed evidence.
