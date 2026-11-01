@@ -1,0 +1,42 @@
+[
+  {
+    "fixture": "tests/module-snapshots/collections/binary-heap-runtime.wat",
+    "sha256": "6bfacd348b8a351126d3a8d86b1c6d12058390e22f5789b344d870f9ed5019b0",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/generics/bounded-function-reference-runtime-evidence.wat",
+    "sha256": "9073a5ba39540398cc462d1e9f83f24087abef2b0f17e9c0e03fdf6aff6e538f",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/generics/generic-enum-adapter-runtime.wat",
+    "sha256": "61d319caacbd04758d4d40ad29e656652c269ea2cb154a082e79cc25e204822e",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.wat",
+    "sha256": "b002eddeb2392c538d684b1424dd0a182f2fdba3762bddedb836cddd923f67d1",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/modules/imported-bounded-function-reference-runtime-evidence.wat",
+    "sha256": "9fa9a8367942db625794f8042d25fadc955b1c7334f7f44183176e8a3bc8e2d0",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/text/show-collections-runtime.wat",
+    "sha256": "ae3267d62470acebd4abbd4d75aa175141d8e5d7305a7a9670114a26fe1e78f8",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/text/show-derived-runtime.wat",
+    "sha256": "db46ab7711928c9555a1d40b8dc5700723f8db3c2e63cb3b4be3dc8449278c02",
+    "unchanged_from": "8c3b047f"
+  },
+  {
+    "fixture": "tests/module-snapshots/types/derive-debug-runtime.wat",
+    "sha256": "f74d63c7dd4dc951cc38118fd4f60fd72dedbbf8ef1220eb0829c05b8a0b55fa",
+    "unchanged_from": "8c3b047f"
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "pass": 460,
+  "checking": 461,
+  "failed_summary": [
+    "module snapshots failed: 1 fixture(s)"
+  ],
+  "compiler_calls": 917,
+  "generator": [
+    "snapshot timing: native generator build: 23.454 seconds"
+  ],
+  "longest_compile": 2.775,
+  "wall": [
+    "real 288.25"
+  ],
+  "performance_bugs": [],
+  "status": "wat 0\nsnapshots 1\n"
+}
