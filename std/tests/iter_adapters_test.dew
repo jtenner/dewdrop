@@ -1,0 +1,57 @@
+open dew.std.iter
+open dew.std.array
+
+struct AdapterProbe {
+  mut pulls: U32
+  mut predicates: U32
+  mut maps: U32
+}
+struct AdapterSource {
+  probe: AdapterProbe
+  limit: U32
+}
+impl Iter<U32> for AdapterSource {
+  fn next(self) -> Option<U32> {
+    let n = self.probe.pulls
+    self.probe.pulls = n + 1u32
+    if n < self.limit { Some(n) } else { None }
+  }
+}
+fn adapter_probe() -> AdapterProbe {
+  AdapterProbe::{ pulls: 0u32 predicates: 0u32 maps: 0u32 }
+}
+
+test "lazy adapters do no work at construction or take zero" {
+  let p = adapter_probe()
+  let source = AdapterSource::{ probe: p limit: 3u32 }
+  let mapped = iter_map(source, fn(v: U32) -> U32 {
+    p.maps = p.maps + 1u32
+    v
+  })
+  let taken = iter_take(mapped, 0u32)
+  assert(p.pulls == 0u32 && p.maps == 0u32, "construction is lazy")
+  assert(taken.next() is None, "take zero")
+  assert(taken.next() is None, "take zero terminal")
+  assert(p.pulls == 0u32 && p.maps == 0u32, "take zero never pulls")
+}
+
+test "filter map callback order counts and terminal state" {
+  let p = adapter_probe()
+  let source = AdapterSource::{ probe: p limit: 5u32 }
+  let filtered = iter_filter(source, fn(v: U32) -> Bool {
+    p.predicates = p.predicates + 1u32
+    assert(p.maps == v / 2u32, "predicate precedes map")
+    v % 2u32 == 0u32
+  })
+  let mapped = iter_map(filtered, fn(v: U32) -> U32 {
+    assert(p.predicates == v + 1u32, "map follows accepted predicate")
+    p.maps = p.maps + 1u32
+    v + 10u32
+  })
+  assert(mapped.next() is Some(10u32), "first")
+  assert(mapped.next() is Some(12u32), "second")
+  assert(mapped.next() is Some(14u32), "third")
+  assert(mapped.next() is None, "end")
+  assert(mapped.next() is None, "fused end")
+  assert(p.pulls == 6u32 && p.predicates == 5u32 && p.maps == 3u32, "exact counts")
+}

@@ -381,3 +381,14 @@ They do not do Unicode trimming. NUL and all non-ASCII spaces stay unchanged.
 For example, `" \tλ \n".trim_ascii().to_string()` is `"λ"`.
 Bounds are relative to the input view. Only single-byte ASCII scalars are
 removed, so a valid input view keeps valid UTF-8 scalar boundaries.
+
+Lazy iterator adapters in `dew.std.iter` use typed state and create no arrays:
+`iter_map(source, callback)`, `iter_filter(source, predicate)`,
+`iter_take(source, count: U32)`, `iter_skip(source, count: U32)`, and
+`iter_enumerate(source)`. Each result implements `Iter`; call `next()` to pull.
+For example, `iter_map(iter_filter(array_iter(values), keep), transform)`
+runs `keep` in input order and calls `transform` only for accepted values.
+Construction does no upstream work. `take(0)` never pulls. All wrappers stop
+permanently at the first `None`; later calls do no work. Skip discards its count
+on the first pull. Enumerate returns `IterEntry<t>` with `index: U64` (starting
+at zero, wrapping at the U64 limit) and `value: t`. Aliases share wrapper state.
