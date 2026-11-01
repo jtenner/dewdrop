@@ -159,3 +159,40 @@ snapshot Python cache before releasing the lock. Starshine remains clean at
 - Old SHA-256: `17c5dd62cb831162bbd1b7e328af3796a01850f48257b22dca18ff31a273c681`
 - New SHA-256: `3116484d7281b17d76698cecb857cfc7d1da7739bb27f1ae7e45932912837c6e`
 
+## Wildcard assertion resolution
+
+The separate general compiler fix `f4a63e6d` (integration commit recorded in
+the campaign report) aligns callback-reference collection with reachable
+nominal demand. It preserves the invariant and uses no standard-module path,
+name, or ordinal rule. An ordinary user-module regression proves the former
+role-53 panic. The wildcard now compiles and runs on Node and Wago; its WAT
+is byte-for-byte unchanged. The former compiler escalation is resolved.
+
+The wildcard's diagnostic expectation gains two correct source warnings:
+`std/encoding/hex.dew:46` has a dead fallback after the explicit overflow trap,
+and `std/encoding/binary.dew:6` derives Eq for a one-variant error enum, making
+the generated fallback redundant (the existing UTF-8 warning uses the same
+policy). These warnings were already visible in item gates. Only the warnings
+array is updated; errors, output and expected WAT are unchanged. This is
+**CORRECT NEW DIAGNOSTIC OUTPUT**, after fixing the real assertion cause.
+The final full snapshot result is recorded in the campaign report.
+
+## Iterator expectation after the compiler fix
+
+**CORRECT NEW OUTPUT.** Reachable-only callback collection removes the three
+unused callback signatures added by unused iterator producers. The final
+iterator WAT is byte-for-byte equal to the pre-wave expected file at
+`1caf8f48`; all 47 function bodies and all facts therefore match that known
+output exactly. The new full run passed unchanged diagnostics/output on
+Node and Wago before the WAT comparison. Only this reviewed expected WAT
+is restored; no blanket update command is used.
+
+The 24-hunk full diff and old/new hashes are preserved in
+`research/data/stdlib-wave1/final/iter-reachability.diff.gz` and
+`iter-reachability-review.json`. The prior four-fixture review remains a
+record of the earlier library-only output; this section records the smaller
+output after the general compiler fix. A final full snapshot rerun follows.
+
+Final full verification at `a1eb11ed`: **461/461 snapshots passed** on Node
+and Wago in 235.53 s, with 922 measured compiler calls. No functional
+escalation remains. Full log: `research/data/stdlib-wave1/final/snapshots-final.log.gz`.
