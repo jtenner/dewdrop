@@ -414,3 +414,18 @@ import dew.std.encoding.hex as @hex
 // @hex.encode(b"\xAB\x01") == b"ab01"
 // @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
 ```
+
+`RelativePath.filename() -> String` returns the last component.
+`parent() -> Option<RelativePath>` returns the prefix before the last slash;
+a single component returns `None`, so the workspace root is never an empty
+`RelativePath`. `extension() -> Option<String>` uses the last dot in the
+filename, except a dot at byte zero. `stem() -> String` returns the filename
+before that dot, or the whole filename when there is no extension. Thus `.env`
+has no extension, `.env.json` has `Some("json")`, and `file.` has `Some("")`.
+Repeated dots use the same last-dot rule. All cuts are at ASCII separators,
+so UTF-8 names keep valid boundaries. Queries scan bytes without a split array.
+For example, after `relative_path("src/main.dew")` returns `Ok(path)`,
+`path.filename()` is `"main.dew"`, `path.stem()` is `"main"`,
+`path.extension()` is `Some("dew")`, and `path.parent()` is `Some` of `"src"`.
+The existing 4,096-byte bound and escape checks still apply. These queries do
+not normalize absolute paths or add authority.
