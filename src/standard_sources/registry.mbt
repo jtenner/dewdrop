@@ -30,12 +30,14 @@ pub fn standard_source_paths() -> Array[String] {
   }
   paths.push("std/types.dew")
   paths.push("std/encoding/hex.dew")
+  paths.push("std/encoding/binary.dew")
   paths
 }
 
 ///|
 pub fn bootstrap_standard_source(path : String) -> Bytes? {
   match path {
+    "std/encoding/binary.dew" => Some(standard_binary_source())
     "std/types.dew" => Some(standard_types_source())
     "std/preamble/00-builtins.dew" => Some(standard_preamble_builtins_source())
     "std/preamble/10-traits.dew" => Some(standard_preamble_traits_source())

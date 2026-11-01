@@ -1,0 +1,138 @@
+{
+  "attempt1": {
+    "binary_generator": {
+      "command": "python3 tools/generate_binary_std.py --check",
+      "wall_time": "0:00.01",
+      "peak_rss_kib": "12028",
+      "exit": "0"
+    },
+    "consumer": {
+      "command": "moon run -j 1 --target native src/module_snapshot_gen -- .tmp/consumer.wasm production app.binary binary-consumer.dew docs/research/stdlib-wave1-06-consumer.dew",
+      "wall_time": "0:20.37",
+      "peak_rss_kib": "930704",
+      "exit": "0"
+    },
+    "equivalence": {
+      "command": "moon test -j 1 --target native src/standard_loader/interface_bundle_cache_wbtest.mbt --filter bootstrap and on-disk standard providers are byte identical",
+      "wall_time": "0:09.64",
+      "peak_rss_kib": "681160",
+      "exit": "0"
+    },
+    "focused": {
+      "command": "moon run -j 1 --target native src/dew_test_gen -- .tmp/binary.wasm dew.std dew.std std/tests/binary_codec_test.dew std/tests/binary_codec_test.dew",
+      "wall_time": "0:29.14",
+      "peak_rss_kib": "1081132",
+      "exit": "0"
+    },
+    "focused_runtime": {
+      "command": "node tools/dew-test/run.mjs --wasm .tmp/binary.wasm",
+      "wall_time": "0:00.03",
+      "peak_rss_kib": "46444",
+      "exit": "0"
+    },
+    "generated": {
+      "command": "bash tools/check-generated.sh",
+      "wall_time": "0:03.57",
+      "peak_rss_kib": "27148",
+      "exit": "127"
+    },
+    "identity_generator": {
+      "command": "python3 tools/generate_standard_module_identities.py --check",
+      "wall_time": "0:00.02",
+      "peak_rss_kib": "12024",
+      "exit": "0"
+    },
+    "integration": {
+      "command": "env DEW_INTEGRATION_TEST_FILES=src/semantic/module_system_wbtest.mbt src/semantic/standard_preamble_wbtest.mbt bash tools/test-integration-native.sh -j 1",
+      "wall_time": "0:24.50",
+      "peak_rss_kib": "1132300",
+      "exit": "1"
+    },
+    "interfaces": {
+      "command": "moon info --target native src/standard_sources",
+      "wall_time": "0:00.20",
+      "peak_rss_kib": "35020",
+      "exit": "0"
+    },
+    "registry": {
+      "command": "env DEW_NATIVE_TEST_PACKAGES=standard_sources bash tools/test-native.sh -j 1",
+      "wall_time": "0:01.00",
+      "peak_rss_kib": "80780",
+      "exit": "0"
+    },
+    "runtime": {
+      "command": "node --expose-gc docs/research/stdlib-wave1-06-runtime.mjs .tmp/consumer.wasm",
+      "wall_time": "0:01.13",
+      "peak_rss_kib": "54080",
+      "exit": "0"
+    }
+  },
+  "attempt2": {
+    "binary_generator": {
+      "command": "python3 tools/generate_binary_std.py --check",
+      "wall_time": "0:00.02",
+      "peak_rss_kib": "12104",
+      "exit": "0"
+    },
+    "consumer": {
+      "command": "moon run -j 1 --target native src/module_snapshot_gen -- .tmp/consumer.wasm production app.binary binary-consumer.dew docs/research/stdlib-wave1-06-consumer.dew",
+      "wall_time": "0:19.87",
+      "peak_rss_kib": "930768",
+      "exit": "0"
+    },
+    "equivalence": {
+      "command": "moon test -j 1 --target native src/standard_loader/interface_bundle_cache_wbtest.mbt --filter bootstrap and on-disk standard providers are byte identical",
+      "wall_time": "0:09.44",
+      "peak_rss_kib": "681064",
+      "exit": "0"
+    },
+    "focused": {
+      "command": "moon run -j 1 --target native src/dew_test_gen -- .tmp/binary.wasm dew.std dew.std std/tests/binary_codec_test.dew std/tests/binary_codec_test.dew",
+      "wall_time": "0:28.81",
+      "peak_rss_kib": "1081024",
+      "exit": "0"
+    },
+    "focused_runtime": {
+      "command": "node tools/dew-test/run.mjs --wasm .tmp/binary.wasm",
+      "wall_time": "0:00.03",
+      "peak_rss_kib": "46504",
+      "exit": "0"
+    },
+    "generated": {
+      "command": "bash tools/check-generated.sh",
+      "wall_time": "0:54.49",
+      "peak_rss_kib": "837112",
+      "exit": "0"
+    },
+    "identity_generator": {
+      "command": "python3 tools/generate_standard_module_identities.py --check",
+      "wall_time": "0:00.02",
+      "peak_rss_kib": "11992",
+      "exit": "0"
+    },
+    "integration": {
+      "command": "env DEW_INTEGRATION_TEST_FILES=src/semantic/module_system_wbtest.mbt src/semantic/standard_preamble_wbtest.mbt bash tools/test-integration-native.sh -j 1",
+      "wall_time": "0:25.34",
+      "peak_rss_kib": "1132400",
+      "exit": "0"
+    },
+    "interfaces": {
+      "command": "moon info --target native src/standard_sources",
+      "wall_time": "0:00.19",
+      "peak_rss_kib": "34988",
+      "exit": "0"
+    },
+    "registry": {
+      "command": "env DEW_NATIVE_TEST_PACKAGES=standard_sources bash tools/test-native.sh -j 1",
+      "wall_time": "0:00.92",
+      "peak_rss_kib": "80784",
+      "exit": "0"
+    },
+    "runtime": {
+      "command": "node --expose-gc docs/research/stdlib-wave1-06-runtime.mjs .tmp/consumer.wasm",
+      "wall_time": "0:01.12",
+      "peak_rss_kib": "54240",
+      "exit": "0"
+    }
+  }
+}

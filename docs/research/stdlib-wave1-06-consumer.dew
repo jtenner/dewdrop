@@ -1,0 +1,66 @@
+import dew.std.encoding.binary as @binary
+open dew.std.bytes_builder
+
+// A tiny request/capsule shape, not a change to any version 1 format.
+pub fn main() -> U32 {
+  let builder = BytesBuilder::new()
+  @binary.write_u16_le(builder, 1u16)
+  @binary.write_u32_be(builder, 3u32)
+  builder.append(b"req")
+  let cursor = @binary.binary_cursor(builder.finish())
+  match @binary.read_u16_le(cursor) {
+    Result::Ok(1u16) => @binary.binary_remaining(cursor)
+    _ => 0u32
+  }
+}
+
+// Fixed input and constant live cursor state. Count controls only iterations.
+pub fn scan(count: U32) -> U32 {
+  let input = b"\x01\x02\x03\x04\x05\x06\x07\x08"
+  while (0u32, 0u32) {
+    (index, sum) if index < count => {
+      let cursor = @binary.binary_cursor(input)
+      let value = match @binary.read_u64_le(cursor) {
+        Result::Ok(value) => {
+          if value == 578437695752307201u64 {
+            1u32
+          } else {
+            0u32
+          }
+        }
+        Result::Err(_) => 0u32
+      }
+      continue (index + 1u32, sum + value)
+    }
+    (_, sum) => break sum
+  }
+}
+
+pub fn roundtrip(count: U32) -> U32 {
+  while (0u32, 0u32) {
+    (index, sum) if index < count => {
+      let builder = BytesBuilder::with_capacity(28u32)
+      @binary.write_u16_le(builder, 513u16)
+      @binary.write_u16_be(builder, 513u16)
+      @binary.write_u32_le(builder, 67305985u32)
+      @binary.write_u32_be(builder, 67305985u32)
+      @binary.write_u64_le(builder, 578437695752307201u64)
+      @binary.write_u64_be(builder, 578437695752307201u64)
+      let cursor = @binary.binary_cursor(builder.finish())
+      let valid = @binary.read_u16_le(cursor) is Result::Ok(513u16) &&
+        @binary.read_u16_be(cursor) is Result::Ok(513u16) &&
+        @binary.read_u32_le(cursor) is Result::Ok(67305985u32) &&
+        @binary.read_u32_be(cursor) is Result::Ok(67305985u32) &&
+        @binary.read_u64_le(cursor) is Result::Ok(578437695752307201u64) &&
+        @binary.read_u64_be(cursor) is Result::Ok(578437695752307201u64) &&
+        @binary.binary_remaining(cursor) == 0u32
+      let value = if valid {
+        1u32
+      } else {
+        0u32
+      }
+      continue (index + 1u32, sum + value)
+    }
+    (_, sum) => break sum
+  }
+}

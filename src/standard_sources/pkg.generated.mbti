@@ -8,6 +8,8 @@ pub fn standard_array_source() -> Bytes
 
 pub fn standard_binary_heap_source() -> Bytes
 
+pub fn standard_binary_source() -> Bytes
+
 pub fn standard_blake3_source() -> Bytes
 
 pub fn standard_bloom_filter_source() -> Bytes

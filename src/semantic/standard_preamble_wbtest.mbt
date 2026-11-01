@@ -46,7 +46,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 92)
+  assert_eq(wildcard_paths.length(), 93)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -97,6 +97,7 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[88], "std/f64x2.dew")
   assert_eq(wildcard_paths[90], "std/collections/btree.dew")
   assert_eq(wildcard_paths[91], "std/encoding/hex.dew")
+  assert_eq(wildcard_paths[92], "std/encoding/binary.dew")
   let hex_manifest = ProgramManifest::new([
     ManifestModule::new("app.hex", [
       ManifestFile::new(
@@ -575,4 +576,20 @@ test "ambient preamble resolves Fibonacci operators" {
     }
   }
   assert_eq(selected, 4)
+}
+
+///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
+test "binary import closure includes bytes and builder" {
+  let paths = required_standard_library_source_paths(
+    ProgramManifest::new([ManifestModule::new("app.main", [
+      ManifestFile::new("main.dew", b"open dew.std.encoding.binary\npub fn run() -> Unit {\n}\n"),
+    ])]), false,
+  )
+  assert_true(paths.contains("std/encoding/binary.dew"))
+  assert_true(paths.contains("std/bytes.dew"))
+  assert_true(paths.contains("std/bytes_builder.dew"))
+  assert_false(paths.contains("std/encoding/utf8.dew"))
+  assert_false(paths.contains("std/encoding/hex.dew"))
+  assert_eq(canonical_standard_module_id("dew.std.encoding.binary"), Some(4294901842UL))
 }

@@ -84,6 +84,7 @@ dew.std.string_builder              consuming StringBuilder
 dew.std.bytes                       immutable Bytes ranges and search
 dew.std.bytes_builder               consuming BytesBuilder
 dew.std.encoding.utf8               strict and lossy UTF-8 codecs
+dew.std.encoding.binary             bounded byte cursor and endian integer writes
 dew.std.blake3                       portable BLAKE3-256
 dew.std.integrity.sha256              portable one-shot SHA-256
 dew.std.wasi                        Preview 1 Bytes I/O
@@ -483,3 +484,21 @@ Construction reads only the delimiter. KMP search takes O(source + delimiter)
 time and O(delimiter) state. `source_scans()` and `comparisons()` count source
 bytes advanced by the forward search and search comparisons. They exclude
 prefix table setup and the CR check in `lines()`.
+
+`dew.std.encoding.binary` provides a bounded `BinaryCursor` over `Bytes`.
+`binary_cursor(bytes)` starts at zero. `binary_position`, `binary_remaining`,
+and `binary_remaining_bytes` expose its state. `read_bytes(cursor, length)`
+returns a shared view. `read_u16_le`/`read_u16_be`, `read_u32_le`/`read_u32_be`,
+and `read_u64_le`/`read_u64_be` return a `Result` with the stated integer
+type or `BinaryError`.
+`ShortInput(position, requested, available)` leaves the cursor unchanged.
+Zero length reads succeed, including at the end. Lengths use U32; subtraction
+checks prevent overflow. Cursor state is private to this module. Aliases
+share the cursor position.
+
+For example, `read_u16_le(binary_cursor(b"\x01\x00"))` returns
+`Result::Ok(1u16)`. The six `write_u*_le`/`write_u*_be` functions append
+fixed width values to a `BytesBuilder`. They use its normal capacity and
+finished-builder rules. No host access is needed. Slice views keep the input
+backing storage alive; use `Bytes.compact()` when a small slice must outlive
+large input. Existing version 1 formats are unchanged.

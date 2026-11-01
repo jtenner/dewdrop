@@ -105,6 +105,7 @@ python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check
 python3 tools/generate_utf8_std.py --check
 python3 tools/generate_hex_std.py --check
+python3 tools/generate_binary_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 python3 tools/test_dew_registry_cli.py
