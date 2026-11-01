@@ -262,6 +262,7 @@ def compile_fixture(
     ]
     for module, logical, path in fixture_sources(source):
         command.extend((module, logical, str(path)))
+    started = time.perf_counter()
     process = subprocess.run(
         command,
         cwd=ROOT,
@@ -270,6 +271,10 @@ def compile_fixture(
         stderr=subprocess.PIPE,
         text=True,
     )
+    elapsed = time.perf_counter() - started
+    print(f"snapshot compile timing: {fixture_name(source)}: {elapsed:.3f} seconds", file=sys.stderr)
+    if elapsed > 30:
+        print(f"snapshot performance bug: {fixture_name(source)} compile exceeded 30 seconds", file=sys.stderr)
     errors, warnings, internals = compiler_diagnostics(
         process.stdout + "\n" + process.stderr
     )
