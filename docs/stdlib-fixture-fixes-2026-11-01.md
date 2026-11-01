@@ -74,3 +74,11 @@ Source: `tests/module-snapshots/generics/bounded-function-reference-runtime-evid
 Full review: **3 hunks**, 773 → 773 lines. Only `compiler.facts`, the declared element, and startup `ref.func` change; the target is 5 → 7. All function bodies remain unchanged. Function 7 converts compact scalar payloads through the erased fallback and back; function 5 is the direct specialized implementation. Facts must mark the new address-taken target and startup call target.
 
 Source: `tests/module-snapshots/generics/generic-enum-adapter-runtime.dew:18` defines `echo_maybe`, line 39 returns it as a function value, and line 43 checks tuple, named, boxed, and nested enum payloads (42–45). `src/semantic/program_physical_link.mbt:1572` checks signature compatibility before selecting an adapter; emission uses that selected singleton. Both versions pass every assertion on both runtimes.
+
+### `generics/generic-erased-scalar-adapter-runtime.wat`
+
+**CORRECT NEW OUTPUT. Each singleton uses its exact typed export adapter, which boxes the argument, calls erased `identity`, and unboxes the result. The value and carrier type are preserved.**
+
+Full review: **3 hunks**, 276 → 276 lines. Only facts, declared elements, and startup references change: 9–13 → 14–18. All other code, types, globals, and exports remain unchanged. The five new targets have signatures I32, I64, F32, F64, and V128 respectively, with matching box fields on each side of erased function 7.
+
+Source: `tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.dew:1` defines identity; lines 13–30 return the five typed references. Main at line 33 creates all five and invokes I32, I64, and F64 with assertions. Both versions pass on both runtimes. F32 and V128 are constructed but not invoked by this existing fixture; their exact adapter bodies and matching carrier types were checked in the full WAT (no extra runtime coverage is claimed).
