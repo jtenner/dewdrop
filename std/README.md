@@ -157,11 +157,20 @@ The self-host compiler uses the declared enum fragments for Option and Result, w
 range error and `Some` for an exact value. Existing `Into` bit and wrapping
 conversions keep their current behavior.
 
-`dew.std.text` provides `parse_u32_decimal(StringView)` and
-`parse_i32_decimal(StringView)`. The parsers accept ASCII decimal digits,
-leading zeros, and an optional minus for I32. They reject whitespace, plus,
-separators, fractions, and exponents. `DecimalParseError` reports empty text,
+`dew.std.text` provides `parse_u32_decimal(StringView)`,
+`parse_i32_decimal(StringView)`, `parse_u64_decimal(StringView)`, and
+`parse_i64_decimal(StringView)`. The parsers accept ASCII decimal digits,
+leading zeros, and an optional minus for signed values. They reject whitespace,
+plus, separators, fractions, and exponents. `DecimalParseError` reports empty text,
 an invalid digit, or overflow. Offsets count bytes from the start of the view.
+Overflow reports the first digit that exceeds the target range. Empty input returns `Empty`; a lone minus
+returns `InvalidDigit(0u32)`. Signed negative zero returns zero. Each parser
+reads the view directly in one pass, with constant working space and no text copy.
+
+```dew
+let value = parse_u64_decimal("!18446744073709551615?".view(1u32, 20u32))
+// Result::Ok(18446744073709551615u64)
+```
 
 `BytesBuilder` remains the name of the one-shot, consuming construction type. A future `Buffer` would imply a reusable mutable/random-access abstraction and should be designed separately rather than aliasing the builder.
 

@@ -1,0 +1,16 @@
+checked src/standard_sources/standard_text_iteration_sources.mbt
+generator 0.02 s 12060 KiB
+264 samples; 528 Node BigInt checks
+focused 73.28 s 2430176 KiB
+Dew tests passed: 8
+focused runtime 0.10 s 120952 KiB
+wrote .tmp/consumer.wasm (7124 bytes)
+production 64.90 s 2578956 KiB
+production wat 0.12 s 7780 KiB
+{"digits":1,"calls":100000,"ms":6.136380000000003,"heapDelta":96520,"rssDelta":3411968}
+{"digits":20,"calls":100000,"ms":7.365290000000002,"heapDelta":-32,"rssDelta":393216}
+{"digits":200,"calls":100000,"ms":38.66218699999999,"heapDelta":12936,"rssDelta":679936}
+WAT allocation instructions: { 'array.new': 4, 'array.copy': 0, 'struct.new': 19, 'memory.grow': 0 }
+WAT allocation instructions: { 'array.new': 4, 'array.copy': 0, 'struct.new': 19, 'memory.grow': 0 }
+PASS: all backing-array allocations are input literals in consumer functions; none in parser or text helpers
+wat proof 0.03 s 45556 KiB

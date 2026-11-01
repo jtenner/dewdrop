@@ -60,3 +60,15 @@ test "wide decimal parsers report byte offsets and reject extra syntax" {
   assert(parse_u64_decimal("x12ay".view(1u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(2u32)), "view-relative offset")
   assert(parse_u64_decimal("١".view(0u32, 2u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "non-ASCII digit")
 }
+
+test "wide decimal parsers keep sign and failure offsets inside views" {
+  assert(parse_i64_decimal("".view(0u32, 0u32)) is Result::Err(DecimalParseError::Empty), "signed empty")
+  assert(parse_u64_decimal("+".view(0u32, 1u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "unsigned lone plus")
+  assert(parse_i64_decimal("+".view(0u32, 1u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "signed lone plus")
+  assert(parse_u64_decimal("-".view(0u32, 1u32)) is Result::Err(DecimalParseError::InvalidDigit(0u32)), "unsigned lone minus")
+  assert(parse_i64_decimal("!--1?".view(1u32, 3u32)) is Result::Err(DecimalParseError::InvalidDigit(1u32)), "double minus")
+  assert(parse_i64_decimal("!-1_2?".view(1u32, 4u32)) is Result::Err(DecimalParseError::InvalidDigit(2u32)), "signed separator")
+  assert(parse_i64_decimal("!12١?".view(1u32, 4u32)) is Result::Err(DecimalParseError::InvalidDigit(2u32)), "signed byte offset")
+  assert(parse_u64_decimal("!184467440737095516160x?".view(1u32, 22u32)) is Result::Err(DecimalParseError::Overflow(19u32)), "first overflow precedes bad byte")
+  assert(parse_i64_decimal("!-9223372036854775809?".view(1u32, 20u32)) is Result::Err(DecimalParseError::Overflow(19u32)), "view underflow")
+}

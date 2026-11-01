@@ -85,6 +85,88 @@ fn decimal_magnitude_to_i32(value: U32) -> I32 {
   value.into()
 }
 
+fn parse_wide_decimal_magnitude(
+  value: StringView,
+  start: U32,
+  limit: U64,
+) -> Result<U64, DecimalParseError> {
+  let length = value.byte_length()
+  let quotient = limit / 10u64
+  let remainder = limit % 10u64
+  let mut number = 0u64
+  while start {
+    index if index < length => {
+      let byte = value.byte_at(index)
+      if byte < 48u8 || byte > 57u8 {
+        break Result::Err(DecimalParseError::InvalidDigit(index))
+      } else {
+        let digit = decimal_digit_to_u64(code_point_u8_to_u32(byte - 48u8))
+        if number > quotient || (number == quotient && digit > remainder) {
+          break Result::Err(DecimalParseError::Overflow(index))
+        } else {
+          number = number * 10u64 + digit
+          continue index + 1u32
+        }
+      }
+    }
+    _ => break Result::Ok(number)
+  }
+}
+
+pub fn parse_u64_decimal(value: StringView) -> Result<U64, DecimalParseError> {
+  if value.byte_length() == 0u32 {
+    Result::Err(DecimalParseError::Empty)
+  } else {
+    parse_wide_decimal_magnitude(value, 0u32, 18446744073709551615u64)
+  }
+}
+
+pub fn parse_i64_decimal(value: StringView) -> Result<I64, DecimalParseError> {
+  let length = value.byte_length()
+  if length == 0u32 {
+    Result::Err(DecimalParseError::Empty)
+  } else {
+    let negative = value.byte_at(0u32) == 45u8
+    let start = if negative {
+      1u32
+    } else {
+      0u32
+    }
+    if start == length {
+      Result::Err(DecimalParseError::InvalidDigit(0u32))
+    } else {
+      let limit = if negative {
+        9223372036854775808u64
+      } else {
+        9223372036854775807u64
+      }
+      match parse_wide_decimal_magnitude(value, start, limit) {
+        Result::Err(error) => Result::Err(error)
+        Result::Ok(magnitude) => {
+          if negative && magnitude == 9223372036854775808u64 {
+            Result::Ok(-9223372036854775808i64)
+          } else {
+            let signed = decimal_magnitude_to_i64(magnitude)
+            Result::Ok(if negative {
+              -signed
+            } else {
+              signed
+            })
+          }
+        }
+      }
+    }
+  }
+}
+
+fn decimal_digit_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn decimal_magnitude_to_i64(value: U64) -> I64 {
+  value.into()
+}
+
 pub struct StringCodePoints {
   value: String
   state: FixedArray<U32>
