@@ -66,3 +66,11 @@ Source: `std/ordering.dew:39` compares values and does not read `self`; `std/col
 Full review: **5 hunks**, 399 → 375 lines. Specialized readers 11–14 now load globals 0–3 instead of allocating closures with wrappers 24–27. Startup already binds those globals to targets 17–20; the four removed wrappers only forwarded their value argument to those same targets. Four closure subtypes and their declared elements are removed. Capturing readers 9–10 and evidence wrappers 22–23 remain intact.
 
 Source: `tests/module-snapshots/generics/bounded-function-reference-runtime-evidence.dew:41` defines `read`; line 45 returns it from `reader`; line 71 checks results 42, 84, 42, and 1 for single-bound, ordered multi-bound, nominal, and Bool callbacks. The full-key/singleton rules above select the right evidence instance, while `src/backend/starshine_program_adapters.mbt:700` plans escaping evidence references. Both versions pass all four assertions on both runtimes.
+
+### `generics/generic-enum-adapter-runtime.wat`
+
+**CORRECT NEW OUTPUT. The singleton now refers to the exact enum adapter selected for this source site. Its argument/result conversion preserves the source enum values.**
+
+Full review: **3 hunks**, 773 → 773 lines. Only `compiler.facts`, the declared element, and startup `ref.func` change; the target is 5 → 7. All function bodies remain unchanged. Function 7 converts compact scalar payloads through the erased fallback and back; function 5 is the direct specialized implementation. Facts must mark the new address-taken target and startup call target.
+
+Source: `tests/module-snapshots/generics/generic-enum-adapter-runtime.dew:18` defines `echo_maybe`, line 39 returns it as a function value, and line 43 checks tuple, named, boxed, and nested enum payloads (42–45). `src/semantic/program_physical_link.mbt:1572` checks signature compatibility before selecting an adapter; emission uses that selected singleton. Both versions pass every assertion on both runtimes.
