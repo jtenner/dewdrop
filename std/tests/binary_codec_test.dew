@@ -1,0 +1,158 @@
+open dew.std.encoding.binary
+open dew.std.bytes
+open dew.std.bytes_builder
+
+test "binary U16 le vectors and short widths" {
+  let input = b"x\x01\x02y".view(1u32, 2u32)
+  let cursor = binary_cursor(input)
+  assert(read_u16_le(cursor) is Result::Ok(513u16), "endian vector")
+  assert(binary_remaining(cursor) == 0u32, "consumed width")
+  let builder = BytesBuilder::new()
+  write_u16_le(builder, 513u16)
+  assert(builder.finish().equals(input), "writer vector")
+  let maximum = BytesBuilder::new()
+  write_u16_le(maximum, 65535u16)
+  assert(read_u16_le(binary_cursor(maximum.finish())) is Result::Ok(65535u16), "maximum")
+  while 0u32 {
+    length if length < 2u32 => {
+      let short = binary_cursor(input.view(0u32, length))
+      assert(read_u16_le(short) is Result::Err(BinaryError::ShortInput(0u32, 2u32, length)), "short error")
+      assert(binary_position(short) == 0u32, "failed read advanced")
+      continue length + 1u32
+    }
+    _ => break
+  }
+}
+
+test "binary U16 be vectors and short widths" {
+  let input = b"x\x01\x02y".view(1u32, 2u32)
+  let cursor = binary_cursor(input)
+  assert(read_u16_be(cursor) is Result::Ok(258u16), "endian vector")
+  assert(binary_remaining(cursor) == 0u32, "consumed width")
+  let builder = BytesBuilder::new()
+  write_u16_be(builder, 258u16)
+  assert(builder.finish().equals(input), "writer vector")
+  let maximum = BytesBuilder::new()
+  write_u16_be(maximum, 65535u16)
+  assert(read_u16_be(binary_cursor(maximum.finish())) is Result::Ok(65535u16), "maximum")
+  while 0u32 {
+    length if length < 2u32 => {
+      let short = binary_cursor(input.view(0u32, length))
+      assert(read_u16_be(short) is Result::Err(BinaryError::ShortInput(0u32, 2u32, length)), "short error")
+      assert(binary_position(short) == 0u32, "failed read advanced")
+      continue length + 1u32
+    }
+    _ => break
+  }
+}
+
+test "binary U32 le vectors and short widths" {
+  let input = b"x\x01\x02\x03\x04y".view(1u32, 4u32)
+  let cursor = binary_cursor(input)
+  assert(read_u32_le(cursor) is Result::Ok(67305985u32), "endian vector")
+  assert(binary_remaining(cursor) == 0u32, "consumed width")
+  let builder = BytesBuilder::new()
+  write_u32_le(builder, 67305985u32)
+  assert(builder.finish().equals(input), "writer vector")
+  let maximum = BytesBuilder::new()
+  write_u32_le(maximum, 4294967295u32)
+  assert(read_u32_le(binary_cursor(maximum.finish())) is Result::Ok(4294967295u32), "maximum")
+  while 0u32 {
+    length if length < 4u32 => {
+      let short = binary_cursor(input.view(0u32, length))
+      assert(read_u32_le(short) is Result::Err(BinaryError::ShortInput(0u32, 4u32, length)), "short error")
+      assert(binary_position(short) == 0u32, "failed read advanced")
+      continue length + 1u32
+    }
+    _ => break
+  }
+}
+
+test "binary U32 be vectors and short widths" {
+  let input = b"x\x01\x02\x03\x04y".view(1u32, 4u32)
+  let cursor = binary_cursor(input)
+  assert(read_u32_be(cursor) is Result::Ok(16909060u32), "endian vector")
+  assert(binary_remaining(cursor) == 0u32, "consumed width")
+  let builder = BytesBuilder::new()
+  write_u32_be(builder, 16909060u32)
+  assert(builder.finish().equals(input), "writer vector")
+  let maximum = BytesBuilder::new()
+  write_u32_be(maximum, 4294967295u32)
+  assert(read_u32_be(binary_cursor(maximum.finish())) is Result::Ok(4294967295u32), "maximum")
+  while 0u32 {
+    length if length < 4u32 => {
+      let short = binary_cursor(input.view(0u32, length))
+      assert(read_u32_be(short) is Result::Err(BinaryError::ShortInput(0u32, 4u32, length)), "short error")
+      assert(binary_position(short) == 0u32, "failed read advanced")
+      continue length + 1u32
+    }
+    _ => break
+  }
+}
+
+test "binary U64 le vectors and short widths" {
+  let input = b"x\x01\x02\x03\x04\x05\x06\x07\x08y".view(1u32, 8u32)
+  let cursor = binary_cursor(input)
+  assert(read_u64_le(cursor) is Result::Ok(578437695752307201u64), "endian vector")
+  assert(binary_remaining(cursor) == 0u32, "consumed width")
+  let builder = BytesBuilder::new()
+  write_u64_le(builder, 578437695752307201u64)
+  assert(builder.finish().equals(input), "writer vector")
+  let maximum = BytesBuilder::new()
+  write_u64_le(maximum, 18446744073709551615u64)
+  assert(read_u64_le(binary_cursor(maximum.finish())) is Result::Ok(18446744073709551615u64), "maximum")
+  while 0u32 {
+    length if length < 8u32 => {
+      let short = binary_cursor(input.view(0u32, length))
+      assert(read_u64_le(short) is Result::Err(BinaryError::ShortInput(0u32, 8u32, length)), "short error")
+      assert(binary_position(short) == 0u32, "failed read advanced")
+      continue length + 1u32
+    }
+    _ => break
+  }
+}
+
+test "binary U64 be vectors and short widths" {
+  let input = b"x\x01\x02\x03\x04\x05\x06\x07\x08y".view(1u32, 8u32)
+  let cursor = binary_cursor(input)
+  assert(read_u64_be(cursor) is Result::Ok(72623859790382856u64), "endian vector")
+  assert(binary_remaining(cursor) == 0u32, "consumed width")
+  let builder = BytesBuilder::new()
+  write_u64_be(builder, 72623859790382856u64)
+  assert(builder.finish().equals(input), "writer vector")
+  let maximum = BytesBuilder::new()
+  write_u64_be(maximum, 18446744073709551615u64)
+  assert(read_u64_be(binary_cursor(maximum.finish())) is Result::Ok(18446744073709551615u64), "maximum")
+  while 0u32 {
+    length if length < 8u32 => {
+      let short = binary_cursor(input.view(0u32, length))
+      assert(read_u64_be(short) is Result::Err(BinaryError::ShortInput(0u32, 8u32, length)), "short error")
+      assert(binary_position(short) == 0u32, "failed read advanced")
+      continue length + 1u32
+    }
+    _ => break
+  }
+}
+
+test "binary slices and arithmetic bounds" {
+  let cursor = binary_cursor(b"abc")
+  assert(read_bytes(cursor, 1u32) is Result::Ok(value) && value.equals(b"a"), "slice")
+  assert(read_bytes(cursor, 4294967295u32) is Result::Err(BinaryError::ShortInput(1u32, 4294967295u32, 2u32)), "overflow bound")
+  assert(binary_position(cursor) == 1u32, "error position")
+  assert(binary_remaining_bytes(cursor).equals(b"bc"), "remaining view")
+  assert(read_bytes(cursor, 2u32) is Result::Ok(value) && value.equals(b"bc"), "exact slice")
+  assert(read_bytes(cursor, 0u32) is Result::Ok(value) && value.equals(b""), "empty at end")
+  assert(read_u16_le(cursor) is Result::Err(BinaryError::ShortInput(3u32, 2u32, 0u32)), "end error")
+}
+
+test "binary version one capsule shaped request" {
+  let builder = BytesBuilder::new()
+  write_u16_le(builder, 1u16)
+  write_u32_be(builder, 3u32)
+  builder.append(b"req")
+  let cursor = binary_cursor(builder.finish())
+  assert(read_u16_le(cursor) is Result::Ok(1u16), "version")
+  assert(read_u32_be(cursor) is Result::Ok(3u32), "payload length")
+  assert(read_bytes(cursor, 3u32) is Result::Ok(value) && value.equals(b"req"), "payload")
+  assert(binary_remaining(cursor) == 0u32, "capsule end")
+}
