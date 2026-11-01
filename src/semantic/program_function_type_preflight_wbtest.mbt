@@ -411,3 +411,20 @@ test "generic callback records retain external result storage" {
   assert_eq(link.diagnostics, [])
   assert_eq(verify_program_physical_type_fragments(link), Ok(()))
 }
+
+///|
+test "unused generic callback producer registers external results" {
+  let stages = compiler_test_stages(24026UL, [
+    CompilerTestModule::new("app.main", [
+      CompilerTestSource::new("main.dew", b"open app.callbacks\npub fn main() -> I32 { 42 }\n"),
+    ]),
+    CompilerTestModule::new("app.callbacks", [
+      CompilerTestSource::new("callbacks_test.dew", b"open app.values\npub struct Reader<t, i> {\n  inner: i\n  pull: fn(i) -> Maybe<t>\n}\nfn next<t, i: Read<t>>(inner: i) -> Maybe<t> { inner.read() }\npub fn reader<t, i: Read<t>>(inner: i) -> Reader<t, i> {\n  Reader::{ inner: inner, pull: next }\n}\n"),
+    ]),
+    CompilerTestModule::new("app.values", [
+      CompilerTestSource::new("values.dew", b"pub enum Maybe<t> {\n  Some(t)\n  None\n}\npub trait Read<t> { fn read(self) -> Maybe<t> }\n"),
+    ]),
+  ])
+  assert_eq(stages.diagnostics(), [])
+  assert_eq(verify_program_physical_type_fragments(stages.link), Ok(()))
+}
