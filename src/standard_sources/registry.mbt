@@ -30,14 +30,13 @@ pub fn standard_source_paths() -> Array[String] {
   }
   paths.push("std/types.dew")
   paths.push("std/encoding/hex.dew")
-  paths.push("std/encoding/binary.dew")
+  paths.push("std/io/process.dew")
   paths
 }
 
 ///|
 pub fn bootstrap_standard_source(path : String) -> Bytes? {
   match path {
-    "std/encoding/binary.dew" => Some(standard_binary_source())
     "std/types.dew" => Some(standard_types_source())
     "std/preamble/00-builtins.dew" => Some(standard_preamble_builtins_source())
     "std/preamble/10-traits.dew" => Some(standard_preamble_traits_source())
@@ -76,6 +75,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/disposable.dew" => Some(standard_disposable_source())
     "std/math.dew" => Some(standard_math_source())
     "std/io.dew" => Some(standard_io_source())
+    "std/io/process.dew" => Some(standard_io_process_source())
     "std/testing.dew" => Some(standard_testing_source())
     "std/json.dew" => Some(standard_json_source())
     "std/encode.dew" => Some(standard_encode_source())

@@ -84,7 +84,6 @@ dew.std.string_builder              consuming StringBuilder
 dew.std.bytes                       immutable Bytes ranges and search
 dew.std.bytes_builder               consuming BytesBuilder
 dew.std.encoding.utf8               strict and lossy UTF-8 codecs
-dew.std.encoding.binary             bounded byte cursor and endian integer writes
 dew.std.blake3                       portable BLAKE3-256
 dew.std.integrity.sha256              portable one-shot SHA-256
 dew.std.wasi                        Preview 1 Bytes I/O
@@ -276,22 +275,6 @@ The read/write loops are ordinary Dew functions that call the raw foreign import
 
 `dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. `dew.std.facet.imports` owns every raw Facet adapter import. The grouped `core`, `fs`, `process`, `clock`, `random`, `poll`, and `net` modules expose decoded results for all 261 canonical Facet 0.1 operations. `dew.std.facet.fs` contains `fd_sync` and `fd_datasync`. Link Facet programs with `--link-wasm facet fixtures/facet/facet-adapter.wasm`.
 
-`RelativePath.filename() -> String` returns the last component.
-`parent() -> Option<RelativePath>` returns the prefix before the last slash;
-a single component returns `None`, so the workspace root is never an empty
-`RelativePath`. `extension() -> Option<String>` uses the last dot in the
-filename, except a dot at byte zero. `stem() -> String` returns the filename
-before that dot, or the whole filename when there is no extension. Thus `.env`
-has no extension, `.env.json` has `Some("json")`, and `file.` has `Some("")`.
-Repeated dots use the same last-dot rule. All cuts are at ASCII separators,
-so UTF-8 names keep valid boundaries. Queries scan bytes without a split array.
-For example, after `relative_path("src/main.dew")` returns `Ok(path)`,
-`path.filename()` is `"main.dew"`, `path.stem()` is `"main"`,
-`path.extension()` is `Some("dew")`, and `path.parent()` is `Some` of `"src"`.
-The existing 4,096-byte bound and escape checks still apply. These queries do
-not normalize absolute paths or add authority.
-
-
 Path joins enforce the full 4,096-byte limit. WASI directory creation is
 idempotent for an existing directory, but reports an error for an existing file
 or other path kind.
@@ -398,7 +381,6 @@ They do not do Unicode trimming. NUL and all non-ASCII spaces stay unchanged.
 For example, `" \tλ \n".trim_ascii().to_string()` is `"λ"`.
 Bounds are relative to the input view. Only single-byte ASCII scalars are
 removed, so a valid input view keeps valid UTF-8 scalar boundaries.
-
 Lazy iterator adapters in `dew.std.iter` use typed state and create no arrays:
 `iter_map(source, callback)`, `iter_filter(source, predicate)`,
 `iter_take(source, count: U32)`, `iter_skip(source, count: U32)`, and
@@ -411,7 +393,6 @@ on the first pull. Enumerate returns `IterEntry<t>` with `index: U64` (starting
 at zero, wrapping at the U64 limit) and `value: t`. Aliases share wrapper state.
 When only `None` constrains a result, state the payload and source types, for
 example `iter_take::<U32, ArrayIter<U32>>(array_iter(values), 0u32)`.
-
 ### Hex bytes
 
 `dew.std.encoding.hex` exports `encode(Bytes) -> Bytes`,
@@ -432,86 +413,18 @@ import dew.std.encoding.hex as @hex
 // @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
 ```
 
-Incremental SHA-256 (`dew.std.integrity.sha256`):
+`dew.std.io.process` adapts an existing `Process` to `Writer`:
 
 ```dew
-let state = sha256_new()
-assert(sha256_update(state, first_chunk), "SHA-256 update failed")
-assert(sha256_update(state, next_chunk), "SHA-256 update failed")
-let digest = sha256_finalize(state) // FixedArray<U8>, 32 bytes
+let output = process_stdout(process)
+let result = io_write_all(output, b"hello\n")
+let errors = process_stderr(process)
 ```
 
-Aliases share one state. Finalize closes it. Repeated finalize calls return
-fresh digest arrays with the same bytes. Update returns `false` after finalize,
-even for empty input. It also returns `false` if total input would exceed
-`2305843009213693951` bytes (the SHA-256 bit-length limit). A rejected update
-makes no change. Empty updates succeed while open, including at the limit.
-Do not change state fields directly. Returned digests do not share state.
-The state retains a 64-byte block, eight hash words, a checked byte count,
-a block offset, and a closed flag. It retains no input and allocates nothing
-in update. The block also serves as the circular message schedule.
-The existing `sha256(Bytes)` and its digest type are unchanged.
-
-Sorted Array search uses the existing `ArrayComparator<t>` contract.
-`array_lower_bound(values, key, comparator)` returns the first index whose
-value does not precede the key. `array_upper_bound` returns the first index
-whose value follows the key. `array_binary_search` returns `Option<U32>`
-and selects the first equal key. Equality here means comparator equivalence.
-The `_range` forms add `start, end` before the comparator and search only
-`[start, end)`. Results are absolute indices. Invalid ranges trap. Empty
-ranges return `start` for bounds and `None` for search. Input must be sorted
-by the same strict weak order; the comparator must not change it.
-Natural methods require `Lt`:
-
-```dew
-let values = [2u32, 4u32, 4u32, 8u32]
-values.lower_bound(4u32) // 1u32
-values.upper_bound(4u32) // 3u32
-values.binary_search(4u32) // Option::Some(1u32)
-```
-
-Search takes O(log n) comparisons and O(1) extra space. It does not sort.
-
-`dew.std.text` adds `StringView.split(delimiter: StringView)` and `lines()`.
-Both return `StringViewSplit`, which implements `Iter<StringView>` directly.
-Fields share the source bytes; call `field.compact()` to copy a field.
-For example, `"a,,".view(0u32, 3u32).split(",".view(0u32, 1u32))`
-yields `"a"`, `""`, `""`. Matches do not overlap. Empty input yields one
-empty field. An empty delimiter yields the whole view once. `lines()` splits
-on LF, removes CR only in CRLF, keeps lone CR, and keeps a final empty line.
-Repeated `next()` calls after the last field return `None`. Aliases share progress.
-Construction reads only the delimiter. KMP search takes O(source + delimiter)
-time and O(delimiter) state. `source_scans()` and `comparisons()` count source
-bytes advanced by the forward search and search comparisons. They exclude
-prefix table setup and the CR check in `lines()`.
-
-`dew.std.encoding.binary` provides a bounded `BinaryCursor` over `Bytes`.
-`binary_cursor(bytes)` starts at zero. `binary_position`, `binary_remaining`,
-and `binary_remaining_bytes` expose its state. `read_bytes(cursor, length)`
-returns a shared view. `read_u16_le`/`read_u16_be`, `read_u32_le`/`read_u32_be`,
-and `read_u64_le`/`read_u64_be` return a `Result` with the stated integer
-type or `BinaryError`.
-`ShortInput(position, requested, available)` leaves the cursor unchanged.
-Zero length reads succeed, including at the end. Lengths use U32; subtraction
-checks prevent overflow. Cursor state is private to this module. Aliases
-share the cursor position.
-
-For example, `read_u16_le(binary_cursor(b"\x01\x00"))` returns
-`Result::Ok(1u16)`. The six `write_u*_le`/`write_u*_be` functions append
-fixed width values to a `BytesBuilder`. They use its normal capacity and
-finished-builder rules. No host access is needed. Slice views keep the input
-backing storage alive; use `Bytes.compact()` when a small slice must outlive
-large input. Existing version 1 formats are unchanged.
-
-Buffered byte records use `dew.std.io`:
-
-```dew
-let input = buffered_reader_new(BytesInput::new(b"hello\n"), 64u32, 1024u32)
-let line = input.read_line(256u32)
-```
-
-`read_until(delimiter: Bytes, max_bytes)` keeps its delimiter. `read_line(max_bytes)`
-removes LF only. Both return `Result<Option<Bytes>, IoError>`: None is EOF,
-Some(empty) is an empty line. Bounds count the delimiter. `max_buffer` limits
-partial-record bytes plus unread bytes. Errors discard the consumed partial
-record and keep the unread suffix. Decode text with `dew.std.utf8`. See `docs/research/stdlib-wave1-10.md` for error and buffer rules.
+Both return `ProcessWriter<p>`. `channel()` returns `StandardOutput` or
+`StandardError` from `ProcessOutputChannel`. Direct writes forward once;
+`io_write_all` handles partial writes and rejects zero or excessive progress.
+Process `LimitExceeded` maps to IO `LimitExceeded`; every other kind maps to
+`Backend(code)`. This keeps the numeric code but discards the Process operation
+and kind. Channel identity stays in adapter state. Already written bytes are
+not rolled back on error. The module creates no global Process or host import.

@@ -130,7 +130,7 @@ test "dew std wildcard selects every wildcard standard module deterministically"
   assert_true(program.module_index("dew.std.text") is Some(_))
   assert_true(program.module_index("dew.std.encoding.utf8") is Some(_))
   assert_true(program.module_index("dew.std.encoding.hex") is Some(_))
-  assert_true(program.module_index("dew.std.encoding.binary") is Some(_))
+  assert_true(program.module_index("dew.std.io.process") is Some(_))
   assert_true(program.module_index("dew.std.array") is Some(_))
   assert_true(program.module_index("dew.std.map") is Some(_))
   assert_true(program.module_index("dew.std.set") is Some(_))

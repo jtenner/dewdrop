@@ -1,0 +1,91 @@
+open dew.std.io
+open dew.std.io.process
+open dew.std.process
+open dew.std.array
+open dew.std.fixed_array
+open dew.std.bytes
+open dew.std.bytes_builder
+
+struct OutputMock {
+  state: FixedArray<U32>
+  out: BytesBuilder
+  err: BytesBuilder
+  limit: U32
+  mode: U32
+  kind: ProcessErrorKind
+}
+fn output_mock(limit: U32, mode: U32, kind: ProcessErrorKind) -> OutputMock {
+  OutputMock::{
+    state: FixedArray::make(2u32, 0u32)
+    out: BytesBuilder::new()
+    err: BytesBuilder::new()
+    limit: limit
+    mode: mode
+    kind: kind
+  }
+}
+fn mock_output_write(mock: OutputMock, value: Bytes, channel: U32) -> Result<U32, ProcessError> {
+  let calls = mock.state.get_unchecked(channel)
+  mock.state.set_unchecked(channel, calls + 1u32)
+  if mock.mode == 3u32 || (mock.mode == 4u32 && calls > 0u32) {
+    Result::Err(ProcessError::{
+      operation: ProcessOperation::Exit
+      kind: mock.kind
+      code: 37u32
+    })
+  } else if mock.mode == 1u32 {
+    Result::Ok(0u32)
+  } else if mock.mode == 2u32 {
+    Result::Ok(value.byte_length() + 1u32)
+  } else {
+    let count = if value.byte_length() < mock.limit {
+      value.byte_length()
+    } else {
+      mock.limit
+    }
+    let chunk = value.view(0u32, count)
+    if channel == 0u32 {
+      mock.out.append(chunk)
+    } else {
+      mock.err.append(chunk)
+    }
+    Result::Ok(count)
+  }
+}
+impl Process for OutputMock {
+  fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError> {
+    Result::Ok(Array::new())
+  }
+  fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError> {
+    Result::Ok(Option::None)
+  }
+  fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError> {
+    mock_output_write(self, value, 0u32)
+  }
+  fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError> {
+    mock_output_write(self, value, 1u32)
+  }
+  fn exit(self, status: U32) -> Never {
+    unreachable()
+  }
+}
+
+pub fn main() -> U32 {
+  let mock = output_mock(3u32, 0u32, ProcessErrorKind::Backend)
+  let bytes = b"a\x00\x80\xffz"
+  match io_write_all(process_stdout(mock), bytes) {
+    Result::Ok(5u32) => {
+      match io_write_all(process_stderr(mock), bytes) {
+        Result::Ok(5u32) => {
+          if mock.out.finish().equals(bytes) && mock.err.finish().equals(bytes) {
+            mock.state.get_unchecked(0u32) + mock.state.get_unchecked(1u32)
+          } else {
+            90u32
+          }
+        }
+        _ => 91u32
+      }
+    }
+    _ => 92u32
+  }
+}

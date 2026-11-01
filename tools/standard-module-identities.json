@@ -81,6 +81,6 @@
     "dew.std.types": 79,
     "dew.std.collections.btree": 80,
     "dew.std.encoding.hex": 81,
-    "dew.std.encoding.binary": 82
+    "dew.std.io.process": 83
   }
 }

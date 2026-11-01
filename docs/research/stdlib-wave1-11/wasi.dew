@@ -1,0 +1,15 @@
+open dew.std.io
+open dew.std.io.process
+open dew.std.process.wasi
+pub fn main() -> U32 {
+  let process = wasi_process()
+  match io_write_all(process_stdout(process), b"out\x00\x80\xff\n") {
+    Result::Ok(7u32) => {
+      match io_write_all(process_stderr(process), b"err\x00\x80\xff\n") {
+        Result::Ok(7u32) => 0u32
+        _ => 2u32
+      }
+    }
+    _ => 1u32
+  }
+}

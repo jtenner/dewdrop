@@ -241,8 +241,8 @@ fn self_host_standard_module_id(path: String) -> U64 {
   if self_host_manifest_string_equal(path, "dew.std.encoding.hex") {
     return 4294901841u64
   }
-  if self_host_manifest_string_equal(path, "dew.std.encoding.binary") {
-    return 4294901842u64
+  if self_host_manifest_string_equal(path, "dew.std.io.process") {
+    return 4294901843u64
   }
   0u64
 }

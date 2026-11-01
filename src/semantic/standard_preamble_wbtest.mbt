@@ -97,7 +97,7 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[88], "std/f64x2.dew")
   assert_eq(wildcard_paths[90], "std/collections/btree.dew")
   assert_eq(wildcard_paths[91], "std/encoding/hex.dew")
-  assert_eq(wildcard_paths[92], "std/encoding/binary.dew")
+  assert_true(wildcard_paths.contains("std/io/process.dew"))
   let hex_manifest = ProgramManifest::new([
     ManifestModule::new("app.hex", [
       ManifestFile::new(
@@ -580,16 +580,22 @@ test "ambient preamble resolves Fibonacci operators" {
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "binary import closure includes bytes and builder" {
-  let paths = required_standard_library_source_paths(
-    ProgramManifest::new([ManifestModule::new("app.main", [
-      ManifestFile::new("main.dew", b"open dew.std.encoding.binary\npub fn run() -> Unit {\n}\n"),
-    ])]), false,
-  )
-  assert_true(paths.contains("std/encoding/binary.dew"))
-  assert_true(paths.contains("std/bytes.dew"))
-  assert_true(paths.contains("std/bytes_builder.dew"))
-  assert_false(paths.contains("std/encoding/utf8.dew"))
-  assert_false(paths.contains("std/encoding/hex.dew"))
-  assert_eq(canonical_standard_module_id("dew.std.encoding.binary"), Some(4294901842UL))
+test "process writer import selects pure source closure and reserved identity" {
+  let manifest = ProgramManifest::new([
+    ManifestModule::new("app.process_writer", [
+      ManifestFile::new("main.dew", b"open dew.std.io.process\npub fn main() -> U32 {\n  0u32\n}\n"),
+    ]),
+  ])
+  let paths = required_standard_library_source_paths(manifest, false)
+  for path in ["std/io/process.dew", "std/io.dew", "std/process.dew", "std/bytes.dew", "std/bytes_builder.dew", "std/fixed_array.dew", "std/array.dew"] {
+    assert_true(paths.contains(path))
+  }
+  assert_false(paths.contains("std/process/wasi.dew"))
+  assert_false(paths.contains("std/wasm/wasi.dew"))
+  assert_eq(canonical_standard_module_id("dew.std.io.process"), Some(4294901843UL))
+  let program = collect_program_manifest(1192UL, manifest)
+  assert_eq(program.diagnostics.length(), 0)
+  assert_true(program.module_index("dew.std.io.process") is Some(_))
+  let frozen = freeze_program_interfaces(program)
+  assert_eq(frozen.import_diagnostics.length(), 0)
 }

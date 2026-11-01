@@ -60,6 +60,8 @@ pub fn standard_into_builtins_source() -> Bytes
 
 pub fn standard_into_impls_source() -> Bytes
 
+pub fn standard_io_process_source() -> Bytes
+
 pub fn standard_io_source() -> Bytes
 
 pub fn standard_iter_source() -> Bytes
