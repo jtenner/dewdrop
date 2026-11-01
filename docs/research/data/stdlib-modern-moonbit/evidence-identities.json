@@ -1,0 +1,38 @@
+{
+  "snapshots.log.gz": {
+    "sha256": "cc38f6f5409cc97dd87ddca8ddf758901e7d39a2504d50d9df6e13270f12116a",
+    "bytes": 45066
+  },
+  "results.json": {
+    "sha256": "b3a876849945d312efa9b96ab373b95c9997b7591610e0123e48606317391f37",
+    "bytes": 1339
+  },
+  "second-errors.log.gz": {
+    "sha256": "f7d46b2ba4d348cfa49a3a5acbd123c489cbad6da94c4cd57d1449332f89015e",
+    "bytes": 37560
+  },
+  "snapshots-first.log.gz": {
+    "sha256": "303dde3153314b3721e34c1eb1a9bcdf2efb5327869cfd5315af66738cd70acd",
+    "bytes": 167373
+  },
+  "starshine-modern.patch": {
+    "sha256": "69a95fc4807528804f51ea2face5fedc3caa35f9b452802d747333eb861931e9",
+    "bytes": 10363
+  },
+  "std-first.log.gz": {
+    "sha256": "3746a1a933a5813bac399f27e53ffee85255c9aa3e2f6f8dc8fca853d6cd7c19",
+    "bytes": 1158
+  },
+  "initial-build.log.gz": {
+    "sha256": "269110cb39ad809944cb3a84de8d6706cf28aead2066e74502fcf4400658ca61",
+    "bytes": 112091
+  },
+  "build.log.gz": {
+    "sha256": "b93295f2bc1e6d834701deb8e1ff12b9283a09379602c88d3fdc700bb4a9c2bf",
+    "bytes": 17173
+  },
+  "std.log.gz": {
+    "sha256": "a6100465773d72c300d3a05829bea33d7c5003447d98c71a8dd83026d3da4d90",
+    "bytes": 1632
+  }
+}

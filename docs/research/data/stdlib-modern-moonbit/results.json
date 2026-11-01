@@ -1,0 +1,43 @@
+{
+  "integration_head": "4b2103130990902a3de9c8143520abc630f32e05",
+  "std": {
+    "exit": 0,
+    "wall_seconds": 74.63,
+    "public_passed": 355,
+    "btree_passed": 41,
+    "builtin_traps_passed": 42,
+    "operation_checks_passed": 4121,
+    "probe_scripts": 42,
+    "compile_calls": 46,
+    "failures": []
+  },
+  "snapshots": {
+    "exit": 1,
+    "wall_seconds": 114.61,
+    "executed": 461,
+    "passed": 453,
+    "failed": 8,
+    "compile_calls": 922,
+    "runtimes": [
+      "node",
+      "wago"
+    ],
+    "reproduction_check": true,
+    "failures": [
+      "tests/module-snapshots/collections/binary-heap-runtime.wat",
+      "tests/module-snapshots/generics/bounded-function-reference-runtime-evidence.wat",
+      "tests/module-snapshots/generics/generic-enum-adapter-runtime.wat",
+      "tests/module-snapshots/generics/generic-erased-scalar-adapter-runtime.wat",
+      "tests/module-snapshots/modules/imported-bounded-function-reference-runtime-evidence.wat",
+      "tests/module-snapshots/text/show-collections-runtime.wat",
+      "tests/module-snapshots/text/show-derived-runtime.wat",
+      "tests/module-snapshots/types/derive-debug-runtime.wat"
+    ],
+    "slowest_compile": [
+      "modules/std-wildcard-runtime",
+      "2.431"
+    ]
+  },
+  "node": "v22.23.3",
+  "wasm_tools": "wasm-tools 1.262.0 (e22db44da 2026-10-13)"
+}

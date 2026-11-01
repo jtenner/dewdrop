@@ -1,0 +1,243 @@
+From 29dde5c78291a976abd5f739da920915f04fdc36 Mon Sep 17 00:00:00 2001
+From: Joshua Tenner <tenner.joshua@gmail.com>
+Date: Sun, 1 Nov 2026 02:49:30 +0000
+Subject: [PATCH] fix: adapt Dewdrop dependency to modern MoonBit APIs
+
+---
+ MODERN_MOONBIT.md                              |  9 +++++++++
+ src/cmd/cmd.mbt                                | 16 ++++++++--------
+ src/ffi_bridge/ffi_bridge.mbt                  |  2 +-
+ src/passes/global_effects.mbt                  |  2 +-
+ src/passes/global_type_optimization.mbt        |  2 +-
+ src/passes/global_type_optimization_fields.mbt |  2 +-
+ src/passes/i64_to_i32_lowering.mbt             |  2 +-
+ src/passes/intrinsic_lowering.mbt              |  2 +-
+ src/passes/make_shared_objects.mbt             |  2 +-
+ src/passes/precompute.mbt                      |  2 +-
+ src/passes/tail_call.mbt                       |  2 +-
+ src/wast/lower_to_lib.mbt                      |  2 +-
+ 12 files changed, 27 insertions(+), 18 deletions(-)
+ create mode 100644 MODERN_MOONBIT.md
+
+diff --git a/MODERN_MOONBIT.md b/MODERN_MOONBIT.md
+new file mode 100644
+index 000000000..acf6ec24c
+--- /dev/null
++++ b/MODERN_MOONBIT.md
+@@ -0,0 +1,9 @@
++# Dewdrop compatibility patch
++
++Dewdrop owner decision, 2026-10-31: use Moon 0.1.20261023,
++moonc v0.10.17+d971670cd, and bundled core 0.10.17+d971670cd for now.
++
++Replace removed Result predicate methods with equivalent constructor patterns.
++Use Float::reinterpret_from_int/from_uint for f32 bit casts. No algorithm or
++snapshot changes. This local commit stays on top of Dewdrop's pinned revision
++1b237952167f582abd492aec27adf10c5a6c9e60.
+diff --git a/src/cmd/cmd.mbt b/src/cmd/cmd.mbt
+index 93977f363..9b4f7024f 100644
+--- a/src/cmd/cmd.mbt
++++ b/src/cmd/cmd.mbt
+@@ -9858,7 +9858,7 @@ test "full O4z command presets merge private helpers across host boundaries" {
+   )
+   for preset in ["optimize", "shrink"] {
+     let output = optimize_module_with_pass_flags(input, [preset], options).unwrap()
+-    assert_true(@validate.validate_module(output).is_ok())
++    assert_true(@validate.validate_module(output) is Ok(_))
+     let funcs = match output.code_sec {
+       Some(@lib.CodeSec(funcs)) => funcs
+       None => fail("expected private helper and exported caller")
+@@ -10021,7 +10021,7 @@ test "Binaryen 133 command GTO removes an unread private struct field" {
+     ["global-type-optimization"],
+     OptimizeOptions::new(closed_world=true),
+   ).unwrap()
+-  assert_true(@validate.validate_module(output).is_ok())
++  assert_true(@validate.validate_module(output) is Ok(_))
+   let @lib.TypeSec(types) = output.type_sec.unwrap()
+   let fields : Array[@lib.FieldType] = []
+   let found = [false]
+@@ -10056,7 +10056,7 @@ test "Binaryen 133 command shared objects lowers indirect calls" {
+     ["make-shared-objects"],
+     OptimizeOptions::new(),
+   ).unwrap()
+-  assert_true(@validate.validate_module(output).is_ok())
++  assert_true(@validate.validate_module(output) is Ok(_))
+   assert_eq(output.table_sec.unwrap().0.length(), 2)
+   let @lib.Func(_, @lib.Expr(body)) = output.code_sec.unwrap().0[1]
+   assert_true(body.any(fn(i) { i is @lib.CallIndirect(_, @lib.TableIdx(1U)) }))
+@@ -10072,7 +10072,7 @@ test "Binaryen 133 command GTO remaps inherited fields" {
+     ["global-type-optimization"],
+     OptimizeOptions::new(closed_world=true),
+   ).unwrap()
+-  assert_true(@validate.validate_module(output).is_ok())
++  assert_true(@validate.validate_module(output) is Ok(_))
+   let @lib.Func(_, @lib.Expr(body)) = output.code_sec.unwrap().0[0]
+   assert_true(body.any(fn(i) { i is @lib.StructGet(_, @lib.U32(0U)) }))
+   assert_eq(body.filter(fn(i) { i is @lib.I32Const(_) }).length(), 1)
+@@ -10089,13 +10089,13 @@ test "Binaryen 133 command tail-call lowers an indirect table64 exit" {
+       0x00, 0x0b,
+     ]),
+   ).unwrap()
+-  assert_true(@validate.validate_module(input).is_ok())
++  assert_true(@validate.validate_module(input) is Ok(_))
+   let output = optimize_module_with_pass_flags(
+     input,
+     ["tail-call"],
+     OptimizeOptions::new(),
+   ).unwrap()
+-  assert_true(@validate.validate_module(output).is_ok())
++  assert_true(@validate.validate_module(output) is Ok(_))
+   let @lib.Func(_, @lib.Expr(body)) = output.code_sec.unwrap().0[1]
+   assert_true(body.any(fn(i) { i is @lib.ReturnCallIndirect(_, _) }))
+ }
+@@ -10110,7 +10110,7 @@ test "Binaryen 133 command GTO preserves canonical packed array identities" {
+     ["global-type-optimization"],
+     OptimizeOptions::new(closed_world=true),
+   ).unwrap()
+-  assert_true(@validate.validate_module(output).is_ok())
++  assert_true(@validate.validate_module(output) is Ok(_))
+   let groups = output.type_sec.unwrap().0
+   assert_eq(groups.length(), 4)
+   assert_true(groups.all(fn(g) { g is @lib.SingleRecType(_) }))
+@@ -10202,7 +10202,7 @@ test "Binaryen 133 command shared objects refines nested null branch chains" {
+     ["make-shared-objects"],
+     OptimizeOptions::new(),
+   ).unwrap()
+-  assert_true(@validate.validate_module(output).is_ok())
++  assert_true(@validate.validate_module(output) is Ok(_))
+   let @lib.Func(_, @lib.Expr(body)) = output.code_sec.unwrap().0[0]
+   let result = match body[0] {
+     @lib.Block(@lib.ValTypeBlockType(vt), _) => vt
+diff --git a/src/ffi_bridge/ffi_bridge.mbt b/src/ffi_bridge/ffi_bridge.mbt
+index 8939f866a..99544db67 100644
+--- a/src/ffi_bridge/ffi_bridge.mbt
++++ b/src/ffi_bridge/ffi_bridge.mbt
+@@ -494,7 +494,7 @@ fn invalid_engine_state_binary(bytes : Bytes, seed : UInt64) -> Bytes {
+ 
+ ///|
+ pub fn EncodedEngineStateCase::is_ok(self : EncodedEngineStateCase) -> Bool {
+-  self.encoded.is_ok()
++  self.encoded is Ok(_)
+ }
+ 
+ ///|
+diff --git a/src/passes/global_effects.mbt b/src/passes/global_effects.mbt
+index fe6ff864a..35064ebd2 100644
+--- a/src/passes/global_effects.mbt
++++ b/src/passes/global_effects.mbt
+@@ -277,7 +277,7 @@ fn global_effects_run_module_pass(mod_ : @lib.Module) -> @lib.Module {
+     return mod_
+   }
+   let candidate = mod_.with_code_sec(@lib.CodeSec::new(rewritten))
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/passes/global_type_optimization.mbt b/src/passes/global_type_optimization.mbt
+index 2b43c3abe..af7f90748 100644
+--- a/src/passes/global_type_optimization.mbt
++++ b/src/passes/global_type_optimization.mbt
+@@ -339,7 +339,7 @@ fn global_type_optimization_run_module_pass(
+   let candidate = mod_
+     .with_type_sec(@lib.TypeSec::new(rewritten_types))
+     .with_code_sec(@lib.CodeSec::new(rewritten_funcs))
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/passes/global_type_optimization_fields.mbt b/src/passes/global_type_optimization_fields.mbt
+index d683a8e77..0569bc4ed 100644
+--- a/src/passes/global_type_optimization_fields.mbt
++++ b/src/passes/global_type_optimization_fields.mbt
+@@ -863,7 +863,7 @@ fn gto_optimize_fields(mod_ : @lib.Module) -> @lib.Module {
+     candidate.with_type_sec(mod_.type_sec.unwrap()),
+   )
+   let candidate = gto_regroup_private_types(candidate, public_, type_order)
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/passes/i64_to_i32_lowering.mbt b/src/passes/i64_to_i32_lowering.mbt
+index 270325f63..d1b7c3266 100644
+--- a/src/passes/i64_to_i32_lowering.mbt
++++ b/src/passes/i64_to_i32_lowering.mbt
+@@ -338,7 +338,7 @@ fn i64_trunc_sat_float_lowering_run_module_pass(
+     return mod_
+   }
+   let candidate = mod_.with_code_sec(@lib.CodeSec::new(rewritten))
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/passes/intrinsic_lowering.mbt b/src/passes/intrinsic_lowering.mbt
+index e724a2a59..bdbbd85f8 100644
+--- a/src/passes/intrinsic_lowering.mbt
++++ b/src/passes/intrinsic_lowering.mbt
+@@ -199,7 +199,7 @@ fn intrinsic_lowering_run_module_pass(mod_ : @lib.Module) -> @lib.Module {
+     return mod_
+   }
+   let candidate = mod_.with_code_sec(@lib.CodeSec::new(rewritten))
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/passes/make_shared_objects.mbt b/src/passes/make_shared_objects.mbt
+index 0b938a7a3..d63ff2ceb 100644
+--- a/src/passes/make_shared_objects.mbt
++++ b/src/passes/make_shared_objects.mbt
+@@ -1433,7 +1433,7 @@ fn make_shared_objects_run_module_pass(mod_ : @lib.Module) -> @lib.Module {
+       }
+     _ => ()
+   }
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/passes/precompute.mbt b/src/passes/precompute.mbt
+index 9807f4700..b53393adb 100644
+--- a/src/passes/precompute.mbt
++++ b/src/passes/precompute.mbt
+@@ -12286,7 +12286,7 @@ fn precompute_u64_to_f32(value : UInt64, negative~ : Bool = false) -> Float {
+   let bits = sign |
+     ((exponent + 127).to_uint() << 23) |
+     (significand.to_uint() & 0x7fffffU)
+-  bits.reinterpret_as_int().reinterpret_as_float()
++  Float::reinterpret_from_uint(bits)
+ }
+ 
+ ///|
+diff --git a/src/passes/tail_call.mbt b/src/passes/tail_call.mbt
+index d04c72a6f..30032ccc3 100644
+--- a/src/passes/tail_call.mbt
++++ b/src/passes/tail_call.mbt
+@@ -226,7 +226,7 @@ fn tail_call_run_module_pass(mod_ : @lib.Module) -> @lib.Module {
+     return mod_
+   }
+   let candidate = mod_.with_code_sec(@lib.CodeSec::new(next_funcs))
+-  if @validate.validate_module(candidate).is_ok() {
++  if @validate.validate_module(candidate) is Ok(_) {
+     candidate
+   } else {
+     mod_
+diff --git a/src/wast/lower_to_lib.mbt b/src/wast/lower_to_lib.mbt
+index c197b5968..70997c2dd 100644
+--- a/src/wast/lower_to_lib.mbt
++++ b/src/wast/lower_to_lib.mbt
+@@ -811,7 +811,7 @@ fn wt_parse_f32(text : String) -> Result[@lib.F32, String] {
+     wt_parse_nan_payload_bits(
+       text, 0x7f800000UL, 0x00400000UL, 0x007fffffUL, 0x80000000UL, "f32",
+     ) {
+-    Ok(Some(bits)) => return Ok(@lib.F32(bits.to_int().reinterpret_as_float()))
++    Ok(Some(bits)) => return Ok(@lib.F32(Float::reinterpret_from_int(bits.to_int())))
+     Ok(None) => ()
+     Err(error) => return Err(error)
+   }
+-- 
+2.47.3
+
