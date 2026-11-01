@@ -189,7 +189,13 @@ node --version
 wasm-tools --version
 ```
 
-Use current stable tool releases. Dew targets evolving WasmGC functionality, so a very old runtime may reject otherwise valid output.
+The owner selected the following MoonBit baseline for now on 2026-10-31:
+Moon `0.1.20261023 (3778465)`, moonc `v0.10.17+d971670cd`, and its bundled
+core `0.10.17+d971670cd`. This supersedes the old 2026-10-12 SDK requirement.
+The checked record is [`tools/MOON_TOOLCHAIN.json`](tools/MOON_TOOLCHAIN.json);
+run `python3 tools/check-moon-toolchain.py` to check your local SDK.
+Core comes from that SDK, not a separate module dependency.
+Use current stable releases for the other tools. Dew targets evolving WasmGC functionality, so a very old runtime may reject otherwise valid output.
 
 ### 2. Clone Dewdrop with Starshine
 
