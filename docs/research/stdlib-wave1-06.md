@@ -186,3 +186,14 @@ there is no item blocker.
 
 Final inspection confirms a clean tracked worktree, unchanged Starshine
 submodule, and no worker-owned build or temporary Wasm artifacts.
+
+## Combined landing gate
+
+Full `bash tools/dew-test/run.sh` exited 0 in 169.99 s:
+411 public tests (403 prior + 8 permanent new tests), 41 private
+tests, builtin traps, repeat-byte check, and all 42 operation check scripts
+passed. `DEW_NATIVE_TEST_PACKAGES=standard_loader bash tools/test-native.sh`
+passed 31/31 tests in 14.84 s. Process-local Clang uses trailing
+-g0 -O0 and bracket-depth 4096; the pinned SDK is unchanged. Compiler calls
+over 30 s remain visible in the full logs. Build output was removed.
+Logs: `data/stdlib-wave1/landing-06-{std,native}.log.gz`.

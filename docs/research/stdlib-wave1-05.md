@@ -156,3 +156,27 @@ dependency checkpoint, including each compact evidence file.
 Cleanup checked after the final lock exited: `_build`, `.mooncakes`,
 `.dew/cache`, generated Wasm, WAT and harness files are absent. The pinned
 Starshine submodule is unchanged. Source checks (`git diff --check`) pass.
+
+## Combined-tree correction
+
+The first combined full standard compile failed (28.78 s): both UTF-8 and
+hex tests opened a `decode(Bytes)` function in the shared `dew.std` test
+module. Diagnostics at `std/tests/12_utf8_test.dew:7` and
+`std/tests/hex_test.dew:9` report `AmbiguousCallOverload`. No runtime test
+ran. The native loader lane passed 31 tests in 13.93 s.
+The hex tests now import the module as `@hex` and qualify codec calls and
+errors. Existing UTF-8 tests and codec APIs are unchanged. This uses normal
+module namespacing; no compiler rule changes. Failed logs:
+`data/stdlib-wave1/landing-05-{std,native}-attempt1.log.gz`.
+
+## Combined landing gate
+
+After the alias correction, `bash tools/dew-test/run.sh` exited 0 in
+159.00 s: 379 public tests (374 prior + 5 hex), 41 private tests,
+builtin traps and all 42 operation check scripts passed. Repeat bytes match.
+The native loader lane passed 31/31 in 14.22 s. Local Clang -g0 -O0
+uses the pinned SDK; long compiler calls are recorded in the full logs.
+New module slot 81 and text-selection bit 128 are reserved for hex.
+Orchestrator review confirms source closure, generated source/export interface,
+canonical identity mirrors, wildcard facts, and generator check wiring.
+Full logs: `data/stdlib-wave1/landing-05-{std,native}.log.gz`. Build output removed.

@@ -222,3 +222,14 @@ identity, global SDK file or unrelated source changed. No push was made.
 
 Fifth-run cold compile timing (also a performance bug): 74.97 s,
 2,430,276 KiB. Its focused runtime took 0.03 s (46,464 KiB).
+
+## Combined landing gate
+
+Item 08 on integration `5bfc21a0`: full `bash tools/dew-test/run.sh`
+exited 0. Public tests: 374 passed (365 prior + 9), private: 41 passed.
+Builtin traps and all 42 operation check scripts passed. Repeat bytes match.
+Relevant native lane `DEW_NATIVE_TEST_PACKAGES=standard_loader bash
+tools/test-native.sh` passed all 31 tests in 13.66 s. Local Clang wrapper
+uses -g0 -O0 and bracket-depth 4096; SDK unchanged. Compiler calls over
+30 s remain visible in the full log. Exact lane times are in
+`data/stdlib-wave1/landing-08-{std,native}.log.gz`. Build output removed.

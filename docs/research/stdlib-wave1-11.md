@@ -160,3 +160,21 @@ Both locked scripts completed their EXIT cleanup. `_build`, `.mooncakes`,
 were removed after log preservation. The pinned submodule is unchanged.
 `git diff --check` passes. The tree is clean after the item commit. The
 orchestrator must review and run its combined standard gate before landing.
+
+## Combined landing gate
+
+Full `bash tools/dew-test/run.sh` exited 0 in 161.96 s:
+435 public tests (425 prior + 10 permanent new tests), 41 private
+tests, builtin traps, repeat-byte check, and all 42 operation check scripts
+passed. `DEW_NATIVE_TEST_PACKAGES=standard_loader bash tools/test-native.sh`
+passed 31/31 tests in 13.45 s. Process-local Clang uses trailing
+-g0 -O0 and bracket-depth 4096; the pinned SDK is unchanged. Compiler calls
+over 30 s remain visible in the full logs. Build output was removed.
+Logs: `data/stdlib-wave1/landing-11-{std,native}.log.gz`.
+
+Combined registration check: canonical slots 81/82/83 remain distinct. The
+wildcard has 83 modules, 94 source paths and 80 root dependencies. Both binary
+and process import-closure tests are retained. Scoped `moon info --target native
+src/standard_sources` passed and the exported interface stayed current. The
+two focused integration files passed 52 tests in 23.89 s. Logs:
+`data/stdlib-wave1/landing-11-{modules,info}.log.gz`.

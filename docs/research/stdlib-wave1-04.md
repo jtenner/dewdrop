@@ -182,3 +182,12 @@ Changed files are exactly:
 - `docs/research/data/stdlib-wave1-04/consumer.dew`
 - `docs/research/data/stdlib-wave1-04/gate.sh`
 - `docs/research/data/stdlib-wave1-04/moon-cc.sh`
+
+## Combined landing gate
+
+Item 04 on hex integration head `8dc8bdf4`: full `bash tools/dew-test/run.sh`
+exited 0 in 157.07 s. Public tests: 387 passed (379 prior + 8 path tests),
+private tests: 41 passed. Builtin traps, repeat-byte check and all 42 operation
+check scripts passed. Native standard_loader lane passed 31 tests. Local
+Clang -g0 -O0 uses the pinned SDK; long compiler calls remain visible.
+Full logs: `data/stdlib-wave1/landing-04-{std,native}.log.gz`. Build output removed.

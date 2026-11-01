@@ -106,3 +106,19 @@ The EXIT trap removed `_build`, `.mooncakes`, `.dew/cache`, generated Wasm,
 and the generated consumer source before releasing the lock. No push,
 SDK change, B-tree edit, new module, or shared registry change occurred.
 Status: READY for review; not landed.
+
+## Combined landing gate
+
+Integration tree: item 02 on Mission A head `8c3b047f`. Full
+`bash tools/dew-test/run.sh` exited 0 in 161.14 s: public 361 passed
+(355 baseline + 6), private B-tree 41 passed, builtin traps and all
+42 operation check scripts passed. Repeat-compilation bytes match.
+The first compile took 31.344 s and the private B-tree compile took
+63.239 s; both are visible compiler performance issues. Other compiler
+calls stayed below 30 s. Process-local MOON_CC used Clang with -g0 -O0
+and bracket-depth 4096; no SDK file changed. Initial local wrapper setup
+failed to find adjacent ar before any tests; adding a local ar symlink fixed it.
+`DEW_NATIVE_TEST_PACKAGES=standard_sources bash tools/test-native.sh`
+exited 0 in 0.70 s but contains zero tests; no test coverage is claimed for it.
+Final campaign native lanes cover compiler loading rules. Full compressed
+logs: `data/stdlib-wave1/landing-02-{std,native}.log.gz`. Build output removed.

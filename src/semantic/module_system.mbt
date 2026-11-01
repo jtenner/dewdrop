@@ -451,6 +451,12 @@ pub fn direct_standard_library_source_paths(
   if (text_mask & 128) != 0 {
     required.push("std/encoding/hex.dew")
   }
+  if (text_mask & 256) != 0 {
+    required.push("std/encoding/binary.dew")
+  }
+  if (text_mask & 512) != 0 {
+    required.push("std/io/process.dew")
+  }
   if (text_mask & 1024) != 0 {
     required.push("std/fs/directory.dew")
   }
@@ -1263,6 +1269,36 @@ pub fn collect_program_manifest_with_standard_sources(
         module_id,
         standard_library_program_files(
           module_id, "std/encoding/hex.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 256) != 0 &&
+    !first_module.contains("dew.std.encoding.binary") {
+    let module_id = standard_library_module_id(82)
+    let module_index = modules.length()
+    first_module["dew.std.encoding.binary"] = module_index
+    module_paths.push("dew.std.encoding.binary")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/encoding/binary.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 512) != 0 &&
+    !first_module.contains("dew.std.io.process") {
+    let module_id = standard_library_module_id(83)
+    let module_index = modules.length()
+    first_module["dew.std.io.process"] = module_index
+    module_paths.push("dew.std.io.process")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/io/process.dew", standard_sources, false, false,
         ),
       ),
     )

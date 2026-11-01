@@ -157,3 +157,25 @@ before lock release. No push occurred.
 - `docs/research/data/stdlib-wave1-07/gate-attempt1.log.gz`
 - `docs/research/data/stdlib-wave1-07/gate-attempt2.log.gz`
 - `docs/research/data/stdlib-wave1-07/gate-pass.log.gz`
+
+## Combined test-module correction
+
+The first combined standard compile exited 1 in 27.80 s: six copied
+stream-test helpers had the same names as helpers in the original one-shot
+file. `DuplicateName` diagnostics start at `std/tests/sha256_stream_test.dew:8`
+and point to `std/tests/08_sha256_test.dew:8`. The stream-test helpers now
+have a `sha256_stream_` prefix. Corpus bytes, assertions, and library code
+are unchanged. No runtime tests ran in that failed attempt. Native loader
+tests passed 31/31 in 13.45 s. Failed logs are preserved at
+`data/stdlib-wave1/landing-07-{std,native}-attempt1.log.gz`.
+
+## Combined landing gate
+
+Full `bash tools/dew-test/run.sh` exited 0 in 163.61 s:
+391 public tests (387 prior + 4 permanent new tests), 41 private
+tests, builtin traps, repeat-byte check, and all 42 operation check scripts
+passed. `DEW_NATIVE_TEST_PACKAGES=standard_loader bash tools/test-native.sh`
+passed 31/31 tests in 14.26 s. Process-local Clang uses trailing
+-g0 -O0 and bracket-depth 4096; the pinned SDK is unchanged. Compiler calls
+over 30 s remain visible in the full logs. Build output was removed.
+Logs: `data/stdlib-wave1/landing-07-{std,native}.log.gz`.

@@ -150,3 +150,14 @@ analysis above give the operation's storage bound.
 
 Remaining blockers: **none**. Status: **READY candidate**, subject to owner
 review and the combined full standard-suite gate.
+
+## Combined landing gate
+
+Full `bash tools/dew-test/run.sh` exited 0 in 167.80 s:
+425 public tests (411 prior + 14 permanent new tests), 41 private
+tests, builtin traps, repeat-byte check, and all 42 operation check scripts
+passed. `DEW_NATIVE_TEST_PACKAGES=standard_loader bash tools/test-native.sh`
+passed 31/31 tests in 14.07 s. Process-local Clang uses trailing
+-g0 -O0 and bracket-depth 4096; the pinned SDK is unchanged. Compiler calls
+over 30 s remain visible in the full logs. Build output was removed.
+Logs: `data/stdlib-wave1/landing-10-{std,native}.log.gz`.

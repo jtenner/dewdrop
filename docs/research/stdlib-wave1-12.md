@@ -179,3 +179,25 @@ tools/dew-test/run.sh
 tools/generate_directory_std.py
 tools/standard-module-identities.json
 ```
+
+## Combined landing gate
+
+Full `bash tools/dew-test/run.sh` exited 0 in 170.94 s:
+445 public tests (435 prior + 10 permanent new tests), 41 private
+tests, builtin traps, repeat-byte check, and all 43 operation check scripts
+passed. `DEW_NATIVE_TEST_PACKAGES=standard_loader bash tools/test-native.sh`
+passed 31/31 tests in 14.01 s. Process-local Clang uses trailing
+-g0 -O0 and bracket-depth 4096; the pinned SDK is unchanged. Compiler calls
+over 30 s remain visible in the full logs. Build output was removed.
+Logs: `data/stdlib-wave1/landing-12-{std,native}.log.gz`.
+
+## Combined registration and host gate
+
+The final wildcard selects 85 modules, 96 source paths and 82 direct root
+dependencies. Source bits 128/256/512/1024/2048 and slots 81–85 remain
+distinct. Both directory sources and all prior module checks are retained.
+Scoped native source-interface generation passed; the exported interface
+was current. Preamble and module-system integration files passed 53 tests
+in 24.65 s. Logs: `data/stdlib-wave1/landing-12-{modules,info}.log.gz`.
+The full standard runner now has 43 operation scripts: 4,121 baseline checks
+plus 70 directory host checks. Its real WASI and mock-host checks passed.
