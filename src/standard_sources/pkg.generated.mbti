@@ -8,6 +8,8 @@ pub fn standard_array_source() -> Bytes
 
 pub fn standard_binary_heap_source() -> Bytes
 
+pub fn standard_binary_source() -> Bytes
+
 pub fn standard_blake3_source() -> Bytes
 
 pub fn standard_bloom_filter_source() -> Bytes
@@ -21,6 +23,8 @@ pub fn standard_debug_preamble_source() -> Bytes
 pub fn standard_decode_source() -> Bytes
 
 pub fn standard_deque_source() -> Bytes
+
+pub fn standard_directory_source() -> Bytes
 
 pub fn standard_disposable_source() -> Bytes
 
@@ -52,9 +56,13 @@ pub fn standard_fs_source() -> Bytes
 
 pub fn standard_fs_wasi_source() -> Bytes
 
+pub fn standard_hex_source() -> Bytes
+
 pub fn standard_into_builtins_source() -> Bytes
 
 pub fn standard_into_impls_source() -> Bytes
+
+pub fn standard_io_process_source() -> Bytes
 
 pub fn standard_io_source() -> Bytes
 
@@ -137,6 +145,8 @@ pub fn standard_types_source() -> Bytes
 pub fn standard_utf8_source() -> Bytes
 
 pub fn standard_v128_preamble_source() -> Bytes
+
+pub fn standard_wasi_directory_source() -> Bytes
 
 pub fn standard_wasi_source() -> Bytes
 

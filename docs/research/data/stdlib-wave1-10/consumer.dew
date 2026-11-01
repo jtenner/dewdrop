@@ -1,0 +1,15 @@
+open dew.std.io
+open dew.std.bytes
+pub fn main() -> I32 {
+  let input = buffered_reader_new(BytesInput::new(b"a\nb\n"), 8u32, 32u32)
+  match input.read_line(8u32) {
+    Result::Ok(Option::Some(value)) => {
+      if value.equals(b"a") {
+      0
+    } else {
+      1
+    }
+    }
+    _ => 2
+  }
+}

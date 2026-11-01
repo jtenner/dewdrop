@@ -1,0 +1,33 @@
+## .tmp/gates.log
+checked src/standard_sources/standard_text_sources.mbt and src/standard_sources/standard_option_result_sources.mbt
+	Command being timed: "python3 tools/generate_string_std.py --check"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.02
+	Maximum resident set size (kbytes): 12312
+	Exit status: 0
+cc: fatal error: Killed signal terminated program cc1
+	Command being timed: "moon run --target native src/dew_test_gen -- .tmp/trim.wasm dew.std dew.std std/tests/string_trim_test.dew std/tests/string_trim_test.dew"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:32.83
+	Maximum resident set size (kbytes): 2490244
+	Exit status: 1
+## .tmp/extra.log
+checked src/standard_sources/standard_text_sources.mbt and src/standard_sources/standard_option_result_sources.mbt
+	Command being timed: "python3 tools/generate_string_std.py --check"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.03
+	Maximum resident set size (kbytes): 11960
+	Exit status: 0
+/data/workspace/wave1-item-02/src/backend/starshine_v128_builtins.mbt:533:71: fatal error: bracket nesting level exceeded maximum of 256
+	Command being timed: "moon run -j 1 --target native src/dew_test_gen -- .tmp/trim.wasm dew.std dew.std std/tests/string_trim_test.dew std/tests/string_trim_test.dew"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:21.63
+	Maximum resident set size (kbytes): 866528
+	Exit status: 1
+
+## .tmp/syntax-gate.log
+Dew parser: std/string.dew:139 FunctionBodyNewline at break (fixed).
+	Command being timed: "python3 tools/generate_string_std.py --check"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.03
+	Maximum resident set size (kbytes): 12060
+	Exit status: 0
+	Command being timed: "moon run -j 1 --target native src/dew_test_gen -- .tmp/trim.wasm dew.std dew.std std/tests/string_trim_test.dew std/tests/string_trim_test.dew"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:27.93
+	Maximum resident set size (kbytes): 1076656
+	Exit status: 1

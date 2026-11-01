@@ -1,0 +1,38 @@
+## production_runtime.log
+production directory consumer passed: 42; no WASI imports, no test metadata
+TIME 0.02 RSS_KB 46916
+## production.log
+TIME 20.22 RSS_KB 925856
+## registry.log
+Total tests: 2, passed: 2, failed: 0.
+self-host timing: native src/standard_sources tests: 0.824 seconds
+TIME 0.82 RSS_KB 80784
+## integration.log
+Total tests: 27, passed: 27, failed: 0.
+self-host timing: native integration src/semantic/module_system_wbtest.mbt: 23.222 seconds
+Total tests: 24, passed: 24, failed: 0.
+self-host timing: native integration src/semantic/standard_preamble_wbtest.mbt: 2.682 seconds
+TIME 25.91 RSS_KB 1125212
+## identities.log
+TIME 0.02 RSS_KB 12096
+## focused.log
+TIME 29.47 RSS_KB 1080764
+## generated.log
+Total tests: 14, passed: 14, failed: 0.
+CLI fixtures passed: 3
+TIME 55.96 RSS_KB 836692
+## generator.log
+TIME 0.02 RSS_KB 12248
+## host_runtime.log
+AssertionError [ERR_ASSERTION]: final symlink rejected
+TIME 0.04 RSS_KB 51476
+## equivalence.log
+Total tests: 1, passed: 1, failed: 0.
+TIME 9.62 RSS_KB 680464
+## probe.log
+TIME 1.12 RSS_KB 70980
+## interfaces.log
+TIME 0.19 RSS_KB 34580
+## focused_runtime.log
+Dew tests passed: 10
+TIME 0.02 RSS_KB 46616

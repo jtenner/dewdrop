@@ -1,0 +1,195 @@
+open dew.std.array
+
+fn search_result_index(value: Option<U32>) -> U32 {
+  match value {
+    Option::Some(index) => index
+    Option::None => 4294967295u32
+  }
+}
+
+struct SearchOrder {
+  reverse: Bool
+  mut calls: U32
+}
+impl ArrayComparator<U32> for SearchOrder {
+  fn before(self, left: U32, right: U32) -> Bool {
+    self.calls = self.calls + 1u32
+    if self.reverse {
+      left > right
+    } else {
+      left < right
+    }
+  }
+}
+fn search_oracle(values: Array<U32>, key: U32, start: U32, end: U32, order: SearchOrder, upper: Bool) -> U32 {
+  while start {
+    i if i < end => {
+      let advance = if upper {
+        !order.before(key, values[i])
+      } else {
+        order.before(values[i], key)
+      }
+      if advance {
+        continue i + 1u32
+      } else {
+        break i
+      }
+    }
+    _ => break end
+  }
+}
+test "sorted bounds match linear oracle for all small ranges in both orders" {
+  let order = SearchOrder::{
+    reverse: false
+    calls: 0u32
+  }
+  let descending = SearchOrder::{
+    reverse: true
+    calls: 0u32
+  }
+  let values = [2u32, 4u32, 4u32, 4u32, 8u32]
+  let reversed = [8u32, 4u32, 4u32, 4u32, 2u32]
+  let mut start = 0u32
+  while true {
+    true if start < 6u32 => {
+      let mut end = start
+      while true {
+        true if end < 6u32 => {
+          let mut key = 0u32
+          while true {
+            true if key < 11u32 => {
+              let lo = search_oracle(values, key, start, end, order, false)
+              let hi = search_oracle(values, key, start, end, order, true)
+              assert(array_lower_bound_range(values, key, start, end, order) == lo, "lower oracle")
+              assert(array_upper_bound_range(values, key, start, end, order) == hi, "upper oracle")
+              let found = array_binary_search_range(values, key, start, end, order)
+              if lo < hi {
+                assert(search_result_index(found) == lo, "first equal")
+              } else {
+                assert(found is Option::None, "missing key")
+              }
+              assert(array_lower_bound_range(reversed, key, start, end, descending) == search_oracle(reversed, key, start, end, descending, false), "reverse lower")
+              assert(array_upper_bound_range(reversed, key, start, end, descending) == search_oracle(reversed, key, start, end, descending, true), "reverse upper")
+              let rlo = search_oracle(reversed, key, start, end, descending, false)
+              let rhi = search_oracle(reversed, key, start, end, descending, true)
+              assert(search_result_index(array_binary_search_range(reversed, key, start, end, descending)) == (if rlo < rhi {
+                rlo
+              } else {
+                4294967295u32
+              }), "reverse search")
+              key = key + 1u32
+              continue true
+            }
+            _ => break ()
+          }
+          end = end + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      start = start + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}
+test "empty singleton and full array helpers" {
+  let empty = array_new::<U32>()
+  assert(empty.lower_bound(4u32) == 0u32 && empty.upper_bound(4u32) == 0u32, "empty bounds")
+  assert(empty.binary_search(4u32) is Option::None, "empty search")
+  let empty_order = SearchOrder::{
+    reverse: false
+    calls: 0u32
+  }
+  assert(array_lower_bound_range(empty, 4u32, 0u32, 0u32, empty_order) == 0u32, "empty range lower")
+  assert(array_upper_bound_range(empty, 4u32, 0u32, 0u32, empty_order) == 0u32, "empty range upper")
+  assert(array_binary_search_range(empty, 4u32, 0u32, 0u32, empty_order) is Option::None, "empty range search")
+  assert(empty_order.calls == 0u32, "empty range compared")
+  let one = [4u32]
+  assert(one.lower_bound(4u32) == 0u32 && one.upper_bound(4u32) == 1u32, "singleton equal")
+  assert(search_result_index(one.binary_search(4u32)) == 0u32, "singleton found")
+  assert(one.lower_bound(0u32) == 0u32 && one.upper_bound(9u32) == 1u32, "singleton outside")
+  let values = [2u32, 4u32, 4u32, 8u32]
+  empty_order.calls = 0u32
+  assert(array_lower_bound_range(values, 4u32, 2u32, 2u32, empty_order) == 2u32, "interior empty lower")
+  assert(array_upper_bound_range(values, 4u32, 4u32, 4u32, empty_order) == 4u32, "tail empty upper")
+  assert(array_binary_search_range(values, 4u32, 4u32, 4u32, empty_order) is Option::None, "tail empty search")
+  assert(empty_order.calls == 0u32, "nonzero empty range compared")
+  assert(values.lower_bound_range(4u32, 2u32, 4u32) == 2u32, "natural range lower")
+  assert(values.upper_bound_range(4u32, 1u32, 2u32) == 2u32, "natural range upper")
+  assert(search_result_index(values.binary_search_range(4u32, 2u32, 4u32)) == 2u32, "natural range first")
+  let order = SearchOrder::{
+    reverse: false
+    calls: 0u32
+  }
+  assert(array_lower_bound(values, 4u32, order) == 1u32, "full lower")
+  assert(array_upper_bound(values, 4u32, order) == 3u32, "full upper")
+  assert(search_result_index(array_binary_search(values, 4u32, order)) == 1u32, "full first")
+}
+struct SearchKey {
+  value: U32
+}
+struct SearchKeyOrder {
+}
+impl ArrayComparator<SearchKey> for SearchKeyOrder {
+  fn before(self, left: SearchKey, right: SearchKey) -> Bool {
+    left.value < right.value
+  }
+}
+test "reference keys use comparator equivalence" {
+  let values = [SearchKey::{
+    value: 2u32
+  }, SearchKey::{
+    value: 4u32
+  }, SearchKey::{
+    value: 4u32
+  }]
+  let key = SearchKey::{
+    value: 4u32
+  }
+  let order = SearchKeyOrder::{
+  }
+  assert(array_lower_bound(values, key, order) == 1u32, "reference lower")
+  assert(array_upper_bound(values, key, order) == 3u32, "reference upper")
+  assert(search_result_index(array_binary_search(values, key, order)) == 1u32, "reference first")
+}
+test "comparison counts grow logarithmically with duplicate runs" {
+  let mut power = 0u32
+  while true {
+    true if power < 15u32 => {
+      let length = 1u32 << power
+      let values = Array::make(length, 4u32)
+      let order = SearchOrder::{
+        reverse: false
+        calls: 0u32
+      }
+      let mut key = 3u32
+      while true {
+        true if key < 6u32 => {
+          order.calls = 0u32
+          let lo = array_lower_bound(values, key, order)
+          assert(order.calls <= power + 1u32, "lower comparison bound")
+          order.calls = 0u32
+          let hi = array_upper_bound(values, key, order)
+          assert(order.calls <= power + 1u32, "upper comparison bound")
+          order.calls = 0u32
+          let found = array_binary_search(values, key, order)
+          assert(order.calls <= power + 2u32, "search comparison bound")
+          assert(lo == search_oracle(values, key, 0u32, length, order, false), "large lower oracle")
+          assert(hi == search_oracle(values, key, 0u32, length, order, true), "large upper oracle")
+          assert(search_result_index(found) == (if key == 4u32 {
+            0u32
+          } else {
+            4294967295u32
+          }), "large search")
+          key = key + 1u32
+          continue true
+        }
+        _ => break ()
+      }
+      power = power + 1u32
+      continue true
+    }
+    _ => break ()
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "pass": 456,
+  "checking": 461,
+  "compiler_calls": 917,
+  "generator": [
+    "snapshot timing: native generator build: 20.710 seconds"
+  ],
+  "longest_compile": 2.645,
+  "wall": [
+    "real 294.28"
+  ]
+}

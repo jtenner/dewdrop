@@ -1,0 +1,62 @@
+open dew.std.bytes
+open dew.std.io
+open dew.std.process
+
+pub enum ProcessOutputChannel {
+  StandardOutput
+  StandardError
+}
+
+// Capture ordinary Process evidence at construction, as in std/iter.dew.
+pub struct ProcessWriter<p> {
+  private process: p
+  private output_channel: ProcessOutputChannel
+  private output: fn(p, Bytes) -> Result<U32, ProcessError>
+}
+
+fn process_stdout_write<p: Process>(process: p, value: Bytes) -> Result<U32, ProcessError> {
+  process.write_stdout(value)
+}
+
+fn process_stderr_write<p: Process>(process: p, value: Bytes) -> Result<U32, ProcessError> {
+  process.write_stderr(value)
+}
+
+pub fn process_stdout<p: Process>(process: p) -> ProcessWriter<p> {
+  ProcessWriter::{
+    process: process
+    output_channel: ProcessOutputChannel::StandardOutput
+    output: process_stdout_write
+  }
+}
+
+pub fn process_stderr<p: Process>(process: p) -> ProcessWriter<p> {
+  ProcessWriter::{
+    process: process
+    output_channel: ProcessOutputChannel::StandardError
+    output: process_stderr_write
+  }
+}
+
+impl<p> ProcessWriter<p> {
+  fn channel(self) -> ProcessOutputChannel {
+    self.output_channel
+  }
+}
+
+// Retain backend codes; collapse non-limit kinds to Backend. The operation
+// field is discarded. The writer itself retains the selected output channel.
+impl<p> Writer for ProcessWriter<p> {
+  fn write(self, value: Bytes) -> Result<U32, IoError> {
+    let output = self.output
+    match output(self.process, value) {
+      Result::Ok(count) => Result::Ok(count)
+      Result::Err(error) => {
+        match error.kind {
+          ProcessErrorKind::LimitExceeded => Result::Err(IoError::LimitExceeded)
+          _ => Result::Err(IoError::Backend(error.code))
+        }
+      }
+    }
+  }
+}

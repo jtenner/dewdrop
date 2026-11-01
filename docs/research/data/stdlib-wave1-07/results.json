@@ -1,0 +1,89 @@
+{
+  "stream": {
+    "seconds": 0.11
+  },
+  "measure": {
+    "seconds": 0.68,
+    "samples": [
+      {
+        "method": "run",
+        "bytes": 65536,
+        "ms": 1.5527699999999953,
+        "heapGrowth": 221064,
+        "rssGrowth": 847872,
+        "first": 191
+      },
+      {
+        "method": "run",
+        "bytes": 1048576,
+        "ms": 13.872079000000006,
+        "heapGrowth": 149664,
+        "rssGrowth": 393216,
+        "first": 155
+      },
+      {
+        "method": "run",
+        "bytes": 4194304,
+        "ms": 55.11286700000001,
+        "heapGrowth": 596560,
+        "rssGrowth": 786432,
+        "first": 41
+      },
+      {
+        "method": "run",
+        "bytes": 16777216,
+        "ms": 202.651448,
+        "heapGrowth": 808,
+        "rssGrowth": -3563520,
+        "first": 91
+      },
+      {
+        "method": "run_oneshot",
+        "bytes": 65536,
+        "ms": 0.8888800000000288,
+        "heapGrowth": 67088,
+        "rssGrowth": -14643200,
+        "first": 191
+      },
+      {
+        "method": "run_oneshot",
+        "bytes": 1048576,
+        "ms": 14.598018999999965,
+        "heapGrowth": 1049800,
+        "rssGrowth": 1179648,
+        "first": 155
+      },
+      {
+        "method": "run_oneshot",
+        "bytes": 4194304,
+        "ms": 56.50466699999998,
+        "heapGrowth": 4195336,
+        "rssGrowth": 4194304,
+        "first": 41
+      },
+      {
+        "method": "run_oneshot",
+        "bytes": 16777216,
+        "ms": 225.17100700000003,
+        "heapGrowth": 16778248,
+        "rssGrowth": 16777216,
+        "first": 91
+      }
+    ]
+  },
+  "stream-compile": {
+    "seconds": 28.35
+  },
+  "generator": {
+    "seconds": 0.02
+  },
+  "oneshot-compile": {
+    "seconds": 0.88
+  },
+  "oneshot": {
+    "seconds": 0.03
+  },
+  "consumer": {
+    "seconds": 16.53
+  }
+}

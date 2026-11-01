@@ -1,0 +1,74 @@
+import dew.std.encoding.hex as @hex
+open dew.std.bytes
+open dew.std.bytes_builder
+
+fn hex_test_unit() -> Unit {
+}
+
+fn hex_expect(text: Bytes, expected: Bytes) -> Unit {
+  match @hex.decode(text) {
+    Ok(value) => assert(value == expected, "hex decoded bytes differ")
+    Err(_) => assert(false, "hex decode failed")
+  }
+}
+
+fn hex_invalid(text: Bytes, offset: U32) -> Unit {
+  match @hex.decode(text) {
+    Err(@hex.HexDecodeError::InvalidByte(index)) => assert(index == offset, "hex invalid offset differs")
+    _ => assert(false, "hex expected invalid byte")
+  }
+}
+
+test "hex empty and mixed case" {
+  assert(@hex.encode(b"") == b"", "hex empty encode")
+  hex_expect(b"", b"")
+  hex_expect(b"prefix".view(6u32, 0u32), b"")
+  hex_expect(b"aAbBcCdDeEfF0099", b"\xAA\xBB\xCC\xDD\xEE\xFF\x00\x99")
+}
+
+test "hex invalid offsets and odd length" {
+  hex_invalid(b"?000", 0u32)
+  hex_invalid(b"00?0", 2u32)
+  hex_invalid(b"000?", 3u32)
+  hex_invalid(b"000?00", 3u32)
+  hex_invalid(b"0x", 1u32)
+  hex_invalid(b"0\x00", 1u32)
+  hex_invalid(b"0\xFF", 1u32)
+  hex_invalid(b"0 ", 1u32)
+  match @hex.decode(b"?00") {
+    Err(@hex.HexDecodeError::OddLength) => assert(true, "odd length")
+    _ => assert(false, "odd length must take precedence")
+  }
+}
+
+test "hex all byte values and offset views" {
+  let builder = BytesBuilder::with_capacity(256u32)
+  while 0u32 {
+    i if i < 256u32 => {
+      builder.append_byte(i.into())
+      continue i + 1u32
+    }
+    _ => break hex_test_unit()
+  }
+  let bytes = builder.finish()
+  let text = @hex.encode(bytes)
+  assert(text.byte_length() == 512u32, "hex length")
+  hex_expect(text, bytes)
+  assert(@hex.encode(b"!\x00\x0F\xFF!".view(1u32, 3u32)) == b"000fff", "hex offset encode")
+  hex_expect(b"!aBcD!".view(1u32, 4u32), b"\xAB\xCD")
+  hex_invalid(b"!00?0!".view(1u32, 4u32), 2u32)
+}
+
+test "hex output size arithmetic" {
+  assert(@hex.encoded_length(0u32) is Option::Some(0u32), "hex zero length")
+  assert(@hex.encoded_length(2147483647u32) is Option::Some(4294967294u32), "hex maximum")
+  assert(@hex.encoded_length(2147483648u32) is Option::None, "hex overflow")
+  assert(@hex.encoded_length(4294967295u32) is Option::None, "hex overflow maximum")
+}
+
+test "hex SHA256 known text" {
+  let text = b"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  let bytes = b"\xBA\x78\x16\xBF\x8F\x01\xCF\xEA\x41\x41\x40\xDE\x5D\xAE\x22\x23\xB0\x03\x61\xA3\x96\x17\x7A\x9C\xB4\x10\xFF\x61\xF2\x00\x15\xAD"
+  hex_expect(text, bytes)
+  assert(@hex.encode(bytes) == text, "hex SHA256 encode")
+}

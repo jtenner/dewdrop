@@ -1,0 +1,226 @@
+=== bench-4096-compile.log ===
+Error: Failed to build a build plan for the modules
+
+Caused by:
+    0: Failed to set C compiler when compiling jtenner/dewdrop/dew_cli@0.1.0
+    1: failed to resolve native archiver executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    2: failed to find executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    3: cannot find binary path
+Command exited with non-zero status 255
+	Command being timed: "moon run -j 1 --target native src/dew_cli -- build .tmp/bench-4096.dew -o .tmp/bench-4096.wasm"
+	User time (seconds): 0.01
+	System time (seconds): 0.02
+	Percent of CPU this job got: 95%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 69888
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 4750
+	Voluntary context switches: 4
+	Involuntary context switches: 3
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 255
+
+=== bench-512-compile.log ===
+Error: Failed to build a build plan for the modules
+
+Caused by:
+    0: Failed to set C compiler when compiling jtenner/dewdrop/dew_cli@0.1.0
+    1: failed to resolve native archiver executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    2: failed to find executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    3: cannot find binary path
+Command exited with non-zero status 255
+	Command being timed: "moon run -j 1 --target native src/dew_cli -- build .tmp/bench-512.dew -o .tmp/bench-512.wasm"
+	User time (seconds): 0.01
+	System time (seconds): 0.02
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 70004
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 4753
+	Voluntary context switches: 4
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 255
+
+=== bench-64-compile.log ===
+Error: Failed to build a build plan for the modules
+
+Caused by:
+    0: Failed to set C compiler when compiling jtenner/dewdrop/dew_cli@0.1.0
+    1: failed to resolve native archiver executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    2: failed to find executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    3: cannot find binary path
+Command exited with non-zero status 255
+	Command being timed: "moon run -j 1 --target native src/dew_cli -- build .tmp/bench-64.dew -o .tmp/bench-64.wasm"
+	User time (seconds): 0.01
+	System time (seconds): 0.02
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 69944
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 4751
+	Voluntary context switches: 5
+	Involuntary context switches: 1
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 255
+
+=== consumer-compile.log ===
+Error: Failed to build a build plan for the modules
+
+Caused by:
+    0: Failed to set C compiler when compiling jtenner/dewdrop/dew_cli@0.1.0
+    1: failed to resolve native archiver executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    2: failed to find executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    3: cannot find binary path
+Command exited with non-zero status 255
+	Command being timed: "moon run -j 1 --target native src/dew_cli -- build .tmp/consumer.dew -o .tmp/consumer.wasm"
+	User time (seconds): 0.01
+	System time (seconds): 0.02
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 69912
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 4756
+	Voluntary context switches: 5
+	Involuntary context switches: 3
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 255
+
+=== focused-compile.log ===
+Error: Failed to build a build plan for the modules
+
+Caused by:
+    0: Failed to set C compiler when compiling jtenner/dewdrop/dew_test_gen@0.1.0
+    1: failed to resolve native archiver executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    2: failed to find executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    3: cannot find binary path
+Command exited with non-zero status 255
+	Command being timed: "moon run -j 1 --target native src/dew_test_gen -- .tmp/path-tests.wasm dew.std dew.std std/tests/path_parts_test.dew std/tests/path_parts_test.dew dew.std std/tests/09_host_test.dew std/tests/09_host_test.dew"
+	User time (seconds): 0.02
+	System time (seconds): 0.03
+	Percent of CPU this job got: 56%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.10
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 69976
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 16
+	Minor (reclaiming a frame) page faults: 4760
+	Voluntary context switches: 72
+	Involuntary context switches: 2
+	Swaps: 0
+	File system inputs: 8648
+	File system outputs: 2944
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 255
+
+=== generator.log ===
+checked src/standard_sources/standard_host_sources.mbt
+	Command being timed: "python3 tools/generate_host_std.py --check"
+	User time (seconds): 0.02
+	System time (seconds): 0.01
+	Percent of CPU this job got: 95%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 12964
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 1982
+	Voluntary context switches: 14
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 408
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+=== native.log ===
+Error: failed to run test for target Native
+
+Caused by:
+    0: Failed to build a build plan for the modules
+    1: Failed to set C compiler when compiling jtenner/dewdrop/standard_sources@0.1.0
+    2: new native backend requires a C compiler/linker driver; install clang/cc or set MOON_CC
+    3: failed to resolve native archiver executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    4: failed to find executable `/data/workspace/wave1-item-04/.tmp/moon-ar`
+    5: cannot find binary path
+self-host timing: native src/standard_sources tests: 0.048 seconds
+Command exited with non-zero status 1
+	Command being timed: "env DEW_NATIVE_TEST_PACKAGES=standard_sources bash tools/test-native.sh -j 1"
+	User time (seconds): 0.02
+	System time (seconds): 0.02
+	Percent of CPU this job got: 92%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.05
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 69976
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1
+	Minor (reclaiming a frame) page faults: 5947
+	Voluntary context switches: 19
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 40
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1

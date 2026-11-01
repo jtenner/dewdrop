@@ -1,0 +1,17 @@
+open dew.std.iter
+
+pub fn adapter_identity<t>(value: t) -> t {
+  value
+}
+
+pub fn adapter_accept<t>(value: t) -> Bool {
+  true
+}
+
+pub fn adapter_reader<t>() -> fn(t) -> t {
+  adapter_identity
+}
+
+pub fn adapter_predicate<t>() -> fn(t) -> Bool {
+  adapter_accept
+}

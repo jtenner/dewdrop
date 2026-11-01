@@ -448,6 +448,21 @@ pub fn direct_standard_library_source_paths(
   if (collection_mask & 536870912) != 0 {
     required.push("std/collections/btree.dew")
   }
+  if (text_mask & 128) != 0 {
+    required.push("std/encoding/hex.dew")
+  }
+  if (text_mask & 256) != 0 {
+    required.push("std/encoding/binary.dew")
+  }
+  if (text_mask & 512) != 0 {
+    required.push("std/io/process.dew")
+  }
+  if (text_mask & 1024) != 0 {
+    required.push("std/fs/directory.dew")
+  }
+  if (text_mask & 2048) != 0 {
+    required.push("std/fs/wasi_directory.dew")
+  }
   required
 }
 
@@ -1239,6 +1254,81 @@ pub fn collect_program_manifest_with_standard_sources(
         module_id,
         standard_library_program_files(
           module_id, "std/encoding/utf8.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 128) != 0 &&
+    !first_module.contains("dew.std.encoding.hex") {
+    let module_id = standard_library_module_id(81)
+    let module_index = modules.length()
+    first_module["dew.std.encoding.hex"] = module_index
+    module_paths.push("dew.std.encoding.hex")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/encoding/hex.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 256) != 0 &&
+    !first_module.contains("dew.std.encoding.binary") {
+    let module_id = standard_library_module_id(82)
+    let module_index = modules.length()
+    first_module["dew.std.encoding.binary"] = module_index
+    module_paths.push("dew.std.encoding.binary")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/encoding/binary.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 512) != 0 &&
+    !first_module.contains("dew.std.io.process") {
+    let module_id = standard_library_module_id(83)
+    let module_index = modules.length()
+    first_module["dew.std.io.process"] = module_index
+    module_paths.push("dew.std.io.process")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/io/process.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 1024) != 0 &&
+    !first_module.contains("dew.std.fs.directory") {
+    let module_id = standard_library_module_id(84)
+    let module_index = modules.length()
+    first_module["dew.std.fs.directory"] = module_index
+    module_paths.push("dew.std.fs.directory")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/fs/directory.dew", standard_sources, false, false,
+        ),
+      ),
+    )
+  }
+  if (selected_text_mask & 2048) != 0 &&
+    !first_module.contains("dew.std.fs.wasi_directory") {
+    let module_id = standard_library_module_id(85)
+    let module_index = modules.length()
+    first_module["dew.std.fs.wasi_directory"] = module_index
+    module_paths.push("dew.std.fs.wasi_directory")
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/fs/wasi_directory.dew", standard_sources, false, false,
         ),
       ),
     )

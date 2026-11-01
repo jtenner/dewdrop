@@ -39,6 +39,7 @@ PROBE_MODULES = [
     ("intrinsic_function_reference", "app.builtin_references"),
     ("production_assertions", "app.production_assertions"),
     ("wasi_bytes", "app.wasi_bytes"),
+    ("directory_operations", "app.directory_operations"),
     ("product_patterns", "app.product_patterns"),
     ("constructor_evaluations", "app.constructor_probes"),
     ("operator_call_recipes", "app.operator_call_recipes"),
@@ -58,6 +59,18 @@ PROBE_MODULES = [
     ("string_patterns", "app.string_patterns"),
     ("type_queries", "app.type_queries"),
 ]
+
+
+def measured_compile(command: list[str], **kwargs) -> None:
+    started = time.monotonic()
+    try:
+        subprocess.run(command, **kwargs)
+    finally:
+        elapsed = time.monotonic() - started
+        output = command[command.index("--") + 1]
+        print(f"std compile timing: {output}: {elapsed:.3f} seconds", flush=True)
+        if elapsed > 30:
+            print(f"PERFORMANCE BUG: {output} compile exceeded 30 seconds", flush=True)
 
 
 def main() -> None:
@@ -80,7 +93,7 @@ def main() -> None:
         if "\t" in logical or "\n" in logical or "\r" in logical:
             raise SystemExit(f"unsupported test path: {logical!r}")
         command.extend(("dew.std", logical, str(path)))
-    subprocess.run(command, cwd=ROOT, check=True)
+    measured_compile(command, cwd=ROOT, check=True)
     # Use the exact common source in an ordinary module for private storage tests.
     # The providers must be ordinary declarations for optional associated evidence.
     private_command = command[:5] + ["--", "tools/dew-test/btree_storage_tests.wasm", "probe.btree_storage"]
@@ -88,7 +101,7 @@ def main() -> None:
         private_command.extend(("probe.btree_storage", path.relative_to(ROOT).as_posix(), str(path)))
     private_start = time.monotonic()
     try:
-        subprocess.run(private_command, cwd=ROOT, check=True)
+        measured_compile(private_command, cwd=ROOT, check=True)
     finally:
         elapsed = time.monotonic() - private_start
         print(f"B-tree private test compile: {elapsed:.3f} seconds", flush=True)
@@ -98,11 +111,11 @@ def main() -> None:
     repeat_output = ROOT / ".tmp/stdlib_tests_repeat.wasm"
     repeat_command = command.copy()
     repeat_command[6] = str(repeat_output)
-    subprocess.run(repeat_command, cwd=ROOT, check=True)
+    measured_compile(repeat_command, cwd=ROOT, check=True)
     if (ROOT / "tools/dew-test/stdlib_tests.wasm").read_bytes() != repeat_output.read_bytes():
         raise SystemExit("repeated Dew test compilation produced different Wasm bytes")
     repeat_output.unlink()
-    subprocess.run(
+    measured_compile(
         [
             "moon",
             "run",
@@ -123,7 +136,7 @@ def main() -> None:
         f"compiled {len(paths)} manifest-ordered Dew test files deterministically and builtin traps"
     )
     for fixture, module in PROBE_MODULES:
-        subprocess.run(
+        measured_compile(
             [
                 "moon", "run", "--target", "native", "src/dew_test_gen", "--",
                 f"tools/dew-test/{fixture}.wasm", module,
@@ -134,7 +147,7 @@ def main() -> None:
             check=True,
         )
 
-    subprocess.run(
+    measured_compile(
         [
             "moon", "run", "--target", "native", "src/dew_test_gen", "--",
             "tools/dew-test/wasi_foreign.wasm", "app.wasi_probes",
@@ -144,7 +157,7 @@ def main() -> None:
         cwd=ROOT,
         check=True,
     )
-    subprocess.run(
+    measured_compile(
         [
             "moon", "run", "--target", "native", "src/dew_test_gen", "--",
             "tools/dew-test/wasi_staging.wasm", "app.wasi_staging",

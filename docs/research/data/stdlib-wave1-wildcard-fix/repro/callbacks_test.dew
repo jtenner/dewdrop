@@ -1,0 +1,17 @@
+open app.values
+pub trait Read<t> {
+  fn read(self) -> Maybe<t>
+}
+pub struct Reader<t, i> {
+  inner: i
+  pull: fn(i) -> Maybe<t>
+}
+fn next<t, i: Read<t>>(inner: i) -> Maybe<t> {
+  inner.read()
+}
+pub fn reader<t, i: Read<t>>(inner: i) -> Reader<t, i> {
+  Reader::{
+    inner: inner
+    pull: next
+  }
+}

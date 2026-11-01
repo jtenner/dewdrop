@@ -1,0 +1,55 @@
+{
+  "benchmark": [
+    "TIME 0.35 RSS_KB 56828"
+  ],
+  "random_compile": [
+    "TIME 0.92 RSS_KB 70068"
+  ],
+  "production_runtime": [
+    "Production hex consumer passed: result 10, no test metadata or host I/O.",
+    "TIME 0.02 RSS_KB 46900"
+  ],
+  "production": [
+    "TIME 21.24 RSS_KB 748416"
+  ],
+  "registry": [
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native src/standard_sources tests: 0.764 seconds",
+    "TIME 0.76 RSS_KB 98592"
+  ],
+  "integration": [
+    "Total tests: 24, passed: 24, failed: 0.",
+    "self-host timing: native integration src/semantic/standard_preamble_wbtest.mbt: 15.467 seconds",
+    "Total tests: 26, passed: 26, failed: 0.",
+    "self-host timing: native integration src/semantic/module_system_wbtest.mbt: 9.436 seconds",
+    "TIME 24.91 RSS_KB 1138132"
+  ],
+  "identities": [
+    "TIME 0.02 RSS_KB 12036"
+  ],
+  "focused": [
+    "TIME 29.00 RSS_KB 1076392"
+  ],
+  "check_generated": [
+    "Total tests: 14, passed: 14, failed: 0.",
+    "CLI fixtures passed: 3",
+    "TIME 35.57 RSS_KB 837028"
+  ],
+  "generator": [
+    "TIME 0.02 RSS_KB 12112"
+  ],
+  "info_help": [
+    "TIME 0.00 RSS_KB 8156"
+  ],
+  "runtime": [
+    "Dew tests passed: 5",
+    "TIME 0.03 RSS_KB 46400"
+  ],
+  "random_runtime": [
+    "Dew tests passed: 64",
+    "TIME 0.03 RSS_KB 50480"
+  ],
+  "info": [
+    "TIME 0.19 RSS_KB 34776"
+  ]
+}

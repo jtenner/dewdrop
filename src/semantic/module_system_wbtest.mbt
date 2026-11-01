@@ -124,11 +124,14 @@ test "dew std wildcard selects every wildcard standard module deterministically"
     ]),
   )
   assert_eq(program.diagnostics.length(), 0)
-  assert_eq(program.modules.length(), 80)
+  assert_eq(program.modules.length(), 85)
   assert_true(program.module_index("dew.std.types") is Some(_))
   assert_true(program.module_index("dew.std.string") is Some(_))
   assert_true(program.module_index("dew.std.text") is Some(_))
   assert_true(program.module_index("dew.std.encoding.utf8") is Some(_))
+  assert_true(program.module_index("dew.std.encoding.hex") is Some(_))
+  assert_true(program.module_index("dew.std.encoding.binary") is Some(_))
+  assert_true(program.module_index("dew.std.io.process") is Some(_))
   assert_true(program.module_index("dew.std.array") is Some(_))
   assert_true(program.module_index("dew.std.map") is Some(_))
   assert_true(program.module_index("dew.std.set") is Some(_))
@@ -169,7 +172,7 @@ test "dew std wildcard selects every wildcard standard module deterministically"
   assert_true(program.module_index("dew.std.f64x2") is Some(_))
   let graph = build_module_dependency_graph(program)
   assert_eq(graph.diagnostics.length(), 0)
-  assert_eq(graph.dependencies[0].length, 77)
+  assert_eq(graph.dependencies[0].length, 82)
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics.length(), 0)
   assert_eq(analyzed.modules[0].names.diagnostics.length(), 0)
@@ -845,4 +848,33 @@ test "cyclic module interfaces resolve imported nominal signatures" {
     frozen.interfaces[0].resolved_types.types[parameter.type_],
     NominalType(b),
   )
+}
+
+///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
+test "directory imports select complete separate capability closure" {
+  let program = collect_program_manifest(
+    1284UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.directory", [
+        ManifestFile::new(
+          "main.dew", b"import dew.std.fs.wasi_directory as @directory\npub fn main() -> U32 {\n  let reader = @directory.wasi_directory_reader(3u32)\n  reader.root\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  assert_eq(program.diagnostics.length(), 0)
+  for name in [
+    "dew.std.fs.directory", "dew.std.fs.wasi_directory", "dew.std.path",
+    "dew.std.bytes", "dew.std.bytes_builder", "dew.std.string",
+    "dew.std.string_builder", "dew.std.array", "dew.std.map", "dew.std.set",
+    "dew.std.wasm.wasi", "dew.std.wasm.intrinsics",
+  ] {
+    assert_true(program.module_index(name) is Some(_))
+  }
+  assert_true(program.module_index("dew.std.fs") is None)
+  assert_eq(canonical_standard_module_id("dew.std.fs.directory"), Some(4294901844UL))
+  assert_eq(canonical_standard_module_id("dew.std.fs.wasi_directory"), Some(4294901845UL))
+  let frozen = freeze_program_interfaces(program)
+  assert_eq(frozen.import_diagnostics.length(), 0)
 }

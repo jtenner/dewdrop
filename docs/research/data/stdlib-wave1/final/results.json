@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "integration_base": "b9fcc8ea",
+  "library_landing_head": "1f0b7059",
+  "compiler_fix_head": "daaf2fe1",
+  "tested_code_head": "8313a6aa",
+  "snapshot_expected_head": "a1eb11ed",
+  "sdk": {
+    "decision": "Owner for-now baseline, 2026-10-31",
+    "moon": "moon 0.1.20261023 (3778465 2026-10-23)",
+    "moonc": "v0.10.17+d971670cd (2026-10-23)",
+    "core": "0.10.17+d971670cd"
+  },
+  "starshine_gitlink": "29dde5c78291a976abd5f739da920915f04fdc36",
+  "final_c_settings": "Pinned SDK defaults; MOON_CC and CC unset; inherited PATH preserved",
+  "native": {
+    "executed": 1931,
+    "passed": 1931,
+    "failed": 0,
+    "wall_seconds": 654.6,
+    "calls_over_30_seconds": []
+  },
+  "integration": {
+    "executed": 278,
+    "passed": 278,
+    "failed": 0,
+    "wall_seconds": 85.53
+  },
+  "stress": {
+    "executed": 15,
+    "passed": 15,
+    "failed": 0,
+    "wall_seconds": 0.36
+  },
+  "stdlib": {
+    "public_passed": 445,
+    "private_btree_passed": 41,
+    "failed": 0,
+    "permanent_new_public_tests": 90,
+    "operation_scripts": 43,
+    "operation_checks_passed": 4191,
+    "repeat_bytes": "identical",
+    "wall_seconds": 144.69,
+    "compiler_calls": 47,
+    "calls_over_30_seconds": [
+      {
+        "output": "tools/dew-test/stdlib_tests.wasm",
+        "seconds": 79.634
+      }
+    ]
+  },
+  "snapshots": {
+    "executed": 461,
+    "passed": 461,
+    "failed": 0,
+    "runtimes": [
+      "node",
+      "wago"
+    ],
+    "compiler_calls": 922,
+    "max_fixture_compile_seconds": 2.15,
+    "calls_over_30_seconds": [],
+    "wall_seconds": 235.53,
+    "timing_note": "Parse timing records without line anchors: concurrent jobs can place two records on one line."
+  },
+  "generated": {
+    "exit": 0,
+    "wall_seconds": 59.24
+  },
+  "earlier_runs": {
+    "native_missing_rg": {
+      "classification": "invalid incomplete lane; exit zero is not a pass",
+      "wall_seconds": 20.54
+    },
+    "native_before_array_fact": {
+      "executed": 1929,
+      "passed": 1928,
+      "failed": 1,
+      "wall_seconds": 819.2,
+      "resolution": "Array callable-count expectation 146 -> 158; full final lane passed"
+    },
+    "snapshots_before_review": {
+      "passed": 456,
+      "failed": 5,
+      "wall_seconds": 294.28
+    },
+    "snapshots_after_compiler_before_iter_expectation": {
+      "passed": 460,
+      "failed": 1,
+      "wall_seconds": 219.62
+    }
+  }
+}

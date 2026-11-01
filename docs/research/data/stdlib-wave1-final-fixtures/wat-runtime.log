@@ -1,0 +1,12 @@
+wago build seconds 0.512
+{"fixture": "tests/module-snapshots/collections/iter-combinators-runtime.wat", "version": "old", "parse_validate_seconds": 0.009, "node": ["collections:iter-combinators"], "node_seconds": 0.036, "wago": ["collections:iter-combinators"], "wago_seconds": 0.005}
+{"fixture": "tests/module-snapshots/collections/iter-combinators-runtime.wat", "version": "new", "parse_validate_seconds": 0.009, "node": ["collections:iter-combinators"], "node_seconds": 0.032, "wago": ["collections:iter-combinators"], "wago_seconds": 0.005}
+{"fixture": "tests/module-snapshots/text/code-points-exhausted.wat", "version": "old", "parse_validate_seconds": 0.008, "node": [], "node_seconds": 0.029, "wago": [], "wago_seconds": 0.004}
+{"fixture": "tests/module-snapshots/text/code-points-exhausted.wat", "version": "new", "parse_validate_seconds": 0.007, "node": [], "node_seconds": 0.028, "wago": [], "wago_seconds": 0.004}
+{"fixture": "tests/module-snapshots/text/code-points-invalid-view-trap.wat", "version": "old", "parse_validate_seconds": 0.007, "node": {"trap": "unreachable", "stdout": []}, "node_seconds": 0.028, "wago": {"trap": "unreachable", "stdout": []}, "wago_seconds": 0.003}
+{"fixture": "tests/module-snapshots/text/code-points-invalid-view-trap.wat", "version": "new", "parse_validate_seconds": 0.006, "node": {"trap": "unreachable", "stdout": []}, "node_seconds": 0.031, "wago": {"trap": "unreachable", "stdout": []}, "wago_seconds": 0.004}
+{"fixture": "tests/module-snapshots/text/code-points-runtime.wat", "version": "old", "parse_validate_seconds": 0.008, "node": [], "node_seconds": 0.031, "wago": [], "wago_seconds": 0.004}
+{"fixture": "tests/module-snapshots/text/code-points-runtime.wat", "version": "new", "parse_validate_seconds": 0.007, "node": [], "node_seconds": 0.029, "wago": [], "wago_seconds": 0.004}
+real 0.91
+user 0.81
+sys 0.37

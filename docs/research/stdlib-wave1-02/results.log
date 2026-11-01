@@ -1,0 +1,26 @@
+checked src/standard_sources/standard_text_sources.mbt and src/standard_sources/standard_option_result_sources.mbt
+	Command being timed: "python3 tools/generate_string_std.py --check"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.03
+	Maximum resident set size (kbytes): 12128
+	Exit status: 0
+	Command being timed: "moon run -j 1 --target native src/dew_test_gen -- .tmp/trim.wasm dew.std dew.std std/tests/string_trim_test.dew std/tests/string_trim_test.dew"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:27.92
+	Maximum resident set size (kbytes): 1077276
+	Exit status: 0
+Dew tests passed: 6
+	Command being timed: "node tools/dew-test/run.mjs --wasm .tmp/trim.wasm"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.03
+	Maximum resident set size (kbytes): 46188
+	Exit status: 0
+	Command being timed: "moon run -j 1 --target native src/module_snapshot_gen -- .tmp/trim-consumer.wasm production app.trim trim-consumer.dew .tmp/trim-consumer.dew"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:19.57
+	Maximum resident set size (kbytes): 930852
+	Exit status: 0
+{"whitespaceBytes":32,"calls":70000,"medianNs":78.60899999999944,"heapUsedDelta":-3144,"rssDelta":0}
+{"whitespaceBytes":512,"calls":70000,"medianNs":622.8239000000002,"heapUsedDelta":9560,"rssDelta":561152}
+{"whitespaceBytes":8192,"calls":70000,"medianNs":8293.007500000005,"heapUsedDelta":16,"rssDelta":0}
+production consumer: 5 exports passed; no host imports
+	Command being timed: "node --expose-gc docs/research/stdlib-wave1-02/bench.mjs"
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.77
+	Maximum resident set size (kbytes): 58728
+	Exit status: 0

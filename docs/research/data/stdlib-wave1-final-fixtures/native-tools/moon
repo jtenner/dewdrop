@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+import os,sys
+args=sys.argv[1:]
+if '-j' in args:args[args.index('-j')+1]='1'
+os.execv('/data/home/.moon/bin/moon',['moon',*args])

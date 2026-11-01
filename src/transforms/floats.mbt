@@ -166,14 +166,14 @@ fn float_intrinsic(
       if kind == "F32" {
         let result = if wide {
           if unsigned {
-            bits.to_float()
+            Float::from_uint64(bits)
           } else {
-            bits.reinterpret_as_int64().to_float()
+            Float::from_int64(bits.reinterpret_as_int64())
           }
         } else if unsigned {
-          bits.to_uint().to_float()
+          Float::from_uint(bits.to_uint())
         } else {
-          bits.to_int().to_float()
+          Float::from_int(bits.to_int())
         }
         Floating(result.reinterpret_as_uint().to_uint64(), kind)
       } else {

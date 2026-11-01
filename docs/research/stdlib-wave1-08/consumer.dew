@@ -1,0 +1,48 @@
+open dew.std.iter
+open dew.std.array
+open dew.std.string
+open fixture.callbacks
+
+fn even(value: U32) -> Bool {
+  value % 2u32 == 0u32
+}
+
+fn twice(value: U32) -> U32 {
+  value * 2u32
+}
+
+pub fn pipeline(n: U32) -> U32 {
+  let values = array_with_capacity(n)
+  let _ = while 0u32 {
+    index if index < n => {
+      array_push(values, index)
+      continue index + 1u32
+    }
+    _ => break 0u32
+  }
+  let items = iter_map(iter_filter(array_iter(values), even), twice)
+  iter_fold(items, 0u32, fn(sum: U32,
+  value: U32) -> U32 {
+    sum + value
+  })
+}
+
+pub fn scalar_callback() -> U32 {
+  let values = array_new()
+  array_push(values, 42u32)
+  let items = iter_map(iter_filter(array_iter(values), adapter_predicate::<U32>()), adapter_reader::<U32>())
+  match items.next() {
+    Some(value) => value
+    None => 0u32
+  }
+}
+
+pub fn reference_callback() -> Bool {
+  let values = array_new()
+  array_push(values, "reference")
+  let items = iter_map(iter_filter(array_iter(values), adapter_predicate::<String>()), adapter_reader::<String>())
+  match items.next() {
+    Some(value) => value == "reference"
+    None => false
+  }
+}

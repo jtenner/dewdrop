@@ -1,0 +1,100 @@
+open dew.std.path
+open dew.std.string
+open dew.std.string_builder
+open dew.std.testing
+
+fn parts_path(value: String) -> RelativePath {
+  expect_result_ok(relative_path(value), "path parts input rejected")
+}
+
+fn check_parts(value: String, filename: String, stem: String, extension: Option<String>) -> Unit {
+  let path = parts_path(value)
+  assert(path.filename().equals(filename), "filename differs")
+  assert(path.stem().equals(stem), "stem differs")
+  match (path.extension(), extension) {
+    (Option::None, Option::None) => ()
+    (Option::Some(actual), Option::Some(expected)) => assert(actual.equals(expected), "extension differs")
+    _ => assert(false, "extension presence differs")
+  }
+}
+
+test "path parts single component has no parent" {
+  check_parts("file", "file", "file", Option::None)
+  assert(parts_path("file").parent() is Option::None, "single component has parent")
+}
+
+test "path parts parent is a validated nonempty prefix" {
+  let path = parts_path("one/two/file.txt")
+  check_parts(path.to_string(), "file.txt", "file", Option::Some("txt"))
+  let parent = expect_option_some(path.parent(), "missing parent")
+  assert(parent.to_string().equals("one/two"), "parent differs")
+  let first = expect_option_some(parent.parent(), "missing first parent")
+  assert(first.to_string().equals("one"), "first parent differs")
+  assert(first.parent() is Option::None, "root represented as empty path")
+}
+
+test "path parts UTF8 boundaries" {
+  check_parts("目录/é.文", "é.文", "é", Option::Some("文"))
+  assert(expect_option_some(parts_path("目录/é.文").parent(), "UTF8 parent absent").to_string().equals("目录"), "UTF8 parent differs")
+}
+
+test "path parts dotfiles" {
+  check_parts(".env", ".env", ".env", Option::None)
+  check_parts("dir/.config.json", ".config.json", ".config", Option::Some("json"))
+  check_parts("dir.with.dot/file", "file", "file", Option::None)
+}
+
+test "path parts trailing and repeated dots" {
+  check_parts("file.", "file.", "file", Option::Some(""))
+  check_parts("a..b", "a..b", "a.", Option::Some("b"))
+  check_parts("...", "...", "..", Option::Some(""))
+  check_parts("..name", "..name", ".", Option::Some("name"))
+  check_parts(".env.", ".env.", ".env", Option::Some(""))
+}
+
+test "path parts exact 4096 byte limit" {
+  let builder = StringBuilder::with_capacity(4096u32)
+  builder.append("a/")
+  while 0u32 {
+    index if index < 4092u32 => {
+      builder.append_ascii(120u8)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  builder.append(".z")
+  let value = builder.finish()
+  let path = parts_path(value)
+  assert(path.byte_length() == 4096u32, "limit input size differs")
+  assert(path.filename().byte_length() == 4094u32, "limit filename differs")
+  assert(path.stem().byte_length() == 4092u32, "limit stem differs")
+  assert(expect_option_some(path.extension(), "limit extension absent").equals("z"), "limit extension differs")
+  assert(expect_option_some(path.parent(), "limit parent absent").to_string().equals("a"), "limit parent differs")
+  assert(relative_path(value.concat("x")) is Result::Err(PathError::TooLong), "4097 bytes accepted")
+}
+
+test "path parts keep escape rejection" {
+  assert(relative_path("a/../b") is Result::Err(PathError::ParentEscape), "parent segment accepted")
+  assert(relative_path("a/./b") is Result::Err(PathError::EmptySegment), "dot segment accepted")
+  assert(relative_path("a/") is Result::Err(PathError::EmptySegment), "trailing slash accepted")
+  assert(relative_path("a\x00b") is Result::Err(PathError::Nul), "NUL accepted")
+}
+
+test "path parts limit counts UTF8 bytes" {
+  let builder = StringBuilder::with_capacity(4096u32)
+  while 0u32 {
+    index if index < 2048u32 => {
+      builder.append("é")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let value = builder.finish()
+  let path = parts_path(value)
+  assert(path.byte_length() == 4096u32, "UTF8 byte bound differs")
+  assert(path.filename().equals(value), "UTF8 limit filename differs")
+  assert(path.stem().equals(value), "UTF8 limit stem differs")
+  assert(path.extension() is Option::None, "UTF8 limit extension present")
+  assert(path.parent() is Option::None, "UTF8 limit parent present")
+  assert(relative_path(value.concat("é")) is Result::Err(PathError::TooLong), "UTF8 byte overflow accepted")
+}

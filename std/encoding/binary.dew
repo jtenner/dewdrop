@@ -1,0 +1,226 @@
+open dew.std.bytes
+open dew.std.bytes_builder
+
+pub enum BinaryError {
+  ShortInput(U32, U32, U32)
+} derive(Eq)
+
+pub struct BinaryCursor {
+  private input: Bytes
+  private mut position: U32
+}
+
+pub fn binary_cursor(input: Bytes) -> BinaryCursor {
+  BinaryCursor::{
+    input: input
+    position: 0u32
+  }
+}
+pub fn binary_position(cursor: BinaryCursor) -> U32 {
+  cursor.position
+}
+pub fn binary_remaining(cursor: BinaryCursor) -> U32 {
+  cursor.input.byte_length() - cursor.position
+}
+pub fn binary_remaining_bytes(cursor: BinaryCursor) -> Bytes {
+  cursor.input.view(cursor.position, binary_remaining(cursor))
+}
+pub fn read_bytes(cursor: BinaryCursor, length: U32) -> Result<Bytes, BinaryError> {
+  let available = binary_remaining(cursor)
+  if length > available {
+    Result::Err(BinaryError::ShortInput(cursor.position, length, available))
+  } else {
+    let value = cursor.input.view(cursor.position, length)
+    cursor.position = cursor.position + length
+    Result::Ok(value)
+  }
+}
+
+pub fn read_u16_le(cursor: BinaryCursor) -> Result<U16, BinaryError> {
+  let available = binary_remaining(cursor)
+  if available < 2u32 {
+    Result::Err(BinaryError::ShortInput(cursor.position, 2u32, available))
+  } else {
+    let b0 = binary_u8_to_u16(cursor.input.byte_at(cursor.position + 0u32))
+    let b1 = binary_u8_to_u16(cursor.input.byte_at(cursor.position + 1u32))
+    let value = (b0 << 0u16) | (b1 << 8u16)
+    cursor.position = cursor.position + 2u32
+    Result::Ok(value)
+  }
+}
+
+pub fn write_u16_le(builder: BytesBuilder, value: U16) -> Unit {
+  let b0 = binary_u16_to_u8(((value >> 0u16) & 255u16))
+  builder.append_byte(b0)
+  let b1 = binary_u16_to_u8(((value >> 8u16) & 255u16))
+  builder.append_byte(b1)
+}
+
+pub fn read_u16_be(cursor: BinaryCursor) -> Result<U16, BinaryError> {
+  let available = binary_remaining(cursor)
+  if available < 2u32 {
+    Result::Err(BinaryError::ShortInput(cursor.position, 2u32, available))
+  } else {
+    let b0 = binary_u8_to_u16(cursor.input.byte_at(cursor.position + 0u32))
+    let b1 = binary_u8_to_u16(cursor.input.byte_at(cursor.position + 1u32))
+    let value = (b0 << 8u16) | (b1 << 0u16)
+    cursor.position = cursor.position + 2u32
+    Result::Ok(value)
+  }
+}
+
+pub fn write_u16_be(builder: BytesBuilder, value: U16) -> Unit {
+  let b0 = binary_u16_to_u8(((value >> 8u16) & 255u16))
+  builder.append_byte(b0)
+  let b1 = binary_u16_to_u8(((value >> 0u16) & 255u16))
+  builder.append_byte(b1)
+}
+
+pub fn read_u32_le(cursor: BinaryCursor) -> Result<U32, BinaryError> {
+  let available = binary_remaining(cursor)
+  if available < 4u32 {
+    Result::Err(BinaryError::ShortInput(cursor.position, 4u32, available))
+  } else {
+    let b0 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 0u32))
+    let b1 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 1u32))
+    let b2 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 2u32))
+    let b3 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 3u32))
+    let value = (b0 << 0u32) | (b1 << 8u32) | (b2 << 16u32) | (b3 << 24u32)
+    cursor.position = cursor.position + 4u32
+    Result::Ok(value)
+  }
+}
+
+pub fn write_u32_le(builder: BytesBuilder, value: U32) -> Unit {
+  let b0 = binary_u32_to_u8(((value >> 0u32) & 255u32))
+  builder.append_byte(b0)
+  let b1 = binary_u32_to_u8(((value >> 8u32) & 255u32))
+  builder.append_byte(b1)
+  let b2 = binary_u32_to_u8(((value >> 16u32) & 255u32))
+  builder.append_byte(b2)
+  let b3 = binary_u32_to_u8(((value >> 24u32) & 255u32))
+  builder.append_byte(b3)
+}
+
+pub fn read_u32_be(cursor: BinaryCursor) -> Result<U32, BinaryError> {
+  let available = binary_remaining(cursor)
+  if available < 4u32 {
+    Result::Err(BinaryError::ShortInput(cursor.position, 4u32, available))
+  } else {
+    let b0 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 0u32))
+    let b1 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 1u32))
+    let b2 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 2u32))
+    let b3 = binary_u8_to_u32(cursor.input.byte_at(cursor.position + 3u32))
+    let value = (b0 << 24u32) | (b1 << 16u32) | (b2 << 8u32) | (b3 << 0u32)
+    cursor.position = cursor.position + 4u32
+    Result::Ok(value)
+  }
+}
+
+pub fn write_u32_be(builder: BytesBuilder, value: U32) -> Unit {
+  let b0 = binary_u32_to_u8(((value >> 24u32) & 255u32))
+  builder.append_byte(b0)
+  let b1 = binary_u32_to_u8(((value >> 16u32) & 255u32))
+  builder.append_byte(b1)
+  let b2 = binary_u32_to_u8(((value >> 8u32) & 255u32))
+  builder.append_byte(b2)
+  let b3 = binary_u32_to_u8(((value >> 0u32) & 255u32))
+  builder.append_byte(b3)
+}
+
+pub fn read_u64_le(cursor: BinaryCursor) -> Result<U64, BinaryError> {
+  let available = binary_remaining(cursor)
+  if available < 8u32 {
+    Result::Err(BinaryError::ShortInput(cursor.position, 8u32, available))
+  } else {
+    let b0 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 0u32))
+    let b1 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 1u32))
+    let b2 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 2u32))
+    let b3 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 3u32))
+    let b4 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 4u32))
+    let b5 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 5u32))
+    let b6 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 6u32))
+    let b7 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 7u32))
+    let value = (b0 << 0u64) | (b1 << 8u64) | (b2 << 16u64) | (b3 << 24u64) | (b4 << 32u64) | (b5 << 40u64) | (b6 << 48u64) | (b7 << 56u64)
+    cursor.position = cursor.position + 8u32
+    Result::Ok(value)
+  }
+}
+
+pub fn write_u64_le(builder: BytesBuilder, value: U64) -> Unit {
+  let b0 = binary_u64_to_u8(((value >> 0u64) & 255u64))
+  builder.append_byte(b0)
+  let b1 = binary_u64_to_u8(((value >> 8u64) & 255u64))
+  builder.append_byte(b1)
+  let b2 = binary_u64_to_u8(((value >> 16u64) & 255u64))
+  builder.append_byte(b2)
+  let b3 = binary_u64_to_u8(((value >> 24u64) & 255u64))
+  builder.append_byte(b3)
+  let b4 = binary_u64_to_u8(((value >> 32u64) & 255u64))
+  builder.append_byte(b4)
+  let b5 = binary_u64_to_u8(((value >> 40u64) & 255u64))
+  builder.append_byte(b5)
+  let b6 = binary_u64_to_u8(((value >> 48u64) & 255u64))
+  builder.append_byte(b6)
+  let b7 = binary_u64_to_u8(((value >> 56u64) & 255u64))
+  builder.append_byte(b7)
+}
+
+pub fn read_u64_be(cursor: BinaryCursor) -> Result<U64, BinaryError> {
+  let available = binary_remaining(cursor)
+  if available < 8u32 {
+    Result::Err(BinaryError::ShortInput(cursor.position, 8u32, available))
+  } else {
+    let b0 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 0u32))
+    let b1 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 1u32))
+    let b2 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 2u32))
+    let b3 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 3u32))
+    let b4 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 4u32))
+    let b5 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 5u32))
+    let b6 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 6u32))
+    let b7 = binary_u8_to_u64(cursor.input.byte_at(cursor.position + 7u32))
+    let value = (b0 << 56u64) | (b1 << 48u64) | (b2 << 40u64) | (b3 << 32u64) | (b4 << 24u64) | (b5 << 16u64) | (b6 << 8u64) | (b7 << 0u64)
+    cursor.position = cursor.position + 8u32
+    Result::Ok(value)
+  }
+}
+
+pub fn write_u64_be(builder: BytesBuilder, value: U64) -> Unit {
+  let b0 = binary_u64_to_u8(((value >> 56u64) & 255u64))
+  builder.append_byte(b0)
+  let b1 = binary_u64_to_u8(((value >> 48u64) & 255u64))
+  builder.append_byte(b1)
+  let b2 = binary_u64_to_u8(((value >> 40u64) & 255u64))
+  builder.append_byte(b2)
+  let b3 = binary_u64_to_u8(((value >> 32u64) & 255u64))
+  builder.append_byte(b3)
+  let b4 = binary_u64_to_u8(((value >> 24u64) & 255u64))
+  builder.append_byte(b4)
+  let b5 = binary_u64_to_u8(((value >> 16u64) & 255u64))
+  builder.append_byte(b5)
+  let b6 = binary_u64_to_u8(((value >> 8u64) & 255u64))
+  builder.append_byte(b6)
+  let b7 = binary_u64_to_u8(((value >> 0u64) & 255u64))
+  builder.append_byte(b7)
+}
+
+fn binary_u8_to_u16(value: U8) -> U16 {
+  value.into()
+}
+fn binary_u16_to_u8(value: U16) -> U8 {
+  value.into()
+}
+
+fn binary_u8_to_u32(value: U8) -> U32 {
+  value.into()
+}
+fn binary_u32_to_u8(value: U32) -> U8 {
+  value.into()
+}
+
+fn binary_u8_to_u64(value: U8) -> U64 {
+  value.into()
+}
+fn binary_u64_to_u8(value: U64) -> U8 {
+  value.into()
+}

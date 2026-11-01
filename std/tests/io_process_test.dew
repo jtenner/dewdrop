@@ -1,0 +1,180 @@
+open dew.std.io
+open dew.std.io.process
+open dew.std.process
+open dew.std.array
+open dew.std.fixed_array
+open dew.std.bytes
+open dew.std.bytes_builder
+
+struct OutputMock {
+  state: FixedArray<U32>
+  out: BytesBuilder
+  err: BytesBuilder
+  limit: U32
+  mode: U32
+  kind: ProcessErrorKind
+}
+fn output_mock(limit: U32, mode: U32, kind: ProcessErrorKind) -> OutputMock {
+  OutputMock::{
+    state: FixedArray::make(2u32, 0u32)
+    out: BytesBuilder::new()
+    err: BytesBuilder::new()
+    limit: limit
+    mode: mode
+    kind: kind
+  }
+}
+fn mock_output_write(mock: OutputMock, value: Bytes, channel: U32) -> Result<U32, ProcessError> {
+  let calls = mock.state.get_unchecked(channel)
+  mock.state.set_unchecked(channel, calls + 1u32)
+  if mock.mode == 3u32 || (mock.mode == 4u32 && calls > 0u32) {
+    Result::Err(ProcessError::{
+      operation: ProcessOperation::Exit
+      kind: mock.kind
+      code: 37u32
+    })
+  } else if mock.mode == 1u32 {
+    Result::Ok(0u32)
+  } else if mock.mode == 2u32 {
+    Result::Ok(value.byte_length() + 1u32)
+  } else {
+    let count = if value.byte_length() < mock.limit {
+      value.byte_length()
+    } else {
+      mock.limit
+    }
+    let chunk = value.view(0u32, count)
+    if channel == 0u32 {
+      mock.out.append(chunk)
+    } else {
+      mock.err.append(chunk)
+    }
+    Result::Ok(count)
+  }
+}
+impl Process for OutputMock {
+  fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError> {
+    Result::Ok(Array::new())
+  }
+  fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError> {
+    Result::Ok(Option::None)
+  }
+  fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError> {
+    mock_output_write(self, value, 0u32)
+  }
+  fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError> {
+    mock_output_write(self, value, 1u32)
+  }
+  fn exit(self, status: U32) -> Never {
+    unreachable()
+  }
+}
+
+test "process writers preserve bytes and route partial writes" {
+  while 1u32 {
+    limit if limit <= 9u32 => {
+      let mock = output_mock(limit, 0u32, ProcessErrorKind::Backend)
+      let out = process_stdout(mock)
+      let err = process_stderr(mock)
+      assert(out.channel() is ProcessOutputChannel::StandardOutput, "stdout identity")
+      assert(err.channel() is ProcessOutputChannel::StandardError, "stderr identity")
+      let bytes = b"a\x00\x80\xffz"
+      assert(io_write_all(out, bytes) is Result::Ok(5u32), "stdout count")
+      assert(io_write_all(err, bytes) is Result::Ok(5u32), "stderr count")
+      assert(mock.out.finish().equals(bytes), "stdout bytes")
+      assert(mock.err.finish().equals(bytes), "stderr bytes")
+      let calls = (5u32 + limit - 1u32) / limit
+      assert(mock.state.get_unchecked(0u32) == calls, "stdout calls")
+      assert(mock.state.get_unchecked(1u32) == calls, "stderr calls")
+      continue limit + 1u32
+    }
+    _ => break ()
+  }
+}
+test "process writers leave empty complete writes untouched" {
+  let mock = output_mock(1u32, 3u32, ProcessErrorKind::Backend)
+  assert(io_write_all(process_stdout(mock), b"") is Result::Ok(0u32), "empty stdout")
+  assert(io_write_all(process_stderr(mock), b"") is Result::Ok(0u32), "empty stderr")
+  assert(mock.state.get_unchecked(0u32) == 0u32, "empty called stdout")
+  assert(mock.state.get_unchecked(1u32) == 0u32, "empty called stderr")
+}
+test "process writer direct writes preserve backend progress" {
+  let mock = output_mock(2u32, 0u32, ProcessErrorKind::Backend)
+  assert(io_write(process_stdout(mock), b"abcd") is Result::Ok(2u32), "partial direct")
+  assert(mock.out.finish().equals(b"ab"), "direct prefix")
+  assert(mock.state.get_unchecked(1u32) == 0u32, "wrong channel")
+}
+test "process writers reject mode 1 on both channels" {
+  let mock = output_mock(1u32, 1u32, ProcessErrorKind::Backend)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::ZeroProgress), "stdout progress")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::ZeroProgress), "stderr progress")
+  assert(mock.state.get_unchecked(0u32) == 1u32, "stdout did not stop")
+  assert(mock.state.get_unchecked(1u32) == 1u32, "stderr did not stop")
+}
+test "process writers reject mode 2 on both channels" {
+  let mock = output_mock(1u32, 2u32, ProcessErrorKind::Backend)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::InvalidProgress), "stdout progress")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::InvalidProgress), "stderr progress")
+  assert(mock.state.get_unchecked(0u32) == 1u32, "stdout did not stop")
+  assert(mock.state.get_unchecked(1u32) == 1u32, "stderr did not stop")
+}
+test "process writer maps Missing errors including after progress" {
+  let mock = output_mock(1u32, 3u32, ProcessErrorKind::Missing)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stdout mapping")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stderr mapping")
+  let partial = output_mock(1u32, 4u32, ProcessErrorKind::Missing)
+  assert(io_write_all(process_stdout(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stdout mapping")
+  assert(io_write_all(process_stderr(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stderr mapping")
+  assert(partial.out.finish().equals(b"a"), "stdout prefix lost")
+  assert(partial.err.finish().equals(b"a"), "stderr prefix lost")
+  assert(partial.state.get_unchecked(0u32) == 2u32, "stdout retry after error")
+  assert(partial.state.get_unchecked(1u32) == 2u32, "stderr retry after error")
+}
+test "process writer maps InvalidUtf8 errors including after progress" {
+  let mock = output_mock(1u32, 3u32, ProcessErrorKind::InvalidUtf8)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stdout mapping")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stderr mapping")
+  let partial = output_mock(1u32, 4u32, ProcessErrorKind::InvalidUtf8)
+  assert(io_write_all(process_stdout(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stdout mapping")
+  assert(io_write_all(process_stderr(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stderr mapping")
+  assert(partial.out.finish().equals(b"a"), "stdout prefix lost")
+  assert(partial.err.finish().equals(b"a"), "stderr prefix lost")
+  assert(partial.state.get_unchecked(0u32) == 2u32, "stdout retry after error")
+  assert(partial.state.get_unchecked(1u32) == 2u32, "stderr retry after error")
+}
+test "process writer maps LimitExceeded errors including after progress" {
+  let mock = output_mock(1u32, 3u32, ProcessErrorKind::LimitExceeded)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::LimitExceeded), "stdout mapping")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::LimitExceeded), "stderr mapping")
+  let partial = output_mock(1u32, 4u32, ProcessErrorKind::LimitExceeded)
+  assert(io_write_all(process_stdout(partial), b"abc") is Result::Err(IoError::LimitExceeded), "partial stdout mapping")
+  assert(io_write_all(process_stderr(partial), b"abc") is Result::Err(IoError::LimitExceeded), "partial stderr mapping")
+  assert(partial.out.finish().equals(b"a"), "stdout prefix lost")
+  assert(partial.err.finish().equals(b"a"), "stderr prefix lost")
+  assert(partial.state.get_unchecked(0u32) == 2u32, "stdout retry after error")
+  assert(partial.state.get_unchecked(1u32) == 2u32, "stderr retry after error")
+}
+test "process writer maps Unsupported errors including after progress" {
+  let mock = output_mock(1u32, 3u32, ProcessErrorKind::Unsupported)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stdout mapping")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stderr mapping")
+  let partial = output_mock(1u32, 4u32, ProcessErrorKind::Unsupported)
+  assert(io_write_all(process_stdout(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stdout mapping")
+  assert(io_write_all(process_stderr(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stderr mapping")
+  assert(partial.out.finish().equals(b"a"), "stdout prefix lost")
+  assert(partial.err.finish().equals(b"a"), "stderr prefix lost")
+  assert(partial.state.get_unchecked(0u32) == 2u32, "stdout retry after error")
+  assert(partial.state.get_unchecked(1u32) == 2u32, "stderr retry after error")
+}
+test "process writer maps Backend errors including after progress" {
+  let mock = output_mock(1u32, 3u32, ProcessErrorKind::Backend)
+  assert(io_write_all(process_stdout(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stdout mapping")
+  assert(io_write_all(process_stderr(mock), b"abc") is Result::Err(IoError::Backend(37u32)), "stderr mapping")
+  let partial = output_mock(1u32, 4u32, ProcessErrorKind::Backend)
+  assert(io_write_all(process_stdout(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stdout mapping")
+  assert(io_write_all(process_stderr(partial), b"abc") is Result::Err(IoError::Backend(37u32)), "partial stderr mapping")
+  assert(partial.out.finish().equals(b"a"), "stdout prefix lost")
+  assert(partial.err.finish().equals(b"a"), "stderr prefix lost")
+  assert(partial.state.get_unchecked(0u32) == 2u32, "stdout retry after error")
+  assert(partial.state.get_unchecked(1u32) == 2u32, "stderr retry after error")
+}

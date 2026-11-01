@@ -1,0 +1,22 @@
+open dew.std.path
+open dew.std.string
+pub fn main() -> I32 {
+  match relative_path("src/é.main.dew") {
+    Result::Err(_) => 0
+    Result::Ok(path) => {
+      let parent = match path.parent() {
+        Option::Some(value) => value.to_string().equals("src")
+        Option::None => false
+      }
+      let extension = match path.extension() {
+        Option::Some(value) => value.equals("dew")
+        Option::None => false
+      }
+      if parent && extension && path.filename().equals("é.main.dew") && path.stem().equals("é.main") {
+        1
+      } else {
+        0
+      }
+    }
+  }
+}

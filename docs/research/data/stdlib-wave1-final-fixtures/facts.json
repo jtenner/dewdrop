@@ -1,0 +1,746 @@
+[
+  {
+    "fixture": "tests/module-snapshots/collections/iter-combinators-runtime.wat",
+    "decoded_bytes": [
+      5887,
+      5887
+    ],
+    "changes": [
+      {
+        "field": "root.facts.signatures[17].signature",
+        "old": 83,
+        "new": 86,
+        "offset": 2609
+      },
+      {
+        "field": "root.facts.signatures[18].signature",
+        "old": 84,
+        "new": 87,
+        "offset": 2632
+      },
+      {
+        "field": "root.facts.signatures[19].signature",
+        "old": 86,
+        "new": 89,
+        "offset": 2655
+      },
+      {
+        "field": "root.facts.signatures[20].signature",
+        "old": 87,
+        "new": 90,
+        "offset": 2676
+      },
+      {
+        "field": "root.facts.signatures[21].signature",
+        "old": 88,
+        "new": 91,
+        "offset": 2717
+      },
+      {
+        "field": "root.facts.signatures[22].signature",
+        "old": 90,
+        "new": 93,
+        "offset": 2738
+      },
+      {
+        "field": "root.facts.bodies[6].sites[2].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4054
+      },
+      {
+        "field": "root.facts.bodies[6].sites[3].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4094
+      },
+      {
+        "field": "root.facts.bodies[6].sites[4].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4135
+      },
+      {
+        "field": "root.facts.bodies[6].sites[5].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4176
+      },
+      {
+        "field": "root.facts.bodies[6].sites[6].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4217
+      },
+      {
+        "field": "root.facts.bodies[6].sites[7].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4258
+      },
+      {
+        "field": "root.facts.bodies[6].sites[8].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4299
+      },
+      {
+        "field": "root.facts.bodies[6].sites[9].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4340
+      },
+      {
+        "field": "root.facts.bodies[6].sites[10].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4381
+      },
+      {
+        "field": "root.facts.bodies[6].sites[11].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4422
+      },
+      {
+        "field": "root.facts.bodies[6].sites[12].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4463
+      },
+      {
+        "field": "root.facts.bodies[6].sites[13].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4504
+      },
+      {
+        "field": "root.facts.bodies[6].sites[14].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4545
+      },
+      {
+        "field": "root.facts.bodies[6].sites[15].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4586
+      },
+      {
+        "field": "root.facts.bodies[6].sites[16].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4627
+      },
+      {
+        "field": "root.facts.bodies[6].sites[17].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4668
+      },
+      {
+        "field": "root.facts.bodies[6].sites[18].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4709
+      },
+      {
+        "field": "root.facts.bodies[6].sites[19].facts.reference.heap.heap.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4750
+      },
+      {
+        "field": "root.facts.bodies[6].sites[20].facts.reference.heap.heap.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4791
+      },
+      {
+        "field": "root.facts.bodies[6].sites[21].facts.reference.heap.heap.type_index",
+        "old": 102,
+        "new": 105,
+        "offset": 4832
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[1].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4903
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[2].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 4945
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[3].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 4981
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[4].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5024
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[5].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5060
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[6].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5103
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[7].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5139
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[8].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5182
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[9].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5218
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[10].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5261
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[11].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5297
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[12].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5340
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[13].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5376
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[14].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5419
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[15].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5455
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[16].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5498
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[17].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5534
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[18].facts.kind.type_index",
+        "old": 101,
+        "new": 104,
+        "offset": 5577
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[19].facts.kind.type_index",
+        "old": 100,
+        "new": 103,
+        "offset": 5613
+      },
+      {
+        "field": "root.facts.bodies[6].allocations[20].facts.kind.type_index",
+        "old": 102,
+        "new": 105,
+        "offset": 5656
+      }
+    ]
+  },
+  {
+    "fixture": "tests/module-snapshots/text/code-points-exhausted.wat",
+    "decoded_bytes": [
+      3014,
+      3014
+    ],
+    "changes": [
+      {
+        "field": "root.facts.bodies[1].sites[0].provenance.declaration_id",
+        "old": 18446462796301336594,
+        "new": 18446462796301336599,
+        "offset": 2425
+      },
+      {
+        "field": "root.facts.bodies[1].sites[0].provenance.body_id",
+        "old": 18446462796301336591,
+        "new": 18446462796301336596,
+        "offset": 2436
+      },
+      {
+        "field": "root.facts.bodies[1].sites[0].provenance.source_offset",
+        "old": 4649,
+        "new": 6863,
+        "offset": 2448
+      },
+      {
+        "field": "root.facts.bodies[1].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336594,
+        "new": 18446462796301336599,
+        "offset": 2474
+      },
+      {
+        "field": "root.facts.bodies[1].allocations[0].provenance.body_id",
+        "old": 18446462796301336591,
+        "new": 18446462796301336596,
+        "offset": 2485
+      },
+      {
+        "field": "root.facts.bodies[1].allocations[0].provenance.source_offset",
+        "old": 4649,
+        "new": 6863,
+        "offset": 2497
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 2527
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 2538
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 2550
+      },
+      {
+        "field": "root.facts.bodies[2].sites[1].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 2576
+      },
+      {
+        "field": "root.facts.bodies[2].sites[1].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 2587
+      },
+      {
+        "field": "root.facts.bodies[2].sites[1].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 2599
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 2625
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 2636
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 2648
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[1].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 2669
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[1].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 2680
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[1].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 2692
+      }
+    ]
+  },
+  {
+    "fixture": "tests/module-snapshots/text/code-points-invalid-view-trap.wat",
+    "decoded_bytes": [
+      3649,
+      3649
+    ],
+    "changes": [
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.declaration_id",
+        "old": 18446462796301336595,
+        "new": 18446462796301336600,
+        "offset": 3213
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.body_id",
+        "old": 18446462796301336592,
+        "new": 18446462796301336597,
+        "offset": 3224
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.source_offset",
+        "old": 4788,
+        "new": 7002,
+        "offset": 3236
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336595,
+        "new": 18446462796301336600,
+        "offset": 3262
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.body_id",
+        "old": 18446462796301336592,
+        "new": 18446462796301336597,
+        "offset": 3273
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.source_offset",
+        "old": 4788,
+        "new": 7002,
+        "offset": 3285
+      },
+      {
+        "field": "root.facts.bodies[3].sites[0].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 3315
+      },
+      {
+        "field": "root.facts.bodies[3].sites[0].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 3326
+      },
+      {
+        "field": "root.facts.bodies[3].sites[0].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 3338
+      },
+      {
+        "field": "root.facts.bodies[3].sites[1].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 3364
+      },
+      {
+        "field": "root.facts.bodies[3].sites[1].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 3375
+      },
+      {
+        "field": "root.facts.bodies[3].sites[1].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 3387
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 3413
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[0].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 3424
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[0].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 3436
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[1].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 3457
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[1].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 3468
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[1].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 3480
+      }
+    ]
+  },
+  {
+    "fixture": "tests/module-snapshots/text/code-points-runtime.wat",
+    "decoded_bytes": [
+      7219,
+      7219
+    ],
+    "changes": [
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.declaration_id",
+        "old": 18446462796301336594,
+        "new": 18446462796301336599,
+        "offset": 4393
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.body_id",
+        "old": 18446462796301336591,
+        "new": 18446462796301336596,
+        "offset": 4404
+      },
+      {
+        "field": "root.facts.bodies[2].sites[0].provenance.source_offset",
+        "old": 4649,
+        "new": 6863,
+        "offset": 4416
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336594,
+        "new": 18446462796301336599,
+        "offset": 4442
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.body_id",
+        "old": 18446462796301336591,
+        "new": 18446462796301336596,
+        "offset": 4453
+      },
+      {
+        "field": "root.facts.bodies[2].allocations[0].provenance.source_offset",
+        "old": 4649,
+        "new": 6863,
+        "offset": 4465
+      },
+      {
+        "field": "root.facts.bodies[3].sites[0].provenance.declaration_id",
+        "old": 18446462796301336595,
+        "new": 18446462796301336600,
+        "offset": 4495
+      },
+      {
+        "field": "root.facts.bodies[3].sites[0].provenance.body_id",
+        "old": 18446462796301336592,
+        "new": 18446462796301336597,
+        "offset": 4506
+      },
+      {
+        "field": "root.facts.bodies[3].sites[0].provenance.source_offset",
+        "old": 4788,
+        "new": 7002,
+        "offset": 4518
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336595,
+        "new": 18446462796301336600,
+        "offset": 4544
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[0].provenance.body_id",
+        "old": 18446462796301336592,
+        "new": 18446462796301336597,
+        "offset": 4555
+      },
+      {
+        "field": "root.facts.bodies[3].allocations[0].provenance.source_offset",
+        "old": 4788,
+        "new": 7002,
+        "offset": 4567
+      },
+      {
+        "field": "root.facts.bodies[4].sites[0].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 4597
+      },
+      {
+        "field": "root.facts.bodies[4].sites[0].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 4608
+      },
+      {
+        "field": "root.facts.bodies[4].sites[0].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 4620
+      },
+      {
+        "field": "root.facts.bodies[4].sites[1].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 4646
+      },
+      {
+        "field": "root.facts.bodies[4].sites[1].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 4657
+      },
+      {
+        "field": "root.facts.bodies[4].sites[1].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 4669
+      },
+      {
+        "field": "root.facts.bodies[4].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 4695
+      },
+      {
+        "field": "root.facts.bodies[4].allocations[0].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 4706
+      },
+      {
+        "field": "root.facts.bodies[4].allocations[0].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 4718
+      },
+      {
+        "field": "root.facts.bodies[4].allocations[1].provenance.declaration_id",
+        "old": 18446462796301336607,
+        "new": 18446462796301336612,
+        "offset": 4739
+      },
+      {
+        "field": "root.facts.bodies[4].allocations[1].provenance.body_id",
+        "old": 18446462796301336601,
+        "new": 18446462796301336606,
+        "offset": 4750
+      },
+      {
+        "field": "root.facts.bodies[4].allocations[1].provenance.source_offset",
+        "old": 7762,
+        "new": 9976,
+        "offset": 4762
+      },
+      {
+        "field": "root.facts.bodies[5].sites[0].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 4792
+      },
+      {
+        "field": "root.facts.bodies[5].sites[0].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 4803
+      },
+      {
+        "field": "root.facts.bodies[5].sites[0].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 4815
+      },
+      {
+        "field": "root.facts.bodies[5].sites[1].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 4841
+      },
+      {
+        "field": "root.facts.bodies[5].sites[1].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 4852
+      },
+      {
+        "field": "root.facts.bodies[5].sites[1].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 4864
+      },
+      {
+        "field": "root.facts.bodies[5].allocations[0].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 4890
+      },
+      {
+        "field": "root.facts.bodies[5].allocations[0].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 4901
+      },
+      {
+        "field": "root.facts.bodies[5].allocations[0].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 4913
+      },
+      {
+        "field": "root.facts.bodies[5].allocations[1].provenance.declaration_id",
+        "old": 18446462796301336609,
+        "new": 18446462796301336614,
+        "offset": 4934
+      },
+      {
+        "field": "root.facts.bodies[5].allocations[1].provenance.body_id",
+        "old": 18446462796301336602,
+        "new": 18446462796301336607,
+        "offset": 4945
+      },
+      {
+        "field": "root.facts.bodies[5].allocations[1].provenance.source_offset",
+        "old": 7975,
+        "new": 10189,
+        "offset": 4957
+      }
+    ]
+  }
+]

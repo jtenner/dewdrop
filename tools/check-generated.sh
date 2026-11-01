@@ -88,6 +88,7 @@ python3 tools/generate_disposable_std.py --check
 python3 tools/generate_iter_std.py --check
 python3 tools/generate_math_std.py --check
 python3 tools/generate_io_std.py --check
+python3 tools/generate_io_process_std.py --check
 python3 tools/generate_testing_std.py --check
 python3 tools/generate_bloom_filter_std.py --check
 python3 tools/generate_blake3_std.py --check
@@ -104,6 +105,9 @@ tools/check-facet.sh
 python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check
 python3 tools/generate_utf8_std.py --check
+python3 tools/generate_hex_std.py --check
+python3 tools/generate_binary_std.py --check
+python3 tools/generate_directory_std.py --check
 python3 tools/generate_standard_builtin_registry.py --check
 python3 tools/generate_std_tests.py --check
 python3 tools/test_dew_registry_cli.py

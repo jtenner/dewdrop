@@ -13,7 +13,7 @@ pub fn standard_source_paths() -> Array[String] {
     "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/encode.dew",
     "std/decode.dew", "std/format.dew", "std/semver.dew", "std/package.dew", "std/package/artifact.dew",
     "std/bloom_filter.dew", "std/blake3.dew", "std/integrity/sha256.dew", "std/path.dew",
-    "std/fs.dew", "std/process.dew", "std/fs/wasi.dew", "std/process/wasi.dew", "std/text_runtime.dew",
+    "std/fs/directory.dew", "std/fs/wasi_directory.dew", "std/fs.dew", "std/process.dew", "std/fs/wasi.dew", "std/process/wasi.dew", "std/text_runtime.dew",
     "std/string.dew", "std/string_fixed_array.dew", "std/string_builder.dew", "std/bytes_builder.dew",
     "std/bytes.dew", "std/text.dew", "std/encoding/utf8.dew", "std/wasm/wasi.dew",
     "std/wasi.dew", "std/wasm/intrinsics.dew", "std/facet.dew", "std/facet/imports.dew",
@@ -29,12 +29,16 @@ pub fn standard_source_paths() -> Array[String] {
     paths.push("std/" + name + ".dew")
   }
   paths.push("std/types.dew")
+  paths.push("std/encoding/hex.dew")
+  paths.push("std/encoding/binary.dew")
+  paths.push("std/io/process.dew")
   paths
 }
 
 ///|
 pub fn bootstrap_standard_source(path : String) -> Bytes? {
   match path {
+    "std/encoding/binary.dew" => Some(standard_binary_source())
     "std/types.dew" => Some(standard_types_source())
     "std/preamble/00-builtins.dew" => Some(standard_preamble_builtins_source())
     "std/preamble/10-traits.dew" => Some(standard_preamble_traits_source())
@@ -73,6 +77,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/disposable.dew" => Some(standard_disposable_source())
     "std/math.dew" => Some(standard_math_source())
     "std/io.dew" => Some(standard_io_source())
+    "std/io/process.dew" => Some(standard_io_process_source())
     "std/testing.dew" => Some(standard_testing_source())
     "std/json.dew" => Some(standard_json_source())
     "std/encode.dew" => Some(standard_encode_source())
@@ -85,6 +90,8 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/blake3.dew" => Some(standard_blake3_source())
     "std/integrity/sha256.dew" => Some(standard_sha256_source())
     "std/path.dew" => Some(standard_path_source())
+    "std/fs/directory.dew" => Some(standard_directory_source())
+    "std/fs/wasi_directory.dew" => Some(standard_wasi_directory_source())
     "std/fs.dew" => Some(standard_fs_source())
     "std/process.dew" => Some(standard_process_source())
     "std/fs/wasi.dew" => Some(standard_fs_wasi_source())
@@ -97,6 +104,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/bytes_builder.dew" => Some(standard_text_sources()[3])
     "std/bytes.dew" => Some(standard_text_sources()[4])
     "std/text.dew" => Some(standard_text_iteration_source())
+    "std/encoding/hex.dew" => Some(standard_hex_source())
     "std/encoding/utf8.dew" => Some(standard_utf8_source())
     "std/wasm/wasi.dew" => Some(standard_wasm_wasi_source())
     "std/wasi.dew" => Some(standard_wasi_source())

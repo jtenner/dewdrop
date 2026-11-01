@@ -1,0 +1,219 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.string
+open dew.std.path
+open dew.std.set
+
+pub enum DirectoryError {
+  InvalidLimit
+  PartialRecord
+  MalformedRecord
+  InvalidName
+  InvalidUtf8
+  RepeatedCookie
+  PermissionDenied
+  Symlink
+  Host(U32)
+  Close(U32)
+} derive(Eq)
+
+pub enum DirectoryEntryKind {
+  Unknown
+  BlockDevice
+  CharacterDevice
+  Directory
+  File
+  SocketDatagram
+  SocketStream
+  Symlink
+} derive(Eq)
+
+pub struct DirectoryEntry {
+  name: String
+  kind: DirectoryEntryKind
+}
+
+pub struct DirectoryPage {
+  entries: Array<DirectoryEntry>
+  cookie: U64
+  end: Bool
+}
+
+pub trait DirectoryReader {
+  fn read_directory(self, path: RelativePath, cookie: U64, max_entries: U32, max_bytes: U32) -> Result<DirectoryPage, DirectoryError>
+}
+
+// A host owns handles. Reads return at most the requested encoded bytes.
+pub trait DirectoryHost {
+  fn open_directory(self, path: RelativePath) -> Result<U32, DirectoryError>
+  fn read_directory_bytes(self, handle: U32, cookie: U64, max_bytes: U32) -> Result<Bytes, DirectoryError>
+  fn close_directory(self, handle: U32) -> Result<Unit, DirectoryError>
+}
+
+pub fn directory_limits_valid(max_entries: U32, max_bytes: U32) -> Bool {
+  max_entries > 0u32 && max_entries <= 2048u32 && max_bytes >= 24u32 && max_bytes <= 49152u32
+}
+
+pub fn directory_path_valid(path: RelativePath) -> Bool {
+  match relative_path(path.to_string()) {
+    Result::Ok(_) => true
+    Result::Err(_) => false
+  }
+}
+
+pub fn directory_u64(value: U8) -> U64 {
+  value.into()
+}
+
+pub fn directory_shift(value: U32) -> U64 {
+  value.into()
+}
+
+pub fn directory_u32(value: U64) -> U32 {
+  value.into()
+}
+
+pub fn directory_le(value: Bytes, offset: U32, width: U32) -> U64 {
+  let mut result = 0u64
+  while 0u32 {
+    index if index < width => {
+      result = result | (directory_u64(value.byte_at(offset + index)) << directory_shift(index * 8u32))
+      continue index + 1u32
+    }
+    _ => break result
+  }
+}
+
+pub fn directory_page(entries: Array<DirectoryEntry>, cookie: U64, end: Bool) -> Result<DirectoryPage, DirectoryError> {
+  Result::Ok(DirectoryPage::{
+    entries: entries
+    cookie: cookie
+    end: end
+  })
+}
+
+// WASI preview1 dirent: next:u64, inode:u64, name_length:u32, type:u8,
+// three padding bytes, then name bytes. Padding and inode are opaque.
+pub fn directory_decode_page(value: Bytes, cookie: U64, max_entries: U32, max_bytes: U32) -> Result<DirectoryPage, DirectoryError> {
+  if !directory_limits_valid(max_entries, max_bytes) {
+    Result::Err(DirectoryError::InvalidLimit)
+  } else if value.byte_length() > max_bytes {
+    Result::Err(DirectoryError::MalformedRecord)
+  } else {
+    let entries = Array::new()
+    let seen = Set::singleton(cookie)
+    let mut next = cookie
+    let mut records = 0u32
+    let length = value.byte_length()
+    while 0u32 {
+      offset if offset < length => {
+        if records == max_entries {
+          break directory_page(entries, next, false)
+        } else if length - offset < 24u32 {
+          if records == 0u32 {
+            break Result::Err(DirectoryError::PartialRecord)
+          } else {
+            break directory_page(entries, next, false)
+          }
+        } else {
+          let name_length = directory_u32(directory_le(value, offset + 16u32, 4u32))
+          if name_length > length - offset - 24u32 {
+            if records == 0u32 {
+              break Result::Err(DirectoryError::PartialRecord)
+            } else {
+              break directory_page(entries, next, false)
+            }
+          } else {
+            let following = directory_le(value, offset, 8u32)
+            if !seen.insert(following) {
+              break Result::Err(DirectoryError::RepeatedCookie)
+            } else {
+              let name = value.view(offset + 24u32, name_length)
+              if !name.is_valid_utf8() {
+                break Result::Err(DirectoryError::InvalidUtf8)
+              } else if name_length == 0u32 {
+                break Result::Err(DirectoryError::InvalidName)
+              } else {
+                let valid = while 0u32 {
+                  index if index < name_length => {
+                    let byte = name.byte_at(index)
+                    if byte == 0u8 || byte == 47u8 || byte == 92u8 {
+                      break false
+                    } else {
+                      continue index + 1u32
+                    }
+                  }
+                  _ => break true
+                }
+                let kind = match value.byte_at(offset + 20u32) {
+                  0u8 => Option::Some(DirectoryEntryKind::Unknown)
+                  1u8 => Option::Some(DirectoryEntryKind::BlockDevice)
+                  2u8 => Option::Some(DirectoryEntryKind::CharacterDevice)
+                  3u8 => Option::Some(DirectoryEntryKind::Directory)
+                  4u8 => Option::Some(DirectoryEntryKind::File)
+                  5u8 => Option::Some(DirectoryEntryKind::SocketDatagram)
+                  6u8 => Option::Some(DirectoryEntryKind::SocketStream)
+                  7u8 => Option::Some(DirectoryEntryKind::Symlink)
+                  _ => Option::None
+                }
+                if !valid {
+                  break Result::Err(DirectoryError::InvalidName)
+                } else {
+                  match kind {
+                    Option::None => break Result::Err(DirectoryError::MalformedRecord)
+                    Option::Some(entry_kind) => {
+                      if name != b"." && name != b".." {
+                        entries.push(DirectoryEntry::{
+                          name: name.to_string()
+                          kind: entry_kind
+                        })
+                      }
+                      next = following
+                      records = records + 1u32
+                      continue offset + 24u32 + name_length
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      _ => break directory_page(entries, next, length < max_bytes)
+    }
+  }
+}
+
+pub fn directory_read<h: DirectoryHost>(host: h, path: RelativePath, cookie: U64, max_entries: U32, max_bytes: U32) -> Result<DirectoryPage, DirectoryError> {
+  if !directory_limits_valid(max_entries, max_bytes) {
+    Result::Err(DirectoryError::InvalidLimit)
+  } else if !directory_path_valid(path) {
+    Result::Err(DirectoryError::InvalidName)
+  } else {
+    match host.open_directory(path) {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(handle) => {
+        let value = host.read_directory_bytes(handle, cookie, max_bytes)
+        let closed = host.close_directory(handle)
+        match value {
+          Result::Err(error) => Result::Err(error)
+          Result::Ok(bytes) => {
+            match directory_decode_page(bytes, cookie, max_entries, max_bytes) {
+              Result::Err(error) => Result::Err(error)
+              Result::Ok(page) => {
+                match closed {
+                  Result::Err(error) => Result::Err(error)
+                  Result::Ok(_) => Result::Ok(page)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+pub fn read_directory<r: DirectoryReader>(reader: r, path: RelativePath, cookie: U64, max_entries: U32, max_bytes: U32) -> Result<DirectoryPage, DirectoryError> {
+  reader.read_directory(path, cookie, max_entries, max_bytes)
+}

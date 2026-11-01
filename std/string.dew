@@ -52,7 +52,21 @@ impl Hash for StringView {
   }
 }
 
+// ASCII whitespace only: HT, LF, VT, FF, CR, SPACE.
+fn string_ascii_whitespace(byte: U8) -> Bool {
+  byte == 32u8 || (byte >= 9u8 && byte <= 13u8)
+}
+
 impl String {
+  fn trim_ascii_start(self) -> StringView {
+    self.view(0u32, self.byte_length()).trim_ascii_start()
+  }
+  fn trim_ascii_end(self) -> StringView {
+    self.view(0u32, self.byte_length()).trim_ascii_end()
+  }
+  fn trim_ascii(self) -> StringView {
+    self.view(0u32, self.byte_length()).trim_ascii()
+  }
   fn byte_length(self) -> U32 {
     string_byte_length(self)
   }
@@ -118,6 +132,34 @@ impl String {
 }
 
 impl StringView {
+  fn trim_ascii_start(self) -> StringView {
+    let length = self.byte_length()
+    let start = while 0u32 {
+      index if index < length => {
+        if !string_ascii_whitespace(self.byte_at(index)) {
+          break index
+        }
+        continue index + 1u32
+      }
+      index => break index
+    }
+    self.view(start, length - start)
+  }
+  fn trim_ascii_end(self) -> StringView {
+    let end = while self.byte_length() {
+      index if index > 0u32 => {
+        if !string_ascii_whitespace(self.byte_at(index - 1u32)) {
+          break index
+        }
+        continue index - 1u32
+      }
+      index => break index
+    }
+    self.view(0u32, end)
+  }
+  fn trim_ascii(self) -> StringView {
+    self.trim_ascii_start().trim_ascii_end()
+  }
   fn byte_length(self) -> U32 {
     string_view_byte_length(self)
   }

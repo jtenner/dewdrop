@@ -1,0 +1,17 @@
+{
+  "name": "sdk-version",
+  "command": [
+    "curl",
+    "-fL",
+    "--connect-timeout",
+    "15",
+    "--max-time",
+    "45",
+    "https://cli.moonbitlang.com/binaries/0.1.20261012/moonbit-linux-x86_64.tar.gz",
+    "-o",
+    "/data/workspace/stdlib-wave1-g0/sdk-version.tar.gz"
+  ],
+  "exit": 22,
+  "elapsed": 1.1513442620052956,
+  "stderr": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\ncurl: (22) The requested URL returned error: 403\n"
+}

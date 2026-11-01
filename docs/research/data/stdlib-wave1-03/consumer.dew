@@ -1,0 +1,10 @@
+open dew.std.text
+open dew.std.string
+pub fn main() -> Unit {
+  let parts = "a\r\nb\n".view(0u32, 5u32).lines()
+  let mut count = 0u32
+  for field in parts {
+    count = count + field.byte_length() + 1u32
+  }
+  assert(count == 5u32, "production lines failed")
+}

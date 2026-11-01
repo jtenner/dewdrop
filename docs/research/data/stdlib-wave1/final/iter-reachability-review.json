@@ -1,0 +1,10 @@
+{
+  "fixture": "tests/module-snapshots/collections/iter-combinators-runtime.wat",
+  "source_commit": "8313a6aa",
+  "hunks": 24,
+  "old_sha256": "a4e653a28d1ca1822bf6fbe6bc95f7205f00b5e7e9f98800775f702680a0e096",
+  "new_sha256": "736550654925699f88754d7e5602e2fbab38de6a6ade9412af549a2c823a0fea",
+  "pre_wave_expected_sha256": "736550654925699f88754d7e5602e2fbab38de6a6ade9412af549a2c823a0fea",
+  "exactly_matches_pre_wave_expected": true,
+  "functions": 47
+}

@@ -103,7 +103,7 @@ fn selected_standard_modules(
             import_.path.length() == 2 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {
-            text_mask = 63
+            text_mask = 4031
             wasi = true
             lane_mask = 1048575
             wasm_intrinsics = true
@@ -137,9 +137,21 @@ fn selected_standard_modules(
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
+            import_.path[2] == "io" &&
+            import_.path[3] == "process" {
+            text_mask = text_mask | 525
+            fixed_array = true
+            array = true
+            io = true
+            collection_mask = collection_mask | 262144
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
             import_.path[2] == "encoding" {
             match import_.path[3] {
+              "binary" => text_mask = text_mask | 268
               "utf8" => text_mask = text_mask | 43
+              "hex" => text_mask = text_mask | 140
               _ => ()
             }
           } else if import_.path.length() == 4 &&
@@ -163,6 +175,23 @@ fn selected_standard_modules(
             import_.path[1] == "std" &&
             import_.path[2] == "fs" {
             match import_.path[3] {
+              "directory" => {
+                text_mask = text_mask | 1035
+                array = true
+                map = true
+                set = true
+                fixed_array = true
+                collection_mask = collection_mask | 65536
+              }
+              "wasi_directory" => {
+                text_mask = text_mask | 3087
+                array = true
+                map = true
+                set = true
+                fixed_array = true
+                wasm_intrinsics = true
+                collection_mask = collection_mask | 81920
+              }
               "wasi" => {
                 text_mask = text_mask | 15
                 fixed_array = true

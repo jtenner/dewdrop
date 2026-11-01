@@ -1,0 +1,13 @@
+{
+  "cwd": "/data/workspace/dewdrop",
+  "command": [
+    "env",
+    "PATH=/data/workspace/tools:/data/home/.moon/bin:/usr/local/bin:/usr/bin:/bin",
+    "bash",
+    "tools/module-snapshots/run.sh",
+    "--target-dir",
+    "/data/workspace/stdlib-wave1-g0/snapshot-build"
+  ],
+  "exit": 255,
+  "elapsed_seconds": 4.63279249399784
+}

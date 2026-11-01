@@ -34,12 +34,15 @@ Text, collection, byte, and Wasm APIs are split into focused `dew.std` modules:
 ```text
 dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.types           pure compile-time type queries and assertions
-dew.std.iter            eager consuming iterator combinators over Iter<t>
+dew.std.iter            lazy adapters and consuming operations over Iter<t>
 dew.std.math            explicit checked/wrapping integer and IEEE float math
-dew.std.io              portable byte Reader/Writer contracts and in-memory streams
-dew.std.path            validated workspace-relative paths
+dew.std.io              byte Reader/Writer contracts, memory streams, bounded buffered reads
+dew.std.io.process      stdout/stderr Writer adapters for an explicit Process
+dew.std.path            validated workspace-relative paths and part queries
 dew.std.fs              provider-neutral filesystem contract
 dew.std.fs.wasi         WASI Preview 1 filesystem adapter
+dew.std.fs.directory    bounded directory-reader capability
+dew.std.fs.wasi_directory no-follow WASI directory pages
 dew.std.process         provider-neutral process contract
 dew.std.process.wasi    WASI Preview 1 process adapter
 dew.std.facet           shared Facet handles and error aliases
@@ -63,7 +66,7 @@ dew.std.testing         explicit assertion helpers over compiler-owned test prim
 dew.std.option          ambient generic Option<t>
 dew.std.result          ambient generic Result<t, e>
 dew.std.fixed_array                 fixed-length mutable generic arrays
-dew.std.array                       growable mutable generic arrays and iterators
+dew.std.array                       growable arrays, stable sort, sorted bounds, and iterators
 dew.std.map                         mutable Hash-keyed generic maps and iterators
 dew.std.set                         mutable Hash-keyed generic sets and iterators
 dew.std.queue                       mutable circular-buffer FIFO queue
@@ -79,13 +82,17 @@ dew.std.collections.red_black_tree  ordered balanced-tree core
 dew.std.collections.ordered_map     comparator-ordered map
 dew.std.collections.ordered_set     comparator-ordered set
 dew.std.collections.btree           B-tree config, plans, inline providers, private storage
-dew.std.string                      String and StringView
+dew.std.string                      String, StringView, and ASCII trim views
+dew.std.text                        code-point iteration, checked decimal parsing, split and lines
 dew.std.string_builder              consuming StringBuilder
 dew.std.bytes                       immutable Bytes ranges and search
 dew.std.bytes_builder               consuming BytesBuilder
 dew.std.encoding.utf8               strict and lossy UTF-8 codecs
+dew.std.encoding.hex                lower-case encoding and checked hex decoding
+dew.std.encoding.binary             bounded cursor and endian reads/writes
+dew.std.encoding.binary             bounded byte cursor and endian integer writes
 dew.std.blake3                       portable BLAKE3-256
-dew.std.integrity.sha256              portable one-shot SHA-256
+dew.std.integrity.sha256             one-shot and incremental SHA-256
 dew.std.wasi                        Preview 1 Bytes I/O
 dew.std.wasm.wasi                   raw complete Preview 1 imports
 dew.std.wasm.intrinsics             explicit compiler-known WebAssembly intrinsics
@@ -157,11 +164,20 @@ The self-host compiler uses the declared enum fragments for Option and Result, w
 range error and `Some` for an exact value. Existing `Into` bit and wrapping
 conversions keep their current behavior.
 
-`dew.std.text` provides `parse_u32_decimal(StringView)` and
-`parse_i32_decimal(StringView)`. The parsers accept ASCII decimal digits,
-leading zeros, and an optional minus for I32. They reject whitespace, plus,
-separators, fractions, and exponents. `DecimalParseError` reports empty text,
+`dew.std.text` provides `parse_u32_decimal(StringView)`,
+`parse_i32_decimal(StringView)`, `parse_u64_decimal(StringView)`, and
+`parse_i64_decimal(StringView)`. The parsers accept ASCII decimal digits,
+leading zeros, and an optional minus for signed values. They reject whitespace,
+plus, separators, fractions, and exponents. `DecimalParseError` reports empty text,
 an invalid digit, or overflow. Offsets count bytes from the start of the view.
+Overflow reports the first digit that exceeds the target range. Empty input returns `Empty`; a lone minus
+returns `InvalidDigit(0u32)`. Signed negative zero returns zero. Each parser
+reads the view directly in one pass, with constant working space and no text copy.
+
+```dew
+let value = parse_u64_decimal("!18446744073709551615?".view(1u32, 20u32))
+// Result::Ok(18446744073709551615u64)
+```
 
 `BytesBuilder` remains the name of the one-shot, consuming construction type. A future `Buffer` would imply a reusable mutable/random-access abstraction and should be designed separately rather than aliasing the builder.
 
@@ -266,6 +282,21 @@ The read/write loops are ordinary Dew functions that call the raw foreign import
 
 `dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. `dew.std.facet.imports` owns every raw Facet adapter import. The grouped `core`, `fs`, `process`, `clock`, `random`, `poll`, and `net` modules expose decoded results for all 261 canonical Facet 0.1 operations. `dew.std.facet.fs` contains `fd_sync` and `fd_datasync`. Link Facet programs with `--link-wasm facet fixtures/facet/facet-adapter.wasm`.
 
+`RelativePath.filename() -> String` returns the last component.
+`parent() -> Option<RelativePath>` returns the prefix before the last slash;
+a single component returns `None`, so the workspace root is never an empty
+`RelativePath`. `extension() -> Option<String>` uses the last dot in the
+filename, except a dot at byte zero. `stem() -> String` returns the filename
+before that dot, or the whole filename when there is no extension. Thus `.env`
+has no extension, `.env.json` has `Some("json")`, and `file.` has `Some("")`.
+Repeated dots use the same last-dot rule. All cuts are at ASCII separators,
+so UTF-8 names keep valid boundaries. Queries scan bytes without a split array.
+For example, after `relative_path("src/main.dew")` returns `Ok(path)`,
+`path.filename()` is `"main.dew"`, `path.stem()` is `"main"`,
+`path.extension()` is `Some("dew")`, and `path.parent()` is `Some` of `"src"`.
+The existing 4,096-byte bound and escape checks still apply. These queries do
+not normalize absolute paths or add authority.
+
 Path joins enforce the full 4,096-byte limit. WASI directory creation is
 idempotent for an existing directory, but reports an error for an existing file
 or other path kind.
@@ -363,4 +394,200 @@ Regenerate the lane modules, embedded preamble, fixed-lane, memory, shuffle, cro
 
 ```text
 python3 tools/generate_lane_std.py
+```
+
+## ASCII trim views
+
+`String` and `StringView` provide `trim_ascii_start()`, `trim_ascii_end()`,
+and `trim_ascii()`. Each returns a shared `StringView`, without copying text.
+They remove only ASCII HT, LF, VT, FF, CR, and SPACE (bytes 09–0D and 20).
+They do not do Unicode trimming. NUL and all non-ASCII spaces stay unchanged.
+For example, `" \tλ \n".trim_ascii().to_string()` is `"λ"`.
+Bounds are relative to the input view. Only single-byte ASCII scalars are
+removed, so a valid input view keeps valid UTF-8 scalar boundaries.
+
+## Iterator adapters
+
+Lazy iterator adapters in `dew.std.iter` use typed state and create no arrays:
+`iter_map(source, callback)`, `iter_filter(source, predicate)`,
+`iter_take(source, count: U32)`, `iter_skip(source, count: U32)`, and
+`iter_enumerate(source)`. Each result implements `Iter`; call `next()` to pull.
+For example, `iter_map(iter_filter(array_iter(values), keep), transform)`
+runs `keep` in input order and calls `transform` only for accepted values.
+Construction does no upstream work. `take(0)` never pulls. All wrappers stop
+permanently at the first `None`; later calls do no work. Skip discards its count
+on the first pull. Enumerate returns `IterEntry<t>` with `index: U64` (starting
+at zero, wrapping at the U64 limit) and `value: t`. Aliases share wrapper state.
+When only `None` constrains a result, state the payload and source types, for
+example `iter_take::<U32, ArrayIter<U32>>(array_iter(values), 0u32)`.
+
+## Hex bytes
+
+`dew.std.encoding.hex` exports `encode(Bytes) -> Bytes`,
+`decode(Bytes) -> Result<Bytes, HexDecodeError>`, and
+`encoded_length(U32) -> Option<U32>`.
+
+Encoding emits lower-case ASCII. Decoding accepts upper and lower case.
+It rejects odd lengths first (`OddLength`), then the first non-hex byte
+(`InvalidByte(U32)`). The offset is zero-based within the input view.
+Spaces and `0x` prefixes are not accepted. Size doubling is checked before
+allocation; encode traps if it cannot fit U32. Decode validates before it
+allocates, and divides the even input size by two. Both use linear time and
+one output buffer, rounded to the builder's 16-byte storage chunks.
+
+```dew
+import dew.std.encoding.hex as @hex
+// @hex.encode(b"\xAB\x01") == b"ab01"
+// @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
+```
+
+## Incremental SHA-256
+
+`dew.std.integrity.sha256` adds a streaming state API:
+
+```dew
+let state = sha256_new()
+assert(sha256_update(state, first_chunk), "SHA-256 update failed")
+assert(sha256_update(state, next_chunk), "SHA-256 update failed")
+let digest = sha256_finalize(state) // FixedArray<U8>, 32 bytes
+```
+
+Aliases share one state. Finalize closes it. Repeated finalize calls return
+fresh digest arrays with the same bytes. Update returns `false` after finalize,
+even for empty input. It also returns `false` if total input would exceed
+`2305843009213693951` bytes (the SHA-256 bit-length limit). A rejected update
+makes no change. Empty updates succeed while open, including at the limit.
+Do not change state fields directly. Returned digests do not share state.
+The state retains a 64-byte block, eight hash words, a checked byte count,
+a block offset, and a closed flag. It retains no input and allocates nothing
+in update. The block also serves as the circular message schedule.
+The existing `sha256(Bytes)` and its digest type are unchanged.
+
+## Sorted-array search
+
+Sorted Array search uses the existing `ArrayComparator<t>` contract.
+`array_lower_bound(values, key, comparator)` returns the first index whose
+value does not precede the key. `array_upper_bound` returns the first index
+whose value follows the key. `array_binary_search` returns `Option<U32>`
+and selects the first equal key. Equality here means comparator equivalence.
+The `_range` forms add `start, end` before the comparator and search only
+`[start, end)`. Results are absolute indices. Invalid ranges trap. Empty
+ranges return `start` for bounds and `None` for search. Input must be sorted
+by the same strict weak order; the comparator must not change it.
+Natural methods require `Lt`:
+
+```dew
+let values = [2u32, 4u32, 4u32, 8u32]
+values.lower_bound(4u32) // 1u32
+values.upper_bound(4u32) // 3u32
+values.binary_search(4u32) // Option::Some(1u32)
+```
+
+Search takes O(log n) comparisons and O(1) extra space. It does not sort.
+
+## Text split and lines
+
+`dew.std.text` adds `StringView.split(delimiter: StringView)` and `lines()`.
+Both return `StringViewSplit`, which implements `Iter<StringView>` directly.
+Fields share the source bytes; call `field.compact()` to copy a field.
+For example, `"a,,".view(0u32, 3u32).split(",".view(0u32, 1u32))`
+yields `"a"`, `""`, `""`. Matches do not overlap. Empty input yields one
+empty field. An empty delimiter yields the whole view once. `lines()` splits
+on LF, removes CR only in CRLF, keeps lone CR, and keeps a final empty line.
+Repeated `next()` calls after the last field return `None`. Aliases share progress.
+Construction reads only the delimiter. KMP search takes O(source + delimiter)
+time and O(delimiter) state. `source_scans()` and `comparisons()` count source
+bytes advanced by the forward search and search comparisons. They exclude
+prefix table setup and the CR check in `lines()`.
+
+## Binary cursor
+
+`dew.std.encoding.binary` provides a bounded `BinaryCursor` over `Bytes`.
+`binary_cursor(bytes)` starts at zero. `binary_position`, `binary_remaining`,
+and `binary_remaining_bytes` expose its state. `read_bytes(cursor, length)`
+returns a shared view. `read_u16_le`/`read_u16_be`, `read_u32_le`/`read_u32_be`,
+and `read_u64_le`/`read_u64_be` return a `Result` with the stated integer
+type or `BinaryError`.
+`ShortInput(position, requested, available)` leaves the cursor unchanged.
+Zero length reads succeed, including at the end. Lengths use U32; subtraction
+checks prevent overflow. Cursor state is private to this module. Aliases
+share the cursor position.
+
+For example, `read_u16_le(binary_cursor(b"\x01\x00"))` returns
+`Result::Ok(1u16)`. The six `write_u*_le`/`write_u*_be` functions append
+fixed width values to a `BytesBuilder`. They use its normal capacity and
+finished-builder rules. No host access is needed. Slice views keep the input
+backing storage alive; use `Bytes.compact()` when a small slice must outlive
+large input. Existing version 1 formats are unchanged.
+
+## Buffered byte records
+
+Buffered byte records use `dew.std.io`:
+
+```dew
+let input = buffered_reader_new(BytesInput::new(b"hello\n"), 64u32, 1024u32)
+let line = input.read_line(256u32)
+```
+
+`read_until(delimiter: Bytes, max_bytes)` keeps its delimiter. `read_line(max_bytes)`
+removes LF only. Both return `Result<Option<Bytes>, IoError>`: None is EOF,
+Some(empty) is an empty line. Bounds count the delimiter. `max_buffer` limits
+partial-record bytes plus unread bytes. Errors discard the consumed partial
+record and keep the unread suffix. Decode text with `dew.std.utf8`. See `docs/research/stdlib-wave1-10.md` for error and buffer rules.
+
+## Process writers
+
+`dew.std.io.process` adapts an existing `Process` to `Writer`:
+
+```dew
+let output = process_stdout(process)
+let result = io_write_all(output, b"hello\n")
+let errors = process_stderr(process)
+```
+
+Both return `ProcessWriter<p>`. `channel()` returns `StandardOutput` or
+`StandardError` from `ProcessOutputChannel`. Direct writes forward once;
+`io_write_all` handles partial writes and rejects zero or excessive progress.
+Process `LimitExceeded` maps to IO `LimitExceeded`; every other kind maps to
+`Backend(code)`. This keeps the numeric code but discards the Process operation
+and kind. Channel identity stays in adapter state. Already written bytes are
+not rolled back on error. The module creates no global Process or host import.
+
+### Bounded directory pages
+
+## Directory pages
+
+`dew.std.fs.directory` adds `DirectoryReader`, separate from `FileSystem`.
+Call `read_directory(reader, path, cookie, max_entries, max_bytes)`.
+Start with cookie `0u64`. Use each page's cookie for the next call; stop when
+`page.end` is true. An empty page can still advance past `.` and `..`.
+Limits are 1–2048 encoded records (including dot entries) and 24–49152 encoded
+bytes per call. A full buffer needs another call to confirm end. A short final
+record returns prior progress, or `PartialRecord` if no complete record fits.
+Increase the byte limit on `PartialRecord`. No partial name is returned.
+
+Each entry has a UTF-8 single-part `name` and a `kind`. Names stay relative to
+`path`; do not treat them as global paths. Invalid UTF-8, empty/unsafe names,
+unknown type codes, oversized host replies and repeated cookies within a page
+are typed errors. Cookies are opaque, not ordered. Directory mutation can change
+pages; this API does not provide a snapshot. Callers that need protection from
+cycles across distinct pages must bound total calls or track prior cookies.
+
+`dew.std.fs.wasi_directory` provides `wasi_directory_reader(root_fd)`.
+It checks each path part with no-follow metadata and opens it with DIRECTORY
+and no link-follow flag. It returns entry symlinks as metadata and reports a
+`Symlink` error for a link in the directory path. It attempts to close each
+owned handle exactly once on success or error. The root handle
+belongs to the caller. A read/decode error takes precedence over a close error;
+a close error is returned when the read and decode succeed. This API does not
+walk subdirectories.
+
+```dew
+open dew.std.fs.directory
+open dew.std.fs.wasi_directory
+open dew.std.path
+
+pub fn first_page(path: RelativePath) -> Result<DirectoryPage, DirectoryError> {
+  read_directory(wasi_directory_reader(3u32), path, 0u64, 64u32, 4096u32)
+}
 ```

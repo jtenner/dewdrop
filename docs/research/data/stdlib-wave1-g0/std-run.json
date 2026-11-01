@@ -1,0 +1,9 @@
+{
+  "cwd": "/data/workspace/dewdrop",
+  "command": [
+    "bash",
+    "tools/dew-test/run.sh"
+  ],
+  "exit": 1,
+  "elapsed_seconds": 4.536118489020737
+}

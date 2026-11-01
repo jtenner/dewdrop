@@ -1,0 +1,44 @@
+## equivalence.log
+Total tests: 1, passed: 1, failed: 0.
+TIME 10.74 RSS_KB 680720
+## focused.log
+TIME 30.97 RSS_KB 1080136
+## focused_runtime.log
+Dew tests passed: 10
+TIME 0.03 RSS_KB 46636
+## generated.log
+Total tests: 14, passed: 14, failed: 0.
+CLI fixtures passed: 3
+TIME 59.70 RSS_KB 836952
+## generator.log
+TIME 0.02 RSS_KB 12192
+## host_runtime.log
+real WASI: 4 pages, 12 opens, 12 closes
+{"records":1,"iterations":100,"milliseconds":0.604,"linearMemoryBytes":65536,"rssBytes":53186560,"heapDeltaBytes":420968,"encodedBytes":25}
+{"records":16,"iterations":100,"milliseconds":2.882,"linearMemoryBytes":65536,"rssBytes":54919168,"heapDeltaBytes":205432,"encodedBytes":400}
+{"records":256,"iterations":100,"milliseconds":10.746,"linearMemoryBytes":65536,"rssBytes":61214720,"heapDeltaBytes":1356024,"encodedBytes":6400}
+{"records":1024,"iterations":100,"milliseconds":22.023,"linearMemoryBytes":65536,"rssBytes":65933312,"heapDeltaBytes":2802672,"encodedBytes":25600}
+{"records":1966,"iterations":100,"milliseconds":61.275,"linearMemoryBytes":65536,"rssBytes":75710464,"heapDeltaBytes":4299832,"encodedBytes":49150}
+directory host checks passed: 70
+TIME 0.17 RSS_KB 73936
+## identities.log
+TIME 0.02 RSS_KB 12032
+## integration.log
+Total tests: 27, passed: 27, failed: 0.
+self-host timing: native integration src/semantic/module_system_wbtest.mbt: 26.279 seconds
+Total tests: 24, passed: 24, failed: 0.
+self-host timing: native integration src/semantic/standard_preamble_wbtest.mbt: 2.804 seconds
+TIME 29.09 RSS_KB 1133016
+## interfaces.log
+TIME 0.21 RSS_KB 35020
+## probe.log
+TIME 1.17 RSS_KB 70952
+## production.log
+TIME 22.80 RSS_KB 925828
+## production_runtime.log
+production directory consumer passed: 42; no WASI imports, no test metadata
+TIME 0.03 RSS_KB 46920
+## registry.log
+Total tests: 2, passed: 2, failed: 0.
+self-host timing: native src/standard_sources tests: 0.913 seconds
+TIME 0.91 RSS_KB 80852
