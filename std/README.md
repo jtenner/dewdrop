@@ -34,7 +34,7 @@ Text, collection, byte, and Wasm APIs are split into focused `dew.std` modules:
 ```text
 dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
 dew.std.types           pure compile-time type queries and assertions
-dew.std.iter            eager consuming iterator combinators over Iter<t>
+dew.std.iter            lazy adapters and consuming operations over Iter<t>
 dew.std.math            explicit checked/wrapping integer and IEEE float math
 dew.std.io              portable byte Reader/Writer contracts and in-memory streams
 dew.std.path            validated workspace-relative paths
@@ -392,3 +392,5 @@ Construction does no upstream work. `take(0)` never pulls. All wrappers stop
 permanently at the first `None`; later calls do no work. Skip discards its count
 on the first pull. Enumerate returns `IterEntry<t>` with `index: U64` (starting
 at zero, wrapping at the U64 limit) and `value: t`. Aliases share wrapper state.
+When only `None` constrains a result, state the payload and source types, for
+example `iter_take::<U32, ArrayIter<U32>>(array_iter(values), 0u32)`.

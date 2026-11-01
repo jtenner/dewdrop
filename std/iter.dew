@@ -75,3 +75,212 @@ pub fn iter_find<t, i: Iter<t>>(
     Option::None => break Option::None
   }
 }
+
+// Capture the ordinary Iter evidence once at construction. The wrapper's
+// implementation needs only its typed pull function, including in nested chains.
+fn iter_next<t, i: Iter<t>>(inner: i) -> Option<t> {
+  inner.next()
+}
+
+pub struct MapIter<t, u, i> {
+  inner: i
+  pull: fn(i) -> Option<t>
+  callback: fn(t) -> u
+  mut done: Bool
+}
+
+pub struct FilterIter<t, i> {
+  inner: i
+  pull: fn(i) -> Option<t>
+  predicate: fn(t) -> Bool
+  mut done: Bool
+}
+
+pub struct TakeIter<t, i> {
+  inner: i
+  pull: fn(i) -> Option<t>
+  mut remaining: U32
+  mut done: Bool
+}
+
+pub struct SkipIter<t, i> {
+  inner: i
+  pull: fn(i) -> Option<t>
+  mut remaining: U32
+  mut done: Bool
+}
+
+pub struct EnumerateIter<t, i> {
+  inner: i
+  pull: fn(i) -> Option<t>
+  mut index: U64
+  mut done: Bool
+}
+
+pub struct IterEntry<t> {
+  index: U64
+  value: t
+}
+
+pub fn iter_map<t, u, i: Iter<t>>(
+  inner: i,
+  callback: fn(t) -> u,
+) -> MapIter<t, u, i> {
+  MapIter::{
+    inner: inner
+    pull: iter_next
+    callback: callback
+    done: false
+  }
+}
+
+pub fn iter_filter<t, i: Iter<t>>(
+  inner: i,
+  predicate: fn(t) -> Bool,
+) -> FilterIter<t, i> {
+  FilterIter::{
+    inner: inner
+    pull: iter_next
+    predicate: predicate
+    done: false
+  }
+}
+
+pub fn iter_take<t, i: Iter<t>>(inner: i, count: U32) -> TakeIter<t, i> {
+  TakeIter::{
+    inner: inner
+    pull: iter_next
+    remaining: count
+    done: false
+  }
+}
+
+pub fn iter_skip<t, i: Iter<t>>(inner: i, count: U32) -> SkipIter<t, i> {
+  SkipIter::{
+    inner: inner
+    pull: iter_next
+    remaining: count
+    done: false
+  }
+}
+
+pub fn iter_enumerate<t, i: Iter<t>>(inner: i) -> EnumerateIter<t, i> {
+  EnumerateIter::{
+    inner: inner
+    pull: iter_next
+    index: 0u64
+    done: false
+  }
+}
+
+impl<t, u, i> Iter<u> for MapIter<t, u, i> {
+  fn next(self) -> Option<u> {
+    if self.done {
+      None
+    } else {
+      let pull = self.pull
+      match pull(self.inner) {
+        Some(value) => {
+          let callback = self.callback
+          Some(callback(value))
+        }
+        None => {
+          self.done = true
+          None
+        }
+      }
+    }
+  }
+}
+
+impl<t, i> Iter<t> for FilterIter<t, i> {
+  fn next(self) -> Option<t> {
+    if self.done {
+      None
+    } else {
+      let pull = self.pull
+      while pull(self.inner) {
+        Some(value) => {
+          let predicate = self.predicate
+          if predicate(value) {
+            break Some(value)
+          } else {
+            continue pull(self.inner)
+          }
+        }
+        None => {
+          self.done = true
+          break None
+        }
+      }
+    }
+  }
+}
+
+impl<t, i> Iter<t> for TakeIter<t, i> {
+  fn next(self) -> Option<t> {
+    if self.done || self.remaining == 0u32 {
+      None
+    } else {
+      let pull = self.pull
+      match pull(self.inner) {
+        Some(value) => {
+          self.remaining = self.remaining - 1u32
+          Some(value)
+        }
+        None => {
+          self.done = true
+          None
+        }
+      }
+    }
+  }
+}
+
+impl<t, i> Iter<t> for SkipIter<t, i> {
+  fn next(self) -> Option<t> {
+    if self.done {
+      None
+    } else {
+      let pull = self.pull
+      while pull(self.inner) {
+        Some(value) => {
+          if self.remaining == 0u32 {
+            break Some(value)
+          } else {
+            self.remaining = self.remaining - 1u32
+            continue pull(self.inner)
+          }
+        }
+        None => {
+          self.done = true
+          break None
+        }
+      }
+    }
+  }
+}
+
+impl<t, i> Iter<IterEntry<t>> for EnumerateIter<t, i> {
+  fn next(self) -> Option<IterEntry<t>> {
+    if self.done {
+      None
+    } else {
+      let pull = self.pull
+      match pull(self.inner) {
+        Some(value) => {
+          let index = self.index
+          self.index = index + 1u64
+          Some(IterEntry::{
+            index: index
+            value: value
+          })
+        }
+        None => {
+          self.done = true
+          None
+        }
+      }
+    }
+  }
+}

@@ -6,29 +6,43 @@ struct AdapterProbe {
   mut predicates: U32
   mut maps: U32
 }
+
 struct AdapterSource {
   probe: AdapterProbe
   limit: U32
 }
+
 impl Iter<U32> for AdapterSource {
   fn next(self) -> Option<U32> {
     let n = self.probe.pulls
     self.probe.pulls = n + 1u32
-    if n < self.limit { Some(n) } else { None }
+    if n < self.limit {
+      Some(n)
+    } else {
+      None
+    }
   }
 }
+
 fn adapter_probe() -> AdapterProbe {
-  AdapterProbe::{ pulls: 0u32 predicates: 0u32 maps: 0u32 }
+  AdapterProbe::{
+    pulls: 0u32
+    predicates: 0u32
+    maps: 0u32
+  }
 }
 
 test "lazy adapters do no work at construction or take zero" {
   let p = adapter_probe()
-  let source = AdapterSource::{ probe: p limit: 3u32 }
+  let source = AdapterSource::{
+    probe: p
+    limit: 3u32
+  }
   let mapped = iter_map(source, fn(v: U32) -> U32 {
     p.maps = p.maps + 1u32
     v
   })
-  let taken = iter_take(mapped, 0u32)
+  let taken = iter_take::<U32, MapIter<U32, U32, AdapterSource>>(mapped, 0u32)
   assert(p.pulls == 0u32 && p.maps == 0u32, "construction is lazy")
   assert(taken.next() is None, "take zero")
   assert(taken.next() is None, "take zero terminal")
@@ -37,10 +51,13 @@ test "lazy adapters do no work at construction or take zero" {
 
 test "filter map callback order counts and terminal state" {
   let p = adapter_probe()
-  let source = AdapterSource::{ probe: p limit: 5u32 }
+  let source = AdapterSource::{
+    probe: p
+    limit: 5u32
+  }
   let filtered = iter_filter(source, fn(v: U32) -> Bool {
     p.predicates = p.predicates + 1u32
-    assert(p.maps == v / 2u32, "predicate precedes map")
+    assert(p.maps == (v + 1u32) / 2u32, "predicate precedes map")
     v % 2u32 == 0u32
   })
   let mapped = iter_map(filtered, fn(v: U32) -> U32 {
@@ -54,4 +71,170 @@ test "filter map callback order counts and terminal state" {
   assert(mapped.next() is None, "end")
   assert(mapped.next() is None, "fused end")
   assert(p.pulls == 6u32 && p.predicates == 5u32 && p.maps == 3u32, "exact counts")
+}
+
+test "all adapters fuse empty streams" {
+  let p = adapter_probe()
+  let mapped = iter_map(AdapterSource::{
+    probe: p
+    limit: 0u32
+  }, fn(v: U32) -> U32 {
+    v
+  })
+  assert(mapped.next() is None, "empty map")
+  assert(mapped.next() is None && p.pulls == 1u32, "map fuses")
+  let q = adapter_probe()
+  let filtered = iter_filter(AdapterSource::{
+    probe: q
+    limit: 0u32
+  }, fn(v: U32) -> Bool {
+    v == 0u32
+  })
+  assert(filtered.next() is None, "empty filter")
+  assert(filtered.next() is None && q.pulls == 1u32, "filter fuses")
+  let r = adapter_probe()
+  let taken = iter_take::<U32, AdapterSource>(AdapterSource::{
+    probe: r
+    limit: 0u32
+  }, 10u32)
+  assert(taken.next() is None, "empty take")
+  assert(taken.next() is None && r.pulls == 1u32, "take fuses")
+  let s = adapter_probe()
+  let skipped = iter_skip::<U32, AdapterSource>(AdapterSource::{
+    probe: s
+    limit: 0u32
+  }, 10u32)
+  assert(skipped.next() is None, "empty skip")
+  assert(skipped.next() is None && s.pulls == 1u32, "skip fuses")
+  let t = adapter_probe()
+  let counted = iter_enumerate::<U32, AdapterSource>(AdapterSource::{
+    probe: t
+    limit: 0u32
+  })
+  assert(counted.next() is None, "empty enumerate")
+  assert(counted.next() is None && t.pulls == 1u32, "enumerate fuses")
+}
+
+test "take stops exactly and aliases share state" {
+  let p = adapter_probe()
+  let taken = iter_take::<U32, AdapterSource>(AdapterSource::{
+    probe: p
+    limit: 3u32
+  }, 2u32)
+  let alias = taken
+  assert(taken.next() is Some(0u32), "first")
+  assert(alias.next() is Some(1u32), "alias second")
+  assert(taken.next() is None && alias.next() is None, "limit terminal")
+  assert(p.pulls == 2u32, "no extra end pull")
+}
+
+test "skip zero exact and beyond end" {
+  let p = adapter_probe()
+  let skipped = iter_skip::<U32, AdapterSource>(AdapterSource::{
+    probe: p
+    limit: 3u32
+  }, 0u32)
+  assert(p.pulls == 0u32, "skip construction lazy")
+  assert(skipped.next() is Some(0u32) && p.pulls == 1u32, "skip zero")
+  let q = adapter_probe()
+  let exact = iter_skip::<U32, AdapterSource>(AdapterSource::{
+    probe: q
+    limit: 3u32
+  }, 3u32)
+  assert(exact.next() is None && q.pulls == 4u32, "skip exact")
+  assert(exact.next() is None && q.pulls == 4u32, "skip exact fused")
+  let r = adapter_probe()
+  let beyond = iter_skip::<U32, AdapterSource>(AdapterSource::{
+    probe: r
+    limit: 3u32
+  }, 100u32)
+  assert(beyond.next() is None && r.pulls == 4u32, "skip beyond")
+  assert(beyond.next() is None && r.pulls == 4u32, "skip beyond fused")
+  let s = adapter_probe()
+  let partial = iter_skip::<U32, AdapterSource>(AdapterSource::{
+    probe: s
+    limit: 4u32
+  }, 2u32)
+  assert(partial.next() is Some(2u32) && s.pulls == 3u32, "skip two")
+  assert(partial.next() is Some(3u32) && s.pulls == 4u32, "skip only once")
+}
+
+test "reference payloads enumerate after filter and map" {
+  let values = array_new()
+  array_push(values, "no")
+  array_push(values, "yes")
+  array_push(values, "yes")
+  let filtered = iter_filter(array_iter(values), fn(v: String) -> Bool {
+    v == "yes"
+  })
+  let mapped = iter_map(filtered, fn(v: String) -> String {
+    v
+  })
+  let counted = iter_enumerate::<String, MapIter<String, String, FilterIter<String, ArrayIter<String>>>>(mapped)
+  match counted.next() {
+    Some(entry) => assert(entry.index == 0u64 && entry.value == "yes", "reference first")
+    None => assert(false, "missing first")
+  }
+  match counted.next() {
+    Some(entry) => assert(entry.index == 1u64 && entry.value == "yes", "reference second")
+    None => assert(false, "missing second")
+  }
+  assert(counted.next() is None && counted.next() is None, "reference end")
+}
+
+test "filter rejects all and take skip compose" {
+  let p = adapter_probe()
+  let rejected = iter_filter(AdapterSource::{
+    probe: p
+    limit: 3u32
+  }, fn(v: U32) -> Bool {
+    p.predicates = p.predicates + 1u32
+    v > 9u32
+  })
+  assert(rejected.next() is None && rejected.next() is None, "all rejected")
+  assert(p.pulls == 4u32 && p.predicates == 3u32, "reject exact counts")
+  let q = adapter_probe()
+  let combined = iter_take::<U32, SkipIter<U32, AdapterSource>>(iter_skip::<U32, AdapterSource>(AdapterSource::{
+    probe: q
+    limit: 9u32
+  }, 2u32), 1u32)
+  assert(combined.next() is Some(2u32), "skip then take")
+  assert(combined.next() is None && q.pulls == 3u32, "composition no extra pulls")
+}
+
+test "enumerate scalar index wraps and remains terminal" {
+  let p = adapter_probe()
+  let counted = iter_enumerate::<U32, AdapterSource>(AdapterSource::{
+    probe: p
+    limit: 2u32
+  })
+  counted.index = 18446744073709551615u64
+  match counted.next() {
+    Some(entry) => assert(entry.index == 18446744073709551615u64 && entry.value == 0u32, "last index")
+    None => assert(false, "missing last index")
+  }
+  match counted.next() {
+    Some(entry) => assert(entry.index == 0u64 && entry.value == 1u32, "wrapped index")
+    None => assert(false, "missing wrapped index")
+  }
+  assert(counted.next() is None && counted.next() is None, "enumerate end")
+  assert(p.pulls == 3u32, "enumerate exact pulls")
+}
+
+test "map changes scalar and reference payload types" {
+  let p = adapter_probe()
+  let strings = iter_map(AdapterSource::{
+    probe: p
+    limit: 1u32
+  }, fn(value: U32) -> String {
+    assert(value == 0u32, "scalar input")
+    "converted"
+  })
+  let scalars = iter_map(strings, fn(value: String) -> U32 {
+    assert(value == "converted", "reference input")
+    42u32
+  })
+  assert(scalars.next() is Some(42u32), "changed payload")
+  assert(scalars.next() is None && scalars.next() is None, "changed payload terminal")
+  assert(p.pulls == 2u32, "changed payload pulls")
 }
