@@ -48,6 +48,11 @@ Run from `/data/workspace/wave1-item-06`:
 
 ```sh
 mkdir -p .tmp
+cat > .tmp/clang <<'CC'
+#!/usr/bin/env bash
+exec /usr/bin/clang "$@" -fbracket-depth=4096 -g0 -O0
+CC
+chmod +x .tmp/clang
 cp docs/research/stdlib-wave1-06-gates.sh .tmp/gate.sh
 flock /data/workspace/wave1-control/build.lock bash .tmp/gate.sh > .tmp/gate-summary.log 2>&1
 ```
@@ -170,3 +175,14 @@ No B-tree source edits, held fixes, snapshot refreshes, global SDK changes,
 or push. The accepted G0 baseline and Mission A snapshot review are unchanged.
 The aggregate generated-check time above is the only open performance note;
 there is no item blocker.
+
+## Checkpoints
+
+- Rebased test/doc checkpoint: `8aec583474fbdb00d0a751ce85d541de0089dffd`.
+- Implementation/generated/evidence checkpoint:
+  `407b853364c492fcec0bfc2fe0b0e66c655f2b3e`.
+- This final documentation update records those hashes and makes the replay
+  wrapper setup explicit outside the build lock. It changes no tested code.
+
+Final inspection confirms a clean tracked worktree, unchanged Starshine
+submodule, and no worker-owned build or temporary Wasm artifacts.

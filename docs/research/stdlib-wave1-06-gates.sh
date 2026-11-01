@@ -1,12 +1,6 @@
 set -uo pipefail
 cd /data/workspace/wave1-item-06
 export PATH=/data/workspace/wave1-control:/tmp/burn-starshine-fix-tools:/data/workspace/tools:/data/home/.moon/bin:/usr/local/bin:/usr/bin:/bin
-mkdir -p .tmp
-cat > .tmp/clang <<'CC'
-#!/usr/bin/env bash
-exec /usr/bin/clang "$@" -fbracket-depth=4096 -g0 -O0
-CC
-chmod +x .tmp/clang
 export MOON_CC="$PWD/.tmp/clang"
 cleanup() {
   rm -rf _build .mooncakes .dew/cache
