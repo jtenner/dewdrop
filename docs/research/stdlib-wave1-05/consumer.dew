@@ -1,0 +1,8 @@
+import dew.std.encoding.hex as @hex
+open dew.std.bytes
+pub fn main() -> U32 {
+  match @hex.decode(@hex.encode(b"production")) {
+    Ok(bytes) => bytes.byte_length()
+    Err(_) => 0u32
+  }
+}

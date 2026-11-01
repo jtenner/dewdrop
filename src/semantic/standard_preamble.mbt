@@ -103,7 +103,7 @@ fn selected_standard_modules(
             import_.path.length() == 2 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {
-            text_mask = 63
+            text_mask = 191
             wasi = true
             lane_mask = 1048575
             wasm_intrinsics = true
@@ -140,6 +140,7 @@ fn selected_standard_modules(
             import_.path[2] == "encoding" {
             match import_.path[3] {
               "utf8" => text_mask = text_mask | 43
+              "hex" => text_mask = text_mask | 140
               _ => ()
             }
           } else if import_.path.length() == 4 &&

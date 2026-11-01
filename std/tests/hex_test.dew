@@ -2,6 +2,9 @@ open dew.std.encoding.hex
 open dew.std.bytes
 open dew.std.bytes_builder
 
+fn hex_test_unit() -> Unit {
+}
+
 fn hex_expect(text: Bytes, expected: Bytes) -> Unit {
   match decode(text) {
     Ok(value) => assert(value == expected, "hex decoded bytes differ")
@@ -19,6 +22,7 @@ fn hex_invalid(text: Bytes, offset: U32) -> Unit {
 test "hex empty and mixed case" {
   assert(encode(b"") == b"", "hex empty encode")
   hex_expect(b"", b"")
+  hex_expect(b"prefix".view(6u32, 0u32), b"")
   hex_expect(b"aAbBcCdDeEfF0099", b"\xAA\xBB\xCC\xDD\xEE\xFF\x00\x99")
 }
 
@@ -26,6 +30,9 @@ test "hex invalid offsets and odd length" {
   hex_invalid(b"?000", 0u32)
   hex_invalid(b"00?0", 2u32)
   hex_invalid(b"000?", 3u32)
+  hex_invalid(b"000?00", 3u32)
+  hex_invalid(b"0x", 1u32)
+  hex_invalid(b"0\x00", 1u32)
   hex_invalid(b"0\xFF", 1u32)
   hex_invalid(b"0 ", 1u32)
   match decode(b"?00") {
@@ -37,8 +44,11 @@ test "hex invalid offsets and odd length" {
 test "hex all byte values and offset views" {
   let builder = BytesBuilder::with_capacity(256u32)
   while 0u32 {
-    i if i < 256u32 => { builder.append_byte(i.into()); continue i + 1u32 }
-    _ => break
+    i if i < 256u32 => {
+      builder.append_byte(i.into())
+      continue i + 1u32
+    }
+    _ => break hex_test_unit()
   }
   let bytes = builder.finish()
   let text = encode(bytes)
@@ -50,9 +60,10 @@ test "hex all byte values and offset views" {
 }
 
 test "hex output size arithmetic" {
-  assert(encoded_length(2147483647u32) == Option::Some(4294967294u32), "hex maximum")
-  assert(encoded_length(2147483648u32) == Option::None, "hex overflow")
-  assert(encoded_length(4294967295u32) == Option::None, "hex overflow maximum")
+  assert(encoded_length(0u32) is Option::Some(0u32), "hex zero length")
+  assert(encoded_length(2147483647u32) is Option::Some(4294967294u32), "hex maximum")
+  assert(encoded_length(2147483648u32) is Option::None, "hex overflow")
+  assert(encoded_length(4294967295u32) is Option::None, "hex overflow maximum")
 }
 
 test "hex SHA256 known text" {

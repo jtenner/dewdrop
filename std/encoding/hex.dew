@@ -1,0 +1,85 @@
+open dew.std.bytes
+open dew.std.bytes_builder
+
+pub enum HexDecodeError {
+  OddLength
+  InvalidByte(U32)
+} derive(Eq)
+
+// Check before doubling or allocating. Encoding traps if the size cannot fit U32.
+pub fn encoded_length(length: U32) -> Option<U32> {
+  if length > 2147483647u32 {
+    Option::None
+  } else {
+    Option::Some(length * 2u32)
+  }
+}
+
+fn hex_unit() -> Unit {
+}
+
+fn digit(value: U8) -> U8 {
+  if value < 10u8 {
+    value + 48u8
+  } else {
+    value + 87u8
+  }
+}
+
+fn nibble(byte: U8) -> U8 {
+  if byte >= 48u8 && byte <= 57u8 {
+    byte - 48u8
+  } else if byte >= 97u8 && byte <= 102u8 {
+    byte - 87u8
+  } else if byte >= 65u8 && byte <= 70u8 {
+    byte - 55u8
+  } else {
+    255u8
+  }
+}
+
+pub fn encode(value: Bytes) -> Bytes {
+  let capacity = match encoded_length(value.byte_length()) {
+    Some(length) => length
+    None => {
+      unreachable()
+      0u32
+    }
+  }
+  let builder = BytesBuilder::with_capacity(capacity)
+  while 0u32 {
+    index if index < value.byte_length() => {
+      let byte = value.byte_at(index)
+      builder.append_byte(digit(byte / 16u8))
+      builder.append_byte(digit(byte % 16u8))
+      continue index + 1u32
+    }
+    _ => break builder.finish()
+  }
+}
+
+// Accept ASCII a-f and A-F. Offsets are relative to value, including views.
+// Odd length takes precedence over invalid bytes. Validate before allocation.
+pub fn decode(value: Bytes) -> Result<Bytes, HexDecodeError> {
+  let length = value.byte_length()
+  if length % 2u32 != 0u32 {
+    return Err(HexDecodeError::OddLength)
+  }
+  while 0u32 {
+    index if index < length => {
+      if nibble(value.byte_at(index)) == 255u8 {
+        return Err(HexDecodeError::InvalidByte(index))
+      }
+      continue index + 1u32
+    }
+    _ => break hex_unit()
+  }
+  let builder = BytesBuilder::with_capacity(length / 2u32)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(nibble(value.byte_at(index)) * 16u8 + nibble(value.byte_at(index + 1u32)))
+      continue index + 2u32
+    }
+    _ => break Ok(builder.finish())
+  }
+}

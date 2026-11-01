@@ -394,3 +394,23 @@ on the first pull. Enumerate returns `IterEntry<t>` with `index: U64` (starting
 at zero, wrapping at the U64 limit) and `value: t`. Aliases share wrapper state.
 When only `None` constrains a result, state the payload and source types, for
 example `iter_take::<U32, ArrayIter<U32>>(array_iter(values), 0u32)`.
+
+### Hex bytes
+
+`dew.std.encoding.hex` exports `encode(Bytes) -> Bytes`,
+`decode(Bytes) -> Result<Bytes, HexDecodeError>`, and
+`encoded_length(U32) -> Option<U32>`.
+
+Encoding emits lower-case ASCII. Decoding accepts upper and lower case.
+It rejects odd lengths first (`OddLength`), then the first non-hex byte
+(`InvalidByte(U32)`). The offset is zero-based within the input view.
+Spaces and `0x` prefixes are not accepted. Size doubling is checked before
+allocation; encode traps if it cannot fit U32. Decode validates before it
+allocates, and divides the even input size by two. Both use linear time and
+one output buffer, rounded to the builder's 16-byte storage chunks.
+
+```dew
+import dew.std.encoding.hex as @hex
+// @hex.encode(b"\xAB\x01") == b"ab01"
+// @hex.decode(b"Ab01") == Ok(b"\xAB\x01")
+```

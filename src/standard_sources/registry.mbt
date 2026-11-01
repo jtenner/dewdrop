@@ -29,6 +29,7 @@ pub fn standard_source_paths() -> Array[String] {
     paths.push("std/" + name + ".dew")
   }
   paths.push("std/types.dew")
+  paths.push("std/encoding/hex.dew")
   paths
 }
 
@@ -97,6 +98,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/bytes_builder.dew" => Some(standard_text_sources()[3])
     "std/bytes.dew" => Some(standard_text_sources()[4])
     "std/text.dew" => Some(standard_text_iteration_source())
+    "std/encoding/hex.dew" => Some(standard_hex_source())
     "std/encoding/utf8.dew" => Some(standard_utf8_source())
     "std/wasm/wasi.dew" => Some(standard_wasm_wasi_source())
     "std/wasi.dew" => Some(standard_wasi_source())

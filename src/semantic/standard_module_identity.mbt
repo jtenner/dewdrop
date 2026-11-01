@@ -81,6 +81,7 @@ fn canonical_standard_module_id(path : String) -> ModuleId? {
     "dew.std.facet.net" => Some(4294901838UL)
     "dew.std.types" => Some(4294901839UL)
     "dew.std.collections.btree" => Some(4294901840UL)
+    "dew.std.encoding.hex" => Some(4294901841UL)
     _ => None
   }
 }

@@ -52,6 +52,8 @@ pub fn standard_fs_source() -> Bytes
 
 pub fn standard_fs_wasi_source() -> Bytes
 
+pub fn standard_hex_source() -> Bytes
+
 pub fn standard_into_builtins_source() -> Bytes
 
 pub fn standard_into_impls_source() -> Bytes

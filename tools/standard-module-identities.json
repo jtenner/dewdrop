@@ -79,6 +79,7 @@
     "dew.std.facet.poll": 77,
     "dew.std.facet.net": 78,
     "dew.std.types": 79,
-    "dew.std.collections.btree": 80
+    "dew.std.collections.btree": 80,
+    "dew.std.encoding.hex": 81
   }
 }

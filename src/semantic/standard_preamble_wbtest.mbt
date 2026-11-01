@@ -46,7 +46,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 91)
+  assert_eq(wildcard_paths.length(), 92)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -96,6 +96,21 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[68], "std/wasm/intrinsics.dew")
   assert_eq(wildcard_paths[88], "std/f64x2.dew")
   assert_eq(wildcard_paths[90], "std/collections/btree.dew")
+  assert_eq(wildcard_paths[91], "std/encoding/hex.dew")
+  let hex_manifest = ProgramManifest::new([
+    ManifestModule::new("app.hex", [
+      ManifestFile::new(
+        "main.dew", b"import dew.std.encoding.hex as @hex\npub fn main() -> Bytes {\n  @hex.encode(b\"a\")\n}\n",
+      ),
+    ]),
+  ])
+  let hex_paths = required_standard_library_source_paths(hex_manifest, false)
+  assert_true(hex_paths.contains("std/encoding/hex.dew"))
+  assert_true(hex_paths.contains("std/bytes.dew"))
+  assert_true(hex_paths.contains("std/bytes_builder.dew"))
+  assert_false(hex_paths.contains("std/integrity/sha256.dew"))
+  assert_false(hex_paths.contains("std/encoding/utf8.dew"))
+  assert_eq(canonical_standard_module_id("dew.std.encoding.hex"), Some(4294901841UL))
 }
 
 ///|
